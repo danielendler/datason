@@ -1,10 +1,17 @@
 name: 🤖 Auto-merge
 
 on:
-  pull_request:
+  pull_request_target:  # Use pull_request_target for Dependabot PRs (has write permissions)
     types: [labeled, unlabeled, synchronize, opened, edited, ready_for_review, reopened]
   pull_request_review:
     types: [submitted]
+
+# Add explicit permissions for auto-merge workflows
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+  repository-projects: read
 
 jobs:
   auto-merge:
@@ -50,9 +57,14 @@ jobs:
     # Only run for Dependabot PRs
     if: github.actor == 'dependabot[bot]'
 
+    # Add explicit permissions for auto-approval
+    permissions:
+      contents: read
+      pull-requests: write
+
     steps:
     - name: 🤖 Auto-approve Dependabot PRs
-      uses: hmarr/auto-approve-action@v3
+      uses: hmarr/auto-approve-action@v4
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
 

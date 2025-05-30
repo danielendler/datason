@@ -17,10 +17,6 @@ updates:
       timezone: "Etc/UTC"
     target-branch: "main"  # Changed to main branch
     open-pull-requests-limit: 8
-    reviewers:
-      - "danielendler"
-    assignees:
-      - "danielendler"
     commit-message:
       prefix: "deps"
       prefix-development: "dev-deps"
@@ -57,10 +53,6 @@ updates:
       timezone: "Etc/UTC"
     target-branch: "main"
     open-pull-requests-limit: 3
-    reviewers:
-      - "danielendler"
-    assignees:
-      - "danielendler"
     commit-message:
       prefix: "ci"
       include: "scope"

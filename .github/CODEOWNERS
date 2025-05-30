@@ -1,0 +1,33 @@
+# CODEOWNERS file for SerialPy
+# This file defines who should review changes to specific parts of the repository
+# See: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Global code owners (applies to everything unless overridden)
+* @danielendler
+
+# Core SerialPy code
+/serialpy/ @danielendler
+
+# CI/CD and DevOps infrastructure
+/.github/ @danielendler
+/scripts/ @danielendler
+
+# Documentation
+/docs/ @danielendler
+/README.md @danielendler
+/mkdocs.yml @danielendler
+
+# Configuration files
+/pyproject.toml @danielendler
+/.pre-commit-config.yaml @danielendler
+/codecov.yml @danielendler
+
+# Tests
+/tests/ @danielendler
+
+# Examples and benchmarks
+/examples/ @danielendler
+/benchmarks/ @danielendler
+
+# Dependency management (Dependabot PRs will auto-assign reviewers)
+/.github/dependabot.yml @danielendler
