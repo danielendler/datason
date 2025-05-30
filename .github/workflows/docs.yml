@@ -21,6 +21,24 @@ jobs:
       with:
         python-version: '3.11'
 
+    - name: 💾 Cache pip dependencies (docs)
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-docs-pip-${{ hashFiles('**/pyproject.toml') }}
+        restore-keys: |
+          ${{ runner.os }}-docs-pip-
+          ${{ runner.os }}-pip-
+
+    - name: 💾 Cache MkDocs build
+      uses: actions/cache@v4
+      with:
+        path: .cache
+        key: ${{ runner.os }}-mkdocs-${{ hashFiles('mkdocs.yml') }}-${{ hashFiles('docs/**') }}
+        restore-keys: |
+          ${{ runner.os }}-mkdocs-${{ hashFiles('mkdocs.yml') }}-
+          ${{ runner.os }}-mkdocs-
+
     - name: 📦 Install dependencies
       run: |
         pip install -e ".[docs]"
@@ -53,6 +71,26 @@ jobs:
       uses: actions/setup-python@v4
       with:
         python-version: '3.11'
+
+    - name: 💾 Cache pip dependencies (pages)
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pages-pip-${{ hashFiles('**/pyproject.toml') }}
+        restore-keys: |
+          ${{ runner.os }}-pages-pip-
+          ${{ runner.os }}-docs-pip-
+          ${{ runner.os }}-pip-
+
+    - name: 💾 Cache MkDocs build (pages)
+      uses: actions/cache@v4
+      with:
+        path: .cache
+        key: ${{ runner.os }}-mkdocs-pages-${{ hashFiles('mkdocs.yml') }}-${{ hashFiles('docs/**') }}
+        restore-keys: |
+          ${{ runner.os }}-mkdocs-pages-${{ hashFiles('mkdocs.yml') }}-
+          ${{ runner.os }}-mkdocs-${{ hashFiles('mkdocs.yml') }}-
+          ${{ runner.os }}-mkdocs-
 
     - name: 📦 Install dependencies
       run: |
