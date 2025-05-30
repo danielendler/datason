@@ -84,11 +84,37 @@ def serialize(obj: Any, _depth: int = 0, _seen: Optional[Set[int]] = None) -> An
         )
         return None
 
+    # For mutable objects, check optimization BEFORE adding to _seen
+    optimization_result = None
+    if isinstance(obj, dict):
+        # Security check: prevent excessive object sizes
+        if len(obj) > MAX_OBJECT_SIZE:
+            raise SecurityError(
+                f"Dictionary size ({len(obj)}) exceeds maximum ({MAX_OBJECT_SIZE}). "
+                "This may indicate a resource exhaustion attempt."
+            )
+        # Check if already serialized before adding to _seen
+        if _is_already_serialized_dict(obj):
+            optimization_result = obj
+    elif isinstance(obj, (list, tuple)):
+        # Security check: prevent excessive object sizes
+        if len(obj) > MAX_OBJECT_SIZE:
+            raise SecurityError(
+                f"List/tuple size ({len(obj)}) exceeds maximum ({MAX_OBJECT_SIZE}). "
+                "This may indicate a resource exhaustion attempt."
+            )
+        # Check if already serialized before adding to _seen
+        if _is_already_serialized_list(obj):
+            optimization_result = list(obj) if isinstance(obj, tuple) else obj
+
     # Add current object to seen set for mutable types
     if isinstance(obj, (dict, list, set)):
         _seen.add(id(obj))
 
     try:
+        # Use optimization result if available
+        if optimization_result is not None:
+            return optimization_result
         return _serialize_object(obj, _depth, _seen)
     finally:
         # Clean up: remove from seen set when done processing
@@ -126,33 +152,11 @@ def _serialize_object(obj: Any, _depth: int, _seen: Set[int]) -> Any:
     # OPTIMIZATION: Check if dict/list are already fully serialized
     # This prevents recursive processing when not needed
     if isinstance(obj, dict):
-        # Security check: prevent excessive object sizes
-        if len(obj) > MAX_OBJECT_SIZE:
-            raise SecurityError(
-                f"Dictionary size ({len(obj)}) exceeds maximum ({MAX_OBJECT_SIZE}). "
-                "This may indicate a resource exhaustion attempt."
-            )
-
-        # Quick check: if all keys are strings and all values are basic types, return as-is
-        # BUT only if we haven't seen this object before (to prevent infinite recursion in optimization check)
-        if id(obj) not in _seen and _is_already_serialized_dict(obj):
-            return obj
-        # Otherwise, recursively serialize
+        # Optimization already handled in main serialize function
         return {k: serialize(v, _depth + 1, _seen) for k, v in obj.items()}
 
     if isinstance(obj, (list, tuple)):
-        # Security check: prevent excessive object sizes
-        if len(obj) > MAX_OBJECT_SIZE:
-            raise SecurityError(
-                f"List/tuple size ({len(obj)}) exceeds maximum ({MAX_OBJECT_SIZE}). "
-                "This may indicate a resource exhaustion attempt."
-            )
-
-        # Quick check: if all items are basic types, return as-is (convert tuple to list)
-        # BUT only if we haven't seen this object before (to prevent infinite recursion in optimization check)
-        if id(obj) not in _seen and _is_already_serialized_list(obj):
-            return list(obj) if isinstance(obj, tuple) else obj
-        # Otherwise, recursively serialize
+        # Optimization already handled in main serialize function
         return [serialize(x, _depth + 1, _seen) for x in obj]
 
     # Handle numpy data types
