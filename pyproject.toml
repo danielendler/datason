@@ -143,7 +143,7 @@ exclude = [
     "/build",
     "*.egg-info",
     "__pycache__",
-    "benchmark_real_performance.py",
+    "/benchmarks",
     "/examples",
     "/tests",
     "/.pre-commit-config.yaml",
@@ -212,6 +212,7 @@ ignore = [
     "PLR2004", # Magic value used in comparison
     "TRY003",  # Avoid specifying long messages outside the exception class
     "COM812",  # Missing trailing comma (conflicts with formatter)
+    "ISC001",  # Implicit string concatenation (conflicts with formatter)
     # Complexity rules we'll address gradually
     "PLR0911", # Too many return statements (will fix case by case)
     "PLR0912", # Too many branches (will refactor gradually)
@@ -270,7 +271,7 @@ ignore = [
     "ANN",     # type annotations not required in scripts
     "D",       # docstrings not required in scripts
 ]
-"benchmark_real_performance.py" = [
+"benchmarks/**/*.py" = [
     "T201",    # print statements OK in benchmarks
     "S301",    # pickle usage OK for benchmarking
     "ANN",     # type annotations not required in benchmarks

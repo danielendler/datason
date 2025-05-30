@@ -264,10 +264,20 @@ pytest tests/test_your_new_feature.py --cov=serialpy --cov-report=term-missing
 ### Before Submitting
 - [ ] All tests pass: `pytest`
 - [ ] Coverage maintained: `pytest --cov=serialpy`
-- [ ] Linting clean: `flake8 serialpy/ tests/`
-- [ ] Code formatted: `black serialpy/ tests/`
+- [ ] Code quality: `ruff check --fix .`
+- [ ] Code formatting: `ruff format .`
 - [ ] Type checking: `mypy serialpy/`
+- [ ] Security scan: `bandit -r serialpy/`
 - [ ] Documentation updated if needed
+
+### CI/CD Pipeline
+SerialPy uses a modern multi-pipeline CI/CD architecture. See our **[CI/CD Pipeline Guide](docs/CI_PIPELINE_GUIDE.md)** for complete details on:
+- 🔍 **Quality Pipeline** - Ruff linting, formatting, security scanning (~30s)
+- 🧪 **Main CI** - Testing, coverage, package building (~2-3min)
+- 📚 **Docs Pipeline** - Documentation generation and deployment
+- 📦 **Publish Pipeline** - Automated PyPI releases
+
+All pipelines use intelligent caching for 2-5x speedup on repeat runs.
 
 ### PR Template
 ```markdown

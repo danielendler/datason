@@ -68,7 +68,7 @@ This script is referenced in:
 
 from datetime import datetime
 import json
-import pickle
+import pickle  # nosec B403 - Safe usage for benchmarking only, no untrusted data
 import statistics
 import time
 import uuid

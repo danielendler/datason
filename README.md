@@ -172,7 +172,7 @@ gpu_tensor = torch.randn(1000, 1000).cuda()
 serialized = sp.serialize(gpu_tensor)  # Auto CPU conversion
 ```
 
-*Benchmarks available in `benchmark_real_performance.py`*
+*Benchmarks available in `benchmarks/benchmark_real_performance.py`*
 
 📊 **[See detailed benchmarks and methodology →](docs/BENCHMARKING.md)**
 
