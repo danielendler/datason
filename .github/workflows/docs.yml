@@ -7,6 +7,7 @@ on:
   pull_request:
     branches: [main]
     paths: ['docs/**', 'mkdocs.yml', 'README.md']
+  workflow_dispatch:  # Allow manual triggering
 
 # Set permissions for GitHub Pages deployment
 permissions:
@@ -67,12 +68,8 @@ jobs:
   # Deploy to GitHub Pages
   deploy-github-pages:
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     needs: build-docs
-
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
 
     steps:
     - name: 📥 Checkout
