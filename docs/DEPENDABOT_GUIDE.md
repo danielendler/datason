@@ -280,7 +280,7 @@ pre-commit run --all-files  # Fix formatting
 - [GitHub Dependabot Documentation](https://docs.github.com/en/code-security/dependabot)
 - [Dependabot Configuration Reference](https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file)
 - [SerialPy CI/CD Pipeline Guide](CI_PIPELINE_GUIDE.md)
-- [Contributing Guidelines](../CONTRIBUTING.md)
+- [Contributing Guide](CONTRIBUTING.md)
 
 ---
 
