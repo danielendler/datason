@@ -8,6 +8,17 @@ on:
     branches: [main]
     paths: ['docs/**', 'mkdocs.yml', 'README.md']
 
+# Set permissions for GitHub Pages deployment
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Allow only one concurrent deployment, skipping runs queued between the run in-progress and latest queued.
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
 jobs:
   # Build docs for preview/testing
   build-docs:
@@ -53,15 +64,15 @@ jobs:
         name: documentation
         path: site/
 
-  # Deploy to GitHub Pages (backup)
+  # Deploy to GitHub Pages
   deploy-github-pages:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     needs: build-docs
-    permissions:
-      contents: read
-      pages: write
-      id-token: write
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
 
     steps:
     - name: 📥 Checkout
@@ -100,9 +111,14 @@ jobs:
       run: |
         mkdocs build --strict
 
-    - name: 🚀 Deploy to GitHub Pages
-      uses: peaceiris/actions-gh-pages@v3
+    - name: 🔧 Setup GitHub Pages
+      uses: actions/configure-pages@v4
+
+    - name: 📤 Upload Pages artifact
+      uses: actions/upload-pages-artifact@v3
       with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: ./site
-        cname: serialpy-docs.github.io  # Optional: custom domain
+        path: './site'
+
+    - name: 🚀 Deploy to GitHub Pages
+      id: deployment
+      uses: actions/deploy-pages@v4
