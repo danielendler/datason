@@ -17,7 +17,7 @@ jobs:
   auto-approve:
     runs-on: ubuntu-latest
 
-    # Only run for Dependabot PRs
+    # 🎯 ONLY runs for Dependabot PRs - these get full automation
     if: github.actor == 'dependabot[bot]'
 
     # Add explicit permissions for auto-approval (fixed permissions issue)
@@ -78,7 +78,8 @@ jobs:
     - name: 📥 Checkout repository
       uses: actions/checkout@v4
 
-    - name: 🤖 Auto-merge Dependabot PRs (Fast path)
+    # 🚀 PATH A: Dependabot PRs - FULLY AUTOMATIC (no approval needed)
+    - name: 🤖 Auto-merge Dependabot PRs (Fast path - FULLY AUTOMATIC)
       uses: fastify/github-action-merge-dependabot@v3
       if: |
         github.actor == 'dependabot[bot]' &&
@@ -92,12 +93,14 @@ jobs:
         target: patch
         approve-only: false
 
-    - name: 🤖 Auto-merge labeled PRs (Manual checks)
+    # 🔧 PATH B: Manual PRs with auto-merge label - REQUIRES APPROVAL FIRST
+    - name: 🤖 Auto-merge labeled PRs (Manual checks - REQUIRES HUMAN APPROVAL)
       if: contains(github.event.pull_request.labels.*.name, 'auto-merge') && github.actor != 'dependabot[bot]'
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
         echo "🔍 Checking if PR is ready for auto-merge..."
+        echo "⚠️  NOTE: This requires human approval first! Add 'auto-merge' label after approving."
 
         # Wait a moment for CI to start if it hasn't already
         sleep 10
