@@ -61,6 +61,13 @@ repos:
         pass_filenames: false
         always_run: false
 
+      - id: mkdocs-strict
+        name: MkDocs strict mode check
+        entry: mkdocs build --strict --clean
+        language: system
+        files: ^(mkdocs\.yml|docs/.*)$
+        pass_filenames: false
+
       # Lightweight coverage check for changed files only
       # Note: Disabled due to pytest not being available in pre-commit environment
       # Use local testing instead: pytest --cov=serialpy
