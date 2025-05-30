@@ -21,6 +21,9 @@ jobs:
     if: github.event.pull_request != null && github.event.pull_request.draft == false
 
     steps:
+    - name: 📥 Checkout repository
+      uses: actions/checkout@v4
+
     - name: 🤖 Auto-merge Dependabot PRs
       uses: fastify/github-action-merge-dependabot@v3.10.1
       if: |
@@ -63,6 +66,9 @@ jobs:
       pull-requests: write
 
     steps:
+    - name: 📥 Checkout repository
+      uses: actions/checkout@v4
+
     - name: 🤖 Auto-approve Dependabot PRs (Updated to v4 with proper permissions)
       uses: hmarr/auto-approve-action@v4
       with:

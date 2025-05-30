@@ -129,15 +129,13 @@ pytest -v
 3. **Add tests** for new functionality
 4. **Run tests**: `pytest --cov=serialpy`
 5. **Check coverage**: Ensure coverage stays above 80%
-6. **Run linting**: `flake8 serialpy/ tests/`
-7. **Format code**: `black serialpy/ tests/`
-8. **Create pull request** with detailed description
+6. **Run linting and formatting**: `ruff check --fix . && ruff format .`
+7. **Create pull request** with detailed description
 
 ## 📋 Coding Standards
 
 ### Code Style
-- **Formatter**: Black (automatic formatting)
-- **Linter**: Flake8 (with sensible defaults)
+- **Linter & Formatter**: Ruff (unified tool for linting and formatting)
 - **Type hints**: Required for all public APIs
 - **Docstrings**: Google-style for all public functions
 
