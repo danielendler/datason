@@ -62,7 +62,7 @@ jobs:
 
         # Verify package can be installed
         python -m pip install dist/*.whl
-        python -c "import pyjsonify; print(f'✅ Package import successful: {pyjsonify.__version__ if hasattr(pyjsonify, \"__version__\") else \"unknown\"}')"
+        python -c "import serialpy; print(f'✅ Package import successful: {serialpy.__version__ if hasattr(serialpy, \"__version__\") else \"unknown\"}')"
 
     - name: 🔍 Run Package Checks
       run: |
@@ -101,8 +101,8 @@ jobs:
     - name: ✅ Verify TestPyPI Upload
       run: |
         echo "✅ Package published to TestPyPI!"
-        echo "🔗 View at: https://test.pypi.org/project/pyjsonify/"
-        echo "📦 Test install: pip install --index-url https://test.pypi.org/simple/ pyjsonify"
+        echo "🔗 View at: https://test.pypi.org/project/serialpy/"
+        echo "📦 Test install: pip install --index-url https://test.pypi.org/simple/ serialpy"
 
   pypi:
     name: 🚀 Publish to PyPI
@@ -127,25 +127,25 @@ jobs:
     - name: ✅ Verify PyPI Upload
       run: |
         echo "🎉 Package published to PyPI!"
-        echo "🔗 View at: https://pypi.org/project/pyjsonify/"
-        echo "📦 Install: pip install pyjsonify"
+        echo "🔗 View at: https://pypi.org/project/serialpy/"
+        echo "📦 Install: pip install serialpy"
 
     - name: 📢 Create Release Summary
       run: |
         cat >> $GITHUB_STEP_SUMMARY << 'EOF'
         ## 🎉 Release Published Successfully!
 
-        **Package**: `pyjsonify`
+        **Package**: `serialpy`
         **Version**: `${{ github.event.release.tag_name }}`
-        **PyPI**: https://pypi.org/project/pyjsonify/
+        **PyPI**: https://pypi.org/project/serialpy/
 
         ### 📦 Installation
         ```bash
-        pip install pyjsonify
+        pip install serialpy
         ```
 
         ### 🔗 Links
-        - 📖 [Documentation](https://pyjsonify.readthedocs.io)
+        - 📖 [Documentation](https://serialpy.readthedocs.io)
         - 🐛 [Report Issues](https://github.com/${{ github.repository }}/issues)
         - 💬 [Discussions](https://github.com/${{ github.repository }}/discussions)
         EOF
