@@ -41,7 +41,9 @@ jobs:
     - name: 💾 Cache pre-commit environments
       uses: actions/cache@v4
       with:
-        path: ~/.cache/pre-commit
+        path: |
+          ~/.cache/pre-commit
+          ~/.cache/pre-commit-*
         key: ${{ runner.os }}-pre-commit-${{ hashFiles('.pre-commit-config.yaml') }}
         restore-keys: |
           ${{ runner.os }}-pre-commit-
@@ -51,9 +53,13 @@ jobs:
         python -m pip install --upgrade pip
         pip install -e ".[dev]"
 
-    - name: 🧹 Code quality checks (Ruff)
+    - name: 🪝 Install pre-commit hooks
       run: |
-        ruff check serialpy/ tests/
+        pre-commit install --install-hooks
+
+    - name: 🧹 Run pre-commit on all files
+      run: |
+        pre-commit run --all-files
 
     - name: 🧪 Run core tests
       run: |
