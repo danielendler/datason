@@ -1,0 +1,104 @@
+# Codecov Configuration for SerialPy
+# See: https://docs.codecov.com/docs/codecov-yaml
+
+codecov:
+  # Require CI to pass before coverage is collected
+  require_ci_to_pass: true
+  # Notify us if coverage drops
+  notify:
+    # After this many builds (default is 3)
+    after_n_builds: 2
+    # Wait at most this long (in seconds) for coverage reports
+    wait_for_ci: true
+
+# Coverage targets and thresholds
+coverage:
+  # Precision of the coverage percentage (2 = 85.32%)
+  precision: 2
+  # Rounding method (down, up, nearest)
+  round: nearest
+  # Coverage range (used for color coding)
+  range: 70..90
+
+  # Status checks that will appear on PRs
+  status:
+    # Overall project coverage
+    project:
+      default:
+        # Fail if coverage drops by more than 1%
+        threshold: 1%
+        # Coverage target (we're currently at ~82%)
+        target: 80%
+        # Only check against base branch, not arbitrary commits
+        base: auto
+        # Fail if coverage falls below absolute threshold
+        if_ci_failed: error
+        # Only run on these branches
+        branches:
+          - main
+          - develop
+
+    # Coverage on PR changes only
+    patch:
+      default:
+        # Require 75% coverage on new code
+        target: 75%
+        # Allow new code to drop slightly
+        threshold: 5%
+        # Only check the changes, not the whole project
+        base: auto
+        if_ci_failed: error
+
+# Configure which files to include/exclude
+ignore:
+  # Test files (already tested by running them)
+  - "tests/"
+  - "test_*.py"
+  # Examples and benchmarks
+  - "examples/"
+  - "benchmarks/"
+  # Scripts and tooling
+  - "scripts/"
+  # Build artifacts
+  - "setup.py"
+  - "dist/"
+  - "build/"
+  # Virtual environments
+  - "venv/"
+  - ".venv/"
+  - "env/"
+
+# Comment configuration for PRs
+comment:
+  # Layout of the comment
+  layout: "reach,diff,flags,tree,reach"
+  # Behavior settings
+  behavior: default
+  # Require changes to post comment (don't spam on every commit)
+  require_changes: true
+  # Show coverage for these file types
+  after_n_builds: 1
+
+# GitHub App integration
+github_checks:
+  # Enable codecov checks in GitHub
+  annotations: true
+
+# Flag configuration for different test types
+flags:
+  # Core functionality tests
+  core:
+    paths:
+      - serialpy/core.py
+      - serialpy/converters.py
+      - serialpy/deserializers.py
+  # ML integration tests
+  ml:
+    paths:
+      - serialpy/ml_serializers.py
+  # Utility modules
+  utils:
+    paths:
+      - serialpy/datetime_utils.py
+      - serialpy/data_utils.py
+      - serialpy/serializers.py

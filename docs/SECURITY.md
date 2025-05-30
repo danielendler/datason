@@ -117,7 +117,7 @@ SEVERITY.LOW: 1 (intentional, documented)
 **Please DO NOT report security vulnerabilities through public GitHub issues.**
 
 ### Preferred: Security Advisory
-1. Go to https://github.com/your-username/serialpy/security/advisories
+1. Go to https://github.com/danielendler/SerialPy/security/advisories
 2. Click "Report a vulnerability"
 3. Provide details including reproduction steps
 

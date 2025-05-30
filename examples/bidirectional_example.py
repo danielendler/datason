@@ -199,7 +199,7 @@ def demonstrate_complex_data_structures() -> None:
 
     # Check nested data integrity
     for i, user in enumerate(deserialized["users"]):
-        print(f"  User {i+1}:")
+        print(f"  User {i + 1}:")
         print(f"    ID type: {type(user['id']).__name__}")
         print(f"    Session ID type: {type(user['session']['id']).__name__}")
         print(f"    Timestamps preserved: {isinstance(user['created_at'], datetime)}")

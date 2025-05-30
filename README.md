@@ -3,7 +3,7 @@
 **Universal Serialization for Python** - Effortlessly serialize complex Python objects including ML models, DataFrames, tensors, and more.
 
 [![PyPI version](https://badge.fury.io/py/serialpy.svg)](https://badge.fury.io/py/serialpy)
-[![Test Coverage](https://img.shields.io/badge/coverage-82%25-brightgreen.svg)](https://github.com/username/serialpy)
+[![Test Coverage](https://img.shields.io/badge/coverage-82%25-brightgreen.svg)](https://github.com/danielendler/SerialPy)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
@@ -280,4 +280,4 @@ MIT License - see [LICENSE](LICENSE) file.
 
 *SerialPy - Because complex data shouldn't be complex to serialize.*
 
-📚 **[Documentation](https://serialpy.readthedocs.io)** | 🐛 **[Issues](https://github.com/your-username/serialpy/issues)** | 💬 **[Discussions](https://github.com/your-username/serialpy/discussions)**
+📚 **[Documentation](https://serialpy.readthedocs.io)** | 🐛 **[Issues](https://github.com/danielendler/SerialPy/issues)** | 💬 **[Discussions](https://github.com/danielendler/SerialPy/discussions)**

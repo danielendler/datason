@@ -1,12 +1,12 @@
 # SerialPy Documentation Configuration
 site_name: SerialPy
-site_description: Universal Serialization for Python - Handle complex data types with ease
+site_description: A comprehensive Python package for intelligent serialization that handles complex data types with ease.
 site_author: SerialPy Contributors
-site_url: https://serialpy.readthedocs.io
+site_url: https://serialpy.readthedocs.io/
 
 # Repository
-repo_name: your-username/serialpy
-repo_url: https://github.com/your-username/serialpy
+repo_name: danielendler/SerialPy
+repo_url: https://github.com/danielendler/SerialPy
 edit_uri: edit/main/docs/
 
 # Copyright
@@ -105,8 +105,8 @@ markdown_extensions:
   - pymdownx.keys
   - pymdownx.magiclink:
       repo_url_shorthand: true
-      user: your-username
-      repo: serialpy
+      user: danielendler
+      repo: SerialPy
   - pymdownx.mark
   - pymdownx.smartsymbols
   - pymdownx.superfences:
@@ -141,9 +141,38 @@ extra:
     provider: mike
   social:
     - icon: fontawesome/brands/github
-      link: https://github.com/your-username/serialpy
+      link: https://github.com/danielendler/SerialPy
+      name: SerialPy on GitHub
     - icon: fontawesome/brands/python
       link: https://pypi.org/project/serialpy/
+      name: SerialPy on PyPI
+    - icon: fontawesome/solid/book
+      link: https://serialpy.readthedocs.io/
+      name: Documentation
+
+  generator: false
+
+  # Analytics (update with your tracking ID)
+  analytics:
+    provider: google
+    property: G-XXXXXXXXXX
+    feedback:
+      title: Was this page helpful?
+      ratings:
+        - icon: material/emoticon-happy-outline
+          name: This page was helpful
+          data: 1
+          note: >-
+            Thanks for your feedback!
+        - icon: material/emoticon-sad-outline
+          name: This page could be improved
+          data: 0
+          note: >-
+            Thanks for your feedback! Help us improve this page by
+            <a href="https://github.com/danielendler/SerialPy/issues/new/?title=[Docs]" target="_blank" rel="noopener">opening an issue</a>.
+
+  # Homepage override
+  homepage: https://github.com/danielendler/SerialPy
 
 # Additional CSS/JS
 extra_css:
@@ -152,4 +181,4 @@ extra_css:
 extra_javascript:
   - javascripts/mathjax.js
   - https://polyfill.io/v3/polyfill.min.js?features=es6
-  - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mtml-chtml.js
+  - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js

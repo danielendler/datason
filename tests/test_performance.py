@@ -40,9 +40,9 @@ class TestPerformanceBenchmarks:
         serialize_time = end_time - start_time
 
         # Should complete in reasonable time (< 1 second for 1000 items)
-        assert (
-            serialize_time < 1.0
-        ), f"Serialization took {serialize_time:.3f}s, too slow!"
+        assert serialize_time < 1.0, (
+            f"Serialization took {serialize_time:.3f}s, too slow!"
+        )
 
         # Result should be JSON-compatible
         assert isinstance(result, dict)
@@ -68,9 +68,9 @@ class TestPerformanceBenchmarks:
         sp_time = time.time() - start_time
 
         # SerialPy should be reasonably fast (not more than 10x slower than JSON)
-        assert (
-            sp_time < json_time * 10
-        ), f"SerialPy too slow: {sp_time:.3f}s vs JSON {json_time:.3f}s"
+        assert sp_time < json_time * 10, (
+            f"SerialPy too slow: {sp_time:.3f}s vs JSON {json_time:.3f}s"
+        )
 
         # Results should be equivalent for simple data
         assert json.loads(json_result) == sp_result
@@ -127,9 +127,9 @@ class TestPerformanceBenchmarks:
         deserialize_time = end_time - start_time
 
         # Should complete in reasonable time
-        assert (
-            deserialize_time < 1.0
-        ), f"Deserialization took {deserialize_time:.3f}s, too slow!"
+        assert deserialize_time < 1.0, (
+            f"Deserialization took {deserialize_time:.3f}s, too slow!"
+        )
 
         # Check that parsing worked
         assert len(result["timestamps"]) == 300
@@ -175,9 +175,9 @@ class TestPerformanceBenchmarks:
         round_trip_time = end_time - start_time
 
         # Should complete in reasonable time
-        assert (
-            round_trip_time < 2.0
-        ), f"Round trip took {round_trip_time:.3f}s, too slow!"
+        assert round_trip_time < 2.0, (
+            f"Round trip took {round_trip_time:.3f}s, too slow!"
+        )
 
         # Check data integrity
         assert isinstance(deserialized["metadata"]["created_at"], datetime)
@@ -232,9 +232,9 @@ class TestPerformanceBenchmarks:
         serialize_time = end_time - start_time
 
         # Should handle numpy efficiently
-        assert (
-            serialize_time < 2.0
-        ), f"Numpy serialization took {serialize_time:.3f}s, too slow!"
+        assert serialize_time < 2.0, (
+            f"Numpy serialization took {serialize_time:.3f}s, too slow!"
+        )
 
         # Check results
         assert len(result["large_array"]) == 1000
@@ -271,9 +271,9 @@ class TestPerformanceBenchmarks:
         serialize_time = end_time - start_time
 
         # Should handle pandas efficiently
-        assert (
-            serialize_time < 3.0
-        ), f"Pandas serialization took {serialize_time:.3f}s, too slow!"
+        assert serialize_time < 3.0, (
+            f"Pandas serialization took {serialize_time:.3f}s, too slow!"
+        )
 
         # Check results
         assert len(result["dataframe"]) == 1000
@@ -301,9 +301,9 @@ class TestScalabilityEdgeCases:
 
         # Should handle deep nesting efficiently
         serialize_time = end_time - start_time
-        assert (
-            serialize_time < 1.0
-        ), f"Deep nesting took {serialize_time:.3f}s, too slow!"
+        assert serialize_time < 1.0, (
+            f"Deep nesting took {serialize_time:.3f}s, too slow!"
+        )
 
     def test_wide_structure_performance(self) -> None:
         """Test performance with very wide structures."""
@@ -322,9 +322,9 @@ class TestScalabilityEdgeCases:
 
         # Should handle wide structures efficiently
         serialize_time = end_time - start_time
-        assert (
-            serialize_time < 1.0
-        ), f"Wide structure took {serialize_time:.3f}s, too slow!"
+        assert serialize_time < 1.0, (
+            f"Wide structure took {serialize_time:.3f}s, too slow!"
+        )
         assert len(result) == 1000
 
     def test_mixed_type_performance(self) -> None:
@@ -355,7 +355,7 @@ class TestScalabilityEdgeCases:
 
         # Should handle mixed types efficiently
         serialize_time = end_time - start_time
-        assert (
-            serialize_time < 2.0
-        ), f"Mixed types took {serialize_time:.3f}s, too slow!"
+        assert serialize_time < 2.0, (
+            f"Mixed types took {serialize_time:.3f}s, too slow!"
+        )
         assert len(result) == 100

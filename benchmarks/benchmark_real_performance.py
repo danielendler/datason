@@ -185,7 +185,7 @@ def create_test_data():
                         if HAS_NUMPY
                         else list(range(5000)),
                         "timestamps": pd.date_range("2023-01-01", periods=5000),
-                        "categories": [f"cat_{i%10}" for i in range(5000)],
+                        "categories": [f"cat_{i % 10}" for i in range(5000)],
                     }
                 ),
             },
@@ -214,13 +214,13 @@ def run_comparison_benchmarks():
     # Standard JSON
     json_stats = benchmark_operation(json.dumps, simple_data)
     print(
-        f"Standard JSON:     {json_stats['mean']*1000:.2f}ms ± {json_stats['stdev']*1000:.2f}ms"
+        f"Standard JSON:     {json_stats['mean'] * 1000:.2f}ms ± {json_stats['stdev'] * 1000:.2f}ms"
     )
 
     # SerialPy
     sp_stats = benchmark_operation(sp.serialize, simple_data)
     print(
-        f"SerialPy:         {sp_stats['mean']*1000:.2f}ms ± {sp_stats['stdev']*1000:.2f}ms"
+        f"SerialPy:         {sp_stats['mean'] * 1000:.2f}ms ± {sp_stats['stdev'] * 1000:.2f}ms"
     )
 
     # Ratio
@@ -237,13 +237,13 @@ def run_comparison_benchmarks():
 
     sp_complex_stats = benchmark_operation(sp.serialize, complex_data)
     print(
-        f"SerialPy:         {sp_complex_stats['mean']*1000:.2f}ms ± {sp_complex_stats['stdev']*1000:.2f}ms"
+        f"SerialPy:         {sp_complex_stats['mean'] * 1000:.2f}ms ± {sp_complex_stats['stdev'] * 1000:.2f}ms"
     )
 
     # Try to serialize with pickle for comparison
     pickle_stats = benchmark_operation(pickle.dumps, complex_data)
     print(
-        f"Pickle:            {pickle_stats['mean']*1000:.2f}ms ± {pickle_stats['stdev']*1000:.2f}ms"
+        f"Pickle:            {pickle_stats['mean'] * 1000:.2f}ms ± {pickle_stats['stdev'] * 1000:.2f}ms"
     )
 
     pickle_ratio = sp_complex_stats["mean"] / pickle_stats["mean"]
@@ -263,7 +263,7 @@ def run_comparison_benchmarks():
 
     sp_large_stats = benchmark_operation(sp.serialize, large_data)
     print(
-        f"SerialPy:         {sp_large_stats['mean']*1000:.2f}ms ± {sp_large_stats['stdev']*1000:.2f}ms"
+        f"SerialPy:         {sp_large_stats['mean'] * 1000:.2f}ms ± {sp_large_stats['stdev'] * 1000:.2f}ms"
     )
 
     # Calculate throughput
@@ -282,7 +282,7 @@ def run_comparison_benchmarks():
 
         sp_numpy_stats = benchmark_operation(sp.serialize, numpy_data)
         print(
-            f"SerialPy:         {sp_numpy_stats['mean']*1000:.2f}ms ± {sp_numpy_stats['stdev']*1000:.2f}ms"
+            f"SerialPy:         {sp_numpy_stats['mean'] * 1000:.2f}ms ± {sp_numpy_stats['stdev'] * 1000:.2f}ms"
         )
 
         # Calculate data size
@@ -306,7 +306,7 @@ def run_comparison_benchmarks():
 
         sp_pandas_stats = benchmark_operation(sp.serialize, pandas_data)
         print(
-            f"SerialPy:         {sp_pandas_stats['mean']*1000:.2f}ms ± {sp_pandas_stats['stdev']*1000:.2f}ms"
+            f"SerialPy:         {sp_pandas_stats['mean'] * 1000:.2f}ms ± {sp_pandas_stats['stdev'] * 1000:.2f}ms"
         )
 
         # DataFrame size
@@ -345,13 +345,13 @@ def test_round_trip_performance():
 
     rt_stats = benchmark_operation(round_trip, test_data)
     print(
-        f"Round-trip:        {rt_stats['mean']*1000:.2f}ms ± {rt_stats['stdev']*1000:.2f}ms"
+        f"Round-trip:        {rt_stats['mean'] * 1000:.2f}ms ± {rt_stats['stdev'] * 1000:.2f}ms"
     )
 
     # Test just serialization
     ser_stats = benchmark_operation(sp.serialize, test_data)
     print(
-        f"Serialize only:    {ser_stats['mean']*1000:.2f}ms ± {ser_stats['stdev']*1000:.2f}ms"
+        f"Serialize only:    {ser_stats['mean'] * 1000:.2f}ms ± {ser_stats['stdev'] * 1000:.2f}ms"
     )
 
     # Test just deserialization
@@ -361,10 +361,12 @@ def test_round_trip_performance():
 
     deser_stats = benchmark_operation(sp.deserialize, parsed)
     print(
-        f"Deserialize only:  {deser_stats['mean']*1000:.2f}ms ± {deser_stats['stdev']*1000:.2f}ms"
+        f"Deserialize only:  {deser_stats['mean'] * 1000:.2f}ms ± {deser_stats['stdev'] * 1000:.2f}ms"
     )
 
-    print(f"Total check:       {(ser_stats['mean'] + deser_stats['mean'])*1000:.2f}ms")
+    print(
+        f"Total check:       {(ser_stats['mean'] + deser_stats['mean']) * 1000:.2f}ms"
+    )
 
     return {"round_trip": rt_stats, "serialize": ser_stats, "deserialize": deser_stats}
 
@@ -377,14 +379,14 @@ def generate_performance_summary(results, round_trip_results):
 
     print("\n**Simple Data (JSON-compatible):**")
     simple = results["simple"]
-    print(f"- SerialPy: {simple['serialpy']['mean']*1000:.1f}ms")
-    print(f"- Standard JSON: {simple['json']['mean']*1000:.1f}ms")
+    print(f"- SerialPy: {simple['serialpy']['mean'] * 1000:.1f}ms")
+    print(f"- Standard JSON: {simple['json']['mean'] * 1000:.1f}ms")
     print(f"- Overhead: {simple['ratio']:.1f}x")
 
     print("\n**Complex Data (UUIDs, datetimes):**")
     complex_data = results["complex"]
-    print(f"- SerialPy: {complex_data['serialpy']['mean']*1000:.1f}ms")
-    print(f"- Pickle: {complex_data['pickle']['mean']*1000:.1f}ms")
+    print(f"- SerialPy: {complex_data['serialpy']['mean'] * 1000:.1f}ms")
+    print(f"- Pickle: {complex_data['pickle']['mean'] * 1000:.1f}ms")
     print(f"- vs Pickle: {complex_data['pickle_ratio']:.1f}x")
 
     print("\n**Throughput:**")
@@ -401,10 +403,12 @@ def generate_performance_summary(results, round_trip_results):
 
     print("\n**Round-trip Performance:**")
     print(
-        f"- Serialize + JSON + Deserialize: {round_trip_results['round_trip']['mean']*1000:.1f}ms"
+        f"- Serialize + JSON + Deserialize: {round_trip_results['round_trip']['mean'] * 1000:.1f}ms"
     )
-    print(f"- Serialize only: {round_trip_results['serialize']['mean']*1000:.1f}ms")
-    print(f"- Deserialize only: {round_trip_results['deserialize']['mean']*1000:.1f}ms")
+    print(f"- Serialize only: {round_trip_results['serialize']['mean'] * 1000:.1f}ms")
+    print(
+        f"- Deserialize only: {round_trip_results['deserialize']['mean'] * 1000:.1f}ms"
+    )
 
 
 if __name__ == "__main__":

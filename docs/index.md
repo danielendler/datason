@@ -75,13 +75,13 @@ pip install serialpy
 
 ## Links
 
-- **🏠 Homepage**: [GitHub Repository](https://github.com/your-username/serialpy)
-- **📦 PyPI**: [serialpy on PyPI](https://pypi.org/project/serialpy/)
-- **🐛 Issues**: [Bug Reports](https://github.com/your-username/serialpy/issues)
-- **💬 Discussions**: [Community Forum](https://github.com/your-username/serialpy/discussions)
+- **🏠 Homepage**: [GitHub Repository](https://github.com/danielendler/SerialPy)
+- **📚 Documentation**: [Read the Docs](https://serialpy.readthedocs.io/)
+- **🐛 Issues**: [Bug Reports](https://github.com/danielendler/SerialPy/issues)
+- **💬 Discussions**: [Community Forum](https://github.com/danielendler/SerialPy/discussions)
 
 ---
 
 SerialPy is open source and welcomes contributions from the community.
 
-For questions, issues, or feature requests, please visit our [GitHub repository](https://github.com/your-username/serialpy).
+For questions, issues, or feature requests, please visit our [GitHub repository](https://github.com/danielendler/SerialPy).

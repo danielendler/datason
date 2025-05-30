@@ -105,7 +105,7 @@ def test_large_dataset_performance():
 
 ```bash
 # 1. Fork and clone the repository
-git clone https://github.com/yourusername/serialpy.git
+git clone https://github.com/danielendler/SerialPy.git
 cd serialpy
 
 # 2. Create virtual environment

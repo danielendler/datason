@@ -117,13 +117,13 @@ docs = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/your-username/serialpy"
+Homepage = "https://github.com/danielendler/SerialPy"
 Documentation = "https://serialpy.readthedocs.io"
-Repository = "https://github.com/your-username/serialpy"
-"Bug Tracker" = "https://github.com/your-username/serialpy/issues"
-Changelog = "https://github.com/your-username/serialpy/blob/main/CHANGELOG.md"
-Discussions = "https://github.com/your-username/serialpy/discussions"
-Funding = "https://github.com/sponsors/your-username"
+Repository = "https://github.com/danielendler/SerialPy"
+"Bug Tracker" = "https://github.com/danielendler/SerialPy/issues"
+Changelog = "https://github.com/danielendler/SerialPy/blob/main/CHANGELOG.md"
+Discussions = "https://github.com/danielendler/SerialPy/discussions"
+Funding = "https://github.com/sponsors/danielendler"
 
 [tool.hatch.build.targets.wheel]
 packages = ["serialpy"]
@@ -368,7 +368,13 @@ ignore_missing_imports = true
 # ============================================================================
 [tool.coverage.run]
 source = ["serialpy"]
-omit = ["*/tests/*", "*/test_*.py", "benchmark_real_performance.py"]
+omit = [
+    "*/tests/*",
+    "*/test_*.py",
+    "benchmarks/*",
+    "scripts/*",
+    "examples/*"
+]
 branch = true
 
 [tool.coverage.report]
@@ -395,7 +401,7 @@ directory = "htmlcov"
 # BANDIT SECURITY CONFIGURATION
 # ============================================================================
 [tool.bandit]
-exclude_dirs = ["tests", "venv", ".venv"]
+exclude_dirs = ["tests", "venv", ".venv", "scripts"]
 skips = ["B101"]  # Skip assert_used test
 
 [tool.bandit.assert_used]

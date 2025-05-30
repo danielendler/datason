@@ -61,6 +61,16 @@ repos:
         pass_filenames: false
         always_run: false
 
+      # Lightweight coverage check for changed files only
+      # Note: Disabled due to pytest not being available in pre-commit environment
+      # Use local testing instead: pytest --cov=serialpy
+      # - id: coverage-check
+      #   name: Check coverage on changed files
+      #   entry: python scripts/check_coverage.py
+      #   language: python
+      #   files: ^serialpy/.*\.py$
+      #   pass_filenames: true
+
 # ============================================================================
 # CI-specific configuration
 # ============================================================================

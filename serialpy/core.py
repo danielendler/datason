@@ -23,9 +23,9 @@ except ImportError:
 try:
     from .ml_serializers import detect_and_serialize_ml_object
 
-    _ml_serializer: Optional[
-        Callable[[Any], Optional[Dict[str, Any]]]
-    ] = detect_and_serialize_ml_object
+    _ml_serializer: Optional[Callable[[Any], Optional[Dict[str, Any]]]] = (
+        detect_and_serialize_ml_object
+    )
 except ImportError:
     _ml_serializer = None
 
