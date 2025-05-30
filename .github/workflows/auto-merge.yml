@@ -14,46 +14,6 @@ permissions:
   repository-projects: read
 
 jobs:
-  auto-merge:
-    runs-on: ubuntu-latest
-
-    # Only run on PRs that are not drafts
-    if: github.event.pull_request != null && github.event.pull_request.draft == false
-
-    steps:
-    - name: 📥 Checkout repository
-      uses: actions/checkout@v4
-
-    - name: 🤖 Auto-merge Dependabot PRs
-      uses: fastify/github-action-merge-dependabot@v3.11.1
-      if: |
-        github.actor == 'dependabot[bot]' &&
-        (
-          contains(github.event.pull_request.title, 'Bump') ||
-          contains(github.event.pull_request.title, 'Update')
-        )
-      with:
-        github-token: ${{ secrets.GITHUB_TOKEN }}
-        target: minor
-        merge-method: squash
-
-    - name: 🤖 Auto-merge labeled PRs
-      if: contains(github.event.pull_request.labels.*.name, 'auto-merge')
-      env:
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: |
-        # Wait for checks to complete
-        echo "⏳ Waiting for checks to complete..."
-        gh pr checks ${{ github.event.pull_request.number }} --watch --interval 30
-
-        # Check if all required checks passed
-        if gh pr checks ${{ github.event.pull_request.number }} --required; then
-          echo "✅ All checks passed. Auto-merging..."
-          gh pr merge ${{ github.event.pull_request.number }} --squash --auto
-        else
-          echo "❌ Some checks failed. Skipping auto-merge."
-        fi
-
   auto-approve:
     runs-on: ubuntu-latest
 
@@ -74,7 +34,7 @@ jobs:
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: 🏷️ Label Dependabot PRs
+    - name: 🏷️ Label Dependabot PRs for auto-merge
       uses: actions/github-script@v7
       with:
         script: |
@@ -92,7 +52,7 @@ jobs:
             labels.push('dependencies:core');
           }
 
-          // Add auto-merge label for safe updates
+          // Add auto-merge label for safe updates only
           if (prTitle.includes('patch') || prTitle.includes('minor') || labels.includes('dependencies:dev') || labels.includes('dependencies:github-actions')) {
             labels.push('auto-merge');
           }
@@ -106,3 +66,56 @@ jobs:
               labels: labels
             });
           }
+
+  auto-merge:
+    runs-on: ubuntu-latest
+    # Run after auto-approve completes (if it ran)
+    needs: [auto-approve]
+    # Allow this job to run even if auto-approve was skipped (for non-Dependabot PRs)
+    if: always() && github.event.pull_request != null && github.event.pull_request.draft == false
+
+    steps:
+    - name: 📥 Checkout repository
+      uses: actions/checkout@v4
+
+    - name: 🤖 Auto-merge Dependabot PRs (Fast path)
+      uses: fastify/github-action-merge-dependabot@v3.11.1
+      if: |
+        github.actor == 'dependabot[bot]' &&
+        (
+          contains(github.event.pull_request.title, 'Bump') ||
+          contains(github.event.pull_request.title, 'Update')
+        )
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        target: minor
+        merge-method: squash
+
+    - name: 🤖 Auto-merge labeled PRs (Manual checks)
+      if: contains(github.event.pull_request.labels.*.name, 'auto-merge') && github.actor != 'dependabot[bot]'
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        echo "🔍 Checking if PR is ready for auto-merge..."
+
+        # Wait a moment for CI to start if it hasn't already
+        sleep 10
+
+        # Check current status without waiting indefinitely
+        echo "📊 Current check status:"
+        gh pr view ${{ github.event.pull_request.number }} --json statusCheckRollup --jq '.statusCheckRollup[]'
+
+        # Only wait for actual CI checks (not auto-merge workflow itself)
+        echo "⏳ Waiting for CI checks to complete (max 10 minutes)..."
+        timeout 600 gh pr checks ${{ github.event.pull_request.number }} --watch --interval 30 || {
+          echo "⚠️ Timeout waiting for checks. Checking current status..."
+        }
+
+        # Final check - only merge if required checks passed
+        if gh pr checks ${{ github.event.pull_request.number }} --required 2>/dev/null; then
+          echo "✅ All required checks passed. Auto-merging..."
+          gh pr merge ${{ github.event.pull_request.number }} --squash --auto
+        else
+          echo "❌ Some required checks failed or are still pending. Skipping auto-merge."
+          gh pr view ${{ github.event.pull_request.number }} --json statusCheckRollup --jq '.statusCheckRollup[] | select(.state != "SUCCESS")'
+        fi

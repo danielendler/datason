@@ -5,7 +5,73 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.1.1] - 2025-01-09
+## [0.1.2] - 2025-05-30
+
+### 🔧 DevOps & Infrastructure Fixes
+
+#### GitHub Actions & Workflow Improvements
+- **🚀 GitHub Pages Deployment Fix**: Replaced deprecated `peaceiris/actions-gh-pages` with modern GitHub Pages workflow
+  - Added proper workflow-level permissions (`pages: write`, `id-token: write`)
+  - Used official actions: `actions/configure-pages@v4`, `actions/deploy-pages@v4`
+  - Fixed 403 permission errors with `github-actions[bot]`
+  - Added concurrency control to prevent deployment conflicts
+- **🤖 Auto-merge Workflow Fixes**: Resolved git repository context issues
+  - Added `checkout` steps to auto-merge and auto-approve jobs
+  - Fixed `fatal: not a git repository` errors in workflow
+  - Updated `hmarr/auto-approve-action` to v4 with proper permissions
+  - Enhanced workflow with `pull_request_target` for Dependabot PRs
+
+#### Dependabot Configuration & Labels
+- **🔄 Dependabot Overlapping Directories Fix**: Consolidated multiple `pip` configurations
+  - Unified Python dependency management into single configuration
+  - Removed conflicting documentation-specific pip configuration  
+  - Changed target branch from `develop` to `main` for faster integration
+  - Added smart update rules: conservative for ML libraries, aggressive for dev tools
+- **🏷️ GitHub Labels Setup**: Created comprehensive labeling system
+  - Added missing labels: `automated`, `ci/cd`, `github-actions`, `dependencies`
+  - Created 43 predefined labels for comprehensive PR categorization
+  - Fixed Dependabot PR labeling errors
+- **👥 CODEOWNERS File**: Replaced deprecated reviewers field
+  - Added `.github/CODEOWNERS` for automatic reviewer assignment
+  - Removed deprecated `reviewers` and `assignees` from dependabot.yml
+  - Granular code ownership for different repository sections
+
+#### Documentation Updates
+- **📚 Development Documentation Modernization**: Updated tooling references
+  - Replaced outdated black/flake8 references with ruff
+  - Updated `CONTRIBUTING.md` development workflow
+  - Synchronized main and docs versions of contributing guide
+  - Simplified development workflow from 8 to 7 steps
+- **📖 GitHub Pages Setup Guide**: Added comprehensive troubleshooting documentation
+  - Created `docs/GITHUB_PAGES_SETUP.md` with step-by-step setup
+  - Detailed troubleshooting for common deployment issues
+  - Alternative solutions for different repository configurations
+
+### 🐛 Bug Fixes
+- Fixed GitHub Pages deployment permission errors (`403 Forbidden`)
+- Resolved Dependabot auto-approve workflow permission issues
+- Fixed auto-merge workflow git repository context errors
+- Corrected overlapping Dependabot configurations causing validation errors
+
+### 🔒 Security Enhancements
+- Updated GitHub Actions permissions to minimal required scope
+- Enhanced workflow security with proper OIDC authentication
+- Added explicit permission scoping for auto-merge operations
+
+### 📈 Performance Improvements
+- Streamlined Dependabot configuration reduces processing overhead
+- Optimized GitHub Actions caching strategies maintained
+- Reduced workflow complexity while maintaining functionality
+
+### 🎯 Developer Experience
+- Comprehensive automation now works seamlessly end-to-end
+- Faster feedback loops with working auto-merge system
+- Clear documentation for troubleshooting common issues
+- Modern tooling references align with actual project setup
+
+---
+
+## [0.1.1] - 2025-05-29
 
 ### 🏗️ DevOps & Infrastructure Overhaul
 
