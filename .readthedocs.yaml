@@ -1,0 +1,29 @@
+# Read the Docs configuration file for SerialPy
+# See https://docs.readthedocs.io/en/stable/config-file/v2.html
+
+version: 2
+
+# Set the OS, Python version and other tools you might need
+build:
+  os: ubuntu-22.04
+  tools:
+    python: "3.11"
+  jobs:
+    post_create_environment:
+      # Install poetry
+      - pip install pip setuptools wheel
+    post_install:
+      # Install dependencies
+      - pip install -e ".[docs]"
+
+# Build documentation in the docs/ directory with MkDocs
+mkdocs:
+  configuration: mkdocs.yml
+
+# Python configuration
+python:
+  install:
+    - method: pip
+      path: .
+      extra_requirements:
+        - docs 
