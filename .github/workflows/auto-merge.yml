@@ -79,7 +79,7 @@ jobs:
       uses: actions/checkout@v4
 
     - name: 🤖 Auto-merge Dependabot PRs (Fast path)
-      uses: fastify/github-action-merge-dependabot@v3.11.1
+      uses: fastify/github-action-merge-dependabot@v3
       if: |
         github.actor == 'dependabot[bot]' &&
         (
@@ -88,8 +88,9 @@ jobs:
         )
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
-        target: minor
         merge-method: squash
+        target: patch
+        approve-only: false
 
     - name: 🤖 Auto-merge labeled PRs (Manual checks)
       if: contains(github.event.pull_request.labels.*.name, 'auto-merge') && github.actor != 'dependabot[bot]'
