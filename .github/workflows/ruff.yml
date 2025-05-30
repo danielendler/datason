@@ -1,0 +1,70 @@
+name: Code Quality & Security
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  quality-and-security:
+    runs-on: ubuntu-latest
+    name: Code Quality & Security Checks
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install tools
+      run: |
+        pip install ruff bandit[toml]
+
+    - name: Run Ruff linter
+      run: ruff check serialpy/ tests/
+
+    - name: Run Ruff formatter check
+      run: ruff format --check serialpy/ tests/
+
+    - name: Run Bandit security scan
+      run: bandit -r serialpy/ -f json -o bandit-report.json || true
+
+    - name: Generate Quality & Security Report
+      if: always()
+      run: |
+        echo "## Code Quality & Security Report" >> $GITHUB_STEP_SUMMARY
+
+        echo "### 🔍 Ruff Linting" >> $GITHUB_STEP_SUMMARY
+        ruff check serialpy/ tests/ --output-format=github >> $GITHUB_STEP_SUMMARY || echo "❌ Linting issues found" >> $GITHUB_STEP_SUMMARY
+
+        echo "### 🎨 Code Formatting" >> $GITHUB_STEP_SUMMARY
+        ruff format --check --diff serialpy/ tests/ >> $GITHUB_STEP_SUMMARY || echo "❌ Formatting issues found" >> $GITHUB_STEP_SUMMARY
+
+        echo "### 🛡️ Security Scan Results" >> $GITHUB_STEP_SUMMARY
+        if [ -f bandit-report.json ]; then
+          python -c "
+          import json
+          try:
+              with open('bandit-report.json') as f:
+                  report = json.load(f)
+              metrics = report['metrics']['_totals']
+              print(f'**Scanned**: {metrics[\"loc\"]} lines of code')
+              print(f'**High Severity**: {metrics[\"SEVERITY.HIGH\"]}')
+              print(f'**Medium Severity**: {metrics[\"SEVERITY.MEDIUM\"]}')
+              print(f'**Low Severity**: {metrics[\"SEVERITY.LOW\"]}')
+              if metrics['SEVERITY.HIGH'] == 0 and metrics['SEVERITY.MEDIUM'] == 0:
+                  print('✅ **Security Status**: PASSED')
+              else:
+                  print('⚠️ **Security Status**: ISSUES FOUND')
+                  for result in report.get('results', []):
+                      print(f'- {result[\"test_name\"]}: {result[\"issue_text\"]}')
+          except:
+              print('❌ Security scan failed to parse')
+          " >> $GITHUB_STEP_SUMMARY
+        else
+          echo "❌ Security scan report not found" >> $GITHUB_STEP_SUMMARY
+        fi
