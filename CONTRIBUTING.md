@@ -271,7 +271,7 @@ pytest tests/test_your_new_feature.py --cov=serialpy --cov-report=term-missing
 - [ ] Documentation updated if needed
 
 ### CI/CD Pipeline
-SerialPy uses a modern multi-pipeline CI/CD architecture. See our **[CI/CD Pipeline Guide](docs/CI_PIPELINE_GUIDE.md)** for complete details on:
+SerialPy uses a modern multi-pipeline CI/CD architecture. See our **[CI/CD Pipeline Guide](CI_PIPELINE_GUIDE.md)** for complete details on:
 - 🔍 **Quality Pipeline** - Ruff linting, formatting, security scanning (~30s)
 - 🧪 **Main CI** - Testing, coverage, package building (~2-3min)
 - 📚 **Docs Pipeline** - Documentation generation and deployment
@@ -346,7 +346,7 @@ Contributors are recognized in:
 
 ## 📜 Code of Conduct
 
-We follow the [Contributor Covenant Code of Conduct](CODE_OF_CONDUCT.md). Please be respectful and inclusive in all interactions.
+We follow the Contributor Covenant Code of Conduct. Please be respectful and inclusive in all interactions.
 
 ---
 
