@@ -84,28 +84,22 @@ __author__ = "SerialPy Contributors"
 __license__ = "MIT"
 
 __all__ = [
-    # DateTime utilities
+    # Alphabetically sorted for RUF022 compliance
     "convert_pandas_timestamps",
-    # Data utilities
     "convert_string_method_votes",
-    # Core functionality
     "deserialize",
-    # Specialized deserializers
     "deserialize_to_pandas",
     "ensure_dates",
     "ensure_timestamp",
     "parse_datetime_string",
     "parse_uuid_string",
     "safe_deserialize",
-    # Converters
     "safe_float",
     "safe_int",
+    "SecurityError",
     "serialize",
     "serialize_datetimes",
-    # Specialized serializers
     "serialize_detection_details",
-    # Security
-    "SecurityError",
 ]
 
 # Add ML serializers to __all__ if available
