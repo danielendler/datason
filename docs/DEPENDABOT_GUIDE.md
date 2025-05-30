@@ -285,3 +285,36 @@ pre-commit run --all-files  # Fix formatting
 ---
 
 > 💡 **Tip**: Enable GitHub notifications for Dependabot PRs to stay informed about important security updates and dependency changes.
+
+## ⚙️ **Configuration Overview**
+
+SerialPy uses a **unified Dependabot strategy** with smart update rules:
+
+### **📦 Python Dependencies**
+- **Schedule**: Weekly updates every Monday
+- **Target**: `main` branch (for faster integration)
+- **Strategy**: Unified configuration for all Python packages
+- **Conservative approach** for ML/data science libraries
+- **Aggressive updates** for development tools
+
+### **🔄 GitHub Actions**
+- **Schedule**: Weekly updates every Tuesday  
+- **Target**: `main` branch
+- **Updates**: All workflow actions and runners
+
+### **🎯 Smart Update Strategy**
+
+#### **Conservative Updates (Major Versions Blocked)**
+```yaml
+# ML Libraries - Careful version management
+- torch, tensorflow, jax, scikit-learn
+- pandas, numpy  # Core data science
+```
+
+#### **Aggressive Updates (All Versions)**
+```yaml
+# Development tools get latest versions
+- pytest, ruff, mypy, bandit
+- mkdocs, mkdocstrings  # Documentation
+- pre-commit hooks
+```

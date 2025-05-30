@@ -4,30 +4,28 @@
 version: 2
 updates:
   # ============================================================================
-  # Python Dependencies (pyproject.toml)
+  # Python Dependencies (pyproject.toml) - Unified Configuration
   # ============================================================================
 
-  # Core and Optional Dependencies (Conservative Updates)
+  # All Python Dependencies (Smart Update Strategy)
   - package-ecosystem: "pip"
     directory: "/"
     schedule:
-      interval: "monthly"
+      interval: "weekly"
       day: "monday"
       time: "09:00"
       timezone: "Etc/UTC"
-    target-branch: "develop"
-    open-pull-requests-limit: 3
+    target-branch: "main"  # Changed to main branch
+    open-pull-requests-limit: 8
     reviewers:
-      - "danielmeierendler"
+      - "danielendler"
     assignees:
-      - "danielmeierendler"
+      - "danielendler"
     commit-message:
       prefix: "deps"
       prefix-development: "dev-deps"
       include: "scope"
-    # Only update these core and optional dependencies
-    allow:
-      - dependency-type: "production"
+    # Conservative approach for ML libraries, aggressive for dev tools
     ignore:
       # Pin ML libraries that need careful version management
       - dependency-name: "torch"
@@ -36,33 +34,15 @@ updates:
         update-types: ["version-update:semver-major"]
       - dependency-name: "jax"
         update-types: ["version-update:semver-major"]
+      - dependency-name: "scikit-learn"
+        update-types: ["version-update:semver-major"]
+      # Be conservative with core data science libraries
+      - dependency-name: "pandas"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "numpy"
+        update-types: ["version-update:semver-major"]
     labels:
       - "dependencies"
-      - "automated"
-
-  # Development Dependencies (Aggressive Updates)
-  - package-ecosystem: "pip"
-    directory: "/"
-    schedule:
-      interval: "weekly"
-      day: "monday"
-      time: "10:00"
-      timezone: "Etc/UTC"
-    target-branch: "develop"
-    open-pull-requests-limit: 5
-    reviewers:
-      - "danielmeierendler"
-    assignees:
-      - "danielmeierendler"
-    commit-message:
-      prefix: "dev-deps"
-      include: "scope"
-    # Only update development dependencies
-    allow:
-      - dependency-type: "development"
-    labels:
-      - "dependencies"
-      - "development"
       - "automated"
 
   # ============================================================================
@@ -75,44 +55,16 @@ updates:
       day: "tuesday"
       time: "09:00"
       timezone: "Etc/UTC"
-    target-branch: "develop"
+    target-branch: "main"
     open-pull-requests-limit: 3
     reviewers:
-      - "danielmeierendler"
+      - "danielendler"
     assignees:
-      - "danielmeierendler"
+      - "danielendler"
     commit-message:
       prefix: "ci"
       include: "scope"
     labels:
       - "ci/cd"
       - "github-actions"
-      - "automated"
-
-  # ============================================================================
-  # Documentation Dependencies (MkDocs, etc.)
-  # ============================================================================
-  - package-ecosystem: "pip"
-    directory: "/"
-    schedule:
-      interval: "monthly"
-      day: "tuesday"
-      time: "09:00"
-      timezone: "Etc/UTC"
-    target-branch: "develop"
-    open-pull-requests-limit: 2
-    reviewers:
-      - "danielmeierendler"
-    assignees:
-      - "danielmeierendler"
-    commit-message:
-      prefix: "docs"
-      include: "scope"
-    # Only documentation-related dependencies
-    allow:
-      - dependency-name: "mkdocs*"
-      - dependency-name: "mkdocstrings*"
-    labels:
-      - "documentation"
-      - "dependencies"
       - "automated"
