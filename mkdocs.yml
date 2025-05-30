@@ -132,6 +132,7 @@ nav:
     - Contributing: CONTRIBUTING.md
     - CI/CD Pipeline: CI_PIPELINE_GUIDE.md
     - Dependabot Guide: DEPENDABOT_GUIDE.md
+    - Release Management: RELEASE_MANAGEMENT.md
     - Security: SECURITY.md
     - Building & Publishing: BUILD_PUBLISH.md
     - Changelog: CHANGELOG.md
