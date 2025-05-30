@@ -259,7 +259,8 @@ def _serialize_object(obj: Any, _depth: int, _seen: Set[int]) -> Any:
                 # Continue to fallback rather than using bare pass
     except Exception:
         # Handle case where even hasattr() fails (e.g., in our test)
-        pass
+        # This is intentional - we want to catch all exceptions here as a final fallback
+        pass  # nosec: B110
 
     # Fallback: try to convert to string with length limit
     try:

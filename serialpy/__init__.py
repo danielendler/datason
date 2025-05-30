@@ -84,6 +84,7 @@ __author__ = "SerialPy Contributors"
 __license__ = "MIT"
 
 __all__ = [
+    "SecurityError",
     # Alphabetically sorted for RUF022 compliance
     "convert_pandas_timestamps",
     "convert_string_method_votes",
@@ -96,7 +97,6 @@ __all__ = [
     "safe_deserialize",
     "safe_float",
     "safe_int",
-    "SecurityError",
     "serialize",
     "serialize_datetimes",
     "serialize_detection_details",

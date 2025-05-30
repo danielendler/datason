@@ -3,7 +3,7 @@ name: 🧪 CI (Simplified)
 on:
   push:
     branches: [ main, develop ]
-    paths-ignore: 
+    paths-ignore:
       - 'docs/**'
       - '*.md'
       - 'mkdocs.yml'
@@ -12,7 +12,7 @@ on:
     branches: [ main ]
     paths-ignore:
       - 'docs/**'
-      - '*.md' 
+      - '*.md'
       - 'mkdocs.yml'
       - '.readthedocs.yaml'
 
@@ -20,7 +20,7 @@ jobs:
   # Single Python version testing for now
   test:
     runs-on: ubuntu-latest
-    
+
     steps:
     - name: 📥 Checkout code
       uses: actions/checkout@v4
@@ -93,4 +93,4 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: dist
-        path: dist/ 
+        path: dist/
