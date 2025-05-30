@@ -20,6 +20,15 @@ jobs:
       with:
         python-version: '3.11'
 
+    - name: 💾 Cache pip dependencies (quality)
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-quality-pip-${{ hashFiles('**/pyproject.toml') }}
+        restore-keys: |
+          ${{ runner.os }}-quality-pip-
+          ${{ runner.os }}-pip-
+
     - name: Install tools
       run: |
         pip install ruff bandit[toml]
