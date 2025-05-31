@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 import unittest
 from unittest.mock import Mock, patch
 
-from serialpy.datetime_utils import (
+from datason.datetime_utils import (
     convert_pandas_timestamps,
     ensure_dates,
     ensure_timestamp,

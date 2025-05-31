@@ -12,26 +12,26 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from serialpy.converters import safe_float, safe_int
-from serialpy.core import (
+from datason.converters import safe_float, safe_int
+from datason.core import (
     _is_already_serialized_dict,
     _is_json_serializable_basic_type,
     serialize,
 )
-from serialpy.data_utils import convert_string_method_votes
-from serialpy.datetime_utils import (
+from datason.data_utils import convert_string_method_votes
+from datason.datetime_utils import (
     convert_pandas_timestamps,
     ensure_dates,
     ensure_timestamp,
     serialize_datetimes,
 )
-from serialpy.deserializers import (
+from datason.deserializers import (
     deserialize,
     deserialize_to_pandas,
     parse_datetime_string,
     parse_uuid_string,
 )
-from serialpy.serializers import serialize_detection_details
+from datason.serializers import serialize_detection_details
 
 
 class TestCoreEdgeCases:
@@ -77,7 +77,7 @@ class TestCoreEdgeCases:
 
     def test_tensorflow_check_without_tf(self) -> None:
         """Test TensorFlow detection when TF not available."""
-        from serialpy.ml_serializers import detect_and_serialize_ml_object
+        from datason.ml_serializers import detect_and_serialize_ml_object
 
         # Create mock TF-like object without actual TF
         mock_tf_obj = Mock()
@@ -242,7 +242,7 @@ class TestMLSerializersSpecialCases:
 
     def test_ml_serializer_imports_coverage(self) -> None:
         """Test coverage of ML serializer import paths."""
-        from serialpy.ml_serializers import (
+        from datason.ml_serializers import (
             serialize_huggingface_tokenizer,
             serialize_pil_image,
             serialize_pytorch_tensor,
@@ -275,7 +275,7 @@ class TestMLSerializersSpecialCases:
 
     def test_ml_error_paths_coverage(self) -> None:
         """Test ML serializer error handling paths."""
-        from serialpy.ml_serializers import (
+        from datason.ml_serializers import (
             serialize_sklearn_model,
         )
 
@@ -290,7 +290,7 @@ class TestMLSerializersSpecialCases:
 
     def test_sklearn_parameter_filtering(self) -> None:
         """Test sklearn parameter filtering in serialization."""
-        from serialpy.ml_serializers import serialize_sklearn_model
+        from datason.ml_serializers import serialize_sklearn_model
 
         # Create mock model with various parameter types
         mock_model = Mock()

@@ -13,7 +13,7 @@ import uuid
 
 import pytest
 
-import serialpy as sp
+import datason as sp
 
 
 class TestPerformanceBenchmarks:

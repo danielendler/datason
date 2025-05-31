@@ -62,7 +62,7 @@ jobs:
 
         # Verify package can be installed
         python -m pip install dist/*.whl
-        python -c "import serialpy; print(f'✅ Package import successful: {serialpy.__version__ if hasattr(serialpy, \"__version__\") else \"unknown\"}')"
+        python -c "import datason; print(f'✅ Package import successful: {datason.__version__ if hasattr(datason, \"__version__\") else \"unknown\"}')"
 
     - name: 🔍 Run Package Checks
       run: |
@@ -81,7 +81,6 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     if: github.event.inputs.test_pypi == 'true' || github.event_name == 'workflow_dispatch'
-    environment: testpypi
     permissions:
       id-token: write  # For trusted publishing
 
@@ -101,15 +100,14 @@ jobs:
     - name: ✅ Verify TestPyPI Upload
       run: |
         echo "✅ Package published to TestPyPI!"
-        echo "🔗 View at: https://test.pypi.org/project/serialpy/"
-        echo "📦 Test install: pip install --index-url https://test.pypi.org/simple/ serialpy"
+        echo "🔗 View at: https://test.pypi.org/project/datason/"
+        echo "📦 Test install: pip install --index-url https://test.pypi.org/simple/ datason"
 
   pypi:
     name: 🚀 Publish to PyPI
     needs: build
     runs-on: ubuntu-latest
     if: github.event_name == 'release' && github.event.action == 'published'
-    environment: pypi
     permissions:
       id-token: write  # For trusted publishing
 
@@ -127,25 +125,25 @@ jobs:
     - name: ✅ Verify PyPI Upload
       run: |
         echo "🎉 Package published to PyPI!"
-        echo "🔗 View at: https://pypi.org/project/serialpy/"
-        echo "📦 Install: pip install serialpy"
+        echo "🔗 View at: https://pypi.org/project/datason/"
+        echo "📦 Install: pip install datason"
 
     - name: 📢 Create Release Summary
       run: |
         cat >> $GITHUB_STEP_SUMMARY << 'EOF'
         ## 🎉 Release Published Successfully!
 
-        **Package**: `serialpy`
+        **Package**: `datason`
         **Version**: `${{ github.event.release.tag_name }}`
-        **PyPI**: https://pypi.org/project/serialpy/
+        **PyPI**: https://pypi.org/project/datason/
 
         ### 📦 Installation
         ```bash
-        pip install serialpy
+        pip install datason
         ```
 
         ### 🔗 Links
-        - 📖 [Documentation](https://serialpy.readthedocs.io)
+        - 📖 [Documentation](https://datason.readthedocs.io)
         - 🐛 [Report Issues](https://github.com/${{ github.repository }}/issues)
         - 💬 [Discussions](https://github.com/${{ github.repository }}/discussions)
         EOF

@@ -11,8 +11,8 @@ import fractions
 from pathlib import Path
 from typing import Any, Dict
 
-import serialpy as sp
-from serialpy.core import serialize
+import datason as sp
+from datason.core import serialize
 
 
 class TestEdgeCasesForCoverage:
@@ -255,7 +255,7 @@ class TestHelperFunctions:
 
     def test_is_already_serialized_dict_edge_cases(self) -> None:
         """Test _is_already_serialized_dict with edge cases."""
-        from serialpy.core import _is_already_serialized_dict
+        from datason.core import _is_already_serialized_dict
 
         # Valid serialized dict
         assert _is_already_serialized_dict({"a": 1, "b": "hello", "c": True})
@@ -271,7 +271,7 @@ class TestHelperFunctions:
 
     def test_is_already_serialized_list_edge_cases(self) -> None:
         """Test _is_already_serialized_list with edge cases."""
-        from serialpy.core import _is_already_serialized_list
+        from datason.core import _is_already_serialized_list
 
         # Valid serialized list
         assert _is_already_serialized_list([1, "hello", True, None])

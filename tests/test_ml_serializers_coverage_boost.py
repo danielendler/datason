@@ -9,7 +9,7 @@ import unittest
 from unittest.mock import Mock, patch
 import warnings
 
-from serialpy.ml_serializers import (
+from datason.ml_serializers import (
     detect_and_serialize_ml_object,
     serialize_huggingface_tokenizer,
     serialize_jax_array,

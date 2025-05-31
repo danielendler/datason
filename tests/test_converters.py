@@ -2,8 +2,8 @@
 
 from datetime import datetime
 
-from serialpy.converters import safe_float, safe_int
-from serialpy.datetime_utils import convert_pandas_timestamps_recursive
+from datason.converters import safe_float, safe_int
+from datason.datetime_utils import convert_pandas_timestamps_recursive
 
 
 class TestSafeFloat:

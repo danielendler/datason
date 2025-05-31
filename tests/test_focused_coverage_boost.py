@@ -6,7 +6,7 @@ import sys
 import unittest
 from unittest.mock import Mock, patch
 
-from serialpy import serialize
+from datason import serialize
 
 
 class TestUncoveredLines(unittest.TestCase):
@@ -89,7 +89,7 @@ class TestMLSerializerCoverage(unittest.TestCase):
 
     def test_detect_unsupported_ml_object(self):
         """Test ML detection with unsupported object type."""
-        from serialpy.ml_serializers import detect_and_serialize_ml_object
+        from datason.ml_serializers import detect_and_serialize_ml_object
 
         class CustomObject:
             pass
@@ -102,7 +102,7 @@ class TestMLSerializerCoverage(unittest.TestCase):
 
     def test_import_fallback_paths(self):
         """Test import fallback when libraries not available."""
-        from serialpy.ml_serializers import (
+        from datason.ml_serializers import (
             serialize_pytorch_tensor,
             serialize_sklearn_model,
             serialize_tensorflow_tensor,
@@ -132,7 +132,7 @@ class TestDatetimeUtilsCoverage(unittest.TestCase):
 
     def test_ensure_timestamp_without_pandas(self):
         """Test ensure_timestamp when pandas not available."""
-        from serialpy.datetime_utils import ensure_timestamp
+        from datason.datetime_utils import ensure_timestamp
 
         # Mock pandas to be None
         with patch("serialpy.datetime_utils.pd", None):
@@ -143,7 +143,7 @@ class TestDatetimeUtilsCoverage(unittest.TestCase):
 
     def test_ensure_dates_without_pandas(self):
         """Test ensure_dates when pandas not available."""
-        from serialpy.datetime_utils import ensure_dates
+        from datason.datetime_utils import ensure_dates
 
         # Mock pandas to be None
         with patch("serialpy.datetime_utils.pd", None):
@@ -154,7 +154,7 @@ class TestDatetimeUtilsCoverage(unittest.TestCase):
 
     def test_convert_pandas_timestamps_without_pandas(self):
         """Test convert_pandas_timestamps when pandas not available."""
-        from serialpy.datetime_utils import convert_pandas_timestamps
+        from datason.datetime_utils import convert_pandas_timestamps
 
         # Mock pandas to be None
         with patch("serialpy.datetime_utils.pd", None):
@@ -170,7 +170,7 @@ class TestSimpleErrorPaths(unittest.TestCase):
 
     def test_sklearn_model_error_handling(self):
         """Test sklearn model serialization error handling."""
-        from serialpy.ml_serializers import serialize_sklearn_model
+        from datason.ml_serializers import serialize_sklearn_model
 
         # Create mock model that raises exception
         mock_model = Mock()
@@ -188,7 +188,7 @@ class TestSimpleErrorPaths(unittest.TestCase):
 
     def test_scipy_sparse_error_handling(self):
         """Test scipy sparse matrix error handling."""
-        from serialpy.ml_serializers import serialize_scipy_sparse
+        from datason.ml_serializers import serialize_scipy_sparse
 
         # Create mock matrix that raises exception
         mock_matrix = Mock()
@@ -208,7 +208,7 @@ class TestConvertersModule(unittest.TestCase):
         """Test basic converter functionality."""
         # Import and test basic converters
         try:
-            from serialpy.converters import create_converter_from_numpy_dtype
+            from datason.converters import create_converter_from_numpy_dtype
 
             # This should at least import without error
             self.assertTrue(callable(create_converter_from_numpy_dtype))
@@ -223,7 +223,7 @@ class TestSerializersModule(unittest.TestCase):
     def test_serializers_fallback_import(self):
         """Test serializers module import fallback."""
         try:
-            from serialpy import serializers
+            from datason import serializers
 
             # Basic import test
             self.assertTrue(hasattr(serializers, "__file__"))

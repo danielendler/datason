@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "serialpy"
+name = "datason"
 version = "0.1.3"
 description = "A comprehensive Python package for intelligent serialization that handles complex data types with ease."
 readme = "README.md"
@@ -11,10 +11,10 @@ requires-python = ">=3.8"
 license = "MIT"
 keywords = ["serialization", "json", "pandas", "datetime", "numpy", "ml", "ai", "data-science"]
 authors = [
-    { name = "SerialPy Contributors" },
+    { name = "Datason Contributors" },
 ]
 maintainers = [
-    { name = "SerialPy Maintainers", email = "maintainers@serialpy.dev" },
+    { name = "Datason Maintainers", email = "maintainers@datason.dev" },
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -118,7 +118,7 @@ docs = [
 
 [project.urls]
 Homepage = "https://github.com/danielendler/SerialPy"
-Documentation = "https://serialpy.readthedocs.io"
+Documentation = "https://datason.readthedocs.io"
 Repository = "https://github.com/danielendler/SerialPy"
 "Bug Tracker" = "https://github.com/danielendler/SerialPy/issues"
 Changelog = "https://github.com/danielendler/SerialPy/blob/main/CHANGELOG.md"
@@ -126,7 +126,7 @@ Discussions = "https://github.com/danielendler/SerialPy/discussions"
 Funding = "https://github.com/sponsors/danielendler"
 
 [tool.hatch.build.targets.wheel]
-packages = ["serialpy"]
+packages = ["datason"]
 
 [tool.hatch.build.targets.sdist]
 exclude = [
@@ -282,10 +282,10 @@ ignore = [
     "PLR0915", # too many statements OK in benchmarks
     "RUF001",  # ambiguous characters (like ×) OK in benchmarks
 ]
-"serialpy/__init__.py" = [
+"datason/__init__.py" = [
     "F401",    # Unused imports OK - they're conditionally exported to __all__
 ]
-"serialpy/core.py" = [
+"datason/core.py" = [
     "PLR0915", # too many statements OK in main serialize function - it's complex but well-structured
 ]
 
@@ -293,7 +293,7 @@ ignore = [
 convention = "google"
 
 [tool.ruff.lint.isort]
-known-first-party = ["serialpy"]
+known-first-party = ["datason"]
 force-sort-within-sections = true
 
 # ============================================================================
@@ -303,7 +303,7 @@ force-sort-within-sections = true
 minversion = "7.0"
 addopts = [
     "-v",
-    "--cov=serialpy",
+    "--cov=datason",
     "--cov-report=term-missing",
     "--cov-report=html",
     "--cov-report=xml",
@@ -367,7 +367,7 @@ ignore_missing_imports = true
 # COVERAGE CONFIGURATION
 # ============================================================================
 [tool.coverage.run]
-source = ["serialpy"]
+source = ["datason"]
 omit = [
     "*/tests/*",
     "*/test_*.py",

@@ -11,8 +11,8 @@ import numpy as np
 import pandas as pd
 import pytest
 
-import serialpy as sp
-from serialpy.core import serialize
+import datason as sp
+from datason.core import serialize
 
 
 class TestNumpyIntegration:
@@ -470,7 +470,7 @@ class TestAdditionalCoverage:
 
     def test_core_optimization_edge_cases(self) -> None:
         """Test optimization helper functions with edge cases."""
-        from serialpy.core import (
+        from datason.core import (
             _is_already_serialized_dict,
             _is_already_serialized_list,
         )

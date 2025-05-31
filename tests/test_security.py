@@ -8,8 +8,8 @@ import warnings
 
 import pytest
 
-from serialpy import serialize
-from serialpy.core import (
+from datason import serialize
+from datason.core import (
     MAX_OBJECT_SIZE,
     MAX_SERIALIZATION_DEPTH,
     MAX_STRING_LENGTH,
@@ -309,7 +309,7 @@ class TestSecurityConstants:
 
     def test_security_constants_exist(self):
         """Test that security constants are defined."""
-        from serialpy.core import (
+        from datason.core import (
             MAX_OBJECT_SIZE,
             MAX_SERIALIZATION_DEPTH,
             MAX_STRING_LENGTH,
@@ -326,7 +326,7 @@ class TestSecurityConstants:
 
     def test_security_error_class(self):
         """Test that SecurityError class is available."""
-        from serialpy.core import SecurityError
+        from datason.core import SecurityError
 
         # Should be a proper exception class
         assert issubclass(SecurityError, Exception)

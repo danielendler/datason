@@ -11,7 +11,7 @@ import warnings
 import numpy as np
 import pytest
 
-from serialpy.ml_serializers import (
+from datason.ml_serializers import (
     detect_and_serialize_ml_object,
     get_ml_library_info,
     serialize_huggingface_tokenizer,

@@ -46,7 +46,7 @@ jobs:
     - name: 🧪 Run all tests with coverage
       run: |
         pytest tests/ -v \
-          --cov=serialpy \
+          --cov=datason \
           --cov-report=xml \
           --cov-report=term-missing \
           --cov-report=html \

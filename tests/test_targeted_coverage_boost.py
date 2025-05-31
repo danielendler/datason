@@ -9,7 +9,7 @@ import sys
 import unittest
 from unittest.mock import patch
 
-from serialpy.core import serialize
+from datason.core import serialize
 
 
 class TestSpecificUncoveredLines(unittest.TestCase):
@@ -39,7 +39,7 @@ class TestSpecificUncoveredLines(unittest.TestCase):
                 del sys.modules["serialpy.core"]
 
             # Import should work despite ML serializer failure
-            from serialpy.core import serialize as test_serialize
+            from datason.core import serialize as test_serialize
 
             # Test that basic serialization still works
             result = test_serialize({"test": "value"})
@@ -52,7 +52,7 @@ class TestSpecificUncoveredLines(unittest.TestCase):
 
     def test_core_lines_19_20_ml_function_none(self):
         """Test core.py lines 19-20: When detect_and_serialize_ml_object is None."""
-        from serialpy.core import serialize
+        from datason.core import serialize
 
         # Patch the function to be None (import fallback scenario)
         with patch("serialpy.core.detect_and_serialize_ml_object", None):
@@ -136,7 +136,7 @@ class TestDateTimeUtilsUncoveredLines(unittest.TestCase):
 
     def test_datetime_lines_14_15_pandas_import_fail(self):
         """Test datetime_utils.py lines 14-15: Pandas import failure."""
-        from serialpy.datetime_utils import ensure_timestamp
+        from datason.datetime_utils import ensure_timestamp
 
         with patch("serialpy.datetime_utils.pd", None):
             with self.assertRaises(ImportError) as context:
@@ -153,7 +153,7 @@ class TestDateTimeUtilsUncoveredLines(unittest.TestCase):
             # Create DataFrame with date column
             df = pd.DataFrame({"date": ["2023-01-01", "2023-01-02"], "value": [1, 2]})
 
-            from serialpy.datetime_utils import ensure_dates
+            from datason.datetime_utils import ensure_dates
 
             result = ensure_dates(df)
 
@@ -165,7 +165,7 @@ class TestDateTimeUtilsUncoveredLines(unittest.TestCase):
 
     def test_datetime_lines_183_189_190_type_validation(self):
         """Test datetime_utils.py lines 183, 189-190: Type validation."""
-        from serialpy.datetime_utils import ensure_dates
+        from datason.datetime_utils import ensure_dates
 
         # Test different invalid input types
         with self.assertRaises(TypeError):
@@ -179,7 +179,7 @@ class TestDateTimeUtilsUncoveredLines(unittest.TestCase):
 
     def test_datetime_lines_194_196_pandas_none_fallback(self):
         """Test datetime_utils.py lines 194-196: pandas None fallback."""
-        from serialpy.datetime_utils import convert_pandas_timestamps
+        from datason.datetime_utils import convert_pandas_timestamps
 
         with patch("serialpy.datetime_utils.pd", None):
             # Should return unchanged when pandas is None
@@ -193,7 +193,7 @@ class TestMLSerializersUncoveredLines(unittest.TestCase):
 
     def test_ml_lines_14_49_import_fallbacks(self):
         """Test ml_serializers.py lines 14-49: Import fallback paths."""
-        from serialpy.ml_serializers import (
+        from datason.ml_serializers import (
             serialize_huggingface_tokenizer,
             serialize_jax_array,
             serialize_pil_image,

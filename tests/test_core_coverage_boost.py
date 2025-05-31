@@ -9,7 +9,7 @@ import sys
 import unittest
 from unittest.mock import patch
 
-from serialpy.core import serialize
+from datason.core import serialize
 
 
 class TestCoreImportFallbacks(unittest.TestCase):
@@ -40,7 +40,7 @@ class TestCoreImportFallbacks(unittest.TestCase):
                 del sys.modules["serialpy.core"]
 
             # Import should succeed even without ml_serializers
-            from serialpy.core import serialize as core_serialize
+            from datason.core import serialize as core_serialize
 
             # Test serialization still works
             result = core_serialize({"test": "value"})
@@ -228,7 +228,7 @@ class TestHelperFunctionEdgeCases(unittest.TestCase):
 
     def test_helper_functions_with_complex_objects(self):
         """Test helper functions with complex object scenarios."""
-        from serialpy.core import (
+        from datason.core import (
             _is_already_serialized_dict,
             _is_already_serialized_list,
         )
