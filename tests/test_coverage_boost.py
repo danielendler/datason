@@ -25,6 +25,13 @@ try:
 except ImportError:
     HAS_PANDAS = False
 
+try:
+    from sklearn.base import BaseEstimator
+
+    HAS_SKLEARN = True
+except ImportError:
+    HAS_SKLEARN = False
+
 from datason.converters import safe_float, safe_int
 from datason.core import (
     _is_already_serialized_dict,
@@ -209,6 +216,7 @@ class TestDataUtilsEdgeCases:
 class TestSerializersEdgeCases:
     """Test serializers edge cases."""
 
+    @pytest.mark.skipif(not HAS_NUMPY, reason="numpy not available")
     def test_serialize_detection_details_edge_cases(self) -> None:
         """Test serialize_detection_details with edge cases."""
         # Test with None input
@@ -288,6 +296,7 @@ class TestMLSerializersSpecialCases:
                 == "transformers.tokenizer"
             )
 
+    @pytest.mark.skipif(not HAS_SKLEARN, reason="sklearn not available")
     def test_ml_error_paths_coverage(self) -> None:
         """Test ML serializer error handling paths."""
         from datason.ml_serializers import (
@@ -303,6 +312,7 @@ class TestMLSerializersSpecialCases:
             result = serialize_sklearn_model(mock_model)
             assert "_error" in result
 
+    @pytest.mark.skipif(not HAS_SKLEARN, reason="sklearn not available")
     def test_sklearn_parameter_filtering(self) -> None:
         """Test sklearn parameter filtering in serialization."""
         from datason.ml_serializers import serialize_sklearn_model
