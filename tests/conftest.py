@@ -81,6 +81,9 @@ def pytest_configure(config):
     config.addinivalue_line(
         "markers", "fallback: Tests for fallback behavior when dependencies are missing"
     )
+    config.addinivalue_line(
+        "markers", "intensive: Memory/CPU intensive tests (skipped in CI environments)"
+    )
 
 
 # Convenience skip decorators
