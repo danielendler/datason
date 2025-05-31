@@ -1,8 +1,8 @@
-# Release Management Guide for Datason
+# Release Management Guide for datason
 
 ## 🏷️ Overview
 
-Datason uses a comprehensive release management system with automated workflows, semantic versioning, and strict quality controls. This guide covers the entire process from development to release.
+datason uses a comprehensive release management system with automated workflows, semantic versioning, and strict quality controls. This guide covers the entire process from development to release.
 
 ## 📋 Table of Contents
 
@@ -44,7 +44,7 @@ Restrictions:
 ## 📦 Version Management
 
 ### **Semantic Versioning**
-Datason follows [Semantic Versioning 2.0.0](https://semver.org/):
+datason follows [Semantic Versioning 2.0.0](https://semver.org/):
 
 ```
 v{MAJOR}.{MINOR}.{PATCH}[-{PRERELEASE}]
@@ -89,7 +89,7 @@ Examples:
    ```bash
    # Run locally before creating PR
    pre-commit run --all-files
-   pytest --cov=serialpy
+   pytest --cov=datason
    mkdocs build --strict
    ```
 
@@ -217,12 +217,12 @@ Our automated system generates release notes like:
 
 ## 📦 Installation
 
-pip install serialpy==v0.1.2
+pip install datason==v0.1.2
 
 ## 🔗 Links
-- 📚 Documentation: https://serialpy.readthedocs.io
-- 🐛 Issues: https://github.com/danielendler/Datason/issues
-- 💬 Discussions: https://github.com/danielendler/Datason/discussions
+- 📚 Documentation: https://datason.readthedocs.io
+- 🐛 Issues: https://github.com/danielendler/datason/issues
+- 💬 Discussions: https://github.com/danielendler/datason/discussions
 ```
 
 ## 🤖 Automation Features
@@ -380,4 +380,4 @@ gh release edit v0.1.2 --prerelease
 
 ---
 
-> 💡 **Questions?** Create a [discussion](https://github.com/danielendler/Datason/discussions) or check existing [issues](https://github.com/danielendler/Datason/issues).
+> 💡 **Questions?** Create a [discussion](https://github.com/danielendler/datason/discussions) or check existing [issues](https://github.com/danielendler/datason/issues).

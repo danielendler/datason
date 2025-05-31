@@ -11,10 +11,10 @@ requires-python = ">=3.8"
 license = "MIT"
 keywords = ["serialization", "json", "pandas", "datetime", "numpy", "ml", "ai", "data-science"]
 authors = [
-    { name = "Datason Contributors" },
+    { name = "datason Contributors" },
 ]
 maintainers = [
-    { name = "Datason Maintainers", email = "maintainers@datason.dev" },
+    { name = "datason Maintainers", email = "maintainers@datason.dev" },
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -117,12 +117,12 @@ docs = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/danielendler/Datason"
+Homepage = "https://github.com/danielendler/datason"
 Documentation = "https://datason.readthedocs.io"
-Repository = "https://github.com/danielendler/Datason"
-"Bug Tracker" = "https://github.com/danielendler/Datason/issues"
-Changelog = "https://github.com/danielendler/Datason/blob/main/CHANGELOG.md"
-Discussions = "https://github.com/danielendler/Datason/discussions"
+Repository = "https://github.com/danielendler/datason"
+"Bug Tracker" = "https://github.com/danielendler/datason/issues"
+Changelog = "https://github.com/danielendler/datason/blob/main/CHANGELOG.md"
+Discussions = "https://github.com/danielendler/datason/discussions"
 Funding = "https://github.com/sponsors/danielendler"
 
 [tool.hatch.build.targets.wheel]

@@ -1,14 +1,14 @@
-# GitHub Pages Setup Guide for Datason
+# GitHub Pages Setup Guide for datason
 
 ## 🚀 Overview
 
-This guide explains how to set up GitHub Pages for Datason documentation and resolve common permission issues with GitHub Actions deployment.
+This guide explains how to set up GitHub Pages for datason documentation and resolve common permission issues with GitHub Actions deployment.
 
 ## 🔧 Repository Setup
 
 ### **Step 1: Enable GitHub Pages**
 
-1. Go to your repository settings: `https://github.com/danielendler/Datason/settings`
+1. Go to your repository settings: `https://github.com/danielendler/datason/settings`
 2. Scroll down to **"Pages"** section
 3. Under **"Source"**, select **"GitHub Actions"** (not the legacy "Deploy from a branch")
 4. Click **"Save"**
@@ -60,8 +60,8 @@ environment:
 
 ### **1. Permission Denied Error**
 ```
-remote: Permission to danielendler/Datason.git denied to github-actions[bot].
-fatal: unable to access 'https://github.com/danielendler/Datason.git/': The requested URL returned error: 403
+remote: Permission to danielendler/datason.git denied to github-actions[bot].
+fatal: unable to access 'https://github.com/danielendler/datason.git/': The requested URL returned error: 403
 ```
 
 **Solution:**
@@ -126,7 +126,7 @@ deploy-github-pages:
 1. **Push to main** with documentation changes
 2. **Build job** validates and creates artifact
 3. **Deploy job** publishes to GitHub Pages
-4. **Site available** at `https://danielendler.github.io/Datason/`
+4. **Site available** at `https://danielendler.github.io/datason/`
 
 ### **Manual Deployment**
 ```bash
@@ -151,7 +151,7 @@ gh run watch
 ### **Verify Pages Configuration**
 ```bash
 # Check Pages settings via API
-gh api repos/danielendler/Datason/pages
+gh api repos/danielendler/datason/pages
 ```
 
 ### **Test Documentation Locally**
@@ -203,8 +203,8 @@ Our workflow uses minimal required permissions:
 - [GitHub Pages Documentation](https://docs.github.com/en/pages)
 - [GitHub Actions for Pages](https://github.com/actions/deploy-pages)
 - [MkDocs Documentation](https://www.mkdocs.org/)
-- [Datason Documentation Source](https://github.com/danielendler/Datason/tree/main/docs)
+- [datason Documentation Source](https://github.com/danielendler/datason/tree/main/docs)
 
 ---
 
-> 💡 **Need Help?** Create an [issue](https://github.com/danielendler/Datason/issues) if you encounter problems with documentation deployment.
+> 💡 **Need Help?** Create an [issue](https://github.com/danielendler/datason/issues) if you encounter problems with documentation deployment.

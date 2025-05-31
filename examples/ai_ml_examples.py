@@ -1,7 +1,19 @@
-"""Datason AI/ML Examples
+#!/usr/bin/env python3
+"""
+🤖 AI/ML Examples for datason
 
-This file contains practical examples of using Datason in AI/ML workflows.
-These examples are designed to be easily discovered and understood by AI assistants.
+This module demonstrates datason's capabilities with real-world AI/ML workflows.
+Perfect for data scientists, ML engineers, and AI researchers who need to
+serialize complex training results, model outputs, and experimental data.
+
+Examples include:
+- Training pipeline results
+- Model comparison data
+- Prediction API responses
+- Time series forecasting
+- Multi-modal AI experiments
+
+Run: python examples/ai_ml_examples.py
 """
 
 from datetime import datetime
@@ -9,7 +21,7 @@ import json
 
 import numpy as np
 
-import serialpy
+import datason
 
 
 # Example 1: Basic ML Model Training Results
@@ -34,7 +46,7 @@ def serialize_training_results():
     }
 
     # Serialize complex training results
-    serialized = serialpy.serialize(training_results)
+    serialized = datason.serialize(training_results)
     print("Training Results JSON:")
     print(json.dumps(serialized, indent=2))
     return serialized
@@ -71,7 +83,7 @@ def serialize_data_pipeline():
         "completed_at": datetime.now(),
     }
 
-    serialized = serialpy.serialize(pipeline_state)
+    serialized = datason.serialize(pipeline_state)
     print("\nData Pipeline State JSON:")
     print(json.dumps(serialized, indent=2))
     return serialized
@@ -125,7 +137,7 @@ def serialize_model_comparison():
         "evaluated_at": datetime.now(),
     }
 
-    serialized = serialpy.serialize(model_comparison)
+    serialized = datason.serialize(model_comparison)
     print("\nModel Comparison JSON:")
     print(json.dumps(serialized, indent=2))
     return serialized
@@ -172,7 +184,7 @@ def serialize_prediction_response():
         "timestamp": datetime.now(),
     }
 
-    serialized = serialpy.serialize(prediction_response)
+    serialized = datason.serialize(prediction_response)
     print("\nPrediction Response JSON:")
     print(json.dumps(serialized, indent=2))
     return serialized
@@ -219,7 +231,7 @@ def serialize_forecasting_results():
         "generated_at": datetime.now(),
     }
 
-    serialized = serialpy.serialize(forecasting_results)
+    serialized = datason.serialize(forecasting_results)
     print("\nForecasting Results JSON:")
     print(json.dumps(serialized, indent=2))
     return serialized
@@ -305,7 +317,7 @@ def serialize_experiment_tracking():
         "created_at": datetime.now(),
     }
 
-    serialized = serialpy.serialize(experiment_data)
+    serialized = datason.serialize(experiment_data)
     print("\nExperiment Tracking JSON:")
     print(json.dumps(serialized, indent=2))
     return serialized
@@ -323,7 +335,7 @@ np.random.correlation_matrix = correlation_matrix
 
 
 if __name__ == "__main__":
-    print("Datason AI/ML Examples")
+    print("datason AI/ML Examples")
     print("=" * 50)
 
     # Run all examples
@@ -336,4 +348,4 @@ if __name__ == "__main__":
 
     print("\n" + "=" * 50)
     print("All examples completed successfully!")
-    print("Datason handled all complex ML objects seamlessly.")
+    print("datason handled all complex ML objects seamlessly.")

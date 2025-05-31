@@ -1,14 +1,14 @@
-# Datason AI Usage Guide
+# datason AI Usage Guide
 
 ## Overview
 
-Datason is a **universal JSON serialization library** for Python that handles complex data structures including ML/AI objects, pandas DataFrames, datetime objects, and more. Perfect for data scientists, ML engineers, and developers working with complex Python objects.
+datason is a **universal JSON serialization library** for Python that handles complex data structures including ML/AI objects, pandas DataFrames, datetime objects, and more. Perfect for data scientists, ML engineers, and developers working with complex Python objects.
 
 ## Key Features for AI/ML Workflows
 
 ### 🤖 Machine Learning Object Serialization
 ```python
-import serialpy
+import datason
 import torch
 import tensorflow as tf
 import numpy as np
@@ -17,17 +17,17 @@ from sklearn.ensemble import RandomForestClassifier
 
 # Serialize PyTorch tensors
 tensor = torch.tensor([[1, 2], [3, 4]], dtype=torch.float32)
-serialized = serialpy.serialize(tensor)
+serialized = datason.serialize(tensor)
 # Output: {"_type": "torch.Tensor", "_shape": [2, 2], "_dtype": "torch.float32", "_data": [[1.0, 2.0], [3.0, 4.0]]}
 
 # Serialize TensorFlow tensors
 tf_tensor = tf.constant([[1, 2], [3, 4]])
-serialized = serialpy.serialize(tf_tensor)
+serialized = datason.serialize(tf_tensor)
 # Output: {"_type": "tf.Tensor", "_shape": [2, 2], "_dtype": "int32", "_data": [[1, 2], [3, 4]]}
 
 # Serialize scikit-learn models
 model = RandomForestClassifier(n_estimators=10, random_state=42)
-serialized = serialpy.serialize(model)
+serialized = datason.serialize(model)
 # Output: {"_type": "sklearn.model", "_class": "sklearn.ensemble._forest.RandomForestClassifier", "_params": {...}}
 ```
 
@@ -43,12 +43,12 @@ df = pd.DataFrame({
     'age': [25, 30],
     'created_at': [datetime.now(), datetime.now()]
 })
-serialized = serialpy.serialize(df)
+serialized = datason.serialize(df)
 # Automatically converts datetime objects to ISO format strings
 
 # Handle NaN and infinity values
 data = {'values': [1, 2, np.nan, np.inf, -np.inf]}
-serialized = serialpy.serialize(data)
+serialized = datason.serialize(data)
 # Output: {'values': [1, 2, null, null, null]}  # Safe handling of special values
 ```
 
@@ -69,7 +69,7 @@ complex_data = {
 }
 
 # Single function call handles everything
-result = serialpy.serialize(complex_data)
+result = datason.serialize(complex_data)
 ```
 
 ## Common AI/ML Use Cases
@@ -83,7 +83,7 @@ experiment_data = {
     'predictions': prediction_tensor,
     'timestamp': datetime.now()
 }
-json_data = serialpy.serialize(experiment_data)
+json_data = datason.serialize(experiment_data)
 # Save to file or database for experiment tracking
 ```
 
@@ -101,7 +101,7 @@ def predict():
         'model_version': '1.0.0',
         'processed_at': datetime.now()
     }
-    return jsonify(serialpy.serialize(response))
+    return jsonify(datason.serialize(response))
 ```
 
 ### 3. Data Pipeline Serialization
@@ -113,7 +113,7 @@ pipeline_state = {
     'training_data_sample': df.head(),
     'validation_metrics': validation_results
 }
-serialized_pipeline = serialpy.serialize(pipeline_state)
+serialized_pipeline = datason.serialize(pipeline_state)
 ```
 
 ## Performance Features
@@ -123,11 +123,11 @@ serialized_pipeline = serialpy.serialize(pipeline_state)
 
 ```python
 # Simple data (JSON-compatible, 1000 users)
-serialpy.serialize(simple_data)    # 0.6ms vs 0.4ms standard JSON
+datason.serialize(simple_data)    # 0.6ms vs 0.4ms standard JSON
 # Overhead: 1.6x (very reasonable for added functionality)
 
 # Complex data (500 sessions with UUIDs/datetimes)  
-serialpy.serialize(complex_data)   # 2.1ms vs 0.7ms pickle
+datason.serialize(complex_data)   # 2.1ms vs 0.7ms pickle
 # 3.2x vs pickle but with JSON output + cross-platform compatibility
 
 # High-throughput scenarios
@@ -143,18 +143,18 @@ serialize + JSON.dumps + JSON.loads + deserialize  # 1.4ms total
 ```python
 # Efficiently handles large DataFrames
 large_df = pd.DataFrame(np.random.randn(5000, 20))
-serialized = serialpy.serialize(large_df)  # ~26ms for 5K rows
+serialized = datason.serialize(large_df)  # ~26ms for 5K rows
 
 # Batch processing of ML objects
 batch_tensors = [torch.randn(100, 10) for _ in range(100)]
-serialized_batch = serialpy.serialize(batch_tensors)
+serialized_batch = datason.serialize(batch_tensors)
 ```
 
 ### Memory Management
 ```python
 # Automatic memory optimization for tensors
 gpu_tensor = torch.randn(1000, 1000).cuda()
-serialized = serialpy.serialize(gpu_tensor)  # Automatically moves to CPU for serialization
+serialized = datason.serialize(gpu_tensor)  # Automatically moves to CPU for serialization
 ```
 
 *Full benchmarks available in `benchmark_real_performance.py`*
@@ -163,12 +163,12 @@ serialized = serialpy.serialize(gpu_tensor)  # Automatically moves to CPU for se
 
 ### 🌐 One Output, Multiple Languages
 
-Datason's JSON output works seamlessly across programming languages:
+datason's JSON output works seamlessly across programming languages:
 
 ```python
 # Python: Generate ML results
-import serialpy
-results = serialpy.serialize({
+import datason
+results = datason.serialize({
     'model_accuracy': 0.94,
     'predictions': numpy_predictions,
     'feature_importance': feature_weights,
@@ -256,7 +256,7 @@ metrics.RecordModelAccuracy(results.ModelAccuracy)
 
 ```mermaid
 graph LR
-    A[Python ML Training] --> B[Datason Serialize]
+    A[Python ML Training] --> B[datason Serialize]
     B --> C[JSON API Response]
     C --> D[JavaScript Dashboard]
     C --> E[Java Storage Service]
@@ -290,17 +290,17 @@ model_config = {
     'model_config': model.config,
     'sample_output': model(**tokenizer("Hello world", return_tensors="pt"))
 }
-serialized = serialpy.serialize(model_config)
+serialized = datason.serialize(model_config)
 
 # JAX/Flax support
 import jax.numpy as jnp
 jax_array = jnp.array([1, 2, 3, 4])
-serialized = serialpy.serialize(jax_array)
+serialized = datason.serialize(jax_array)
 
 # SciPy sparse matrices
 from scipy.sparse import csr_matrix
 sparse_matrix = csr_matrix([[1, 0, 2], [0, 0, 3], [4, 5, 6]])
-serialized = serialpy.serialize(sparse_matrix)
+serialized = datason.serialize(sparse_matrix)
 ```
 
 ### Error Handling and Fallbacks
@@ -312,20 +312,20 @@ class CustomMLModel:
 
 custom_model = CustomMLModel()
 # Falls back to dict serialization or string representation
-serialized = serialpy.serialize(custom_model)
+serialized = datason.serialize(custom_model)
 ```
 
 ## Installation and Setup
 
 ```bash
-pip install serialpy
+pip install datason
 
 # For ML dependencies (optional)
-pip install serialpy[ml]  # Includes torch, tensorflow, jax support
-pip install serialpy[all]  # Includes all optional dependencies
+pip install datason[ml]  # Includes torch, tensorflow, jax support
+pip install datason[all]  # Includes all optional dependencies
 ```
 
-## Why Choose Datason?
+## Why Choose datason?
 
 1. **Zero Configuration**: Works out of the box with any Python object
 2. **ML/AI Native**: Built specifically for data science and machine learning workflows
@@ -336,7 +336,7 @@ pip install serialpy[all]  # Includes all optional dependencies
 
 ## Comparison with Alternatives
 
-| Feature | Datason | json | pickle | joblib |
+| Feature | datason | json | pickle | joblib |
 |---------|-----------|------|--------|--------|
 | ML Objects | ✅ | ❌ | ✅ | ✅ |
 | Cross-language | ✅ | ✅ | ❌ | ❌ |

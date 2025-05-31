@@ -1,4 +1,4 @@
-"""Security tests for Datason.
+"""Security tests for datason.
 
 Tests for security protections including circular reference detection,
 depth limits, size limits, and resource exhaustion prevention.

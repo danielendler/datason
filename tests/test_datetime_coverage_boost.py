@@ -2,7 +2,7 @@
 DateTime Utils Coverage Boost Tests
 
 This file contains tests specifically designed to cover the remaining uncovered lines
-in the serialpy.datetime_utils module to push coverage above 95%.
+in the datason.datetime_utils module to push coverage above 95%.
 """
 
 from datetime import datetime, timezone
@@ -23,7 +23,7 @@ class TestDateTimeUtilsImportFallbacks(unittest.TestCase):
     def test_ensure_timestamp_without_pandas(self):
         """Test ensure_timestamp when pandas is not available."""
         # Test lines 14-15 in datetime_utils.py - pandas import fallback
-        with patch("serialpy.datetime_utils.pd", None):
+        with patch("datason.datetime_utils.pd", None):
             with self.assertRaises(ImportError) as context:
                 ensure_timestamp("2023-01-01")
 
@@ -32,7 +32,7 @@ class TestDateTimeUtilsImportFallbacks(unittest.TestCase):
     def test_ensure_dates_without_pandas(self):
         """Test ensure_dates when pandas is not available."""
         # Test import fallback path
-        with patch("serialpy.datetime_utils.pd", None):
+        with patch("datason.datetime_utils.pd", None):
             with self.assertRaises(ImportError) as context:
                 ensure_dates({})
 
@@ -137,7 +137,7 @@ class TestConvertPandasTimestampsEdgeCases(unittest.TestCase):
     def test_convert_pandas_timestamps_without_pandas(self):
         """Test convert_pandas_timestamps when pandas is not available."""
         # Test lines 194-196 in datetime_utils.py - pandas fallback
-        with patch("serialpy.datetime_utils.pd", None):
+        with patch("datason.datetime_utils.pd", None):
             test_data = {"date": "2023-01-01", "value": 42}
             result = convert_pandas_timestamps(test_data)
 
@@ -150,7 +150,7 @@ class TestConvertPandasTimestampsEdgeCases(unittest.TestCase):
         mock_df = Mock()
         mock_df.__class__.__name__ = "DataFrame"
 
-        with patch("serialpy.datetime_utils.pd", None):
+        with patch("datason.datetime_utils.pd", None):
             result = convert_pandas_timestamps(mock_df)
 
             # Should return unchanged when pandas is None
@@ -162,7 +162,7 @@ class TestConvertPandasTimestampsEdgeCases(unittest.TestCase):
         mock_series = Mock()
         mock_series.__class__.__name__ = "Series"
 
-        with patch("serialpy.datetime_utils.pd", None):
+        with patch("datason.datetime_utils.pd", None):
             result = convert_pandas_timestamps(mock_series)
 
             # Should return unchanged when pandas is None

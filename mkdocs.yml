@@ -1,16 +1,16 @@
-# Datason Documentation Configuration
-site_name: Datason
+# datason Documentation Configuration
+site_name: datason
 site_description: A comprehensive Python package for intelligent serialization that handles complex data types with ease.
-site_author: Datason Contributors
-site_url: https://serialpy.readthedocs.io/
+site_author: datason Contributors
+site_url: https://datason.readthedocs.io/
 
 # Repository
-repo_name: danielendler/Datason
-repo_url: https://github.com/danielendler/Datason
+repo_name: danielendler/datason
+repo_url: https://github.com/danielendler/datason
 edit_uri: edit/main/docs/
 
 # Copyright
-copyright: Copyright &copy; 2024 Datason Contributors
+copyright: Copyright &copy; 2024 datason Contributors
 
 # Configuration
 theme:
@@ -106,7 +106,7 @@ markdown_extensions:
   - pymdownx.magiclink:
       repo_url_shorthand: true
       user: danielendler
-      repo: Datason
+      repo: datason
   - pymdownx.mark
   - pymdownx.smartsymbols
   - pymdownx.superfences:
@@ -144,13 +144,13 @@ extra:
     provider: mike
   social:
     - icon: fontawesome/brands/github
-      link: https://github.com/danielendler/Datason
-      name: Datason on GitHub
+      link: https://github.com/danielendler/datason
+      name: datason on GitHub
     - icon: fontawesome/brands/python
-      link: https://pypi.org/project/serialpy/
-      name: Datason on PyPI
+      link: https://pypi.org/project/datason/
+      name: PyPI
     - icon: fontawesome/solid/book
-      link: https://serialpy.readthedocs.io/
+      link: https://datason.readthedocs.io/
       name: Documentation
 
   generator: false
@@ -172,10 +172,10 @@ extra:
           data: 0
           note: >-
             Thanks for your feedback! Help us improve this page by
-            <a href="https://github.com/danielendler/Datason/issues/new/?title=[Docs]" target="_blank" rel="noopener">opening an issue</a>.
+            <a href="https://github.com/danielendler/datason/issues/new/?title=[Docs]" target="_blank" rel="noopener">opening an issue</a>.
 
   # Homepage override
-  homepage: https://github.com/danielendler/Datason
+  homepage: https://github.com/danielendler/datason
 
 # Additional CSS/JS
 extra_css:

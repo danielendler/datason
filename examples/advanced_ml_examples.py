@@ -1,6 +1,6 @@
-"""Advanced ML/AI Examples for Datason.
+"""Advanced ML/AI Examples for datason.
 
-This example demonstrates Datason's capabilities with major ML/AI libraries
+This example demonstrates datason's capabilities with major ML/AI libraries
 including PyTorch, TensorFlow, scikit-learn, scipy, and others. Shows both
 serialization and deserialization in realistic ML workflows.
 """
@@ -368,7 +368,7 @@ def demonstrate_nlp_workflow() -> None:
             "The quick brown fox jumps over the lazy dog.",
             "Machine learning is transforming natural language processing.",
             "Deep neural networks can understand complex text patterns.",
-            "Datason makes it easy to serialize ML experiment data.",
+            "datason makes it easy to serialize ML experiment data.",
         ]
 
         # Simulate text processing results
@@ -601,9 +601,9 @@ def demonstrate_experiment_tracking() -> None:
 
 def main() -> None:
     """Run all advanced ML/AI demonstrations."""
-    print("🚀 Datason Advanced ML/AI Examples")
+    print("🚀 datason Advanced ML/AI Examples")
     print("=" * 70)
-    print("Demonstrating Datason's capabilities with real-world ML workflows")
+    print("Demonstrating datason's capabilities with real-world ML workflows")
     print()
 
     demonstrate_pytorch_workflow()
@@ -625,7 +625,7 @@ def main() -> None:
 
     print("✨ Advanced examples completed!")
     print("\n🎯 Key takeaways:")
-    print("   • Datason seamlessly handles complex ML data structures")
+    print("   • datason seamlessly handles complex ML data structures")
     print("   • Preserves experiment metadata and UUIDs through serialization")
     print("   • Converts numpy arrays and pandas objects intelligently")
     print("   • Enables reproducible ML experiment tracking")

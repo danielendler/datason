@@ -1,4 +1,4 @@
-"""Deserialization functionality for Datason.
+"""Deserialization functionality for datason.
 
 This module provides functions to convert JSON-compatible data back to appropriate
 Python objects, including datetime parsing, UUID reconstruction, and pandas types.

@@ -1,4 +1,4 @@
-# Pull Request for Datason
+# Pull Request for datason
 
 ## 🎯 **What does this PR do?**
 <!-- Provide a clear, concise description of the changes -->
@@ -32,7 +32,7 @@
 - [ ] New tests added for new functionality
 - [ ] Existing tests updated if necessary
 - [ ] All tests pass locally (`pytest`)
-- [ ] Coverage maintained or improved (`pytest --cov=serialpy`)
+- [ ] Coverage maintained or improved (`pytest --cov=datason`)
 
 ### Documentation
 - [ ] Documentation updated (if user-facing changes)
@@ -65,7 +65,7 @@
 ```bash
 # Example:
 $ pytest tests/test_your_feature.py -v
-$ pytest --cov=serialpy --cov-report=term-missing
+$ pytest --cov=datason --cov-report=term-missing
 ```
 
 ## 📊 **Performance Impact**

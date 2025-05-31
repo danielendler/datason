@@ -1,8 +1,12 @@
 # Security Policy
 
+## Security Philosophy
+
+datason prioritizes security alongside performance when handling Python object serialization. This document outlines our security practices, potential risks, and recommended usage patterns.
+
 ## Security Status
 
-✅ **Low Risk** - Datason has been hardened with real security protections against common JSON serialization vulnerabilities.
+✅ **Low Risk** - datason has been hardened with real security protections against common JSON serialization vulnerabilities.
 
 **Last Security Audit**: 2025-05-30  
 **Security Scanner Results**: ✅ 1 minor issue (documented), ✅ 0 critical vulnerabilities  
@@ -20,15 +24,15 @@
 **Real Protection**: Prevents infinite recursion and memory exhaustion.
 
 ```python
-import serialpy
+import datason
 
 # This data structure would crash other serializers
 a = {}
 b = {"a": a}
 a["b"] = b  # Circular reference
 
-# Datason handles it safely
-result = serialpy.serialize(a)
+# datason handles it safely
+result = datason.serialize(a)
 # Warns: "Circular reference detected. Replacing with null to prevent infinite recursion."
 # Returns: {"b": {"a": None}}  # Safe, controlled output
 ```
@@ -45,8 +49,8 @@ deep_nesting = create_nested_dict(depth=2000)  # > 1K depth
 massive_string = "x" * 2_000_000  # > 1M chars (gets truncated)
 
 try:
-    serialpy.serialize(huge_dict)
-except serialpy.SecurityError as e:
+    datason.serialize(huge_dict)
+except datason.SecurityError as e:
     print(f"Blocked: {e}")
     # Output: "Dictionary size (20000000) exceeds maximum (10000000).
     #          This may indicate a resource exhaustion attempt."
@@ -65,9 +69,9 @@ class ProblematicObject:
     def __dict__(self):
         raise RuntimeError("Internal error with sensitive data")
 
-# Datason handles safely
+# datason handles safely
 obj = ProblematicObject()
-result = serialpy.serialize(obj)
+result = datason.serialize(obj)
 # Warns: "Failed to serialize object. Falling back to string representation."
 # Returns: Safe fallback, no sensitive data exposed
 ```
@@ -98,7 +102,7 @@ SEVERITY.LOW: 1 (intentional, documented)
 - ✅ Updated `setuptools` from 70.2.0 → 80.9.0 (fixed path traversal CVE)
 
 **Dependency Strategy**:
-- Core Datason has **zero dependencies** for security
+- Core datason has **zero dependencies** for security
 - Optional dependencies (pandas, numpy, ML libraries) are user-controlled
 - All dev dependencies regularly updated and scanned
 
@@ -117,12 +121,12 @@ SEVERITY.LOW: 1 (intentional, documented)
 **Please DO NOT report security vulnerabilities through public GitHub issues.**
 
 ### Preferred: Security Advisory
-1. Go to https://github.com/danielendler/Datason/security/advisories
+1. Go to https://github.com/danielendler/datason/security/advisories
 2. Click "Report a vulnerability"
 3. Provide details including reproduction steps
 
 ### Alternative: Email
-📧 **security@serialpy.dev**
+📧 **security@datason.dev**
 
 **Include in your report:**
 - Description and impact assessment
@@ -144,26 +148,26 @@ SEVERITY.LOW: 1 (intentional, documented)
 ### **Environment Setup**
 ```bash
 # Install with security scanning
-pip install serialpy[dev]
+pip install datason[dev]
 bandit -r your_project/
 safety scan
 ```
 
 ### **Secure Usage Patterns**
 ```python
-import serialpy
+import datason
 
 # ✅ GOOD: Handle untrusted data safely
 try:
-    result = serialpy.serialize(untrusted_data)
-except serialpy.SecurityError as e:
+    result = datason.serialize(untrusted_data)
+except datason.SecurityError as e:
     logger.warning(f"Blocked potentially malicious data: {e}")
     return None
 
 # ✅ GOOD: Monitor for warnings in production
 import warnings
 with warnings.catch_warnings(record=True) as w:
-    result = serialpy.serialize(data)
+    result = datason.serialize(data)
     if w:
         logger.info(f"Security warnings: {[str(warning.message) for warning in w]}")
 
@@ -171,7 +175,7 @@ with warnings.catch_warnings(record=True) as w:
 sensitive_data = {"password": "secret", "api_key": "12345"}
 # Filter before serializing
 safe_data = {k: v for k, v in data.items() if k not in ["password", "api_key"]}
-result = serialpy.serialize(safe_data)
+result = datason.serialize(safe_data)
 ```
 
 ### **Monitoring & Alerting**
@@ -180,10 +184,10 @@ result = serialpy.serialize(safe_data)
 import logging
 
 logging.basicConfig(level=logging.WARNING)
-logger = logging.getLogger("serialpy.security")
+logger = logging.getLogger("datason.security")
 
 # This will capture security warnings in your logs
-warnings.filterwarnings("always", category=UserWarning, module="serialpy")
+warnings.filterwarnings("always", category=UserWarning, module="datason")
 ```
 
 ## 📋 Security Configuration
@@ -191,7 +195,7 @@ warnings.filterwarnings("always", category=UserWarning, module="serialpy")
 ### **Runtime Security Settings**
 ```python
 # Security constants (configurable in future versions)
-from serialpy.core import MAX_SERIALIZATION_DEPTH, MAX_OBJECT_SIZE, MAX_STRING_LENGTH
+from datason.core import MAX_SERIALIZATION_DEPTH, MAX_OBJECT_SIZE, MAX_STRING_LENGTH
 
 print(f"Max depth: {MAX_SERIALIZATION_DEPTH}")      # 1,000
 print(f"Max object size: {MAX_OBJECT_SIZE}")        # 10,000,000
@@ -204,7 +208,7 @@ print(f"Max string length: {MAX_STRING_LENGTH}")    # 1,000,000
 - name: Security Scan
   run: |
     pip install bandit safety
-    bandit -r serialpy/
+    bandit -r datason/
     safety scan
 
 - name: Dependency Audit  
@@ -228,5 +232,5 @@ print(f"Max string length: {MAX_STRING_LENGTH}")    # 1,000,000
 
 ---
 
-**🛡️ Security is a continuous process.** Help us keep Datason secure by reporting issues responsibly and following security best practices in your own code.
+**🛡️ Security is a continuous process.** Help us keep datason secure by reporting issues responsibly and following security best practices in your own code.
 # Test

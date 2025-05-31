@@ -2,7 +2,7 @@
 Core Module Coverage Boost Tests
 
 This file contains tests specifically designed to cover the remaining uncovered lines
-in the serialpy.core module to push coverage above 95%.
+in the datason.core module to push coverage above 95%.
 """
 
 import sys
@@ -21,14 +21,14 @@ class TestCoreImportFallbacks(unittest.TestCase):
         original_modules = sys.modules.copy()
 
         # Remove ml_serializers from modules to force import error
-        if "serialpy.ml_serializers" in sys.modules:
-            del sys.modules["serialpy.ml_serializers"]
+        if "datason.ml_serializers" in sys.modules:
+            del sys.modules["datason.ml_serializers"]
 
         # Temporarily patch __import__ to raise ImportError for ml_serializers
         original_import = __builtins__["__import__"]
 
         def mock_import(name, *args, **kwargs):
-            if name == "serialpy.ml_serializers":
+            if name == "datason.ml_serializers":
                 raise ImportError("ML serializers not available")
             return original_import(name, *args, **kwargs)
 
@@ -36,8 +36,8 @@ class TestCoreImportFallbacks(unittest.TestCase):
             __builtins__["__import__"] = mock_import
 
             # Force reimport of core module
-            if "serialpy.core" in sys.modules:
-                del sys.modules["serialpy.core"]
+            if "datason.core" in sys.modules:
+                del sys.modules["datason.core"]
 
             # Import should succeed even without ml_serializers
             from datason.core import serialize as core_serialize
@@ -63,7 +63,7 @@ class TestCoreImportFallbacks(unittest.TestCase):
         obj = CustomObject()
 
         # Patch the function to be None (simulating import failure)
-        with patch("serialpy.core.detect_and_serialize_ml_object", None):
+        with patch("datason.core.detect_and_serialize_ml_object", None):
             result = serialize(obj)
 
             # Should fall back to dict serialization
@@ -198,7 +198,7 @@ class TestMLSerializerIntegration(unittest.TestCase):
 
         # Temporarily patch to cause import error during serialization
         with patch(
-            "serialpy.core.detect_and_serialize_ml_object",
+            "datason.core.detect_and_serialize_ml_object",
             side_effect=ImportError("Module not found"),
         ):
             result = serialize(obj)
@@ -216,7 +216,7 @@ class TestMLSerializerIntegration(unittest.TestCase):
         obj = UnknownMLObject()
 
         # Mock ML serializer to return None (object not recognized)
-        with patch("serialpy.core.detect_and_serialize_ml_object", return_value=None):
+        with patch("datason.core.detect_and_serialize_ml_object", return_value=None):
             result = serialize(obj)
 
             # Should fall back to dict serialization

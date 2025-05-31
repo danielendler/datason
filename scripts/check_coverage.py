@@ -1,73 +1,86 @@
 #!/usr/bin/env python3
-"""Lightweight coverage check for pre-commit.
-
-This script runs coverage analysis only on changed files to provide
-fast feedback during development without running the full test suite.
+"""
+Coverage check script for datason.
+Ensures coverage standards are maintained for modified files.
 """
 
-from pathlib import Path
 import subprocess
 import sys
+from typing import List
+
+# Only run coverage for datason package files
+PACKAGE_DIR = "datason"
+
+
+def get_changed_python_files() -> List[str]:
+    """Get list of changed Python files in the datason package."""
+    result = subprocess.run(  # noqa: S603
+        ["git", "diff", "--name-only", "HEAD~1"],  # noqa: S607
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    if result.returncode != 0:
+        print("✅ No Python files changed in datason/")
+        return []
+
+    files = result.stdout.strip().split("\n")
+    # Filter for Python files in the datason package
+    py_files = [
+        f for f in files if f.startswith(f"{PACKAGE_DIR}/") and f.endswith(".py")
+    ]
+
+    # Only check core datason files (exclude __init__.py)
+    return [f for f in py_files if not f.endswith("__init__.py")]
+
+
+def run_coverage_check() -> int:
+    """Run pytest with coverage for the entire package."""
+    cmd = [
+        "pytest",
+        "tests/",
+        "-v",
+        "--tb=short",
+        f"--cov={PACKAGE_DIR}",
+        "--cov-report=term-missing",
+        "--cov-report=xml",
+        "--cov-fail-under=80",  # Fail if coverage below 80%
+    ]
+
+    result = subprocess.run(cmd, capture_output=True, text=True, check=False)  # noqa: S603
+
+    print("📊 Coverage Report:")
+    print(result.stdout)
+
+    if result.stderr:
+        print("⚠️  Stderr:")
+        print(result.stderr)
+
+    return result.returncode
 
 
 def main() -> int:
-    """Check coverage for changed files."""
-    if len(sys.argv) < 2:
-        print("✅ No Python files changed in serialpy/")
+    changed_files = get_changed_python_files()
+
+    if not changed_files:
+        print("✅ No datason package files changed - skipping coverage check")
         return 0
 
-    changed_files = [Path(f) for f in sys.argv[1:]]
-    print(f"📊 Checking coverage for {len(changed_files)} changed files...")
+    print(f"🔍 Changed files: {', '.join(changed_files)}")
+    print("🧪 Running coverage check...")
 
-    # Only check core serialpy files (exclude __init__.py)
-    core_files = [
-        f for f in changed_files if f.name != "__init__.py" and f.suffix == ".py"
-    ]
+    exit_code = run_coverage_check()
 
-    if not core_files:
-        print("✅ No core files to check coverage for")
-        return 0
-
-    try:
-        # Run minimal test suite with coverage for changed files
-        # This is much faster than full test suite
-        cmd = [
-            "python",
-            "-m",
-            "pytest",
-            "--cov=serialpy",
-            "--cov-report=term-missing",
-            "--cov-fail-under=75",  # Require 75% minimum
-            "-x",  # Stop on first failure
-            "--tb=short",
-            "tests/test_core.py",  # Only run core tests (fastest)
-        ]
-
-        print(f"🧪 Running: {' '.join(cmd)}")
-        # Safe subprocess call with controlled arguments
-        result = subprocess.run(cmd, capture_output=True, text=True, check=False)  # noqa: S603
-
-        if result.returncode == 0:
-            print("✅ Coverage check passed!")
-            return 0
+    if exit_code == 0:
+        print("✅ Coverage check passed!")
+    else:
         print("❌ Coverage check failed!")
-        print("📋 Coverage output:")
-        print(result.stdout)
-        if result.stderr:
-            print("⚠️ Errors:")
-            print(result.stderr)
         print(
-            "\n💡 Tip: Run 'pytest --cov=serialpy --cov-report=html' for detailed coverage report"
+            "\n💡 Tip: Run 'pytest --cov=datason --cov-report=html' for detailed coverage report"
         )
-        return 1
 
-    except FileNotFoundError:
-        print("⚠️ pytest not found - skipping coverage check")
-        print("💡 Install with: pip install -e '.[dev]'")
-        return 0
-    except Exception as e:
-        print(f"⚠️ Coverage check failed with error: {e}")
-        return 0  # Don't block commits on coverage script errors
+    return exit_code
 
 
 if __name__ == "__main__":

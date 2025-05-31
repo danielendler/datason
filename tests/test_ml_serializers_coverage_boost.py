@@ -2,7 +2,7 @@
 ML Serializers Coverage Boost Tests
 
 This file contains tests specifically designed to cover the remaining uncovered lines
-in the serialpy.ml_serializers module to push coverage above 75%.
+in the datason.ml_serializers module to push coverage above 75%.
 """
 
 import unittest
@@ -26,7 +26,7 @@ class TestMLSerializersImportFallbacks(unittest.TestCase):
 
     def test_tensorflow_import_fallback(self):
         """Test TensorFlow serialization when TensorFlow is not available."""
-        with patch("serialpy.ml_serializers.tf", None):
+        with patch("datason.ml_serializers.tf", None):
             # Should handle gracefully when tf is None
             result = serialize_tensorflow_tensor("mock_tensor")
 
@@ -37,7 +37,7 @@ class TestMLSerializersImportFallbacks(unittest.TestCase):
 
     def test_pytorch_import_fallback(self):
         """Test PyTorch serialization when PyTorch is not available."""
-        with patch("serialpy.ml_serializers.torch", None):
+        with patch("datason.ml_serializers.torch", None):
             # Should handle gracefully when torch is None
             result = serialize_pytorch_tensor("mock_tensor")
 
@@ -48,7 +48,7 @@ class TestMLSerializersImportFallbacks(unittest.TestCase):
 
     def test_sklearn_import_fallback(self):
         """Test sklearn serialization when sklearn is not available."""
-        with patch("serialpy.ml_serializers.sklearn", None):
+        with patch("datason.ml_serializers.sklearn", None):
             # Should handle gracefully when sklearn is None
             result = serialize_sklearn_model("mock_model")
 
@@ -59,7 +59,7 @@ class TestMLSerializersImportFallbacks(unittest.TestCase):
 
     def test_jax_import_fallback(self):
         """Test JAX serialization when JAX is not available."""
-        with patch("serialpy.ml_serializers.jax", None):
+        with patch("datason.ml_serializers.jax", None):
             # Should handle gracefully when jax is None
             result = serialize_jax_array("mock_array")
 
@@ -70,7 +70,7 @@ class TestMLSerializersImportFallbacks(unittest.TestCase):
 
     def test_scipy_import_fallback(self):
         """Test SciPy serialization when SciPy is not available."""
-        with patch("serialpy.ml_serializers.scipy", None):
+        with patch("datason.ml_serializers.scipy", None):
             # Should handle gracefully when scipy is None
             result = serialize_scipy_sparse("mock_matrix")
 
@@ -81,7 +81,7 @@ class TestMLSerializersImportFallbacks(unittest.TestCase):
 
     def test_pil_import_fallback(self):
         """Test PIL serialization when PIL is not available."""
-        with patch("serialpy.ml_serializers.Image", None):
+        with patch("datason.ml_serializers.Image", None):
             # Should handle gracefully when PIL is None
             result = serialize_pil_image("mock_image")
 
@@ -92,7 +92,7 @@ class TestMLSerializersImportFallbacks(unittest.TestCase):
 
     def test_transformers_import_fallback(self):
         """Test Transformers serialization when transformers is not available."""
-        with patch("serialpy.ml_serializers.transformers", None):
+        with patch("datason.ml_serializers.transformers", None):
             # Should handle gracefully when transformers is None
             result = serialize_huggingface_tokenizer("mock_tokenizer")
 
@@ -115,7 +115,7 @@ class TestMLSerializersErrorPaths(unittest.TestCase):
         mock_tensor.dtype.name = "float32"
         mock_tensor.numpy.return_value = [[1, 2], [3, 4]]
 
-        with patch("serialpy.ml_serializers.tf", Mock()):
+        with patch("datason.ml_serializers.tf", Mock()):
             # Should handle shape error
             with self.assertRaises(Exception):
                 serialize_tensorflow_tensor(mock_tensor)
@@ -133,8 +133,8 @@ class TestMLSerializersErrorPaths(unittest.TestCase):
         mock_model.__class__.__module__ = "sklearn.linear_model"
         mock_model.__class__.__name__ = "LinearRegression"
 
-        with patch("serialpy.ml_serializers.sklearn", Mock()):
-            with patch("serialpy.ml_serializers.BaseEstimator", Mock()):
+        with patch("datason.ml_serializers.sklearn", Mock()):
+            with patch("datason.ml_serializers.BaseEstimator", Mock()):
                 with warnings.catch_warnings(record=True) as w:
                     warnings.simplefilter("always")
                     result = serialize_sklearn_model(mock_model)
@@ -152,7 +152,7 @@ class TestMLSerializersErrorPaths(unittest.TestCase):
         mock_matrix.format = "csr"
         mock_matrix.shape = (3, 3)
 
-        with patch("serialpy.ml_serializers.scipy", Mock()):
+        with patch("datason.ml_serializers.scipy", Mock()):
             with warnings.catch_warnings(record=True) as w:
                 warnings.simplefilter("always")
                 result = serialize_scipy_sparse(mock_matrix)
@@ -178,8 +178,8 @@ class TestMLDetectionEdgeCases(unittest.TestCase):
         mock_obj.__class__.__module__ = "unknown_module"
 
         # Patch some libraries to None
-        with patch("serialpy.ml_serializers.torch", None):
-            with patch("serialpy.ml_serializers.tf", Mock()):
+        with patch("datason.ml_serializers.torch", None):
+            with patch("datason.ml_serializers.tf", Mock()):
                 result = detect_and_serialize_ml_object(mock_obj)
                 # Should return None for unknown objects
                 self.assertIsNone(result)
@@ -207,7 +207,7 @@ class TestMLDetectionEdgeCases(unittest.TestCase):
         mock_obj.__class__.__module__ = "sklearn.linear_model"
 
         # Test when BaseEstimator is not available
-        with patch("serialpy.ml_serializers.BaseEstimator", None):
+        with patch("datason.ml_serializers.BaseEstimator", None):
             result = detect_and_serialize_ml_object(mock_obj)
             # Should return None when BaseEstimator check fails
             self.assertIsNone(result)
@@ -229,8 +229,8 @@ class TestMLSerializersParameterFiltering(unittest.TestCase):
         mock_model.__class__.__module__ = "sklearn.ensemble"
         mock_model.__class__.__name__ = "RandomForestClassifier"
 
-        with patch("serialpy.ml_serializers.sklearn", Mock()):
-            with patch("serialpy.ml_serializers.BaseEstimator", Mock()):
+        with patch("datason.ml_serializers.sklearn", Mock()):
+            with patch("datason.ml_serializers.BaseEstimator", Mock()):
                 result = serialize_sklearn_model(mock_model)
 
                 # Should include normal params but handle large ones

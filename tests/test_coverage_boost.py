@@ -1,5 +1,5 @@
 """
-Coverage boost tests for Datason.
+Coverage boost tests for datason.
 
 These tests specifically target remaining uncovered lines to achieve 80-85% coverage.
 """
@@ -40,7 +40,7 @@ class TestCoreEdgeCases:
     def test_serialize_ml_objects_with_core_fallback(self) -> None:
         """Test ML object serialization when ml_serializers import fails."""
         # Mock import error for ML serializers
-        with patch.dict("sys.modules", {"serialpy.ml_serializers": None}):
+        with patch.dict("sys.modules", {"datason.ml_serializers": None}):
             # This should trigger the ImportError fallback in core.py
             mock_obj = Mock()
             mock_obj.__dict__ = {"test": "value"}
@@ -86,7 +86,7 @@ class TestCoreEdgeCases:
         mock_tf_obj.dtype = Mock()
 
         # Patch tf to None to simulate absence
-        with patch("serialpy.ml_serializers.tf", None):
+        with patch("datason.ml_serializers.tf", None):
             result = detect_and_serialize_ml_object(mock_tf_obj)
             assert result is None
 
@@ -255,7 +255,7 @@ class TestMLSerializersSpecialCases:
 
         # Test with all libraries patched to None
         with patch.multiple(
-            "serialpy.ml_serializers",
+            "datason.ml_serializers",
             torch=None,
             sklearn=None,
             BaseEstimator=None,

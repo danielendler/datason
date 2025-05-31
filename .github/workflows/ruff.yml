@@ -34,13 +34,13 @@ jobs:
         pip install ruff bandit[toml]
 
     - name: Run Ruff linter
-      run: ruff check serialpy/ tests/
+      run: ruff check datason/ tests/
 
     - name: Run Ruff formatter check
-      run: ruff format --check serialpy/ tests/
+      run: ruff format --check datason/ tests/
 
     - name: Run Bandit security scan
-      run: bandit -r serialpy/ -f json -o bandit-report.json || true
+      run: bandit -r datason/ -f json -o bandit-report.json || true
 
     - name: Generate Quality & Security Report
       if: always()
@@ -48,10 +48,10 @@ jobs:
         echo "## Code Quality & Security Report" >> $GITHUB_STEP_SUMMARY
 
         echo "### 🔍 Ruff Linting" >> $GITHUB_STEP_SUMMARY
-        ruff check serialpy/ tests/ --output-format=github >> $GITHUB_STEP_SUMMARY || echo "❌ Linting issues found" >> $GITHUB_STEP_SUMMARY
+        ruff check datason/ tests/ --output-format=github >> $GITHUB_STEP_SUMMARY || echo "❌ Linting issues found" >> $GITHUB_STEP_SUMMARY
 
         echo "### 🎨 Code Formatting" >> $GITHUB_STEP_SUMMARY
-        ruff format --check --diff serialpy/ tests/ >> $GITHUB_STEP_SUMMARY || echo "❌ Formatting issues found" >> $GITHUB_STEP_SUMMARY
+        ruff format --check --diff datason/ tests/ >> $GITHUB_STEP_SUMMARY || echo "❌ Formatting issues found" >> $GITHUB_STEP_SUMMARY
 
         echo "### 🛡️ Security Scan Results" >> $GITHUB_STEP_SUMMARY
         if [ -f bandit-report.json ]; then

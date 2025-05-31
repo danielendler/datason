@@ -1,10 +1,10 @@
 # Building & Publishing Guide
 
-This guide covers the complete **build and publishing workflow** for Datason using modern Python packaging standards.
+This guide covers the complete **build and publishing workflow** for datason using modern Python packaging standards.
 
 ## 🏗️ **Modern Python Packaging Overview**
 
-Datason uses the **latest Python packaging standards** for a clean, maintainable build process:
+datason uses the **latest Python packaging standards** for a clean, maintainable build process:
 
 ```toml
 # pyproject.toml - Single source of truth
@@ -41,8 +41,8 @@ rm -rf dist/ build/ *.egg-info/
 python -m build
 
 # This creates:
-# dist/serialpy-0.1.0-py3-none-any.whl  (wheel - fast install)
-# dist/serialpy-0.1.0.tar.gz             (source - full source)
+# dist/datason-0.1.0-py3-none-any.whl  (wheel - fast install)
+# dist/datason-0.1.0.tar.gz             (source - full source)
 ```
 
 **What gets built**:
@@ -53,13 +53,13 @@ python -m build
 
 ```bash
 # Check package contents
-python -m zipfile -l dist/serialpy-*.whl
+python -m zipfile -l dist/datason-*.whl
 
 # Test install in clean environment
-pip install dist/serialpy-*.whl
+pip install dist/datason-*.whl
 
 # Verify it works
-python -c "import serialpy; print('✅ Package works!')"
+python -c "import datason; print('✅ Package works!')"
 ```
 
 ## 🚀 **Publishing Workflow**
@@ -73,7 +73,7 @@ Always test on TestPyPI first:
 python -m twine upload --repository testpypi dist/*
 
 # Test install from TestPyPI
-pip install --index-url https://test.pypi.org/simple/ serialpy
+pip install --index-url https://test.pypi.org/simple/ datason
 ```
 
 ### **Production Publishing (PyPI)**
@@ -83,8 +83,8 @@ pip install --index-url https://test.pypi.org/simple/ serialpy
 python -m twine upload dist/*
 
 # Verify successful upload
-pip install serialpy
-python -c "import serialpy; print(f'✅ Version {serialpy.__version__} published!')"
+pip install datason
+python -c "import datason; print(f'✅ Version {datason.__version__} published!')"
 ```
 
 ## 🔐 **Authentication & Security**
@@ -127,7 +127,7 @@ python -m twine upload dist/*
 
 ### **Semantic Versioning**
 
-Datason follows [Semantic Versioning](https://semver.org/):
+datason follows [Semantic Versioning](https://semver.org/):
 
 ```
 MAJOR.MINOR.PATCH
@@ -144,7 +144,7 @@ Update version in `pyproject.toml`:
 
 ```toml
 [project]
-name = "serialpy"
+name = "datason"
 version = "0.2.0"  # ← Update this
 ```
 
@@ -201,7 +201,7 @@ jobs:
 
 - [ ] All tests passing (`pytest`)
 - [ ] Code quality checks (`ruff check`)
-- [ ] Security scan clean (`bandit -r serialpy/`)
+- [ ] Security scan clean (`bandit -r datason/`)
 - [ ] Documentation updated
 - [ ] Version bumped in `pyproject.toml`
 - [ ] `CHANGELOG.md` updated
@@ -211,8 +211,8 @@ jobs:
 ```bash
 # 1. Final testing
 pytest tests/ -v
-ruff check serialpy/
-bandit -r serialpy/
+ruff check datason/
+bandit -r datason/
 
 # 2. Build packages
 rm -rf dist/
@@ -222,7 +222,7 @@ python -m build
 python -m twine upload --repository testpypi dist/*
 
 # 4. Test install
-pip install --index-url https://test.pypi.org/simple/ serialpy
+pip install --index-url https://test.pypi.org/simple/ datason
 
 # 5. Publish to PyPI
 python -m twine upload dist/*
@@ -261,13 +261,13 @@ pip install -e ".[dev,ml,pandas]"
 ```bash
 # Build and test locally
 python -m build
-pip install dist/serialpy-*.whl --force-reinstall
+pip install dist/datason-*.whl --force-reinstall
 
 # Test specific functionality
 python -c "
-import serialpy
+import datason
 import pandas as pd
-result = serialpy.serialize({'df': pd.DataFrame({'A': [1,2,3]})})
+result = datason.serialize({'df': pd.DataFrame({'A': [1,2,3]})})
 print('✅ Local build works!')
 "
 ```
@@ -278,26 +278,26 @@ print('✅ Local build works!')
 
 ```bash
 # Check wheel contents
-python -m zipfile -l dist/serialpy-*.whl
+python -m zipfile -l dist/datason-*.whl
 
 # Expected contents:
-# serialpy/__init__.py
-# serialpy/core.py
-# serialpy/ml_serializers.py
-# serialpy-0.1.0.dist-info/METADATA
-# serialpy-0.1.0.dist-info/WHEEL
+# datason/__init__.py
+# datason/core.py
+# datason/ml_serializers.py
+# datason-0.1.0.dist-info/METADATA
+# datason-0.1.0.dist-info/WHEEL
 ```
 
 ### **Metadata Verification**
 
 ```bash
 # Check package metadata
-python -m pip show serialpy
+python -m pip show datason
 
 # Verify dependencies are correct
 python -c "
 import pkg_resources
-dist = pkg_resources.get_distribution('serialpy')
+dist = pkg_resources.get_distribution('datason')
 print(f'Name: {dist.project_name}')
 print(f'Version: {dist.version}')
 print(f'Dependencies: {[str(req) for req in dist.requires()]}')
@@ -348,9 +348,9 @@ Already configured in `pyproject.toml`:
 ```toml
 [project.optional-dependencies]
 # Users can install specific features
-# pip install serialpy[ml]      # Just ML dependencies
-# pip install serialpy[pandas]  # Just pandas
-# pip install serialpy[all]     # Everything
+# pip install datason[ml]      # Just ML dependencies
+# pip install datason[pandas]  # Just pandas
+# pip install datason[all]     # Everything
 ```
 
 ### **Platform-Specific Builds**
@@ -367,7 +367,7 @@ python -m pip debug --verbose
 
 ## 🎯 **Summary**
 
-Datason uses **modern Python packaging** for:
+datason uses **modern Python packaging** for:
 
 ✅ **Simple builds** with `python -m build`  
 ✅ **Secure publishing** with API tokens  

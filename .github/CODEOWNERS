@@ -1,14 +1,14 @@
-# CODEOWNERS file for Datason
+# CODEOWNERS file for datason
 # This file defines who should review changes to specific parts of the repository
 # See: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
 
 # Global code owners (applies to everything unless overridden)
 * @danielendler
 
-# Core Datason code
-/serialpy/ @danielendler
+# Core package
+/datason/ @danielendler
 
-# CI/CD and DevOps infrastructure
+# CI/CD and workflows
 /.github/ @danielendler
 /scripts/ @danielendler
 
@@ -17,10 +17,10 @@
 /README.md @danielendler
 /mkdocs.yml @danielendler
 
-# Configuration files
-/pyproject.toml @danielendler
+# Security and configuration
+/SECURITY.md @danielendler
 /.pre-commit-config.yaml @danielendler
-/codecov.yml @danielendler
+/pyproject.toml @danielendler
 
 # Tests
 /tests/ @danielendler

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Basic usage examples for Datason.
+"""Basic usage examples for datason.
 
-This script demonstrates the key features and capabilities of the Datason package.
+This script demonstrates the key features and capabilities of the datason package.
 """
 
 from datetime import datetime, timezone
@@ -212,7 +212,7 @@ def example_custom_objects() -> None:
 
 def main() -> None:
     """Run all examples."""
-    print("Datason Examples")
+    print("datason Examples")
     print("=" * 50)
     print()
 

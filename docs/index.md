@@ -1,8 +1,8 @@
-# Welcome to Datason
+# Welcome to datason
 
 **A comprehensive Python package for intelligent serialization that handles complex data types with ease**
 
-Datason transforms complex Python objects into JSON-serializable formats and back with intelligence. Perfect for ML/AI workflows, data science, and any application dealing with complex nested data structures.
+datason transforms complex Python objects into JSON-serializable formats and back with intelligence. Perfect for ML/AI workflows, data science, and any application dealing with complex nested data structures.
 
 ```python
 import datason as ds
@@ -44,4 +44,4 @@ pip install datason
 
 ## License
 
-MIT License - see [LICENSE](https://github.com/danielendler/Datason/blob/main/LICENSE) file for details.
+MIT License - see [LICENSE](https://github.com/danielendler/datason/blob/main/LICENSE) file for details.

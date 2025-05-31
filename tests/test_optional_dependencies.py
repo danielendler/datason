@@ -1,5 +1,5 @@
 """
-Tests for Datason with optional dependencies (pandas and numpy).
+Tests for datason with optional dependencies (pandas and numpy).
 
 This module tests code paths that require pandas and numpy to be installed.
 """

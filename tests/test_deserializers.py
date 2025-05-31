@@ -1,5 +1,5 @@
 """
-Tests for Datason deserialization functionality.
+Tests for datason deserialization functionality.
 
 This module tests the bidirectional serialization capabilities by testing
 the deserialize functions and round-trip serialization/deserialization.
@@ -191,14 +191,14 @@ class TestRoundTripSerialization:
             "data": [1, 2, 3],
         }
 
-        # Serialize with Datason
+        # Serialize with datason
         serialized = ds.serialize(original)
 
         # Convert to JSON string and back
         json_str = json.dumps(serialized)
         parsed = json.loads(json_str)
 
-        # Deserialize with Datason
+        # Deserialize with datason
         deserialized = ds.deserialize(parsed)
 
         assert isinstance(deserialized["datetime"], datetime)

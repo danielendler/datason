@@ -1,7 +1,7 @@
-"""Datason Bidirectional Serialization Example.
+"""datason Bidirectional Serialization Example.
 
 This example demonstrates the complete round-trip serialization and
-deserialization capabilities of Datason, showing how complex Python
+deserialization capabilities of datason, showing how complex Python
 objects can be serialized to JSON-compatible formats and then restored
 back to their original types.
 """
@@ -240,7 +240,7 @@ def demonstrate_performance_awareness() -> None:
 
 def main() -> None:
     """Run all demonstrations."""
-    print("🚀 Datason Bidirectional Serialization Demo")
+    print("🚀 datason Bidirectional Serialization Demo")
     print("=" * 70)
     print()
 
@@ -258,7 +258,7 @@ def main() -> None:
 
     demonstrate_performance_awareness()
 
-    print("✨ Demo completed! Datason provides complete bidirectional")
+    print("✨ Demo completed! datason provides complete bidirectional")
     print("   serialization with intelligent type restoration.")
 
 

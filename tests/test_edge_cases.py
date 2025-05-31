@@ -1,5 +1,5 @@
 """
-Edge case tests for Datason to improve coverage.
+Edge case tests for datason to improve coverage.
 
 This module contains targeted tests for specific edge cases and corner scenarios.
 """

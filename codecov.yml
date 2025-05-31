@@ -1,4 +1,4 @@
-# Codecov Configuration for Datason
+# Codecov Configuration for datason
 # See: https://docs.codecov.com/docs/codecov-yaml
 
 codecov:
@@ -89,16 +89,16 @@ flags:
   # Core functionality tests
   core:
     paths:
-      - serialpy/core.py
-      - serialpy/converters.py
-      - serialpy/deserializers.py
+      - datason/core.py
+      - datason/converters.py
+      - datason/deserializers.py
   # ML integration tests
   ml:
     paths:
-      - serialpy/ml_serializers.py
+      - datason/ml_serializers.py
   # Utility modules
   utils:
     paths:
-      - serialpy/datetime_utils.py
-      - serialpy/data_utils.py
-      - serialpy/serializers.py
+      - datason/datetime_utils.py
+      - datason/data_utils.py
+      - datason/serializers.py

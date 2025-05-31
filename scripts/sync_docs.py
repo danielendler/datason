@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Documentation synchronization script for Datason.
+"""Documentation synchronization script for datason.
 
 This script copies key documentation files from the root directory
 to the docs/ directory to ensure they are available for mkdocs.

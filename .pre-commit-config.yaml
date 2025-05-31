@@ -1,4 +1,4 @@
-# Pre-commit hooks for Datason - Core Quality & Security
+# Pre-commit hooks for datason - Core Quality & Security
 # See https://pre-commit.com for more information
 
 fail_fast: false
@@ -70,12 +70,12 @@ repos:
 
       # Lightweight coverage check for changed files only
       # Note: Disabled due to pytest not being available in pre-commit environment
-      # Use local testing instead: pytest --cov=serialpy
+      # Use local testing instead: pytest --cov=datason
       # - id: coverage-check
       #   name: Check coverage on changed files
       #   entry: python scripts/check_coverage.py
       #   language: python
-      #   files: ^serialpy/.*\.py$
+      #   files: ^datason/.*\.py$
       #   pass_filenames: true
 
 # ============================================================================

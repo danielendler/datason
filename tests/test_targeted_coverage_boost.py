@@ -2,7 +2,7 @@
 Targeted Coverage Boost Tests
 
 This file contains highly focused tests that target the specific uncovered lines
-to push Datason coverage above 85%.
+to push datason coverage above 85%.
 """
 
 import sys
@@ -22,8 +22,8 @@ class TestSpecificUncoveredLines(unittest.TestCase):
 
         try:
             # Remove the module if it exists
-            if "serialpy.ml_serializers" in sys.modules:
-                del sys.modules["serialpy.ml_serializers"]
+            if "datason.ml_serializers" in sys.modules:
+                del sys.modules["datason.ml_serializers"]
 
             # Create a module that will raise ImportError
             class FailingModule:
@@ -32,11 +32,11 @@ class TestSpecificUncoveredLines(unittest.TestCase):
                         raise ImportError("Module not found")
                     raise AttributeError(name)
 
-            sys.modules["serialpy.ml_serializers"] = FailingModule()
+            sys.modules["datason.ml_serializers"] = FailingModule()
 
             # Reload core module to trigger import failure path
-            if "serialpy.core" in sys.modules:
-                del sys.modules["serialpy.core"]
+            if "datason.core" in sys.modules:
+                del sys.modules["datason.core"]
 
             # Import should work despite ML serializer failure
             from datason.core import serialize as test_serialize
@@ -55,7 +55,7 @@ class TestSpecificUncoveredLines(unittest.TestCase):
         from datason.core import serialize
 
         # Patch the function to be None (import fallback scenario)
-        with patch("serialpy.core.detect_and_serialize_ml_object", None):
+        with patch("datason.core.detect_and_serialize_ml_object", None):
             # Create custom object that would normally be handled by ML serializer
             class CustomObject:
                 def __init__(self):
@@ -138,7 +138,7 @@ class TestDateTimeUtilsUncoveredLines(unittest.TestCase):
         """Test datetime_utils.py lines 14-15: Pandas import failure."""
         from datason.datetime_utils import ensure_timestamp
 
-        with patch("serialpy.datetime_utils.pd", None):
+        with patch("datason.datetime_utils.pd", None):
             with self.assertRaises(ImportError) as context:
                 ensure_timestamp("2023-01-01")
 
@@ -181,7 +181,7 @@ class TestDateTimeUtilsUncoveredLines(unittest.TestCase):
         """Test datetime_utils.py lines 194-196: pandas None fallback."""
         from datason.datetime_utils import convert_pandas_timestamps
 
-        with patch("serialpy.datetime_utils.pd", None):
+        with patch("datason.datetime_utils.pd", None):
             # Should return unchanged when pandas is None
             test_data = {"date": "2023-01-01", "value": 42}
             result = convert_pandas_timestamps(test_data)
@@ -204,37 +204,37 @@ class TestMLSerializersUncoveredLines(unittest.TestCase):
         )
 
         # Test each serializer when its library is None
-        with patch("serialpy.ml_serializers.torch", None):
+        with patch("datason.ml_serializers.torch", None):
             result = serialize_pytorch_tensor("test")
             self.assertEqual(result["_type"], "torch.Tensor")
             self.assertEqual(result["_data"], "test")
 
-        with patch("serialpy.ml_serializers.tf", None):
+        with patch("datason.ml_serializers.tf", None):
             result = serialize_tensorflow_tensor("test")
             self.assertEqual(result["_type"], "tf.Tensor")
             self.assertEqual(result["_data"], "test")
 
-        with patch("serialpy.ml_serializers.sklearn", None):
+        with patch("datason.ml_serializers.sklearn", None):
             result = serialize_sklearn_model("test")
             self.assertEqual(result["_type"], "sklearn.model")
             self.assertEqual(result["_data"], "test")
 
-        with patch("serialpy.ml_serializers.jax", None):
+        with patch("datason.ml_serializers.jax", None):
             result = serialize_jax_array("test")
             self.assertEqual(result["_type"], "jax.Array")
             self.assertEqual(result["_data"], "test")
 
-        with patch("serialpy.ml_serializers.scipy", None):
+        with patch("datason.ml_serializers.scipy", None):
             result = serialize_scipy_sparse("test")
             self.assertEqual(result["_type"], "scipy.sparse")
             self.assertEqual(result["_data"], "test")
 
-        with patch("serialpy.ml_serializers.Image", None):
+        with patch("datason.ml_serializers.Image", None):
             result = serialize_pil_image("test")
             self.assertEqual(result["_type"], "PIL.Image")
             self.assertEqual(result["_data"], "test")
 
-        with patch("serialpy.ml_serializers.transformers", None):
+        with patch("datason.ml_serializers.transformers", None):
             result = serialize_huggingface_tokenizer("test")
             self.assertEqual(result["_type"], "transformers.tokenizer")
             self.assertEqual(result["_data"], "test")

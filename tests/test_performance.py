@@ -1,7 +1,7 @@
 """
-Performance benchmarks for Datason.
+Performance benchmarks for datason.
 
-This module contains performance tests to ensure Datason remains fast
+This module contains performance tests to ensure datason remains fast
 and efficient, especially compared to standard JSON serialization.
 """
 
@@ -17,7 +17,7 @@ import datason as ds
 
 
 class TestPerformanceBenchmarks:
-    """Performance benchmarks for Datason operations."""
+    """Performance benchmarks for datason operations."""
 
     def test_serialize_large_dict_performance(self) -> None:
         """Test serialization performance on large dictionaries."""
@@ -62,14 +62,14 @@ class TestPerformanceBenchmarks:
         json_result = json.dumps(simple_data)
         json_time = time.time() - start_time
 
-        # Benchmark Datason
+        # Benchmark datason
         start_time = time.time()
         sp_result = ds.serialize(simple_data)
         sp_time = time.time() - start_time
 
-        # Datason should be reasonably fast (not more than 10x slower than JSON)
+        # datason should be reasonably fast (not more than 10x slower than JSON)
         assert sp_time < json_time * 10, (
-            f"Datason too slow: {sp_time:.3f}s vs JSON {json_time:.3f}s"
+            f"datason too slow: {sp_time:.3f}s vs JSON {json_time:.3f}s"
         )
 
         # Results should be equivalent for simple data

@@ -2,7 +2,7 @@
 
 ## Overview
 
-Datason uses **best-in-class modern Python tooling** for development, testing, security, and documentation. This guide explains our choices and how to use them effectively.
+datason uses **best-in-class modern Python tooling** for development, testing, security, and documentation. This guide explains our choices and how to use them effectively.
 
 ## 🚀 **Tool Stack Summary**
 
@@ -25,15 +25,15 @@ Datason uses **best-in-class modern Python tooling** for development, testing, s
 
 ```bash
 # Old approach (slow, multiple tools)
-black serialpy/ tests/     # ~2 seconds
-isort serialpy/ tests/     # ~1 second  
-flake8 serialpy/ tests/    # ~3 seconds
+black datason/ tests/     # ~2 seconds
+isort datason/ tests/     # ~1 second  
+flake8 datason/ tests/    # ~3 seconds
 pyupgrade **/*.py           # ~2 seconds
 # Total: ~8 seconds
 
 # New approach (fast, single tool)
-ruff check --fix serialpy/ tests/    # ~0.1 seconds
-ruff format serialpy/ tests/          # ~0.1 seconds  
+ruff check --fix datason/ tests/    # ~0.1 seconds
+ruff format datason/ tests/          # ~0.1 seconds  
 # Total: ~0.2 seconds (40x faster!)
 ```
 
@@ -82,10 +82,10 @@ ruff check --select E501 .  # Line too long
 
 ```bash
 # Run all security checks
-bandit -c pyproject.toml -r serialpy/
+bandit -c pyproject.toml -r datason/
 safety check --json
 pip-audit --format=json
-semgrep --config=auto serialpy/
+semgrep --config=auto datason/
 ```
 
 **Common security issues caught:**
@@ -120,7 +120,7 @@ mkdocs gh-deploy # Deploy to GitHub Pages
 
 ```bash
 # Run all tests with coverage
-pytest --cov=serialpy --cov-report=html
+pytest --cov=datason --cov-report=html
 
 # Parallel testing (faster)
 pytest -n auto
@@ -188,18 +188,18 @@ pre-commit run --all-files
 ruff check --fix .          # Fix linting issues
 ruff format .               # Format code
 pytest                      # Run tests
-mypy serialpy/            # Type checking
+mypy datason/            # Type checking
 ```
 
 ### Release Process
 ```bash
 # 1. Security audit
-bandit -c pyproject.toml -r serialpy/
+bandit -c pyproject.toml -r datason/
 safety check
 pip-audit
 
 # 2. Full test suite
-pytest --cov=serialpy --cov-report=term-missing
+pytest --cov=datason --cov-report=term-missing
 
 # 3. Documentation
 mkdocs build
@@ -217,7 +217,7 @@ def test_serialization_performance(benchmark):
     """Benchmark serialization performance."""
     data = create_test_data()
 
-    result = benchmark(serialpy.serialize, data)
+    result = benchmark(datason.serialize, data)
 
     # Assertions on performance
     assert benchmark.stats.median < 0.01  # < 10ms
@@ -264,7 +264,7 @@ updates:
 ### Coverage Tracking
 ```bash
 # Generate coverage report
-pytest --cov=serialpy --cov-report=html
+pytest --cov=datason --cov-report=html
 
 # Coverage thresholds in pyproject.toml
 [tool.coverage.report]

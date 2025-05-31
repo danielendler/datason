@@ -1,4 +1,4 @@
-"""Safe conversion utilities for Datason.
+"""Safe conversion utilities for datason.
 
 This module provides robust type conversion functions that handle edge cases
 like NaN, None, and invalid values gracefully.
