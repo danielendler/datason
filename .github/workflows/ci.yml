@@ -1,4 +1,4 @@
-name: 🧪 CI (Simplified)
+name: 🧪 CI (Optimized Plugin Testing)
 
 on:
   push:
@@ -16,11 +16,18 @@ on:
       - 'mkdocs.yml'
       - '.readthedocs.yaml'
 
-jobs:
-  # Single Python version testing for now
-  test:
-    runs-on: ubuntu-latest
+env:
+  # Optimize pip for CI
+  PIP_CACHE_DIR: ~/.cache/pip
+  PIP_DISABLE_PIP_VERSION_CHECK: 1
+  PIP_NO_INPUT: 1
 
+jobs:
+  # Pre-cache base dependencies (runs first, others depend on it)
+  cache-base:
+    runs-on: ubuntu-latest
+    outputs:
+      cache-key: ${{ steps.cache-key.outputs.key }}
     steps:
     - name: 📥 Checkout code
       uses: actions/checkout@v4
@@ -30,58 +37,267 @@ jobs:
       with:
         python-version: "3.11"
 
-    - name: 💾 Cache pip dependencies
+    - name: 🔑 Generate cache key
+      id: cache-key
+      run: |
+        echo "key=base-${{ runner.os }}-py3.11-${{ hashFiles('**/pyproject.toml') }}-${{ hashFiles('**/requirements*.txt') }}" >> $GITHUB_OUTPUT
+
+    - name: 💾 Cache base Python dependencies
+      uses: actions/cache@v4
+      id: cache-base-deps
+      with:
+        path: |
+          ~/.cache/pip
+          ~/.local/lib/python3.11/site-packages
+        key: ${{ steps.cache-key.outputs.key }}
+        restore-keys: |
+          base-${{ runner.os }}-py3.11-
+
+    - name: 📦 Warm cache with base dependencies
+      if: steps.cache-base-deps.outputs.cache-hit != 'true'
+      run: |
+        python -m pip install --upgrade pip setuptools wheel
+        pip install pytest pytest-cov build twine bandit
+
+  # Matrix testing (runs in parallel after base cache is warmed)
+  test:
+    needs: cache-base
+    runs-on: ubuntu-latest
+    strategy:
+      # Allow parallel execution and don't fail fast
+      fail-fast: false
+      max-parallel: 5  # Run up to 5 jobs in parallel
+      matrix:
+        python-version: ["3.11"]
+        dependency-set:
+          - name: "minimal"
+            packages: ""
+            description: "Core functionality only (no optional dependencies)"
+            test-pattern: "tests/test_core.py tests/test_deserializers.py tests/test_converters.py"
+            cache-extra: ""
+
+          - name: "with-numpy"
+            packages: "numpy"
+            description: "Core + NumPy support"
+            test-pattern: "tests/test_core.py tests/test_deserializers.py tests/test_converters.py"
+            cache-extra: "numpy"
+
+          - name: "with-pandas"
+            packages: "pandas"
+            description: "Core + Pandas support"
+            test-pattern: "tests/test_core.py tests/test_deserializers.py tests/test_converters.py tests/test_datetime_coverage_boost.py"
+            cache-extra: "pandas"
+
+          - name: "with-ml-deps"
+            packages: "numpy pandas scikit-learn"
+            description: "Core + ML dependencies"
+            test-pattern: "tests/test_core.py tests/test_deserializers.py tests/test_converters.py tests/test_ml_serializers.py"
+            cache-extra: "ml"
+
+          - name: "full"
+            packages: ""  # Will use dev dependencies
+            description: "All dependencies (full test suite)"
+            test-pattern: "tests/"
+            cache-extra: "dev"
+            use-dev: true
+
+    name: "🧪 ${{ matrix.dependency-set.name }}"
+
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+
+    - name: 🐍 Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    # Restore base cache first
+    - name: 💾 Restore base dependencies cache
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cache/pip
+          ~/.local/lib/python3.11/site-packages
+        key: ${{ needs.cache-base.outputs.cache-key }}
+        restore-keys: |
+          base-${{ runner.os }}-py3.11-
+
+    # Specific cache for this dependency set
+    - name: 💾 Cache specific dependencies
       uses: actions/cache@v4
       with:
         path: ~/.cache/pip
-        key: ${{ runner.os }}-pip-${{ hashFiles('**/pyproject.toml') }}
+        key: deps-${{ runner.os }}-${{ matrix.dependency-set.cache-extra }}-${{ hashFiles('**/pyproject.toml') }}
         restore-keys: |
-          ${{ runner.os }}-pip-
+          deps-${{ runner.os }}-${{ matrix.dependency-set.cache-extra }}-
+          deps-${{ runner.os }}-
 
-    - name: 📦 Install dependencies
+    - name: 📦 Install package and dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install -e ".[dev]"
+        # Install package first
+        pip install -e .
 
-    - name: 🧪 Run all tests with coverage
+        # Install test dependencies
+        pip install pytest pytest-cov
+
+        # Install specific optional dependencies
+        if [ "${{ matrix.dependency-set.use-dev }}" = "true" ]; then
+          pip install -e ".[dev]"
+        elif [ -n "${{ matrix.dependency-set.packages }}" ]; then
+          pip install ${{ matrix.dependency-set.packages }}
+        fi
+
+    - name: 📋 Show installed packages (for debugging)
+      run: pip list
+
+    - name: 🧪 Test package import
       run: |
-        pytest tests/ -v \
+        python -c "
+        import datason
+        print('✅ Package imports successfully')
+        data = {'test': 123, 'nested': {'value': 'hello'}}
+        result = datason.serialize(data)
+        print('✅ Basic serialization works:', result)
+        "
+
+    - name: 🧪 Run tests
+      run: |
+        pytest ${{ matrix.dependency-set.test-pattern }} -v \
           --cov=datason \
-          --cov-report=xml \
+          --cov-report=xml:coverage-${{ matrix.dependency-set.name }}.xml \
           --cov-report=term-missing \
-          --cov-report=html \
-          --junitxml=junit.xml \
-          --cov-branch
+          --junitxml=junit-${{ matrix.dependency-set.name }}.xml \
+          --tb=short
 
     - name: 📊 Upload coverage to Codecov
       uses: codecov/codecov-action@v4
       if: always()
       with:
-        file: ./coverage.xml
-        flags: tests
-        name: ubuntu-py3.11
+        file: ./coverage-${{ matrix.dependency-set.name }}.xml
+        flags: ${{ matrix.dependency-set.name }}
+        name: ${{ matrix.dependency-set.name }}-py${{ matrix.python-version }}
         token: ${{ secrets.CODECOV_TOKEN }}
 
-    - name: 📋 Upload test results to Codecov
-      if: ${{ !cancelled() }}
-      uses: codecov/test-results-action@v1
-      with:
-        token: ${{ secrets.CODECOV_TOKEN }}
-        file: ./junit.xml
-
-    - name: 📤 Upload coverage reports
+    - name: 📤 Upload test results
       uses: actions/upload-artifact@v4
       if: always()
       with:
-        name: coverage-reports
+        name: test-results-${{ matrix.dependency-set.name }}
         path: |
-          coverage.xml
-          htmlcov/
-          junit.xml
+          coverage-${{ matrix.dependency-set.name }}.xml
+          junit-${{ matrix.dependency-set.name }}.xml
 
-    - name: 🔒 Security scan
+  # Quality checks (runs in parallel with tests)
+  quality:
+    needs: cache-base
+    runs-on: ubuntu-latest
+    name: "🔍 Code Quality & Security"
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+
+    - name: 🐍 Set up Python 3.11
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
+
+    - name: 💾 Restore base dependencies cache
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cache/pip
+          ~/.local/lib/python3.11/site-packages
+        key: ${{ needs.cache-base.outputs.cache-key }}
+
+    - name: 📦 Install quality tools
       run: |
+        python -m pip install --upgrade pip
+        pip install ruff bandit[toml] mypy
+
+    - name: 🎨 Run Ruff linter
+      run: |
+        echo "🔍 Running Ruff linter..."
+        ruff check datason/ tests/ --output-format=github
+
+    - name: 🎨 Run Ruff formatter check
+      run: |
+        echo "🎨 Checking code formatting..."
+        ruff format --check datason/ tests/
+
+    - name: 🔍 Type check with mypy
+      run: |
+        echo "🔍 Running type checks..."
+        mypy datason/ --install-types --non-interactive || true
+
+    - name: 🔒 Run Bandit security scan
+      run: |
+        echo "🔒 Running security scan..."
         bandit -r datason/ -f json -o bandit-report.json || true
+
+    - name: 📊 Generate Quality & Security Report
+      if: always()
+      run: |
+        echo "## 🔍 Code Quality & Security Report" >> $GITHUB_STEP_SUMMARY
+
+        echo "### 🎨 Ruff Linting" >> $GITHUB_STEP_SUMMARY
+        if ruff check datason/ tests/ --output-format=text > ruff-results.txt 2>&1; then
+          echo "✅ **Linting**: All checks passed" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "❌ **Linting**: Issues found" >> $GITHUB_STEP_SUMMARY
+          echo "<details><summary>Show Details</summary>" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          head -20 ruff-results.txt >> $GITHUB_STEP_SUMMARY || echo "No detailed output available" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "</details>" >> $GITHUB_STEP_SUMMARY
+        fi
+
+        echo "### 🎨 Code Formatting" >> $GITHUB_STEP_SUMMARY
+        if ruff format --check --diff datason/ tests/ > format-results.txt 2>&1; then
+          echo "✅ **Formatting**: All files properly formatted" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "❌ **Formatting**: Issues found" >> $GITHUB_STEP_SUMMARY
+          echo "<details><summary>Show Formatting Diff</summary>" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo '```diff' >> $GITHUB_STEP_SUMMARY
+          head -30 format-results.txt >> $GITHUB_STEP_SUMMARY || echo "No detailed output available" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "</details>" >> $GITHUB_STEP_SUMMARY
+        fi
+
+        echo "### 🛡️ Security Scan Results" >> $GITHUB_STEP_SUMMARY
+        if [ -f bandit-report.json ]; then
+          python3 -c "
+        import json
+        try:
+            with open('bandit-report.json') as f:
+                report = json.load(f)
+            metrics = report['metrics']['_totals']
+            high = metrics.get('SEVERITY.HIGH', 0)
+            medium = metrics.get('SEVERITY.MEDIUM', 0)
+            low = metrics.get('SEVERITY.LOW', 0)
+            loc = metrics.get('loc', 0)
+
+            print(f'📊 **Scanned**: {loc} lines of code')
+            if high == 0 and medium == 0:
+                print('✅ **Security**: No critical issues found')
+                if low > 0:
+                    print(f'ℹ️ **Info**: {low} low severity informational findings')
+            else:
+                print(f'⚠️ **Security**: {high} high, {medium} medium, {low} low severity issues')
+        except Exception as e:
+            print('❌ **Security**: Scan report parsing failed')
+            print(f'Error: {e}')
+        " >> $GITHUB_STEP_SUMMARY
+        else
+          echo "❌ **Security**: Report not generated" >> $GITHUB_STEP_SUMMARY
+        fi
+
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "---" >> $GITHUB_STEP_SUMMARY
+        echo "*Quality checks completed at $(date)*" >> $GITHUB_STEP_SUMMARY
 
     - name: 📤 Upload security report
       uses: actions/upload-artifact@v4
@@ -90,11 +306,12 @@ jobs:
         name: security-report
         path: bandit-report.json
 
-  # Build package
+  # Build package (only runs if tests pass - but doesn't wait for ALL tests)
   build:
-    needs: test
+    needs: [cache-base]
+    # Only run if not a draft PR
+    if: github.event.pull_request.draft == false || github.event_name == 'push'
     runs-on: ubuntu-latest
-
     steps:
     - name: 📥 Checkout code
       uses: actions/checkout@v4
@@ -104,14 +321,13 @@ jobs:
       with:
         python-version: "3.11"
 
-    - name: 💾 Cache pip dependencies (build)
+    - name: 💾 Restore base dependencies cache
       uses: actions/cache@v4
       with:
-        path: ~/.cache/pip
-        key: ${{ runner.os }}-build-pip-${{ hashFiles('**/pyproject.toml') }}
-        restore-keys: |
-          ${{ runner.os }}-build-pip-
-          ${{ runner.os }}-pip-
+        path: |
+          ~/.cache/pip
+          ~/.local/lib/python3.11/site-packages
+        key: ${{ needs.cache-base.outputs.cache-key }}
 
     - name: 📦 Install build tools
       run: |
@@ -119,15 +335,32 @@ jobs:
         pip install build twine
 
     - name: 🏗️ Build package
-      run: |
-        python -m build
+      run: python -m build
 
     - name: ✅ Check package
-      run: |
-        twine check dist/*
+      run: twine check dist/*
 
     - name: 📤 Upload build artifacts
       uses: actions/upload-artifact@v4
       with:
         name: dist
         path: dist/
+
+  # Summary job (waits for all tests, provides final status)
+  test-summary:
+    needs: [test, quality, build]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+    - name: 📋 Check test results
+      run: |
+        if [ "${{ needs.test.result }}" = "success" ] && [ "${{ needs.quality.result }}" = "success" ]; then
+          echo "✅ All tests passed!"
+          exit 0
+        else
+          echo "❌ Some tests failed:"
+          echo "  Tests: ${{ needs.test.result }}"
+          echo "  Quality: ${{ needs.quality.result }}"
+          echo "  Build: ${{ needs.build.result }}"
+          exit 1
+        fi

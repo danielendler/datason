@@ -319,7 +319,13 @@ markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
     "integration: marks tests as integration tests",
     "benchmark: marks tests as benchmarks",
-    "ml: marks tests that require ML libraries",
+    "core: marks core functionality tests (no optional dependencies)",
+    "numpy: marks tests requiring numpy",
+    "pandas: marks tests requiring pandas",
+    "sklearn: marks tests requiring scikit-learn",
+    "ml: marks tests requiring ML libraries (torch, tensorflow, etc.)",
+    "optional: marks tests for optional dependency functionality",
+    "fallback: marks tests for fallback behavior when dependencies are missing",
 ]
 filterwarnings = [
     "error",

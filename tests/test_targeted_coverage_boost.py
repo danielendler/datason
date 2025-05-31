@@ -1,13 +1,22 @@
 """
 Targeted Coverage Boost Tests
 
-This file contains highly focused tests that target the specific uncovered lines
-to push datason coverage above 85%.
+This file contains tests specifically targeting uncovered lines in the codebase.
 """
 
 import sys
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
+
+import pytest
+
+# Optional dependency imports
+try:
+    import pandas as pd
+
+    HAS_PANDAS = True
+except ImportError:
+    HAS_PANDAS = False
 
 from datason.core import serialize
 
@@ -163,6 +172,7 @@ class TestDateTimeUtilsUncoveredLines(unittest.TestCase):
         except ImportError:
             self.skipTest("pandas not available")
 
+    @pytest.mark.skipif(not HAS_PANDAS, reason="pandas not available")
     def test_datetime_lines_183_189_190_type_validation(self):
         """Test datetime_utils.py lines 183, 189-190: Type validation."""
         from datason.datetime_utils import ensure_dates

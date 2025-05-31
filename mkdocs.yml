@@ -131,6 +131,9 @@ nav:
   - Development:
     - Contributing: CONTRIBUTING.md
     - CI/CD Pipeline: CI_PIPELINE_GUIDE.md
+    - CI Performance: CI_PERFORMANCE.md
+    - Plugin Testing: PLUGIN_TESTING.md
+    - Pipeline Audit: PIPELINE_AUDIT.md
     - Dependabot Guide: DEPENDABOT_GUIDE.md
     - Release Management: RELEASE_MANAGEMENT.md
     - GitHub Pages Setup: GITHUB_PAGES_SETUP.md
