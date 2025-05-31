@@ -1,4 +1,4 @@
-# Pre-commit hooks for SerialPy - Core Quality & Security
+# Pre-commit hooks for Datason - Core Quality & Security
 # See https://pre-commit.com for more information
 
 fail_fast: false

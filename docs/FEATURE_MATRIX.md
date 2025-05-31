@@ -1,8 +1,8 @@
-# SerialPy Feature Matrix 🔍
+# Datason Feature Matrix 🔍
 
 ## Library Comparison Matrix
 
-| Feature | SerialPy | json (stdlib) | pickle | joblib | ujson | orjson |
+| Feature | Datason | json (stdlib) | pickle | joblib | ujson | orjson |
 |---------|-----------|---------------|--------|--------|-------|--------|
 | **Core Features** |
 | Basic JSON Types | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
@@ -43,7 +43,7 @@
 
 ## Use Case Recommendations
 
-### 🎯 When to Use SerialPy
+### 🎯 When to Use Datason
 
 **Perfect for:**
 - 🤖 **ML/AI Applications**: Model serialization, experiment tracking
@@ -54,7 +54,7 @@
 
 **Example scenarios:**
 ```python
-# ✅ SerialPy excels here
+# ✅ Datason excels here
 ml_experiment = {
     'model': trained_sklearn_model,
     'predictions': torch_tensor_predictions,
@@ -129,7 +129,7 @@ json:      N/A (can't serialize DataFrames/tensors)
 
 ### 🤖 ML/AI Object Support
 
-SerialPy provides native support for major ML frameworks:
+Datason provides native support for major ML frameworks:
 
 ```python
 # PyTorch
@@ -224,14 +224,14 @@ Use this matrix to choose the right tool:
 | Standard JSON only | json (stdlib) |
 | Python objects + High Performance | pickle |
 | NumPy arrays + Compression | joblib |
-| **ML/AI data + Human Readable** | **SerialPy** |
-| **Complex data + Cross-platform** | **SerialPy** |
-| **API responses with mixed types** | **SerialPy** |
-| **Data science workflows** | **SerialPy** |
+| **ML/AI data + Human Readable** | **Datason** |
+| **Complex data + Cross-platform** | **Datason** |
+| **API responses with mixed types** | **Datason** |
+| **Data science workflows** | **Datason** |
 
 ## Migration Guide
 
-### From `json` to SerialPy
+### From `json` to Datason
 ```python
 # Before
 try:
@@ -244,7 +244,7 @@ except TypeError:
 json_str = json.dumps(serialpy.serialize(data))  # Just works!
 ```
 
-### From `pickle` to SerialPy
+### From `pickle` to Datason
 ```python
 # Before (Python-only)
 with open('data.pkl', 'wb') as f:
@@ -255,7 +255,7 @@ with open('data.json', 'w') as f:
     json.dump(serialpy.serialize(data), f)
 ```
 
-### From `joblib` to SerialPy
+### From `joblib` to Datason
 ```python
 # Before (Binary format)
 joblib.dump(sklearn_model, 'model.joblib')
@@ -269,10 +269,10 @@ with open('model.json', 'w') as f:
 
 ### 🌐 Cross-Language Compatibility
 
-**SerialPy outputs standard JSON** that any programming language can read:
+**Datason outputs standard JSON** that any programming language can read:
 
 ```python
-# SerialPy output - works everywhere
+# Datason output - works everywhere
 {
     "model_results": {
         "_type": "torch.Tensor",
@@ -332,7 +332,7 @@ b'\x80\x04\x95\x1a\x00\x00\x00\x00\x00\x00\x00}\x94\x8c\x04name\x94\x8c\x04John\
 
 ### 👁️ Human-Readable Output
 
-**SerialPy produces readable JSON** you can inspect, debug, and version control:
+**Datason produces readable JSON** you can inspect, debug, and version control:
 
 ```json
 {
@@ -409,14 +409,14 @@ git diff experiment_results.pkl
 | Scenario | Best Tool | Why |
 |----------|-----------|-----|
 | **Python-only ML pipeline** | pickle | Fastest, perfect object reconstruction |
-| **Multi-language microservices** | **SerialPy** | JSON works everywhere |
-| **API responses** | **SerialPy** | Human-readable, debuggable |
-| **Data science collaboration** | **SerialPy** | Readable by everyone |
+| **Multi-language microservices** | **Datason** | JSON works everywhere |
+| **API responses** | **Datason** | Human-readable, debuggable |
+| **Data science collaboration** | **Datason** | Readable by everyone |
 | **High-performance NumPy** | joblib | Optimized for arrays |
 | **Web APIs (basic JSON)** | orjson/ujson | Maximum speed |
-| **Debugging complex data** | **SerialPy** | Inspect results easily |
-| **Cross-team data sharing** | **SerialPy** | No language barriers |
-| **Scientific reproducibility** | **SerialPy** | Human-readable results |
+| **Debugging complex data** | **Datason** | Inspect results easily |
+| **Cross-team data sharing** | **Datason** | No language barriers |
+| **Scientific reproducibility** | **Datason** | Human-readable results |
 
 ### 🎯 Concrete Use Case Examples
 
@@ -435,7 +435,7 @@ pickle.dump(ml_results, open('results.pkl', 'wb'))
 ❌ "Can't inspect experiment results directly"
 ```
 
-**✅ Solutions with SerialPy:**
+**✅ Solutions with Datason:**
 ```python
 # Data science team (Python)
 json.dump(serialpy.serialize(ml_results), open('results.json', 'w'))

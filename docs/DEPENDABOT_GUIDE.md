@@ -1,14 +1,14 @@
-# Dependabot Guide for SerialPy
+# Dependabot Guide for Datason
 
 ## 🤖 Overview
 
-Dependabot is GitHub's automated dependency update service that helps keep SerialPy's dependencies current and secure. It automatically scans for outdated dependencies and creates pull requests to update them.
+Dependabot is GitHub's automated dependency update service that helps keep Datason's dependencies current and secure. It automatically scans for outdated dependencies and creates pull requests to update them.
 
-## 🎯 SerialPy's Dependency Strategy
+## 🎯 Datason's Dependency Strategy
 
-SerialPy follows a **minimal core, modern tooling** philosophy:
+Datason follows a **minimal core, modern tooling** philosophy:
 
-- **Core Dependencies**: Minimal to zero - SerialPy works without any required dependencies
+- **Core Dependencies**: Minimal to zero - Datason works without any required dependencies
 - **Optional Dependencies**: Updated conservatively (ML libraries need compatibility testing)
 - **Development Dependencies**: Updated aggressively (latest tooling for best developer experience)
 
@@ -251,7 +251,7 @@ pre-commit autoupdate  # Update hook versions
 pre-commit run --all-files  # Fix formatting
 ```
 
-## 🎉 Benefits for SerialPy
+## 🎉 Benefits for Datason
 
 ### Security
 - **Automated vulnerability patching**
@@ -279,7 +279,7 @@ pre-commit run --all-files  # Fix formatting
 
 - [GitHub Dependabot Documentation](https://docs.github.com/en/code-security/dependabot)
 - [Dependabot Configuration Reference](https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file)
-- [SerialPy CI/CD Pipeline Guide](CI_PIPELINE_GUIDE.md)
+- [Datason CI/CD Pipeline Guide](CI_PIPELINE_GUIDE.md)
 - [Contributing Guide](CONTRIBUTING.md)
 
 ---
@@ -288,7 +288,7 @@ pre-commit run --all-files  # Fix formatting
 
 ## ⚙️ **Configuration Overview**
 
-SerialPy uses a **unified Dependabot strategy** with smart update rules:
+Datason uses a **unified Dependabot strategy** with smart update rules:
 
 ### **📦 Python Dependencies**
 - **Schedule**: Weekly updates every Monday

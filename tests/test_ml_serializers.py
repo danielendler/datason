@@ -1,5 +1,5 @@
 """
-Tests for ML/AI serializers in SerialPy.
+Tests for ML/AI serializers in Datason.
 
 This module tests the ML serialization functionality with actual ML libraries
 when available, and fallback behavior when they're not.

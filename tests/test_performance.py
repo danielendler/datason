@@ -1,7 +1,7 @@
 """
-Performance benchmarks for SerialPy.
+Performance benchmarks for Datason.
 
-This module contains performance tests to ensure SerialPy remains fast
+This module contains performance tests to ensure Datason remains fast
 and efficient, especially compared to standard JSON serialization.
 """
 
@@ -13,11 +13,11 @@ import uuid
 
 import pytest
 
-import datason as sp
+import datason as ds
 
 
 class TestPerformanceBenchmarks:
-    """Performance benchmarks for SerialPy operations."""
+    """Performance benchmarks for Datason operations."""
 
     def test_serialize_large_dict_performance(self) -> None:
         """Test serialization performance on large dictionaries."""
@@ -34,7 +34,7 @@ class TestPerformanceBenchmarks:
 
         # Benchmark serialization
         start_time = time.time()
-        result = sp.serialize(large_dict)
+        result = ds.serialize(large_dict)
         end_time = time.time()
 
         serialize_time = end_time - start_time
@@ -62,14 +62,14 @@ class TestPerformanceBenchmarks:
         json_result = json.dumps(simple_data)
         json_time = time.time() - start_time
 
-        # Benchmark SerialPy
+        # Benchmark Datason
         start_time = time.time()
-        sp_result = sp.serialize(simple_data)
+        sp_result = ds.serialize(simple_data)
         sp_time = time.time() - start_time
 
-        # SerialPy should be reasonably fast (not more than 10x slower than JSON)
+        # Datason should be reasonably fast (not more than 10x slower than JSON)
         assert sp_time < json_time * 10, (
-            f"SerialPy too slow: {sp_time:.3f}s vs JSON {json_time:.3f}s"
+            f"Datason too slow: {sp_time:.3f}s vs JSON {json_time:.3f}s"
         )
 
         # Results should be equivalent for simple data
@@ -86,12 +86,12 @@ class TestPerformanceBenchmarks:
 
         # First serialization (should be optimized)
         start_time = time.time()
-        result1 = sp.serialize(json_compatible)
+        result1 = ds.serialize(json_compatible)
         first_time = time.time() - start_time
 
         # Second serialization (should be even faster due to optimization)
         start_time = time.time()
-        result2 = sp.serialize(result1)
+        result2 = ds.serialize(result1)
         second_time = time.time() - start_time
 
         # Second should be faster or equal (optimization should kick in)
@@ -121,7 +121,7 @@ class TestPerformanceBenchmarks:
         }
 
         start_time = time.time()
-        result = sp.deserialize(data)
+        result = ds.deserialize(data)
         end_time = time.time()
 
         deserialize_time = end_time - start_time
@@ -161,14 +161,14 @@ class TestPerformanceBenchmarks:
         start_time = time.time()
 
         # Serialize
-        serialized = sp.serialize(complex_data)
+        serialized = ds.serialize(complex_data)
 
         # Convert to JSON and back (simulate real-world usage)
         json_str = json.dumps(serialized)
         parsed = json.loads(json_str)
 
         # Deserialize
-        deserialized = sp.deserialize(parsed)
+        deserialized = ds.deserialize(parsed)
 
         end_time = time.time()
 
@@ -205,7 +205,7 @@ class TestPerformanceBenchmarks:
 
         # This should not crash or consume excessive memory
         start_time = time.time()
-        result = sp.serialize(large_dataset)
+        result = ds.serialize(large_dataset)
         end_time = time.time()
 
         # Should complete without issues
@@ -226,7 +226,7 @@ class TestPerformanceBenchmarks:
         }
 
         start_time = time.time()
-        result = sp.serialize(data)
+        result = ds.serialize(data)
         end_time = time.time()
 
         serialize_time = end_time - start_time
@@ -265,7 +265,7 @@ class TestPerformanceBenchmarks:
         }
 
         start_time = time.time()
-        result = sp.serialize(data)
+        result = ds.serialize(data)
         end_time = time.time()
 
         serialize_time = end_time - start_time
@@ -296,7 +296,7 @@ class TestScalabilityEdgeCases:
             current = current["next"]
 
         start_time = time.time()
-        result = sp.serialize(nested)
+        result = ds.serialize(nested)
         end_time = time.time()
 
         # Should handle deep nesting efficiently
@@ -317,7 +317,7 @@ class TestScalabilityEdgeCases:
             }
 
         start_time = time.time()
-        result = sp.serialize(wide_dict)
+        result = ds.serialize(wide_dict)
         end_time = time.time()
 
         # Should handle wide structures efficiently
@@ -350,7 +350,7 @@ class TestScalabilityEdgeCases:
             )
 
         start_time = time.time()
-        result = sp.serialize(mixed_data)
+        result = ds.serialize(mixed_data)
         end_time = time.time()
 
         # Should handle mixed types efficiently

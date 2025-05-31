@@ -1,4 +1,4 @@
-"""Security tests for SerialPy.
+"""Security tests for Datason.
 
 Tests for security protections including circular reference detection,
 depth limits, size limits, and resource exhaustion prevention.

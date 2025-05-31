@@ -117,12 +117,12 @@ docs = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/danielendler/SerialPy"
+Homepage = "https://github.com/danielendler/Datason"
 Documentation = "https://datason.readthedocs.io"
-Repository = "https://github.com/danielendler/SerialPy"
-"Bug Tracker" = "https://github.com/danielendler/SerialPy/issues"
-Changelog = "https://github.com/danielendler/SerialPy/blob/main/CHANGELOG.md"
-Discussions = "https://github.com/danielendler/SerialPy/discussions"
+Repository = "https://github.com/danielendler/Datason"
+"Bug Tracker" = "https://github.com/danielendler/Datason/issues"
+Changelog = "https://github.com/danielendler/Datason/blob/main/CHANGELOG.md"
+Discussions = "https://github.com/danielendler/Datason/discussions"
 Funding = "https://github.com/sponsors/danielendler"
 
 [tool.hatch.build.targets.wheel]

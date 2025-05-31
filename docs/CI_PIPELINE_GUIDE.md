@@ -1,6 +1,6 @@
 # CI/CD Pipeline Guide
 
-SerialPy uses a **modern, multi-pipeline CI/CD architecture** designed for speed, clarity, and parallel execution. This guide explains our complete CI/CD setup.
+Datason uses a **modern, multi-pipeline CI/CD architecture** designed for speed, clarity, and parallel execution. This guide explains our complete CI/CD setup.
 
 ## 🏗️ **Architecture Overview**
 

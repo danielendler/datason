@@ -1,6 +1,6 @@
-"""SerialPy - A comprehensive Python package for intelligent serialization.
+"""Datason - A comprehensive Python package for intelligent serialization.
 
-SerialPy solves the fundamental problem of serializing complex Python objects
+Datason solves the fundamental problem of serializing complex Python objects
 that standard `json.dumps()` cannot handle. Perfect for AI/ML workflows, data science,
 and modern Python applications that deal with:
 
@@ -80,7 +80,7 @@ except ImportError:
     _ml_available = False
 
 __version__ = "0.1.0"
-__author__ = "SerialPy Contributors"
+__author__ = "Datason Contributors"
 __license__ = "MIT"
 
 __all__ = [

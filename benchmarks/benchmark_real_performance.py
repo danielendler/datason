@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""SerialPy Official Performance Benchmark Suite
+"""Datason Official Performance Benchmark Suite
 
-This script provides the authoritative performance measurements for SerialPy.
+This script provides the authoritative performance measurements for Datason.
 It measures real-world performance across different data types and use cases
 to provide transparent, reproducible benchmarks.
 
@@ -14,10 +14,10 @@ Key measurements:
 
 Methodology:
 - Uses statistical analysis (multiple runs, mean, std dev)
-- Tests both SerialPy advantages and limitations
+- Tests both Datason advantages and limitations
 - Compares against standard library and common alternatives
-- Include both SerialPy strengths and weaknesses
-- Provides context for when to use SerialPy vs alternatives
+- Include both Datason strengths and weaknesses
+- Provides context for when to use Datason vs alternatives
 
 Usage:
     python benchmark_real_performance.py
@@ -56,7 +56,7 @@ BENCHMARKING BEST PRACTICES:
     - Run on dedicated machine (minimal background processes)
     - Multiple runs to verify consistency
     - Representative data sizes and structures
-    - Include both SerialPy strengths and weaknesses
+    - Include both Datason strengths and weaknesses
 
 This script is referenced in:
     - README.md performance section
@@ -87,7 +87,7 @@ try:
 except ImportError:
     HAS_PANDAS = False
 
-import serialpy as sp
+import datason as ds
 
 
 def time_operation(func, *args, **kwargs):
@@ -127,7 +127,7 @@ def create_test_data():
         "metadata": {"total": 1000, "generated": "2024-01-01", "version": "1.0"},
     }
 
-    # Complex data (SerialPy advantages)
+    # Complex data (Datason advantages)
     datasets["complex"] = {
         "sessions": [
             {
@@ -198,7 +198,7 @@ def create_test_data():
 
 
 def run_comparison_benchmarks():
-    """Compare SerialPy with standard JSON on compatible data."""
+    """Compare Datason with standard JSON on compatible data."""
     print("🏁 Running Performance Benchmarks...")
     print("=" * 60)
 
@@ -217,27 +217,27 @@ def run_comparison_benchmarks():
         f"Standard JSON:     {json_stats['mean'] * 1000:.2f}ms ± {json_stats['stdev'] * 1000:.2f}ms"
     )
 
-    # SerialPy
-    sp_stats = benchmark_operation(sp.serialize, simple_data)
+    # Datason
+    sp_stats = benchmark_operation(ds.serialize, simple_data)
     print(
-        f"SerialPy:         {sp_stats['mean'] * 1000:.2f}ms ± {sp_stats['stdev'] * 1000:.2f}ms"
+        f"Datason:         {sp_stats['mean'] * 1000:.2f}ms ± {sp_stats['stdev'] * 1000:.2f}ms"
     )
 
     # Ratio
     ratio = sp_stats["mean"] / json_stats["mean"]
-    print(f"SerialPy/JSON:    {ratio:.2f}x")
+    print(f"Datason/JSON:    {ratio:.2f}x")
 
     results["simple"] = {"json": json_stats, "serialpy": sp_stats, "ratio": ratio}
 
-    # Test complex data (only SerialPy can handle)
+    # Test complex data (only Datason can handle)
     complex_data = datasets["complex"]
 
     print("\n🧩 Complex Data Performance (500 sessions with UUIDs/datetimes)")
     print("-" * 55)
 
-    sp_complex_stats = benchmark_operation(sp.serialize, complex_data)
+    sp_complex_stats = benchmark_operation(ds.serialize, complex_data)
     print(
-        f"SerialPy:         {sp_complex_stats['mean'] * 1000:.2f}ms ± {sp_complex_stats['stdev'] * 1000:.2f}ms"
+        f"Datason:         {sp_complex_stats['mean'] * 1000:.2f}ms ± {sp_complex_stats['stdev'] * 1000:.2f}ms"
     )
 
     # Try to serialize with pickle for comparison
@@ -247,7 +247,7 @@ def run_comparison_benchmarks():
     )
 
     pickle_ratio = sp_complex_stats["mean"] / pickle_stats["mean"]
-    print(f"SerialPy/Pickle:  {pickle_ratio:.2f}x")
+    print(f"Datason/Pickle:  {pickle_ratio:.2f}x")
 
     results["complex"] = {
         "serialpy": sp_complex_stats,
@@ -261,9 +261,9 @@ def run_comparison_benchmarks():
     print("\n📈 Large Nested Data Performance (100 groups × 50 items)")
     print("-" * 50)
 
-    sp_large_stats = benchmark_operation(sp.serialize, large_data)
+    sp_large_stats = benchmark_operation(ds.serialize, large_data)
     print(
-        f"SerialPy:         {sp_large_stats['mean'] * 1000:.2f}ms ± {sp_large_stats['stdev'] * 1000:.2f}ms"
+        f"Datason:         {sp_large_stats['mean'] * 1000:.2f}ms ± {sp_large_stats['stdev'] * 1000:.2f}ms"
     )
 
     # Calculate throughput
@@ -280,9 +280,9 @@ def run_comparison_benchmarks():
         print("\n🔢 NumPy Data Performance")
         print("-" * 30)
 
-        sp_numpy_stats = benchmark_operation(sp.serialize, numpy_data)
+        sp_numpy_stats = benchmark_operation(ds.serialize, numpy_data)
         print(
-            f"SerialPy:         {sp_numpy_stats['mean'] * 1000:.2f}ms ± {sp_numpy_stats['stdev'] * 1000:.2f}ms"
+            f"Datason:         {sp_numpy_stats['mean'] * 1000:.2f}ms ± {sp_numpy_stats['stdev'] * 1000:.2f}ms"
         )
 
         # Calculate data size
@@ -304,9 +304,9 @@ def run_comparison_benchmarks():
         print("\n🐼 Pandas Data Performance")
         print("-" * 30)
 
-        sp_pandas_stats = benchmark_operation(sp.serialize, pandas_data)
+        sp_pandas_stats = benchmark_operation(ds.serialize, pandas_data)
         print(
-            f"SerialPy:         {sp_pandas_stats['mean'] * 1000:.2f}ms ± {sp_pandas_stats['stdev'] * 1000:.2f}ms"
+            f"Datason:         {sp_pandas_stats['mean'] * 1000:.2f}ms ± {sp_pandas_stats['stdev'] * 1000:.2f}ms"
         )
 
         # DataFrame size
@@ -337,29 +337,30 @@ def test_round_trip_performance():
         ]
     }
 
-    def round_trip(data):
-        serialized = sp.serialize(data)
+    def round_trip_test(data):
+        """Test full round-trip performance."""
+        serialized = ds.serialize(data)
         json_str = json.dumps(serialized)
         parsed = json.loads(json_str)
-        return sp.deserialize(parsed)
+        return ds.deserialize(parsed)
 
-    rt_stats = benchmark_operation(round_trip, test_data)
+    rt_stats = benchmark_operation(round_trip_test, test_data)
     print(
         f"Round-trip:        {rt_stats['mean'] * 1000:.2f}ms ± {rt_stats['stdev'] * 1000:.2f}ms"
     )
 
     # Test just serialization
-    ser_stats = benchmark_operation(sp.serialize, test_data)
+    ser_stats = benchmark_operation(ds.serialize, test_data)
     print(
         f"Serialize only:    {ser_stats['mean'] * 1000:.2f}ms ± {ser_stats['stdev'] * 1000:.2f}ms"
     )
 
     # Test just deserialization
-    serialized = sp.serialize(test_data)
+    serialized = ds.serialize(test_data)
     json_str = json.dumps(serialized)
     parsed = json.loads(json_str)
 
-    deser_stats = benchmark_operation(sp.deserialize, parsed)
+    deser_stats = benchmark_operation(ds.deserialize, parsed)
     print(
         f"Deserialize only:  {deser_stats['mean'] * 1000:.2f}ms ± {deser_stats['stdev'] * 1000:.2f}ms"
     )
@@ -379,13 +380,13 @@ def generate_performance_summary(results, round_trip_results):
 
     print("\n**Simple Data (JSON-compatible):**")
     simple = results["simple"]
-    print(f"- SerialPy: {simple['serialpy']['mean'] * 1000:.1f}ms")
+    print(f"- Datason: {simple['serialpy']['mean'] * 1000:.1f}ms")
     print(f"- Standard JSON: {simple['json']['mean'] * 1000:.1f}ms")
     print(f"- Overhead: {simple['ratio']:.1f}x")
 
     print("\n**Complex Data (UUIDs, datetimes):**")
     complex_data = results["complex"]
-    print(f"- SerialPy: {complex_data['serialpy']['mean'] * 1000:.1f}ms")
+    print(f"- Datason: {complex_data['serialpy']['mean'] * 1000:.1f}ms")
     print(f"- Pickle: {complex_data['pickle']['mean'] * 1000:.1f}ms")
     print(f"- vs Pickle: {complex_data['pickle_ratio']:.1f}x")
 
@@ -412,7 +413,7 @@ def generate_performance_summary(results, round_trip_results):
 
 
 if __name__ == "__main__":
-    print("🚀 SerialPy Real Performance Benchmarks")
+    print("🚀 Datason Real Performance Benchmarks")
     print(f"Python {'.'.join(map(str, __import__('sys').version_info[:3]))}")
     print(f"NumPy: {'✅' if HAS_NUMPY else '❌'}")
     print(f"Pandas: {'✅' if HAS_PANDAS else '❌'}")

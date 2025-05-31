@@ -2,7 +2,7 @@
 
 ## Security Status
 
-✅ **Low Risk** - SerialPy has been hardened with real security protections against common JSON serialization vulnerabilities.
+✅ **Low Risk** - Datason has been hardened with real security protections against common JSON serialization vulnerabilities.
 
 **Last Security Audit**: 2025-05-30  
 **Security Scanner Results**: ✅ 1 minor issue (documented), ✅ 0 critical vulnerabilities  
@@ -27,7 +27,7 @@ a = {}
 b = {"a": a}
 a["b"] = b  # Circular reference
 
-# SerialPy handles it safely
+# Datason handles it safely
 result = serialpy.serialize(a)
 # Warns: "Circular reference detected. Replacing with null to prevent infinite recursion."
 # Returns: {"b": {"a": None}}  # Safe, controlled output
@@ -65,7 +65,7 @@ class ProblematicObject:
     def __dict__(self):
         raise RuntimeError("Internal error with sensitive data")
 
-# SerialPy handles safely
+# Datason handles safely
 obj = ProblematicObject()
 result = serialpy.serialize(obj)
 # Warns: "Failed to serialize object. Falling back to string representation."
@@ -98,7 +98,7 @@ SEVERITY.LOW: 1 (intentional, documented)
 - ✅ Updated `setuptools` from 70.2.0 → 80.9.0 (fixed path traversal CVE)
 
 **Dependency Strategy**:
-- Core SerialPy has **zero dependencies** for security
+- Core Datason has **zero dependencies** for security
 - Optional dependencies (pandas, numpy, ML libraries) are user-controlled
 - All dev dependencies regularly updated and scanned
 
@@ -117,7 +117,7 @@ SEVERITY.LOW: 1 (intentional, documented)
 **Please DO NOT report security vulnerabilities through public GitHub issues.**
 
 ### Preferred: Security Advisory
-1. Go to https://github.com/danielendler/SerialPy/security/advisories
+1. Go to https://github.com/danielendler/Datason/security/advisories
 2. Click "Report a vulnerability"
 3. Provide details including reproduction steps
 
@@ -228,5 +228,5 @@ print(f"Max string length: {MAX_STRING_LENGTH}")    # 1,000,000
 
 ---
 
-**🛡️ Security is a continuous process.** Help us keep SerialPy secure by reporting issues responsibly and following security best practices in your own code.
+**🛡️ Security is a continuous process.** Help us keep Datason secure by reporting issues responsibly and following security best practices in your own code.
 # Test

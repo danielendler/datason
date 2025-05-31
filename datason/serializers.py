@@ -1,4 +1,4 @@
-"""Specialized serializers for SerialPy.
+"""Specialized serializers for Datason.
 
 This module provides specialized serialization functions for specific use cases
 and data structures that require custom handling.

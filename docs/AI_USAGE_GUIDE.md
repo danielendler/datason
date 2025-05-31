@@ -1,8 +1,8 @@
-# SerialPy AI Usage Guide
+# Datason AI Usage Guide
 
 ## Overview
 
-SerialPy is a **universal JSON serialization library** for Python that handles complex data structures including ML/AI objects, pandas DataFrames, datetime objects, and more. Perfect for data scientists, ML engineers, and developers working with complex Python objects.
+Datason is a **universal JSON serialization library** for Python that handles complex data structures including ML/AI objects, pandas DataFrames, datetime objects, and more. Perfect for data scientists, ML engineers, and developers working with complex Python objects.
 
 ## Key Features for AI/ML Workflows
 
@@ -163,7 +163,7 @@ serialized = serialpy.serialize(gpu_tensor)  # Automatically moves to CPU for se
 
 ### 🌐 One Output, Multiple Languages
 
-SerialPy's JSON output works seamlessly across programming languages:
+Datason's JSON output works seamlessly across programming languages:
 
 ```python
 # Python: Generate ML results
@@ -256,7 +256,7 @@ metrics.RecordModelAccuracy(results.ModelAccuracy)
 
 ```mermaid
 graph LR
-    A[Python ML Training] --> B[SerialPy Serialize]
+    A[Python ML Training] --> B[Datason Serialize]
     B --> C[JSON API Response]
     C --> D[JavaScript Dashboard]
     C --> E[Java Storage Service]
@@ -325,7 +325,7 @@ pip install serialpy[ml]  # Includes torch, tensorflow, jax support
 pip install serialpy[all]  # Includes all optional dependencies
 ```
 
-## Why Choose SerialPy?
+## Why Choose Datason?
 
 1. **Zero Configuration**: Works out of the box with any Python object
 2. **ML/AI Native**: Built specifically for data science and machine learning workflows
@@ -336,7 +336,7 @@ pip install serialpy[all]  # Includes all optional dependencies
 
 ## Comparison with Alternatives
 
-| Feature | SerialPy | json | pickle | joblib |
+| Feature | Datason | json | pickle | joblib |
 |---------|-----------|------|--------|--------|
 | ML Objects | ✅ | ❌ | ✅ | ✅ |
 | Cross-language | ✅ | ✅ | ❌ | ❌ |

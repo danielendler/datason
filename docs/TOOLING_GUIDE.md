@@ -2,7 +2,7 @@
 
 ## Overview
 
-SerialPy uses **best-in-class modern Python tooling** for development, testing, security, and documentation. This guide explains our choices and how to use them effectively.
+Datason uses **best-in-class modern Python tooling** for development, testing, security, and documentation. This guide explains our choices and how to use them effectively.
 
 ## 🚀 **Tool Stack Summary**
 

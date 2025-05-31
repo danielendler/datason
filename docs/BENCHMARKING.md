@@ -1,8 +1,8 @@
-# SerialPy Performance Benchmarks
+# Datason Performance Benchmarks
 
 ## Overview
 
-This document contains **real performance measurements** for SerialPy, obtained through systematic benchmarking rather than estimates. All benchmarks are reproducible using the included `benchmark_real_performance.py` script.
+This document contains **real performance measurements** for Datason, obtained through systematic benchmarking rather than estimates. All benchmarks are reproducible using the included `benchmark_real_performance.py` script.
 
 ## Benchmark Environment
 
@@ -29,9 +29,9 @@ data = {
 | Library | Performance | Relative Speed |
 |---------|-------------|----------------|
 | Standard JSON | 0.4ms ± 0.02ms | 1.0x (baseline) |
-| **SerialPy** | **0.6ms ± 0.02ms** | **1.6x** |
+| **Datason** | **0.6ms ± 0.02ms** | **1.6x** |
 
-**Analysis**: SerialPy adds only 60% overhead vs standard JSON for compatible data, which is excellent considering the added functionality (type detection, ML object support, safety features).
+**Analysis**: Datason adds only 60% overhead vs standard JSON for compatible data, which is excellent considering the added functionality (type detection, ML object support, safety features).
 
 ### Complex Data Performance
 
@@ -51,11 +51,11 @@ data = {
 
 | Library | Performance | Notes |
 |---------|-------------|-------|
-| **SerialPy** | **2.1ms ± 0.08ms** | Only option for this data |
+| **Datason** | **2.1ms ± 0.08ms** | Only option for this data |
 | Pickle | 0.7ms ± 0.07ms | Binary format, Python-only |
 | Standard JSON | ❌ **Fails** | Cannot serialize UUIDs/datetime |
 
-**Analysis**: SerialPy is 3.2x slower than pickle but provides JSON output that's human-readable and cross-platform compatible.
+**Analysis**: Datason is 3.2x slower than pickle but provides JSON output that's human-readable and cross-platform compatible.
 
 ### High-Throughput Scenarios
 
@@ -103,14 +103,14 @@ print(f"Saved in {time.time() - start:.1f}ms")
 # ✅ Handles any Python object (even lambdas, classes)
 ```
 
-### 🌐 When SerialPy Wins
+### 🌐 When Datason Wins
 ```python
 # Multi-language team, API responses, data sharing
 import json
-import serialpy as sp
+import datason as ds
 
 start = time.time()
-json_data = sp.serialize(complex_ml_pipeline)  # 2.1ms
+json_data = ds.serialize(complex_ml_pipeline)  # 2.1ms
 with open('model.json', 'w') as f:
     json.dump(json_data, f)
 print(f"Saved in {time.time() - start:.1f}ms")
@@ -136,7 +136,7 @@ overhead = 1.4  # ms extra
 
 # For most modern applications: 1.4ms is negligible
 # For high-frequency trading: Every microsecond matters (use pickle)
-# For web APIs: Human-readable JSON is essential (use SerialPy)
+# For web APIs: Human-readable JSON is essential (use Datason)
 ```
 
 ### 🎯 Practical Decision Framework
@@ -144,19 +144,19 @@ overhead = 1.4  # ms extra
 | Your Situation | Recommended Choice | Why |
 |----------------|-------------------|-----|
 | **Python-only batch processing** | pickle | Pure speed, no compatibility needs |
-| **REST API responses** | **SerialPy** | JSON required, human-readable |
-| **Microservices architecture** | **SerialPy** | Language interoperability |
-| **Data science collaboration** | **SerialPy** | Share with non-Python users |
+| **REST API responses** | **Datason** | JSON required, human-readable |
+| **Microservices architecture** | **Datason** | Language interoperability |
+| **Data science collaboration** | **Datason** | Share with non-Python users |
 | **Real-time trading systems** | pickle | Every millisecond counts |
-| **Research/experiments** | **SerialPy** | Reproducible, inspectable results |
-| **Production ML pipelines** | **SerialPy** | Debugging, monitoring, APIs |
+| **Research/experiments** | **Datason** | Reproducible, inspectable results |
+| **Production ML pipelines** | **Datason** | Debugging, monitoring, APIs |
 
 The 3.2x "performance penalty" is actually a **feature trade** - you're getting cross-language compatibility, human readability, and API-friendliness for 1.4ms per operation.
 
 ## Comparative Analysis
 
 ### vs Standard JSON
-- **Compatibility**: SerialPy handles 20+ data types vs JSON's 6 basic types
+- **Compatibility**: Datason handles 20+ data types vs JSON's 6 basic types
 - **Overhead**: Only 1.6x for compatible data (vs 3-10x for many JSON alternatives)
 - **Safety**: Graceful handling of NaN/Infinity vs JSON's errors
 
@@ -169,7 +169,7 @@ The 3.2x "performance penalty" is actually a **feature trade** - you're getting 
 ### vs Specialized Libraries
 - **orjson/ujson**: Faster for basic JSON types but cannot handle ML objects
 - **joblib**: Good for NumPy arrays but binary format
-- **SerialPy**: Best balance of functionality, performance, and compatibility
+- **Datason**: Best balance of functionality, performance, and compatibility
 
 ## Methodology
 
@@ -195,7 +195,7 @@ All measurements come from `benchmark_real_performance.py`, which:
 
 ## Performance Recommendations
 
-### When SerialPy Excels
+### When Datason Excels
 - **Mixed data types**: Standard + ML objects in one structure
 - **API responses**: Need JSON compatibility with complex data
 - **Data science workflows**: Frequent DataFrame/NumPy serialization
@@ -249,4 +249,4 @@ python benchmark_real_performance.py --detailed
 ---
 
 *Last updated: January 2024*  
-*Benchmarks reflect SerialPy v1.0.0 performance characteristics*
+*Benchmarks reflect Datason v1.0.0 performance characteristics*

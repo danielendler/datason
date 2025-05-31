@@ -1,10 +1,10 @@
-# Contributing to SerialPy 🤝
+# Contributing to Datason 🤝
 
-Thank you for your interest in contributing to SerialPy! This guide will help you understand our development process, coding standards, and how to make meaningful contributions.
+Thank you for your interest in contributing to Datason! This guide will help you understand our development process, coding standards, and how to make meaningful contributions.
 
 ## 🎯 Core Development Principles
 
-SerialPy follows three fundamental principles that guide all development decisions:
+Datason follows three fundamental principles that guide all development decisions:
 
 ### 1. 🪶 **Minimal Dependencies**
 
@@ -105,7 +105,7 @@ def test_large_dataset_performance():
 
 ```bash
 # 1. Fork and clone the repository
-git clone https://github.com/danielendler/SerialPy.git
+git clone https://github.com/danielendler/Datason.git
 cd serialpy
 
 # 2. Create virtual environment
@@ -269,7 +269,7 @@ pytest tests/test_your_new_feature.py --cov=serialpy --cov-report=term-missing
 - [ ] Documentation updated if needed
 
 ### CI/CD Pipeline
-SerialPy uses a modern multi-pipeline CI/CD architecture. See our **[CI/CD Pipeline Guide](CI_PIPELINE_GUIDE.md)** for complete details on:
+Datason uses a modern multi-pipeline CI/CD architecture. See our **[CI/CD Pipeline Guide](CI_PIPELINE_GUIDE.md)** for complete details on:
 - 🔍 **Quality Pipeline** - Ruff linting, formatting, security scanning (~30s)
 - 🧪 **Main CI** - Testing, coverage, package building (~2-3min)
 - 📚 **Docs Pipeline** - Documentation generation and deployment
@@ -348,4 +348,4 @@ We follow the Contributor Covenant Code of Conduct. Please be respectful and inc
 
 ---
 
-**Thank you for contributing to SerialPy!** 🙏 Your contributions help make Python data serialization better for everyone.
+**Thank you for contributing to Datason!** 🙏 Your contributions help make Python data serialization better for everyone.

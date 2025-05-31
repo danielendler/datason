@@ -1,8 +1,8 @@
-# Release Management Guide for SerialPy
+# Release Management Guide for Datason
 
 ## 🏷️ Overview
 
-SerialPy uses a comprehensive release management system with automated workflows, semantic versioning, and strict quality controls. This guide covers the entire process from development to release.
+Datason uses a comprehensive release management system with automated workflows, semantic versioning, and strict quality controls. This guide covers the entire process from development to release.
 
 ## 📋 Table of Contents
 
@@ -44,7 +44,7 @@ Restrictions:
 ## 📦 Version Management
 
 ### **Semantic Versioning**
-SerialPy follows [Semantic Versioning 2.0.0](https://semver.org/):
+Datason follows [Semantic Versioning 2.0.0](https://semver.org/):
 
 ```
 v{MAJOR}.{MINOR}.{PATCH}[-{PRERELEASE}]
@@ -221,8 +221,8 @@ pip install serialpy==v0.1.2
 
 ## 🔗 Links
 - 📚 Documentation: https://serialpy.readthedocs.io
-- 🐛 Issues: https://github.com/danielendler/SerialPy/issues
-- 💬 Discussions: https://github.com/danielendler/SerialPy/discussions
+- 🐛 Issues: https://github.com/danielendler/Datason/issues
+- 💬 Discussions: https://github.com/danielendler/Datason/discussions
 ```
 
 ## 🤖 Automation Features
@@ -380,4 +380,4 @@ gh release edit v0.1.2 --prerelease
 
 ---
 
-> 💡 **Questions?** Create a [discussion](https://github.com/danielendler/SerialPy/discussions) or check existing [issues](https://github.com/danielendler/SerialPy/issues).
+> 💡 **Questions?** Create a [discussion](https://github.com/danielendler/Datason/discussions) or check existing [issues](https://github.com/danielendler/Datason/issues).

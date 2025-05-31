@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Setup GitHub labels for SerialPy repository.
+"""Setup GitHub labels for Datason repository.
 
 This script creates consistent labels for PR management, issue tracking,
 and automation workflows.
@@ -47,7 +47,7 @@ def create_label(name: str, color: str, description: str) -> bool:
 
 
 def setup_labels() -> bool:
-    """Set up all SerialPy labels."""
+    """Set up all Datason labels."""
 
     labels = [
         # Type labels
@@ -108,7 +108,7 @@ def setup_labels() -> bool:
         ("wontfix", "ffffff", "This will not be worked on"),
     ]
 
-    print("🏷️ Setting up GitHub labels for SerialPy...")
+    print("🏷️ Setting up GitHub labels for Datason...")
 
     success_count = 0
     total_count = len(labels)

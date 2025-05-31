@@ -1,5 +1,5 @@
 """
-Tests for SerialPy deserialization functionality.
+Tests for Datason deserialization functionality.
 
 This module tests the bidirectional serialization capabilities by testing
 the deserialize functions and round-trip serialization/deserialization.
@@ -11,7 +11,7 @@ import uuid
 
 import pytest
 
-import datason as sp
+import datason as ds
 
 
 class TestDeserialize:
@@ -19,20 +19,20 @@ class TestDeserialize:
 
     def test_deserialize_none(self) -> None:
         """Test deserialization of None."""
-        assert sp.deserialize(None) is None
+        assert ds.deserialize(None) is None
 
     def test_deserialize_basic_types(self) -> None:
         """Test deserialization of basic JSON types."""
-        assert sp.deserialize("hello") == "hello"
-        assert sp.deserialize(42) == 42
-        assert sp.deserialize(3.14) == 3.14
-        assert sp.deserialize(True) is True
-        assert sp.deserialize(False) is False
+        assert ds.deserialize("hello") == "hello"
+        assert ds.deserialize(42) == 42
+        assert ds.deserialize(3.14) == 3.14
+        assert ds.deserialize(True) is True
+        assert ds.deserialize(False) is False
 
     def test_deserialize_datetime_strings(self) -> None:
         """Test deserialization of datetime strings."""
         # ISO format
-        result = sp.deserialize("2023-01-01T12:00:00")
+        result = ds.deserialize("2023-01-01T12:00:00")
         assert isinstance(result, datetime)
         assert result.year == 2023
         assert result.month == 1
@@ -40,26 +40,26 @@ class TestDeserialize:
         assert result.hour == 12
 
         # With timezone
-        result = sp.deserialize("2023-01-01T12:00:00Z")
+        result = ds.deserialize("2023-01-01T12:00:00Z")
         assert isinstance(result, datetime)
         assert result.tzinfo is not None
 
     def test_deserialize_uuid_strings(self) -> None:
         """Test deserialization of UUID strings."""
         uuid_str = "12345678-1234-5678-9012-123456789abc"
-        result = sp.deserialize(uuid_str)
+        result = ds.deserialize(uuid_str)
         assert isinstance(result, uuid.UUID)
         assert str(result) == uuid_str
 
     def test_deserialize_with_parsing_disabled(self) -> None:
         """Test deserialization with parsing options disabled."""
         # Disable datetime parsing
-        result = sp.deserialize("2023-01-01T12:00:00", parse_dates=False)
+        result = ds.deserialize("2023-01-01T12:00:00", parse_dates=False)
         assert isinstance(result, str)
 
         # Disable UUID parsing
         uuid_str = "12345678-1234-5678-9012-123456789abc"
-        result = sp.deserialize(uuid_str, parse_uuids=False)
+        result = ds.deserialize(uuid_str, parse_uuids=False)
         assert isinstance(result, str)
 
     def test_deserialize_lists(self) -> None:
@@ -71,7 +71,7 @@ class TestDeserialize:
             42,
             None,
         ]
-        result = sp.deserialize(data)
+        result = ds.deserialize(data)
 
         assert isinstance(result[0], datetime)
         assert isinstance(result[1], uuid.UUID)
@@ -88,7 +88,7 @@ class TestDeserialize:
             "value": 42,
             "active": True,
         }
-        result = sp.deserialize(data)
+        result = ds.deserialize(data)
 
         assert isinstance(result["created_at"], datetime)
         assert isinstance(result["id"], uuid.UUID)
@@ -109,7 +109,7 @@ class TestDeserialize:
             },
             "metadata": {"processed_at": "2023-01-01T15:30:00"},
         }
-        result = sp.deserialize(data)
+        result = ds.deserialize(data)
 
         assert isinstance(result["user"]["id"], uuid.UUID)
         assert isinstance(result["user"]["created_at"], datetime)
@@ -133,8 +133,8 @@ class TestRoundTripSerialization:
         }
 
         # Serialize then deserialize
-        serialized = sp.serialize(original)
-        deserialized = sp.deserialize(serialized)
+        serialized = ds.serialize(original)
+        deserialized = ds.deserialize(serialized)
 
         assert isinstance(deserialized["datetime"], datetime)
         assert isinstance(deserialized["uuid"], uuid.UUID)
@@ -168,8 +168,8 @@ class TestRoundTripSerialization:
         }
 
         # Serialize then deserialize
-        serialized = sp.serialize(original)
-        deserialized = sp.deserialize(serialized)
+        serialized = ds.serialize(original)
+        deserialized = ds.deserialize(serialized)
 
         # Check structure is preserved
         assert len(deserialized["users"]) == 2
@@ -191,15 +191,15 @@ class TestRoundTripSerialization:
             "data": [1, 2, 3],
         }
 
-        # Serialize with SerialPy
-        serialized = sp.serialize(original)
+        # Serialize with Datason
+        serialized = ds.serialize(original)
 
         # Convert to JSON string and back
         json_str = json.dumps(serialized)
         parsed = json.loads(json_str)
 
-        # Deserialize with SerialPy
-        deserialized = sp.deserialize(parsed)
+        # Deserialize with Datason
+        deserialized = ds.deserialize(parsed)
 
         assert isinstance(deserialized["datetime"], datetime)
         assert isinstance(deserialized["uuid"], uuid.UUID)
@@ -212,7 +212,7 @@ class TestSafeDeserialize:
     def test_safe_deserialize_valid_json(self) -> None:
         """Test safe deserialization with valid JSON."""
         json_str = '{"date": "2023-01-01T12:00:00", "value": 42}'
-        result = sp.safe_deserialize(json_str)
+        result = ds.safe_deserialize(json_str)
 
         assert isinstance(result["date"], datetime)
         assert result["value"] == 42
@@ -220,7 +220,7 @@ class TestSafeDeserialize:
     def test_safe_deserialize_invalid_json(self) -> None:
         """Test safe deserialization with invalid JSON."""
         invalid_json = '{"invalid": json}'
-        result = sp.safe_deserialize(invalid_json)
+        result = ds.safe_deserialize(invalid_json)
 
         # Should return the original string
         assert result == invalid_json
@@ -228,7 +228,7 @@ class TestSafeDeserialize:
     def test_safe_deserialize_with_options(self) -> None:
         """Test safe deserialization with parsing options."""
         json_str = '{"date": "2023-01-01T12:00:00"}'
-        result = sp.safe_deserialize(json_str, parse_dates=False)
+        result = ds.safe_deserialize(json_str, parse_dates=False)
 
         assert isinstance(result["date"], str)
 
@@ -239,26 +239,26 @@ class TestUtilityFunctions:
     def test_parse_datetime_string(self) -> None:
         """Test datetime string parsing."""
         # Valid datetime strings
-        assert sp.parse_datetime_string("2023-01-01T12:00:00") is not None
-        assert sp.parse_datetime_string("2023-01-01T12:00:00Z") is not None
+        assert ds.parse_datetime_string("2023-01-01T12:00:00") is not None
+        assert ds.parse_datetime_string("2023-01-01T12:00:00Z") is not None
 
         # Invalid datetime strings
-        assert sp.parse_datetime_string("not a date") is None
-        assert sp.parse_datetime_string("2023") is None
-        assert sp.parse_datetime_string("") is None
+        assert ds.parse_datetime_string("not a date") is None
+        assert ds.parse_datetime_string("2023") is None
+        assert ds.parse_datetime_string("") is None
 
     def test_parse_uuid_string(self) -> None:
         """Test UUID string parsing."""
         # Valid UUID strings
         valid_uuid = "12345678-1234-5678-9012-123456789abc"
-        result = sp.parse_uuid_string(valid_uuid)
+        result = ds.parse_uuid_string(valid_uuid)
         assert isinstance(result, uuid.UUID)
         assert str(result) == valid_uuid
 
         # Invalid UUID strings
-        assert sp.parse_uuid_string("not a uuid") is None
-        assert sp.parse_uuid_string("12345678-1234-5678-9012") is None
-        assert sp.parse_uuid_string("") is None
+        assert ds.parse_uuid_string("not a uuid") is None
+        assert ds.parse_uuid_string("12345678-1234-5678-9012") is None
+        assert ds.parse_uuid_string("") is None
 
 
 class TestDatetimeEdgeCases:
@@ -275,7 +275,7 @@ class TestDatetimeEdgeCases:
         ]
 
         for fmt in formats:
-            result = sp.deserialize(fmt)
+            result = ds.deserialize(fmt)
             assert isinstance(result, datetime), f"Failed to parse: {fmt}"
 
     def test_non_datetime_strings(self) -> None:
@@ -289,7 +289,7 @@ class TestDatetimeEdgeCases:
         ]
 
         for text in non_dates:
-            result = sp.deserialize(text)
+            result = ds.deserialize(text)
             assert result == text, f"Should remain string: {text}"
 
 
@@ -301,7 +301,7 @@ class TestOptionalDependencies:
         pytest.importorskip("pandas")
 
         # This should work even with pandas available
-        result = sp.deserialize("2023-01-01T12:00:00")
+        result = ds.deserialize("2023-01-01T12:00:00")
         assert isinstance(result, datetime)
 
     def test_deserialize_to_pandas(self) -> None:
@@ -310,6 +310,6 @@ class TestOptionalDependencies:
 
         data = {"timestamp": "2023-01-01T12:00:00", "values": [1, 2, 3]}
 
-        result = sp.deserialize_to_pandas(data)
+        result = ds.deserialize_to_pandas(data)
         assert isinstance(result["timestamp"], datetime)
         assert result["values"] == [1, 2, 3]

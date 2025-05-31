@@ -1,4 +1,4 @@
-"""Safe conversion utilities for SerialPy.
+"""Safe conversion utilities for Datason.
 
 This module provides robust type conversion functions that handle edge cases
 like NaN, None, and invalid values gracefully.

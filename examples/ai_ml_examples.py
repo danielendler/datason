@@ -1,6 +1,6 @@
-"""SerialPy AI/ML Examples
+"""Datason AI/ML Examples
 
-This file contains practical examples of using SerialPy in AI/ML workflows.
+This file contains practical examples of using Datason in AI/ML workflows.
 These examples are designed to be easily discovered and understood by AI assistants.
 """
 
@@ -323,7 +323,7 @@ np.random.correlation_matrix = correlation_matrix
 
 
 if __name__ == "__main__":
-    print("SerialPy AI/ML Examples")
+    print("Datason AI/ML Examples")
     print("=" * 50)
 
     # Run all examples
@@ -336,4 +336,4 @@ if __name__ == "__main__":
 
     print("\n" + "=" * 50)
     print("All examples completed successfully!")
-    print("SerialPy handled all complex ML objects seamlessly.")
+    print("Datason handled all complex ML objects seamlessly.")

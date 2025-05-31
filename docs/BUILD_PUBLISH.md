@@ -1,10 +1,10 @@
 # Building & Publishing Guide
 
-This guide covers the complete **build and publishing workflow** for SerialPy using modern Python packaging standards.
+This guide covers the complete **build and publishing workflow** for Datason using modern Python packaging standards.
 
 ## 🏗️ **Modern Python Packaging Overview**
 
-SerialPy uses the **latest Python packaging standards** for a clean, maintainable build process:
+Datason uses the **latest Python packaging standards** for a clean, maintainable build process:
 
 ```toml
 # pyproject.toml - Single source of truth
@@ -127,7 +127,7 @@ python -m twine upload dist/*
 
 ### **Semantic Versioning**
 
-SerialPy follows [Semantic Versioning](https://semver.org/):
+Datason follows [Semantic Versioning](https://semver.org/):
 
 ```
 MAJOR.MINOR.PATCH
@@ -367,7 +367,7 @@ python -m pip debug --verbose
 
 ## 🎯 **Summary**
 
-SerialPy uses **modern Python packaging** for:
+Datason uses **modern Python packaging** for:
 
 ✅ **Simple builds** with `python -m build`  
 ✅ **Secure publishing** with API tokens  

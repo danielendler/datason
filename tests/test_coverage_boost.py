@@ -1,5 +1,5 @@
 """
-Coverage boost tests for SerialPy.
+Coverage boost tests for Datason.
 
 These tests specifically target remaining uncovered lines to achieve 80-85% coverage.
 """

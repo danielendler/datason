@@ -81,7 +81,7 @@ jobs:
 
     - name: 🔒 Security scan
       run: |
-        bandit -r serialpy/ -f json -o bandit-report.json || true
+        bandit -r datason/ -f json -o bandit-report.json || true
 
     - name: 📤 Upload security report
       uses: actions/upload-artifact@v4

@@ -1,16 +1,16 @@
-# SerialPy Documentation Configuration
-site_name: SerialPy
+# Datason Documentation Configuration
+site_name: Datason
 site_description: A comprehensive Python package for intelligent serialization that handles complex data types with ease.
-site_author: SerialPy Contributors
+site_author: Datason Contributors
 site_url: https://serialpy.readthedocs.io/
 
 # Repository
-repo_name: danielendler/SerialPy
-repo_url: https://github.com/danielendler/SerialPy
+repo_name: danielendler/Datason
+repo_url: https://github.com/danielendler/Datason
 edit_uri: edit/main/docs/
 
 # Copyright
-copyright: Copyright &copy; 2024 SerialPy Contributors
+copyright: Copyright &copy; 2024 Datason Contributors
 
 # Configuration
 theme:
@@ -106,7 +106,7 @@ markdown_extensions:
   - pymdownx.magiclink:
       repo_url_shorthand: true
       user: danielendler
-      repo: SerialPy
+      repo: Datason
   - pymdownx.mark
   - pymdownx.smartsymbols
   - pymdownx.superfences:
@@ -144,11 +144,11 @@ extra:
     provider: mike
   social:
     - icon: fontawesome/brands/github
-      link: https://github.com/danielendler/SerialPy
-      name: SerialPy on GitHub
+      link: https://github.com/danielendler/Datason
+      name: Datason on GitHub
     - icon: fontawesome/brands/python
       link: https://pypi.org/project/serialpy/
-      name: SerialPy on PyPI
+      name: Datason on PyPI
     - icon: fontawesome/solid/book
       link: https://serialpy.readthedocs.io/
       name: Documentation
@@ -172,10 +172,10 @@ extra:
           data: 0
           note: >-
             Thanks for your feedback! Help us improve this page by
-            <a href="https://github.com/danielendler/SerialPy/issues/new/?title=[Docs]" target="_blank" rel="noopener">opening an issue</a>.
+            <a href="https://github.com/danielendler/Datason/issues/new/?title=[Docs]" target="_blank" rel="noopener">opening an issue</a>.
 
   # Homepage override
-  homepage: https://github.com/danielendler/SerialPy
+  homepage: https://github.com/danielendler/Datason
 
 # Additional CSS/JS
 extra_css:

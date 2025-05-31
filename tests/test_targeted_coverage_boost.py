@@ -2,7 +2,7 @@
 Targeted Coverage Boost Tests
 
 This file contains highly focused tests that target the specific uncovered lines
-to push SerialPy coverage above 85%.
+to push Datason coverage above 85%.
 """
 
 import sys

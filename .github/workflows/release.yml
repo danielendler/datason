@@ -117,12 +117,12 @@ jobs:
 
           ## 🔗 Links
           - **📚 Documentation**: https://serialpy.readthedocs.io
-          - **🐛 Issues**: https://github.com/danielendler/SerialPy/issues
-          - **💬 Discussions**: https://github.com/danielendler/SerialPy/discussions
+          - **🐛 Issues**: https://github.com/danielendler/Datason/issues
+          - **💬 Discussions**: https://github.com/danielendler/Datason/discussions
 
           ---
 
-          **Full Changelog**: https://github.com/danielendler/SerialPy/compare/${{ github.event.repository.default_branch }}...${{ needs.validate-release.outputs.version }}
+          **Full Changelog**: https://github.com/danielendler/Datason/compare/${{ github.event.repository.default_branch }}...${{ needs.validate-release.outputs.version }}
         prerelease: ${{ needs.validate-release.outputs.is_prerelease == 'true' }}
         generate_release_notes: true
 
@@ -146,9 +146,9 @@ jobs:
             github.rest.discussions.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              title: `🎉 SerialPy ${version} Released!`,
+              title: `🎉 Datason ${version} Released!`,
               body: `
-              ## SerialPy ${version} is now available! 🚀
+              ## Datason ${version} is now available! 🚀
 
               ### Installation
               \`\`\`bash
@@ -156,11 +156,11 @@ jobs:
               \`\`\`
 
               ### What do you think?
-              - How are you using SerialPy?
+              - How are you using Datason?
               - Any feedback on the new features?
               - Ideas for future improvements?
 
-              **📚 [View Release Notes](https://github.com/danielendler/SerialPy/releases/tag/${version})**
+              **📚 [View Release Notes](https://github.com/danielendler/Datason/releases/tag/${version})**
               `,
               category_id: 'announcements'
             }).catch(err => console.log('Could not create discussion:', err.message));
