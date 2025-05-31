@@ -8,9 +8,22 @@ import json
 from unittest.mock import Mock, patch
 import warnings
 
-import numpy as np
-import pandas as pd
 import pytest
+
+# Optional dependency imports
+try:
+    import numpy as np
+
+    HAS_NUMPY = True
+except ImportError:
+    HAS_NUMPY = False
+
+try:
+    import pandas as pd
+
+    HAS_PANDAS = True
+except ImportError:
+    HAS_PANDAS = False
 
 from datason.converters import safe_float, safe_int
 from datason.core import (
@@ -129,6 +142,7 @@ class TestDeserializersEdgeCases:
 class TestDateTimeUtilsEdgeCases:
     """Test datetime utilities edge cases."""
 
+    @pytest.mark.skipif(not HAS_PANDAS, reason="pandas not available")
     def test_ensure_timestamp_exceptions(self) -> None:
         """Test ensure_timestamp with exception handling."""
         # Test with object that can't be converted - should return NaT for failed conversions
@@ -138,6 +152,7 @@ class TestDateTimeUtilsEdgeCases:
         result = ensure_timestamp(bad_obj)
         assert pd.isna(result)  # Should return NaT which is pandas NA
 
+    @pytest.mark.skipif(not HAS_PANDAS, reason="pandas not available")
     def test_ensure_dates_exception_handling(self) -> None:
         """Test ensure_dates with various exception scenarios."""
         # Test with invalid input type - this should raise TypeError
@@ -330,6 +345,7 @@ class TestImportHandlingEdgeCases:
         result = serialize(mock_obj)
         assert result == {"test": "value"}
 
+    @pytest.mark.skipif(not HAS_NUMPY, reason="numpy not available")
     def test_optional_dependency_combinations(self) -> None:
         """Test various combinations of optional dependencies."""
         # Test numpy arrays with different dtypes
@@ -344,6 +360,7 @@ class TestImportHandlingEdgeCases:
             result = serialize(arr)
             assert isinstance(result, list)
 
+    @pytest.mark.skipif(not HAS_PANDAS, reason="pandas not available")
     def test_pandas_edge_case_types(self) -> None:
         """Test pandas edge case types."""
         # Test pandas Period (if available)
@@ -367,6 +384,7 @@ class TestImportHandlingEdgeCases:
 class TestPerformanceOptimizationEdgeCases:
     """Test performance optimization edge cases."""
 
+    @pytest.mark.skipif(not HAS_NUMPY, reason="numpy not available")
     def test_optimization_bypass_scenarios(self) -> None:
         """Test scenarios where optimization should be bypassed."""
         # Dict with non-string keys should bypass optimization
@@ -400,6 +418,9 @@ class TestPerformanceOptimizationEdgeCases:
 class TestFullIntegrationEdgeCases:
     """Test full integration edge cases."""
 
+    @pytest.mark.skipif(
+        not (HAS_NUMPY and HAS_PANDAS), reason="numpy and pandas not available"
+    )
     def test_end_to_end_with_all_types(self) -> None:
         """Test end-to-end serialization/deserialization with all supported types."""
         from datetime import datetime

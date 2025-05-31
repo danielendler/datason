@@ -7,14 +7,28 @@ This module tests code paths that require pandas and numpy to be installed.
 from datetime import datetime, timezone
 from typing import Any
 
-import numpy as np
-import pandas as pd
 import pytest
+
+# Optional dependency imports
+try:
+    import numpy as np
+
+    HAS_NUMPY = True
+except ImportError:
+    HAS_NUMPY = False
+
+try:
+    import pandas as pd
+
+    HAS_PANDAS = True
+except ImportError:
+    HAS_PANDAS = False
 
 import datason as ds
 from datason.core import serialize
 
 
+@pytest.mark.skipif(not HAS_NUMPY, reason="numpy not available")
 class TestNumpyIntegration:
     """Test numpy type handling in core serialization."""
 
@@ -93,6 +107,7 @@ class TestNumpyIntegration:
         assert result["array_str"] == ["hello", "world"]
 
 
+@pytest.mark.skipif(not HAS_PANDAS, reason="pandas not available")
 class TestPandasIntegration:
     """Test pandas type handling in core serialization."""
 
@@ -167,6 +182,7 @@ class TestPandasIntegration:
         assert "2023-01-01" in result["df_with_dates"][0]["date"]
 
 
+@pytest.mark.skipif(not HAS_PANDAS, reason="pandas not available")
 class TestDateTimeUtilsWithPandas:
     """Test datetime_utils.py functions with pandas installed."""
 
@@ -317,8 +333,11 @@ class TestDateTimeUtilsWithPandas:
         assert isinstance(result.iloc[1, 0], datetime)
 
 
+@pytest.mark.skipif(
+    not (HAS_NUMPY and HAS_PANDAS), reason="numpy and pandas not available"
+)
 class TestSerializersWithDependencies:
-    """Test serializers.py with numpy and pandas."""
+    """Test serializers with optional dependencies."""
 
     def test_serialize_detection_details_with_numpy(self) -> None:
         """Test serialize_detection_details with numpy types."""
@@ -397,8 +416,11 @@ class TestSerializersWithDependencies:
         assert len(result["method1"]["pandas_data"]["timestamps"]) == 2
 
 
+@pytest.mark.skipif(
+    not (HAS_NUMPY and HAS_PANDAS), reason="numpy and pandas not available"
+)
 class TestMixedOptionalDependencies:
-    """Test complex scenarios mixing numpy, pandas, and regular Python types."""
+    """Test complex scenarios mixing multiple optional dependencies."""
 
     def test_complex_mixed_structure(self) -> None:
         """Test serialization of complex structure with all types."""
@@ -439,8 +461,11 @@ class TestMixedOptionalDependencies:
         assert len(result["results"]) == 3
 
 
+@pytest.mark.skipif(
+    not (HAS_NUMPY and HAS_PANDAS), reason="numpy and pandas not available"
+)
 class TestAdditionalCoverage:
-    """Additional tests to cover remaining edge cases."""
+    """Test additional edge cases for coverage."""
 
     def test_data_utils_remaining_paths(self) -> None:
         """Test remaining paths in data_utils.py."""

@@ -8,8 +8,15 @@ when available, and fallback behavior when they're not.
 from unittest.mock import Mock, patch
 import warnings
 
-import numpy as np
 import pytest
+
+# Optional dependency imports
+try:
+    import numpy as np
+
+    HAS_NUMPY = True
+except ImportError:
+    HAS_NUMPY = False
 
 from datason.ml_serializers import (
     detect_and_serialize_ml_object,
@@ -150,6 +157,7 @@ class TestPyTorchSerialization:
 class TestSklearnSerialization:
     """Test scikit-learn model serialization with actual sklearn."""
 
+    @pytest.mark.skipif(not HAS_NUMPY, reason="numpy not available")
     def test_serialize_random_forest(self) -> None:
         """Test serialization of RandomForestClassifier."""
         model = RandomForestClassifier(n_estimators=10, random_state=42)
@@ -221,6 +229,7 @@ class TestJAXSerialization:
 class TestScipySerialization:
     """Test scipy sparse matrix serialization with actual scipy."""
 
+    @pytest.mark.skipif(not HAS_NUMPY, reason="numpy not available")
     def test_serialize_csr_matrix(self) -> None:
         """Test serialization of CSR sparse matrix."""
         data = np.array([1, 2, 3])
@@ -236,6 +245,7 @@ class TestScipySerialization:
         assert result["_nnz"] == 3
         assert len(result["_data"]) == 3
 
+    @pytest.mark.skipif(not HAS_NUMPY, reason="numpy not available")
     def test_serialize_coo_matrix(self) -> None:
         """Test serialization of COO sparse matrix."""
         row = np.array([0, 1, 2])
