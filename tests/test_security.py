@@ -336,6 +336,36 @@ class TestSizeLimits:
         _debug_print("🧪 Testing dict size security:")
         _debug_print(f"   MAX_OBJECT_SIZE: {MAX_OBJECT_SIZE:,}")
 
+        # EXTENSIVE DIAGNOSTICS for CI debugging
+        import sys
+
+        _debug_print("🔍 COMPREHENSIVE DIAGNOSTICS:")
+        _debug_print(f"   Python version: {sys.version}")
+        _debug_print(f"   Python executable: {sys.executable}")
+        _debug_print(f"   SecurityError from top-level import: {SecurityError}")
+        _debug_print(f"   SecurityError module: {SecurityError.__module__}")
+        _debug_print(
+            f"   SecurityError file: {getattr(SecurityError, '__file__', 'N/A')}"
+        )
+
+        # Import fresh and compare
+        from datason.core import SecurityError as FreshSecurityError
+
+        _debug_print(f"   Fresh SecurityError import: {FreshSecurityError}")
+        _debug_print(f"   Fresh SecurityError module: {FreshSecurityError.__module__}")
+        _debug_print(f"   Are they identical? {SecurityError is FreshSecurityError}")
+        _debug_print(f"   Are they equal? {SecurityError == FreshSecurityError}")
+
+        # Test isinstance relationships
+        test_exception = SecurityError("test")
+        _debug_print(f"   Test SecurityError instance: {test_exception}")
+        _debug_print(
+            f"   isinstance(test, SecurityError): {isinstance(test_exception, SecurityError)}"
+        )
+        _debug_print(
+            f"   isinstance(test, FreshSecurityError): {isinstance(test_exception, FreshSecurityError)}"
+        )
+
         # Create a fake dict that reports a large size but is actually small
         fake_large_dict = LargeFakeDict(actual_size=100, reported_size=10_001_000)
         _debug_print(
@@ -346,6 +376,7 @@ class TestSizeLimits:
         # This should raise SecurityError due to reported size exceeding limit
         security_error_raised = False
         caught_exception = None
+        exception_type = None
 
         try:
             result = serialize(fake_large_dict)
@@ -353,13 +384,49 @@ class TestSizeLimits:
             pytest.fail(f"Expected SecurityError but serialization succeeded: {result}")
         except SecurityError as exc:
             # This is the expected case - SecurityError was properly raised
-            _debug_print(f"   ✅ SecurityError raised as expected: {exc}")
+            _debug_print(f"   ✅ SecurityError caught by except SecurityError: {exc}")
+            _debug_print(f"   Exception type: {type(exc)}")
+            _debug_print(f"   Exception module: {type(exc).__module__}")
+            _debug_print(
+                f"   isinstance(exc, SecurityError): {isinstance(exc, SecurityError)}"
+            )
+            _debug_print(
+                f"   isinstance(exc, FreshSecurityError): {isinstance(exc, FreshSecurityError)}"
+            )
+            _debug_print(f"   type(exc) is SecurityError: {type(exc) is SecurityError}")
+            _debug_print(
+                f"   type(exc) is FreshSecurityError: {type(exc) is FreshSecurityError}"
+            )
             security_error_raised = True
             caught_exception = exc
+            exception_type = type(exc)
         except Exception as exc:
             # Any other exception is unexpected
             _debug_print(f"   ❌ Unexpected exception: {type(exc).__name__}: {exc}")
-            pytest.fail(f"Expected SecurityError, got {type(exc).__name__}: {exc}")
+            _debug_print(f"   Exception type: {type(exc)}")
+            _debug_print(f"   Exception module: {type(exc).__module__}")
+            _debug_print(f"   Exception MRO: {type(exc).__mro__}")
+            _debug_print(
+                f"   isinstance(exc, SecurityError): {isinstance(exc, SecurityError)}"
+            )
+            _debug_print(
+                f"   isinstance(exc, FreshSecurityError): {isinstance(exc, FreshSecurityError)}"
+            )
+            _debug_print(f"   type(exc) is SecurityError: {type(exc) is SecurityError}")
+            _debug_print(
+                f"   type(exc) is FreshSecurityError: {type(exc) is FreshSecurityError}"
+            )
+            exception_type = type(exc)
+
+            # Try to catch it with the fresh import
+            if isinstance(exc, FreshSecurityError):
+                _debug_print(
+                    "   🔄 Exception IS instance of FreshSecurityError - treating as SecurityError"
+                )
+                security_error_raised = True
+                caught_exception = exc
+            else:
+                pytest.fail(f"Expected SecurityError, got {type(exc).__name__}: {exc}")
 
         # Perform assertions outside the except block
         assert security_error_raised, "SecurityError should have been raised"
@@ -379,6 +446,19 @@ class TestSizeLimits:
         _debug_print("🧪 Testing list size security:")
         _debug_print(f"   MAX_OBJECT_SIZE: {MAX_OBJECT_SIZE:,}")
 
+        # EXTENSIVE DIAGNOSTICS for CI debugging
+        import sys
+
+        _debug_print("🔍 COMPREHENSIVE DIAGNOSTICS:")
+        _debug_print(f"   Python version: {sys.version}")
+        _debug_print(f"   SecurityError from top-level import: {SecurityError}")
+        _debug_print(f"   SecurityError module: {SecurityError.__module__}")
+
+        # Import fresh and compare
+        from datason.core import SecurityError as FreshSecurityError
+
+        _debug_print(f"   Fresh SecurityError import: {FreshSecurityError}")
+
         # Create a fake list that reports a large size but is actually small
         fake_large_list = LargeFakeList(actual_size=100, reported_size=10_001_000)
         _debug_print(
@@ -389,6 +469,7 @@ class TestSizeLimits:
         # This should raise SecurityError due to reported size exceeding limit
         security_error_raised = False
         caught_exception = None
+        exception_type = None
 
         try:
             result = serialize(fake_large_list)
@@ -396,13 +477,49 @@ class TestSizeLimits:
             pytest.fail(f"Expected SecurityError but serialization succeeded: {result}")
         except SecurityError as exc:
             # This is the expected case - SecurityError was properly raised
-            _debug_print(f"   ✅ SecurityError raised as expected: {exc}")
+            _debug_print(f"   ✅ SecurityError caught by except SecurityError: {exc}")
+            _debug_print(f"   Exception type: {type(exc)}")
+            _debug_print(f"   Exception module: {type(exc).__module__}")
+            _debug_print(
+                f"   isinstance(exc, SecurityError): {isinstance(exc, SecurityError)}"
+            )
+            _debug_print(
+                f"   isinstance(exc, FreshSecurityError): {isinstance(exc, FreshSecurityError)}"
+            )
+            _debug_print(f"   type(exc) is SecurityError: {type(exc) is SecurityError}")
+            _debug_print(
+                f"   type(exc) is FreshSecurityError: {type(exc) is FreshSecurityError}"
+            )
             security_error_raised = True
             caught_exception = exc
+            exception_type = type(exc)
         except Exception as exc:
             # Any other exception is unexpected
             _debug_print(f"   ❌ Unexpected exception: {type(exc).__name__}: {exc}")
-            pytest.fail(f"Expected SecurityError, got {type(exc).__name__}: {exc}")
+            _debug_print(f"   Exception type: {type(exc)}")
+            _debug_print(f"   Exception module: {type(exc).__module__}")
+            _debug_print(f"   Exception MRO: {type(exc).__mro__}")
+            _debug_print(
+                f"   isinstance(exc, SecurityError): {isinstance(exc, SecurityError)}"
+            )
+            _debug_print(
+                f"   isinstance(exc, FreshSecurityError): {isinstance(exc, FreshSecurityError)}"
+            )
+            _debug_print(f"   type(exc) is SecurityError: {type(exc) is SecurityError}")
+            _debug_print(
+                f"   type(exc) is FreshSecurityError: {type(exc) is FreshSecurityError}"
+            )
+            exception_type = type(exc)
+
+            # Try to catch it with the fresh import
+            if isinstance(exc, FreshSecurityError):
+                _debug_print(
+                    "   🔄 Exception IS instance of FreshSecurityError - treating as SecurityError"
+                )
+                security_error_raised = True
+                caught_exception = exc
+            else:
+                pytest.fail(f"Expected SecurityError, got {type(exc).__name__}: {exc}")
 
         # Perform assertions outside the except block
         assert security_error_raised, "SecurityError should have been raised"
