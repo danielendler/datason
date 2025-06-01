@@ -11,7 +11,7 @@ on:
       test_pypi:
         description: 'Publish to TestPyPI instead of PyPI'
         required: false
-        default: true
+        default: false
         type: boolean
 
 jobs:
@@ -80,7 +80,7 @@ jobs:
     name: 🧪 Publish to TestPyPI
     needs: build
     runs-on: ubuntu-latest
-    if: github.event.inputs.test_pypi == 'true' || github.event_name == 'workflow_dispatch'
+    if: github.event.inputs.test_pypi == 'true'
     environment: pypi  # Use the pypi environment for trusted publishing
     permissions:
       id-token: write  # For trusted publishing
@@ -108,7 +108,7 @@ jobs:
     name: 🚀 Publish to PyPI
     needs: build
     runs-on: ubuntu-latest
-    if: github.event_name == 'release' && github.event.action == 'published'
+    if: (github.event_name == 'release' && github.event.action == 'published') || (github.event_name == 'workflow_dispatch' && github.event.inputs.test_pypi != 'true')
     environment: pypi  # Use the pypi environment for trusted publishing
     permissions:
       id-token: write  # For trusted publishing
