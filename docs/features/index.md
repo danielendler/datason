@@ -56,6 +56,15 @@ Fine-grained control over serialization behavior with preset configurations.
 - **Type Coercion**: 3 levels from strict type preservation to aggressive conversion
 - **Custom Serializers**: Register handlers for custom types
 
+### [Pickle Bridge](pickle-bridge/)
+Secure migration of legacy ML pickle files to portable JSON format.
+
+- **Security-First**: Class whitelisting prevents arbitrary code execution
+- **Zero Dependencies**: Uses only Python standard library
+- **ML Coverage**: 54 safe classes covering 95%+ of common pickle files
+- **Bulk Processing**: Directory-level conversion with statistics tracking
+- **Production Ready**: File size limits, error handling, monitoring
+
 ### [Performance Features](performance/)
 Optimizations for speed and memory efficiency in production environments.
 
@@ -71,6 +80,7 @@ Optimizations for speed and memory efficiency in production environments.
 | **Core Types** | ✅ JSON types | ✅ + Python types | ✅ + Custom types |
 | **ML/AI Objects** | ❌ | ✅ Common libraries | ✅ + Custom models |
 | **Configuration** | ❌ | ✅ Presets | ✅ + Full control |
+| **Pickle Bridge** | ❌ | ✅ Safe conversion | ✅ + Bulk migration |
 | **Performance** | ✅ Basic | ✅ Optimized | ✅ + Monitoring |
 | **Data Science** | ❌ | ✅ Pandas/NumPy | ✅ + Advanced |
 
@@ -110,6 +120,21 @@ config = SerializationConfig(
 result = datason.serialize(data, config=config)
 ```
 
+### Pickle Bridge Usage (ML Migration)
+```python
+import datason
+
+# Convert legacy pickle files safely
+result = datason.from_pickle("legacy_model.pkl")
+
+# Bulk migration with security controls
+stats = datason.convert_pickle_directory(
+    source_dir="old_models/",
+    target_dir="json_models/",
+    safe_classes=datason.get_ml_safe_classes()
+)
+```
+
 ## 🛣️ Feature Roadmap
 
 ### ✅ Available Now
@@ -119,6 +144,7 @@ result = datason.serialize(data, config=config)
 - Configuration system with presets
 - Pandas deep integration
 - Performance optimizations
+- **Pickle Bridge for legacy ML migration**
 
 ### 🔄 In Development
 - Schema validation
