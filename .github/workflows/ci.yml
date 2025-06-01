@@ -16,6 +16,12 @@ on:
       - 'mkdocs.yml'
       - '.readthedocs.yaml'
 
+# Set explicit permissions for security
+permissions:
+  contents: read
+  packages: read
+  actions: read
+
 env:
   # Optimize pip for CI
   PIP_CACHE_DIR: ~/.cache/pip

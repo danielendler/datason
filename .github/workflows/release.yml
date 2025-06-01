@@ -16,6 +16,12 @@ on:
         type: boolean
         default: false
 
+# Set explicit permissions for security
+permissions:
+  contents: write  # Needed to create releases and read repository
+  discussions: write  # Needed to create release discussions
+  actions: write  # Needed to trigger other workflows
+
 jobs:
   validate-release:
     runs-on: ubuntu-latest
