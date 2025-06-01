@@ -90,7 +90,7 @@ except ImportError:
 
 # Pickle Bridge (new in v0.3.0) - Zero dependencies, always available
 try:
-    from .pickle_bridge import (
+    from .pickle_bridge import (  # nosec B403
         PickleBridge,
         PickleSecurityError,
         convert_pickle_directory,
@@ -102,7 +102,7 @@ try:
 except ImportError:
     _pickle_bridge_available = False
 
-__version__ = "0.3.0"
+__version__ = "0.3.1"
 __author__ = "datason Contributors"
 __license__ = "MIT"
 
