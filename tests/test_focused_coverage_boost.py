@@ -53,7 +53,7 @@ class TestUncoveredLines(unittest.TestCase):
         self.assertIsInstance(result, str)
 
     def test_object_with_empty_dict(self):
-        """Test object with empty __dict__."""
+        """Test object with empty __dict__ (Line 133 in core.py)."""
 
         class EmptyObject:
             pass
@@ -61,8 +61,8 @@ class TestUncoveredLines(unittest.TestCase):
         obj = EmptyObject()
         result = serialize(obj)
 
-        # Should fall back to string representation for empty dict
-        self.assertIsInstance(result, str)
+        # With new type handler system, empty __dict__ returns empty dict
+        self.assertEqual(result, {})
 
     def test_ml_serializer_import_error_during_serialize(self):
         """Test when ML serializer import fails during serialization."""

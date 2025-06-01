@@ -124,20 +124,16 @@ class TestSpecificUncoveredLines(unittest.TestCase):
         self.assertIsInstance(result, str)
 
     def test_core_line_133_empty_dict_fallback(self):
-        """Test core.py line 133: Empty dict fallback to string."""
+        """Test line 133 in core.py - empty dict fallback behavior."""
 
-        # Create object with truly empty __dict__
         class EmptyDictObject:
             pass
 
         obj = EmptyDictObject()
-        # Verify it has empty dict
-        self.assertEqual(obj.__dict__, {})
-
         result = serialize(obj)
 
-        # Should fall back to string representation for empty dict
-        self.assertIsInstance(result, str)
+        # With new type handler system, empty __dict__ returns empty dict
+        self.assertEqual(result, {})
 
 
 class TestDateTimeUtilsUncoveredLines(unittest.TestCase):

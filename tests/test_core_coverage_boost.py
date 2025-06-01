@@ -124,18 +124,13 @@ class TestObjectSerializationEdgeCases(unittest.TestCase):
     def test_object_empty_dict(self):
         """Test object with empty __dict__."""
 
-        # Test line 133 in core.py - empty dict fallback
         class EmptyObject:
             pass
 
         obj = EmptyObject()
-        # Ensure it actually has an empty dict
-        self.assertEqual(obj.__dict__, {})
-
         result = serialize(obj)
-
-        # Should fall back to string representation for empty dict
-        self.assertIsInstance(result, str)
+        # With new type handler system, empty __dict__ returns empty dict
+        self.assertEqual(result, {})
 
     def test_object_str_exception(self):
         """Test object where str() raises exception."""
