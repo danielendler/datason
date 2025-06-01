@@ -1,52 +1,10 @@
-"""datason - A comprehensive Python package for intelligent serialization.
+"""datason - A comprehensive serialization package for Python.
 
-datason solves the fundamental problem of serializing complex Python objects
-that standard `json.dumps()` cannot handle. Perfect for AI/ML workflows, data science,
-and modern Python applications that deal with:
-
-• PyTorch/TensorFlow tensors and models
-• Pandas DataFrames and Series
-• NumPy arrays and scientific computing objects
-• Datetime objects with timezone support
-• UUIDs, custom classes, and complex nested structures
-
-Example:
-    ```python
-    import datason
-    import torch
-    import pandas as pd
-
-    data = {
-        'model_output': torch.tensor([0.9, 0.1, 0.8]),
-        'dataset': pd.DataFrame({'A': [1, 2], 'B': [3, 4]}),
-        'timestamp': datetime.now()
-    }
-
-    # One line to serialize anything
-    result = datason.serialize(data)
-
-    # Or with custom configuration
-    from datason.config import get_ml_config
-    result = datason.serialize(data, config=get_ml_config())
-    ```
-
-The package provides intelligent serialization that:
-• Preserves type information for complex objects
-• Handles circular references and edge cases gracefully
-• Maintains compatibility with standard JSON format
-• Optimizes performance for large datasets
-• Provides extensible architecture for custom types
-
-Key functions:
-- serialize(): Convert any Python object to JSON-compatible format
-- deserialize(): Reconstruct original objects from serialized data
-- register_serializer(): Add custom serialization logic
-
-Supports 20+ data types out of the box with optional dependencies for:
-- pandas, numpy (data science)
-- torch, tensorflow, jax (machine learning)
-- scikit-learn, scipy (scientific computing)
+This package provides intelligent serialization that handles complex data types
+with ease, perfect for ML/AI workflows and data science applications.
 """
+
+# Test codecov upload after permissions and configuration fixes
 
 import sys
 from typing import Any
@@ -55,9 +13,8 @@ import warnings
 # Python version compatibility check
 if sys.version_info < (3, 8):  # noqa: UP036
     raise RuntimeError(
-        f"datason requires Python 3.8 or later. "
-        f"You are using Python {sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}. "
-        f"Please upgrade your Python installation."
+        "datason requires Python 3.8 or higher. "
+        f"Your Python version: {sys.version_info.major}.{sys.version_info.minor}"
     )
 
 # Warn for EOL Python versions
