@@ -81,6 +81,7 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     if: github.event.inputs.test_pypi == 'true' || github.event_name == 'workflow_dispatch'
+    environment: pypi  # Use the pypi environment for trusted publishing
     permissions:
       id-token: write  # For trusted publishing
 
