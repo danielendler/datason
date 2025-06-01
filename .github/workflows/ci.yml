@@ -205,7 +205,7 @@ jobs:
 
     - name: 📊 Upload coverage to Codecov
       uses: codecov/codecov-action@v5
-      if: always()
+      if: always() && matrix.dependency-set.name == 'full'
       with:
         files: ./coverage-${{ matrix.dependency-set.name }}.xml
         flags: ${{ matrix.dependency-set.name }}
@@ -213,7 +213,7 @@ jobs:
         token: ${{ secrets.CODECOV_TOKEN }}
         fail_ci_if_error: false  # Don't fail CI if codecov upload fails
         verbose: true
-        # Only use full test suite for main coverage calculation
+        # Only upload from full test suite for accurate coverage calculation
         env_vars: OS,PYTHON
 
     - name: 📤 Upload test results

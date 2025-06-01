@@ -10,8 +10,8 @@ codecov:
   require_ci_to_pass: false  # Changed to false to allow coverage even if some CI jobs fail
   # Notify us if coverage drops
   notify:
-    # After this many builds (default is 3)
-    after_n_builds: 1  # Reduced to get faster feedback
+    # After this many builds (we only upload from full test suite now)
+    after_n_builds: 1  # Reduced since we only get coverage from "full" jobs
     # Wait at most this long (in seconds) for coverage reports
     wait_for_ci: true
 
