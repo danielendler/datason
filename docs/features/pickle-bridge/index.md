@@ -115,67 +115,14 @@ result = bridge.from_pickle_file("custom_model.pkl")
 
 ## 🔒 Security Features
 
-### Class Whitelisting
+The Pickle Bridge implements multiple security layers to prevent arbitrary code execution:
 
-The core security mechanism prevents unauthorized class instantiation:
+- **Class Whitelisting**: Only predefined safe classes are allowed
+- **Import Validation**: Restricted to specific modules and packages  
+- **Code Inspection**: No `__reduce__` or custom deserialization methods
+- **Resource Limits**: File size and processing time constraints
 
-```python
-# Get default ML-safe classes
-safe_classes = datason.get_ml_safe_classes()
-print(f"Default safe classes: {len(safe_classes)}")
-
-# Common safe classes include:
-# - builtins.dict, builtins.list, builtins.str
-# - numpy.ndarray, numpy.dtype  
-# - pandas.core.frame.DataFrame
-# - sklearn.linear_model._base.LinearRegression
-# - torch.Tensor (basic PyTorch support)
-
-# Add custom safe classes
-bridge = datason.PickleBridge()
-bridge.add_safe_class("mypackage.MyModel")
-
-# Add entire modules (with warning)
-bridge.add_safe_module("trustworthy_package")  # Adds "trustworthy_package.*"
-```
-
-### File Size Protection
-
-Prevent resource exhaustion with configurable size limits:
-
-```python
-import datason
-
-# Conservative limits for shared environments
-small_bridge = datason.PickleBridge(max_file_size=10 * 1024 * 1024)  # 10MB
-
-# Liberal limits for local processing
-large_bridge = datason.PickleBridge(max_file_size=1024 * 1024 * 1024)  # 1GB
-
-try:
-    result = small_bridge.from_pickle("huge_model.pkl")
-except datason.SecurityError as e:
-    print(f"File too large: {e}")
-```
-
-### Error Handling
-
-Comprehensive error detection and reporting:
-
-```python
-import datason
-
-bridge = datason.PickleBridge()
-
-try:
-    result = bridge.from_pickle_file("suspicious.pkl")
-except datason.PickleSecurityError as e:
-    print(f"Security violation: {e}")
-except FileNotFoundError as e:
-    print(f"File not found: {e}")
-except datason.SecurityError as e:
-    print(f"Size limit exceeded: {e}")
-```
+For detailed security guidelines, see **[Security Documentation](../../SECURITY.md)**.
 
 ## 📊 Performance & Statistics
 
@@ -689,10 +636,10 @@ results = parallel_conversion("pickles/", "json_output/", max_workers=8)
 
 ## 🔗 Related Features
 
-- **[Configuration System](../configuration/)** - Optimize JSON output format
-- **[ML/AI Integration](../ml-ai/)** - Handle ML objects in converted data  
-- **[Advanced Types](../advanced-types/)** - Support for complex Python types
-- **[Security Features](../security/)** - Additional security considerations
+- **[Configuration System](../configuration/index.md)** - Customize bridge behavior
+- **[ML/AI Integration](../ml-ai/index.md)** - Framework-specific features
+- **[Advanced Types](../advanced-types/index.md)** - Extended type support
+- **[Security Documentation](../../SECURITY.md)** - Additional security considerations
 
 ## 🚀 Migration Checklist
 

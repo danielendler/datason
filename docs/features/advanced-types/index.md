@@ -622,7 +622,7 @@ If you need to deserialize back to original objects, use `TypeCoercion.STRICT` a
 
 ## 🔗 Related Documentation
 
-- **[Configuration System →](../configuration/)** - Control type coercion behavior
-- **[Pandas Integration →](../pandas/)** - Pandas-specific type handling
-- **[Performance Guide →](../performance/)** - Optimize type handling for speed
-- **[Core Serialization →](../core/)** - Basic type support
+- **[Configuration System →](../configuration/index.md)** - Control type coercion behavior
+- **[Pandas Integration →](../pandas/index.md)** - Pandas-specific type handling
+- **[Performance Guide →](../performance/index.md)** - Optimize type handling for speed
+- **[Core Serialization →](../core/index.md)** - Basic type support

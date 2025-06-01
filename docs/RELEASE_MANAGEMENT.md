@@ -373,7 +373,12 @@ gh release edit v0.1.2 --prerelease
 
 - [Contributing Guide](CONTRIBUTING.md)
 - [CI/CD Pipeline Guide](CI_PIPELINE_GUIDE.md)
-- [Dependabot Guide](DEPENDABOT_GUIDE.md)
+- [CI Performance Optimization](CI_PERFORMANCE.md)
+- [Pipeline Audit Report](PIPELINE_AUDIT.md)
+- [Plugin Testing Strategy](PLUGIN_TESTING.md)
+- [Tooling Guide](TOOLING_GUIDE.md)
+- [Dependabot Setup](DEPENDABOT_GUIDE.md)
+- [GitHub Pages Setup](GITHUB_PAGES_SETUP.md)
 - [Security Policy](SECURITY.md)
 - [GitHub Flow Documentation](https://docs.github.com/en/get-started/quickstart/github-flow)
 - [Semantic Versioning Specification](https://semver.org/)
@@ -381,3 +386,9 @@ gh release edit v0.1.2 --prerelease
 ---
 
 > 💡 **Questions?** Create a [discussion](https://github.com/danielendler/datason/discussions) or check existing [issues](https://github.com/danielendler/datason/issues).
+
+## Additional Documentation
+
+- [Contributing Guide](CONTRIBUTING.md)
+- [Security Policy](SECURITY.md)
+- [CI/CD Pipeline](CI_PIPELINE_GUIDE.md)

@@ -412,7 +412,7 @@ Ensure your configuration handles edge cases in your data (NaN, None, circular r
 
 ## 🔗 Related Documentation
 
-- **[Advanced Types →](../advanced-types/)** - Supported Python types
-- **[Performance Guide →](../performance/)** - Optimization strategies
-- **[ML/AI Integration →](../ml-ai/)** - ML-specific configuration
-- **[Pandas Integration →](../pandas/)** - DataFrame handling options
+- **[Advanced Types →](../advanced-types/index.md)** - Supported Python types
+- **[Performance Guide →](../performance/index.md)** - Optimization strategies
+- **[ML/AI Integration →](../ml-ai/index.md)** - ML-specific configuration
+- **[Pandas Integration →](../pandas/index.md)** - DataFrame handling options
