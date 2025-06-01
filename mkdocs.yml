@@ -120,9 +120,20 @@ markdown_extensions:
       custom_checkbox: true
   - pymdownx.tilde
 
-# Enhanced navigation with build/publish docs
+# Enhanced navigation with organized structure
 nav:
   - Home: index.md
+  - Features:
+    - Overview: features/index.md
+    - Core Serialization: features/core/index.md
+    - Configuration: features/configuration/index.md
+    - Advanced Types: features/advanced-types/index.md
+    - Date/Time Handling: features/datetime/index.md
+    - ML/AI Integration: features/ml-ai/index.md
+    - Pandas Integration: features/pandas/index.md
+    - Pickle Bridge: features/pickle-bridge/index.md
+    - Performance: features/performance/index.md
+    - Migration Guide: features/migration/index.md
   - User Guide:
     - Tooling Guide: TOOLING_GUIDE.md
     - Feature Matrix: FEATURE_MATRIX.md
@@ -139,7 +150,9 @@ nav:
     - GitHub Pages Setup: GITHUB_PAGES_SETUP.md
     - Security: SECURITY.md
     - Building & Publishing: BUILD_PUBLISH.md
+  - Reference:
     - Changelog: CHANGELOG.md
+    - Roadmap: ROADMAP.md
 
 # Extra
 extra:

@@ -20,28 +20,64 @@ json_data = ds.serialize(data)
 # Works perfectly! 🎉
 ```
 
-## Features
+## ✨ Key Features
 
 - **🧠 Intelligent Type Detection**: Automatically handles pandas DataFrames, NumPy arrays, datetime objects, and more
 - **🔄 Bidirectional**: Serialize to JSON and deserialize back to original objects  
 - **🚀 ML/AI Optimized**: Special support for PyTorch tensors, TensorFlow objects, and scikit-learn models
 - **🛡️ Type Safety**: Preserves data types and structure integrity
 - **⚡ High Performance**: Optimized for speed with minimal overhead
-- **🔌 Extensible**: Easy to add custom serializers for your own types
+- **🔧 Configurable**: Multiple presets and fine-grained control
+- **🔒 Secure**: Safe handling with protection against malicious data
 - **📦 Zero Dependencies**: Core functionality works without additional packages
 
-## Quick Start
+## 🚀 Quick Start
 
 ```bash
 pip install datason
 ```
 
-## Documentation
+```python
+import datason
 
-- [API Reference](api/)
-- [Examples](examples/)
-- [Contributing](contributing/)
+# Simple serialization
+data = {"numbers": [1, 2, 3], "text": "hello"}
+json_ready = datason.serialize(data)
 
-## License
+# With configuration
+config = datason.get_ml_config()
+result = datason.serialize(complex_ml_data, config=config)
+
+# Pickle Bridge (NEW in v0.3.0)
+json_data = datason.from_pickle("legacy_model.pkl")
+```
+
+## 📚 Documentation
+
+### 🎯 **User Guides**
+- **[Features Overview](features/)** - Complete feature guide and examples
+- **[Tooling Guide](TOOLING_GUIDE.md)** - Development tools and workflows
+- **[Feature Matrix](FEATURE_MATRIX.md)** - Capability comparison
+- **[AI/ML Usage](AI_USAGE_GUIDE.md)** - Machine learning integration
+- **[Benchmarking](BENCHMARKING.md)** - Performance metrics and optimization
+
+### 🔧 **Development**
+- **[Contributing](CONTRIBUTING.md)** - How to contribute to datason
+- **[Security](SECURITY.md)** - Security policies and reporting
+- **[CI/CD Guide](CI_PIPELINE_GUIDE.md)** - Continuous integration workflows
+- **[Release Management](RELEASE_MANAGEMENT.md)** - Release process and versioning
+
+### 📊 **Reference**
+- **[Changelog](CHANGELOG.md)** - Version history and changes
+- **[Roadmap](ROADMAP.md)** - Future development plans
+
+## 🤝 Community & Support
+
+- **GitHub**: [danielendler/datason](https://github.com/danielendler/datason)
+- **Issues**: [Report bugs](https://github.com/danielendler/datason/issues)
+- **Discussions**: [Ask questions](https://github.com/danielendler/datason/discussions)
+- **PyPI**: [Package index](https://pypi.org/project/datason/)
+
+## 📄 License
 
 MIT License - see [LICENSE](https://github.com/danielendler/datason/blob/main/LICENSE) file for details.
