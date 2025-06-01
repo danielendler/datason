@@ -1,7 +1,7 @@
-"""SerialPy Bidirectional Serialization Example.
+"""datason Bidirectional Serialization Example.
 
 This example demonstrates the complete round-trip serialization and
-deserialization capabilities of SerialPy, showing how complex Python
+deserialization capabilities of datason, showing how complex Python
 objects can be serialized to JSON-compatible formats and then restored
 back to their original types.
 """
@@ -10,7 +10,7 @@ from datetime import datetime
 import json
 import uuid
 
-import serialpy as sp
+import datason as ds
 
 
 def demonstrate_basic_round_trip() -> None:
@@ -38,7 +38,7 @@ def demonstrate_basic_round_trip() -> None:
     print()
 
     # Step 1: Serialize to JSON-compatible format
-    serialized = sp.serialize(original_data)
+    serialized = ds.serialize(original_data)
     print("✅ Serialized to JSON-compatible format")
     print(
         f"  user_id: {type(serialized['user_id']).__name__} = {serialized['user_id']}"
@@ -61,7 +61,7 @@ def demonstrate_basic_round_trip() -> None:
     print()
 
     # Step 4: Deserialize back to original types
-    deserialized = sp.deserialize(parsed_data)
+    deserialized = ds.deserialize(parsed_data)
     print("✅ Deserialized back to original types")
     print(f"  user_id: {type(deserialized['user_id']).__name__}")
     print(f"  created_at: {type(deserialized['created_at']).__name__}")
@@ -88,7 +88,7 @@ def demonstrate_safe_deserialization() -> None:
 
     # Valid JSON
     valid_json = '{"timestamp": "2023-12-25T10:30:00", "id": "12345678-1234-5678-9012-123456789abc"}'
-    result = sp.safe_deserialize(valid_json)
+    result = ds.safe_deserialize(valid_json)
     print("✅ Valid JSON deserialized successfully:")
     print(f"  timestamp: {type(result['timestamp']).__name__}")
     print(f"  id: {type(result['id']).__name__}")
@@ -96,7 +96,7 @@ def demonstrate_safe_deserialization() -> None:
 
     # Invalid JSON - graceful handling
     invalid_json = '{"invalid": json syntax}'
-    result = sp.safe_deserialize(invalid_json)
+    result = ds.safe_deserialize(invalid_json)
     print("⚠️  Invalid JSON handled gracefully:")
     print(f"  Result: {result}")
     print(f"  Type: {type(result).__name__}")
@@ -115,21 +115,21 @@ def demonstrate_selective_parsing() -> None:
     }
 
     # Parse with all options enabled (default)
-    full_parse = sp.deserialize(test_data)
+    full_parse = ds.deserialize(test_data)
     print("🔧 Full parsing (default):")
     print(f"  timestamp: {type(full_parse['timestamp']).__name__}")
     print(f"  user_id: {type(full_parse['user_id']).__name__}")
     print()
 
     # Parse with datetime disabled
-    no_dates = sp.deserialize(test_data, parse_dates=False)
+    no_dates = ds.deserialize(test_data, parse_dates=False)
     print("🔧 Datetime parsing disabled:")
     print(f"  timestamp: {type(no_dates['timestamp']).__name__}")
     print(f"  user_id: {type(no_dates['user_id']).__name__}")
     print()
 
     # Parse with UUID disabled
-    no_uuids = sp.deserialize(test_data, parse_uuids=False)
+    no_uuids = ds.deserialize(test_data, parse_uuids=False)
     print("🔧 UUID parsing disabled:")
     print(f"  timestamp: {type(no_uuids['timestamp']).__name__}")
     print(f"  user_id: {type(no_uuids['user_id']).__name__}")
@@ -183,10 +183,10 @@ def demonstrate_complex_data_structures() -> None:
     print(f"Original structure: {len(app_data['users'])} users with nested sessions")
 
     # Full round trip
-    serialized = sp.serialize(app_data)
+    serialized = ds.serialize(app_data)
     json_str = json.dumps(serialized, indent=2)
     parsed = json.loads(json_str)
-    deserialized = sp.deserialize(parsed)
+    deserialized = ds.deserialize(parsed)
 
     print("✅ Round-trip completed successfully")
     print(
@@ -220,7 +220,7 @@ def demonstrate_performance_awareness() -> None:
     }
 
     print("Simple JSON-compatible data (optimized path):")
-    serialized_simple = sp.serialize(simple_data)
+    serialized_simple = ds.serialize(simple_data)
     print(f"  Serialized successfully: {serialized_simple is simple_data}")
     print()
 
@@ -232,7 +232,7 @@ def demonstrate_performance_awareness() -> None:
     }
 
     print("Complex data requiring processing:")
-    serialized_complex = sp.serialize(complex_data)
+    serialized_complex = ds.serialize(complex_data)
     print(f"  Types converted: {isinstance(serialized_complex['timestamp'], str)}")
     print(f"  UUID converted: {isinstance(serialized_complex['id'], str)}")
     print()
@@ -240,7 +240,7 @@ def demonstrate_performance_awareness() -> None:
 
 def main() -> None:
     """Run all demonstrations."""
-    print("🚀 SerialPy Bidirectional Serialization Demo")
+    print("🚀 datason Bidirectional Serialization Demo")
     print("=" * 70)
     print()
 
@@ -258,7 +258,7 @@ def main() -> None:
 
     demonstrate_performance_awareness()
 
-    print("✨ Demo completed! SerialPy provides complete bidirectional")
+    print("✨ Demo completed! datason provides complete bidirectional")
     print("   serialization with intelligent type restoration.")
 
 

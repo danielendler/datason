@@ -1,4 +1,4 @@
-"""Data conversion utilities for SerialPy.
+"""Data conversion utilities for datason.
 
 This module provides functions for converting and cleaning various data formats,
 particularly for handling string representations of complex data types.

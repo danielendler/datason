@@ -170,3 +170,18 @@ docs/_build/
 .env.development.local
 .env.test.local
 .env.production.local
+
+# Plugin testing environments (from local matrix script)
+test-environments/
+
+# Backup files
+*.backup
+*.bak
+
+# Local test outputs
+ruff-results.txt
+format-results.txt
+bandit-report.json
+
+# Benchmark outputs
+benchmark-*.json

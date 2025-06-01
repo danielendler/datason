@@ -1,4 +1,4 @@
-"""Machine Learning and AI library serializers for SerialPy.
+"""Machine Learning and AI library serializers for datason.
 
 This module provides specialized serialization support for popular ML/AI libraries
 including PyTorch, TensorFlow, scikit-learn, JAX, scipy, and others.

@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
-"""Basic usage examples for SerialPy.
+"""Basic usage examples for datason.
 
-This script demonstrates the key features and capabilities of the SerialPy package.
+This script demonstrates the key features and capabilities of the datason package.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 import json
 from typing import Any, Dict
 import uuid
 
-import serialpy as sp
+import datason as ds
 
 
 def example_basic_serialization() -> None:
@@ -27,7 +27,7 @@ def example_basic_serialization() -> None:
         "nested_dict": {"inner_key": "inner_value", "numbers": [1, 2, 3]},
     }
 
-    serialized = sp.serialize(data)
+    serialized = ds.serialize(data)
     print("Original data structure converted to JSON-ready format:")
     print(json.dumps(serialized, indent=2))
     print()
@@ -47,7 +47,7 @@ def example_datetime_handling() -> None:
         ],
     }
 
-    serialized = sp.serialize(data)
+    serialized = ds.serialize(data)
     print("DateTime objects converted to ISO format:")
     print(json.dumps(serialized, indent=2))
     print()
@@ -65,7 +65,7 @@ def example_edge_cases() -> None:
         "uuid": uuid.uuid4(),
     }
 
-    serialized = sp.serialize(data)
+    serialized = ds.serialize(data)
     print("Edge cases handled gracefully:")
     print(json.dumps(serialized, indent=2))
     print()
@@ -87,12 +87,12 @@ def example_safe_conversions() -> None:
 
     print("Safe float conversions:")
     for value in test_values:
-        safe_result = sp.safe_float(value, default=0.0)
+        safe_result = ds.safe_float(value, default=0.0)
         print(f"  {value!r:15} -> {safe_result}")
 
     print("\nSafe int conversions:")
     for value in test_values:
-        safe_result = sp.safe_int(value, default=0)
+        safe_result = ds.safe_int(value, default=0)
         print(f"  {value!r:15} -> {safe_result}")
     print()
 
@@ -163,7 +163,7 @@ def example_nested_complex_data() -> None:
         },
     }
 
-    serialized = sp.serialize(user_data)
+    serialized = ds.serialize(user_data)
     print("Complex nested structure with various data types:")
     print(json.dumps(serialized, indent=2))
     print()
@@ -204,7 +204,7 @@ def example_custom_objects() -> None:
         "timestamp": datetime.now(),
     }
 
-    serialized = sp.serialize(data)
+    serialized = ds.serialize(data)
     print("Custom objects serialized:")
     print(json.dumps(serialized, indent=2))
     print()
@@ -212,7 +212,7 @@ def example_custom_objects() -> None:
 
 def main() -> None:
     """Run all examples."""
-    print("SerialPy Examples")
+    print("datason Examples")
     print("=" * 50)
     print()
 

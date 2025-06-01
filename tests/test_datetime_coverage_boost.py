@@ -2,14 +2,24 @@
 DateTime Utils Coverage Boost Tests
 
 This file contains tests specifically designed to cover the remaining uncovered lines
-in the serialpy.datetime_utils module to push coverage above 95%.
+in the datason.datetime_utils module to push coverage above 95%.
 """
 
 from datetime import datetime, timezone
 import unittest
 from unittest.mock import Mock, patch
 
-from serialpy.datetime_utils import (
+import pytest
+
+# Optional dependency imports
+try:
+    import pandas as pd
+
+    HAS_PANDAS = True
+except ImportError:
+    HAS_PANDAS = False
+
+from datason.datetime_utils import (
     convert_pandas_timestamps,
     ensure_dates,
     ensure_timestamp,
@@ -23,7 +33,7 @@ class TestDateTimeUtilsImportFallbacks(unittest.TestCase):
     def test_ensure_timestamp_without_pandas(self):
         """Test ensure_timestamp when pandas is not available."""
         # Test lines 14-15 in datetime_utils.py - pandas import fallback
-        with patch("serialpy.datetime_utils.pd", None):
+        with patch("datason.datetime_utils.pd", None):
             with self.assertRaises(ImportError) as context:
                 ensure_timestamp("2023-01-01")
 
@@ -32,21 +42,19 @@ class TestDateTimeUtilsImportFallbacks(unittest.TestCase):
     def test_ensure_dates_without_pandas(self):
         """Test ensure_dates when pandas is not available."""
         # Test import fallback path
-        with patch("serialpy.datetime_utils.pd", None):
+        with patch("datason.datetime_utils.pd", None):
             with self.assertRaises(ImportError) as context:
                 ensure_dates({})
 
             self.assertIn("pandas is required", str(context.exception))
 
 
+@pytest.mark.skipif(not HAS_PANDAS, reason="pandas not available")
 class TestEnsureTimestampEdgeCases(unittest.TestCase):
     """Test edge cases in ensure_timestamp function."""
 
     def test_ensure_timestamp_conversion_exceptions(self):
         """Test ensure_timestamp with objects that raise exceptions during conversion."""
-        # Skip if pandas not available
-        pd = pytest.importorskip("pandas")
-
         # Test line 84 in datetime_utils.py - exception during conversion
         mock_obj = Mock()
         mock_obj.to_pydatetime.side_effect = Exception("Conversion failed")
@@ -56,9 +64,6 @@ class TestEnsureTimestampEdgeCases(unittest.TestCase):
 
     def test_ensure_timestamp_attribute_error(self):
         """Test ensure_timestamp with object missing to_pydatetime method."""
-        # Skip if pandas not available
-        pd = pytest.importorskip("pandas")
-
         # Test line 86 in datetime_utils.py - AttributeError handling
         mock_obj = Mock()
         del mock_obj.to_pydatetime  # Remove the method
@@ -67,15 +72,13 @@ class TestEnsureTimestampEdgeCases(unittest.TestCase):
         self.assertTrue(pd.isna(result))  # Should return NaT
 
 
+@pytest.mark.skipif(not HAS_PANDAS, reason="pandas not available")
 class TestEnsureDatesEdgeCases(unittest.TestCase):
     """Test edge cases in ensure_dates function."""
 
     def test_ensure_dates_dataframe_column_errors(self):
         """Test ensure_dates with DataFrame column access errors."""
-        # Skip if pandas not available
-        pd = pytest.importorskip("pandas")
-
-        # The current implementation requires a 'date' column, so test with proper DataFrame
+        # Test line 104 in datetime_utils.py - DataFrame column access error
         df_with_date = pd.DataFrame({"date": ["2023-01-01"], "other_col": [1]})
         result = ensure_dates(df_with_date)
 
@@ -84,11 +87,7 @@ class TestEnsureDatesEdgeCases(unittest.TestCase):
 
     def test_ensure_dates_empty_dataframe(self):
         """Test ensure_dates with empty DataFrame."""
-        # Skip if pandas not available
-        pd = pytest.importorskip("pandas")
-
-        # Current implementation requires 'date' column even for empty DataFrame
-        # Test with empty DataFrame that has date column
+        # Test line 106 in datetime_utils.py - empty DataFrame handling
         empty_df = pd.DataFrame({"date": []})
         result = ensure_dates(empty_df)
 
@@ -97,10 +96,7 @@ class TestEnsureDatesEdgeCases(unittest.TestCase):
 
     def test_ensure_dates_dict_with_complex_keys(self):
         """Test ensure_dates with dictionary containing complex keys."""
-        # Skip if pandas not available
-        pytest.importorskip("pandas")
-
-        # Test dict handling with non-date keys
+        # Test line 108 in datetime_utils.py - dict handling with non-date keys
         test_dict = {
             "regular_key": "value",
             "number_key": 123,
@@ -116,17 +112,17 @@ class TestEnsureDatesEdgeCases(unittest.TestCase):
 
     def test_ensure_dates_invalid_input_type(self):
         """Test ensure_dates with invalid input type."""
-        # Test type validation - fix assertion to match actual error message
+        # Test line 110 in datetime_utils.py - type validation
         with self.assertRaises(TypeError) as context:
             ensure_dates("not_a_dict_or_dataframe")
 
         self.assertIn("pandas DataFrame or dict", str(context.exception))
 
-        # Test with None
+        # Test line 112 in datetime_utils.py - None handling
         with self.assertRaises(TypeError):
             ensure_dates(None)
 
-        # Test with list
+        # Test line 114 in datetime_utils.py - list handling
         with self.assertRaises(TypeError):
             ensure_dates([1, 2, 3])
 
@@ -137,7 +133,7 @@ class TestConvertPandasTimestampsEdgeCases(unittest.TestCase):
     def test_convert_pandas_timestamps_without_pandas(self):
         """Test convert_pandas_timestamps when pandas is not available."""
         # Test lines 194-196 in datetime_utils.py - pandas fallback
-        with patch("serialpy.datetime_utils.pd", None):
+        with patch("datason.datetime_utils.pd", None):
             test_data = {"date": "2023-01-01", "value": 42}
             result = convert_pandas_timestamps(test_data)
 
@@ -150,7 +146,7 @@ class TestConvertPandasTimestampsEdgeCases(unittest.TestCase):
         mock_df = Mock()
         mock_df.__class__.__name__ = "DataFrame"
 
-        with patch("serialpy.datetime_utils.pd", None):
+        with patch("datason.datetime_utils.pd", None):
             result = convert_pandas_timestamps(mock_df)
 
             # Should return unchanged when pandas is None
@@ -162,7 +158,7 @@ class TestConvertPandasTimestampsEdgeCases(unittest.TestCase):
         mock_series = Mock()
         mock_series.__class__.__name__ = "Series"
 
-        with patch("serialpy.datetime_utils.pd", None):
+        with patch("datason.datetime_utils.pd", None):
             result = convert_pandas_timestamps(mock_series)
 
             # Should return unchanged when pandas is None

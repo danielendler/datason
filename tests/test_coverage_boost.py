@@ -1,5 +1,5 @@
 """
-Coverage boost tests for SerialPy.
+Coverage boost tests for datason.
 
 These tests specifically target remaining uncovered lines to achieve 80-85% coverage.
 """
@@ -8,30 +8,50 @@ import json
 from unittest.mock import Mock, patch
 import warnings
 
-import numpy as np
-import pandas as pd
 import pytest
 
-from serialpy.converters import safe_float, safe_int
-from serialpy.core import (
+# Optional dependency imports
+try:
+    import numpy as np
+
+    HAS_NUMPY = True
+except ImportError:
+    HAS_NUMPY = False
+
+try:
+    import pandas as pd
+
+    HAS_PANDAS = True
+except ImportError:
+    HAS_PANDAS = False
+
+try:
+    from sklearn.base import BaseEstimator
+
+    HAS_SKLEARN = True
+except ImportError:
+    HAS_SKLEARN = False
+
+from datason.converters import safe_float, safe_int
+from datason.core import (
     _is_already_serialized_dict,
     _is_json_serializable_basic_type,
     serialize,
 )
-from serialpy.data_utils import convert_string_method_votes
-from serialpy.datetime_utils import (
+from datason.data_utils import convert_string_method_votes
+from datason.datetime_utils import (
     convert_pandas_timestamps,
     ensure_dates,
     ensure_timestamp,
     serialize_datetimes,
 )
-from serialpy.deserializers import (
+from datason.deserializers import (
     deserialize,
     deserialize_to_pandas,
     parse_datetime_string,
     parse_uuid_string,
 )
-from serialpy.serializers import serialize_detection_details
+from datason.serializers import serialize_detection_details
 
 
 class TestCoreEdgeCases:
@@ -40,7 +60,7 @@ class TestCoreEdgeCases:
     def test_serialize_ml_objects_with_core_fallback(self) -> None:
         """Test ML object serialization when ml_serializers import fails."""
         # Mock import error for ML serializers
-        with patch.dict("sys.modules", {"serialpy.ml_serializers": None}):
+        with patch.dict("sys.modules", {"datason.ml_serializers": None}):
             # This should trigger the ImportError fallback in core.py
             mock_obj = Mock()
             mock_obj.__dict__ = {"test": "value"}
@@ -77,7 +97,7 @@ class TestCoreEdgeCases:
 
     def test_tensorflow_check_without_tf(self) -> None:
         """Test TensorFlow detection when TF not available."""
-        from serialpy.ml_serializers import detect_and_serialize_ml_object
+        from datason.ml_serializers import detect_and_serialize_ml_object
 
         # Create mock TF-like object without actual TF
         mock_tf_obj = Mock()
@@ -86,7 +106,7 @@ class TestCoreEdgeCases:
         mock_tf_obj.dtype = Mock()
 
         # Patch tf to None to simulate absence
-        with patch("serialpy.ml_serializers.tf", None):
+        with patch("datason.ml_serializers.tf", None):
             result = detect_and_serialize_ml_object(mock_tf_obj)
             assert result is None
 
@@ -129,6 +149,7 @@ class TestDeserializersEdgeCases:
 class TestDateTimeUtilsEdgeCases:
     """Test datetime utilities edge cases."""
 
+    @pytest.mark.skipif(not HAS_PANDAS, reason="pandas not available")
     def test_ensure_timestamp_exceptions(self) -> None:
         """Test ensure_timestamp with exception handling."""
         # Test with object that can't be converted - should return NaT for failed conversions
@@ -138,6 +159,7 @@ class TestDateTimeUtilsEdgeCases:
         result = ensure_timestamp(bad_obj)
         assert pd.isna(result)  # Should return NaT which is pandas NA
 
+    @pytest.mark.skipif(not HAS_PANDAS, reason="pandas not available")
     def test_ensure_dates_exception_handling(self) -> None:
         """Test ensure_dates with various exception scenarios."""
         # Test with invalid input type - this should raise TypeError
@@ -194,6 +216,7 @@ class TestDataUtilsEdgeCases:
 class TestSerializersEdgeCases:
     """Test serializers edge cases."""
 
+    @pytest.mark.skipif(not HAS_NUMPY, reason="numpy not available")
     def test_serialize_detection_details_edge_cases(self) -> None:
         """Test serialize_detection_details with edge cases."""
         # Test with None input
@@ -242,7 +265,7 @@ class TestMLSerializersSpecialCases:
 
     def test_ml_serializer_imports_coverage(self) -> None:
         """Test coverage of ML serializer import paths."""
-        from serialpy.ml_serializers import (
+        from datason.ml_serializers import (
             serialize_huggingface_tokenizer,
             serialize_pil_image,
             serialize_pytorch_tensor,
@@ -255,7 +278,7 @@ class TestMLSerializersSpecialCases:
 
         # Test with all libraries patched to None
         with patch.multiple(
-            "serialpy.ml_serializers",
+            "datason.ml_serializers",
             torch=None,
             sklearn=None,
             BaseEstimator=None,
@@ -273,9 +296,10 @@ class TestMLSerializersSpecialCases:
                 == "transformers.tokenizer"
             )
 
+    @pytest.mark.skipif(not HAS_SKLEARN, reason="sklearn not available")
     def test_ml_error_paths_coverage(self) -> None:
         """Test ML serializer error handling paths."""
-        from serialpy.ml_serializers import (
+        from datason.ml_serializers import (
             serialize_sklearn_model,
         )
 
@@ -288,9 +312,10 @@ class TestMLSerializersSpecialCases:
             result = serialize_sklearn_model(mock_model)
             assert "_error" in result
 
+    @pytest.mark.skipif(not HAS_SKLEARN, reason="sklearn not available")
     def test_sklearn_parameter_filtering(self) -> None:
         """Test sklearn parameter filtering in serialization."""
-        from serialpy.ml_serializers import serialize_sklearn_model
+        from datason.ml_serializers import serialize_sklearn_model
 
         # Create mock model with various parameter types
         mock_model = Mock()
@@ -330,6 +355,7 @@ class TestImportHandlingEdgeCases:
         result = serialize(mock_obj)
         assert result == {"test": "value"}
 
+    @pytest.mark.skipif(not HAS_NUMPY, reason="numpy not available")
     def test_optional_dependency_combinations(self) -> None:
         """Test various combinations of optional dependencies."""
         # Test numpy arrays with different dtypes
@@ -344,6 +370,7 @@ class TestImportHandlingEdgeCases:
             result = serialize(arr)
             assert isinstance(result, list)
 
+    @pytest.mark.skipif(not HAS_PANDAS, reason="pandas not available")
     def test_pandas_edge_case_types(self) -> None:
         """Test pandas edge case types."""
         # Test pandas Period (if available)
@@ -367,6 +394,7 @@ class TestImportHandlingEdgeCases:
 class TestPerformanceOptimizationEdgeCases:
     """Test performance optimization edge cases."""
 
+    @pytest.mark.skipif(not HAS_NUMPY, reason="numpy not available")
     def test_optimization_bypass_scenarios(self) -> None:
         """Test scenarios where optimization should be bypassed."""
         # Dict with non-string keys should bypass optimization
@@ -400,6 +428,9 @@ class TestPerformanceOptimizationEdgeCases:
 class TestFullIntegrationEdgeCases:
     """Test full integration edge cases."""
 
+    @pytest.mark.skipif(
+        not (HAS_NUMPY and HAS_PANDAS), reason="numpy and pandas not available"
+    )
     def test_end_to_end_with_all_types(self) -> None:
         """Test end-to-end serialization/deserialization with all supported types."""
         from datetime import datetime

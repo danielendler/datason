@@ -1,6 +1,6 @@
 # CI/CD Pipeline Guide
 
-SerialPy uses a **modern, multi-pipeline CI/CD architecture** designed for speed, clarity, and parallel execution. This guide explains our complete CI/CD setup.
+datason uses a **modern, multi-pipeline CI/CD architecture** designed for speed, clarity, and parallel execution. This guide explains our complete CI/CD setup.
 
 ## 🏗️ **Architecture Overview**
 
@@ -240,7 +240,7 @@ git commit → pre-commit runs → quality checks pass → commit succeeds
 # Manual quality check
 ruff check --fix .
 ruff format .
-pytest --cov=serialpy
+pytest --cov=datason
 ```
 
 ### **Push to GitHub**
@@ -310,7 +310,7 @@ repos:
 ```yaml
 - name: New Quality Check
   run: |
-    new-tool check serialpy/
+    new-tool check datason/
 ```
 
 **To Main CI:**
@@ -390,7 +390,7 @@ git commit --amend
 ```bash
 # Local debugging
 pytest tests/test_failing.py -v
-pytest --cov=serialpy --cov-report=html
+pytest --cov=datason --cov-report=html
 # Open htmlcov/index.html
 ```
 

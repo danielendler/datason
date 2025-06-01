@@ -1,6 +1,6 @@
-"""Advanced ML/AI Examples for SerialPy.
+"""Advanced ML/AI Examples for datason.
 
-This example demonstrates SerialPy's capabilities with major ML/AI libraries
+This example demonstrates datason's capabilities with major ML/AI libraries
 including PyTorch, TensorFlow, scikit-learn, scipy, and others. Shows both
 serialization and deserialization in realistic ML workflows.
 """
@@ -9,7 +9,7 @@ from datetime import datetime
 import json
 import uuid
 
-import serialpy as sp
+import datason as ds
 
 
 def demonstrate_pytorch_workflow() -> None:
@@ -56,7 +56,7 @@ def demonstrate_pytorch_workflow() -> None:
         print()
 
         # Serialize (without our ML serializer extension for now)
-        serialized = sp.serialize(experiment_data)
+        serialized = ds.serialize(experiment_data)
         print("✅ Serialized PyTorch experiment")
         print(f"  Input batch type: {type(serialized['training_data']['input_batch'])}")
         print(f"  Loss value preserved: {serialized['metrics']['loss']}")
@@ -65,7 +65,7 @@ def demonstrate_pytorch_workflow() -> None:
         # Full round trip through JSON
         json_str = json.dumps(serialized, indent=2)
         parsed = json.loads(json_str)
-        deserialized = sp.deserialize(parsed)
+        deserialized = ds.deserialize(parsed)
 
         print("✅ Round-trip completed")
         print(
@@ -151,7 +151,7 @@ def demonstrate_sklearn_pipeline() -> None:
         print()
 
         # Serialize
-        serialized = sp.serialize(ml_experiment)
+        serialized = ds.serialize(ml_experiment)
         print("✅ Serialized ML pipeline metadata")
         print(
             f"  All numpy arrays converted: {isinstance(serialized['performance']['feature_importances'], list)}"
@@ -164,7 +164,7 @@ def demonstrate_sklearn_pipeline() -> None:
         # Round trip
         json_str = json.dumps(serialized, indent=2)
         parsed = json.loads(json_str)
-        deserialized = sp.deserialize(parsed)
+        deserialized = ds.deserialize(parsed)
 
         print("✅ Round-trip completed")
         print(f"  Experiment ID: {type(deserialized['experiment_id']).__name__}")
@@ -245,7 +245,7 @@ def demonstrate_computer_vision_workflow() -> None:
         print()
 
         # Serialize
-        serialized = sp.serialize(cv_experiment)
+        serialized = ds.serialize(cv_experiment)
         print("✅ Serialized CV experiment")
         print(
             f"  Numpy arrays converted: {isinstance(serialized['sample_image']['pixel_stats']['mean'], list)}"
@@ -256,7 +256,7 @@ def demonstrate_computer_vision_workflow() -> None:
         # Round trip
         json_str = json.dumps(serialized, indent=2)
         parsed = json.loads(json_str)
-        deserialized = sp.deserialize(parsed)
+        deserialized = ds.deserialize(parsed)
 
         print("✅ Round-trip completed")
         print(f"  Experiment ID: {type(deserialized['experiment_id']).__name__}")
@@ -327,7 +327,7 @@ def demonstrate_time_series_analysis() -> None:
         print()
 
         # Serialize
-        serialized = sp.serialize(ts_analysis)
+        serialized = ds.serialize(ts_analysis)
         print("✅ Serialized time series analysis")
         print(
             f"  Timestamps converted: {isinstance(serialized['time_series']['timestamps'][0], str)}"
@@ -338,7 +338,7 @@ def demonstrate_time_series_analysis() -> None:
         # Round trip
         json_str = json.dumps(serialized, indent=2)
         parsed = json.loads(json_str)
-        deserialized = sp.deserialize(parsed)
+        deserialized = ds.deserialize(parsed)
 
         print("✅ Round-trip completed")
         print(f"  Analysis ID: {type(deserialized['analysis_id']).__name__}")
@@ -368,7 +368,7 @@ def demonstrate_nlp_workflow() -> None:
             "The quick brown fox jumps over the lazy dog.",
             "Machine learning is transforming natural language processing.",
             "Deep neural networks can understand complex text patterns.",
-            "SerialPy makes it easy to serialize ML experiment data.",
+            "datason makes it easy to serialize ML experiment data.",
         ]
 
         # Simulate text processing results
@@ -458,7 +458,7 @@ def demonstrate_nlp_workflow() -> None:
         print()
 
         # Serialize
-        serialized = sp.serialize(nlp_experiment)
+        serialized = ds.serialize(nlp_experiment)
         print("✅ Serialized NLP experiment")
         print(
             f"  Numpy arrays converted: {isinstance(serialized['embeddings_sample']['word_vectors'], list)}"
@@ -471,7 +471,7 @@ def demonstrate_nlp_workflow() -> None:
         # Round trip
         json_str = json.dumps(serialized, indent=2)
         parsed = json.loads(json_str)
-        deserialized = sp.deserialize(parsed)
+        deserialized = ds.deserialize(parsed)
 
         print("✅ Round-trip completed")
         print(f"  Experiment ID: {type(deserialized['experiment_id']).__name__}")
@@ -571,7 +571,7 @@ def demonstrate_experiment_tracking() -> None:
         print()
 
         # Serialize
-        serialized = sp.serialize(tracking_data)
+        serialized = ds.serialize(tracking_data)
         print("✅ Serialized experiment tracking data")
         print(
             f"  All experiment IDs converted: {isinstance(serialized['experiments'][0]['experiment_id'], str)}"
@@ -584,7 +584,7 @@ def demonstrate_experiment_tracking() -> None:
         # Round trip
         json_str = json.dumps(serialized, indent=2)
         parsed = json.loads(json_str)
-        deserialized = sp.deserialize(parsed)
+        deserialized = ds.deserialize(parsed)
 
         print("✅ Round-trip completed")
         print(f"  Session ID: {type(deserialized['tracking_session_id']).__name__}")
@@ -601,9 +601,9 @@ def demonstrate_experiment_tracking() -> None:
 
 def main() -> None:
     """Run all advanced ML/AI demonstrations."""
-    print("🚀 SerialPy Advanced ML/AI Examples")
+    print("🚀 datason Advanced ML/AI Examples")
     print("=" * 70)
-    print("Demonstrating SerialPy's capabilities with real-world ML workflows")
+    print("Demonstrating datason's capabilities with real-world ML workflows")
     print()
 
     demonstrate_pytorch_workflow()
@@ -625,7 +625,7 @@ def main() -> None:
 
     print("✨ Advanced examples completed!")
     print("\n🎯 Key takeaways:")
-    print("   • SerialPy seamlessly handles complex ML data structures")
+    print("   • datason seamlessly handles complex ML data structures")
     print("   • Preserves experiment metadata and UUIDs through serialization")
     print("   • Converts numpy arrays and pandas objects intelligently")
     print("   • Enables reproducible ML experiment tracking")

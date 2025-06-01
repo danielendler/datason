@@ -1,4 +1,4 @@
-"""DateTime utilities for SerialPy.
+"""DateTime utilities for datason.
 
 This module provides functions for handling datetime objects, pandas timestamps,
 and related date/time conversion tasks.

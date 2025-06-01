@@ -7,7 +7,7 @@ import uuid
 
 import pytest
 
-from serialpy.core import serialize
+from datason.core import serialize
 
 
 class TestSerialize:

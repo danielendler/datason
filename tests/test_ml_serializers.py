@@ -1,5 +1,5 @@
 """
-Tests for ML/AI serializers in SerialPy.
+Tests for ML/AI serializers in datason.
 
 This module tests the ML serialization functionality with actual ML libraries
 when available, and fallback behavior when they're not.
@@ -8,10 +8,17 @@ when available, and fallback behavior when they're not.
 from unittest.mock import Mock, patch
 import warnings
 
-import numpy as np
 import pytest
 
-from serialpy.ml_serializers import (
+# Optional dependency imports
+try:
+    import numpy as np
+
+    HAS_NUMPY = True
+except ImportError:
+    HAS_NUMPY = False
+
+from datason.ml_serializers import (
     detect_and_serialize_ml_object,
     get_ml_library_info,
     serialize_huggingface_tokenizer,
@@ -150,6 +157,7 @@ class TestPyTorchSerialization:
 class TestSklearnSerialization:
     """Test scikit-learn model serialization with actual sklearn."""
 
+    @pytest.mark.skipif(not HAS_NUMPY, reason="numpy not available")
     def test_serialize_random_forest(self) -> None:
         """Test serialization of RandomForestClassifier."""
         model = RandomForestClassifier(n_estimators=10, random_state=42)
@@ -221,6 +229,7 @@ class TestJAXSerialization:
 class TestScipySerialization:
     """Test scipy sparse matrix serialization with actual scipy."""
 
+    @pytest.mark.skipif(not HAS_NUMPY, reason="numpy not available")
     def test_serialize_csr_matrix(self) -> None:
         """Test serialization of CSR sparse matrix."""
         data = np.array([1, 2, 3])
@@ -236,6 +245,7 @@ class TestScipySerialization:
         assert result["_nnz"] == 3
         assert len(result["_data"]) == 3
 
+    @pytest.mark.skipif(not HAS_NUMPY, reason="numpy not available")
     def test_serialize_coo_matrix(self) -> None:
         """Test serialization of COO sparse matrix."""
         row = np.array([0, 1, 2])
@@ -334,7 +344,7 @@ class TestMLSerializersFallbacks:
         mock_tensor = Mock()
         mock_tensor.__str__ = Mock(return_value="MockTensor([1, 2, 3])")
 
-        with patch("serialpy.ml_serializers.torch", None):
+        with patch("datason.ml_serializers.torch", None):
             result = serialize_pytorch_tensor(mock_tensor)
 
         assert result == {"_type": "torch.Tensor", "_data": "MockTensor([1, 2, 3])"}
@@ -344,8 +354,8 @@ class TestMLSerializersFallbacks:
         mock_model = Mock()
         mock_model.__str__ = Mock(return_value="MockSKLearnModel")
 
-        with patch("serialpy.ml_serializers.sklearn", None):
-            with patch("serialpy.ml_serializers.BaseEstimator", None):
+        with patch("datason.ml_serializers.sklearn", None):
+            with patch("datason.ml_serializers.BaseEstimator", None):
                 result = serialize_sklearn_model(mock_model)
 
         assert result == {"_type": "sklearn.model", "_data": "MockSKLearnModel"}
@@ -355,7 +365,7 @@ class TestMLSerializersFallbacks:
         mock_array = Mock()
         mock_array.__str__ = Mock(return_value="MockJaxArray")
 
-        with patch("serialpy.ml_serializers.jax", None):
+        with patch("datason.ml_serializers.jax", None):
             result = serialize_jax_array(mock_array)
 
         assert result == {"_type": "jax.Array", "_data": "MockJaxArray"}
@@ -365,7 +375,7 @@ class TestMLSerializersFallbacks:
         mock_matrix = Mock()
         mock_matrix.__str__ = Mock(return_value="MockSparseMatrix")
 
-        with patch("serialpy.ml_serializers.scipy", None):
+        with patch("datason.ml_serializers.scipy", None):
             result = serialize_scipy_sparse(mock_matrix)
 
         assert result == {"_type": "scipy.sparse", "_data": "MockSparseMatrix"}
@@ -375,7 +385,7 @@ class TestMLSerializersFallbacks:
         mock_image = Mock()
         mock_image.__str__ = Mock(return_value="MockPILImage")
 
-        with patch("serialpy.ml_serializers.Image", None):
+        with patch("datason.ml_serializers.Image", None):
             result = serialize_pil_image(mock_image)
 
         assert result == {"_type": "PIL.Image", "_data": "MockPILImage"}
@@ -385,7 +395,7 @@ class TestMLSerializersFallbacks:
         mock_tokenizer = Mock()
         mock_tokenizer.__str__ = Mock(return_value="MockTokenizer")
 
-        with patch("serialpy.ml_serializers.transformers", None):
+        with patch("datason.ml_serializers.transformers", None):
             result = serialize_huggingface_tokenizer(mock_tokenizer)
 
         assert result == {"_type": "transformers.tokenizer", "_data": "MockTokenizer"}
@@ -407,7 +417,7 @@ class TestDetectAndSerializeMLObject:
         mock_obj = Mock()
 
         with patch.multiple(
-            "serialpy.ml_serializers",
+            "datason.ml_serializers",
             torch=None,
             tf=None,
             jax=None,

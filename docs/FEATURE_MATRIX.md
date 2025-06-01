@@ -1,8 +1,8 @@
-# SerialPy Feature Matrix 🔍
+# datason Feature Matrix 🔍
 
 ## Library Comparison Matrix
 
-| Feature | SerialPy | json (stdlib) | pickle | joblib | ujson | orjson |
+| Feature | datason | json (stdlib) | pickle | joblib | ujson | orjson |
 |---------|-----------|---------------|--------|--------|-------|--------|
 | **Core Features** |
 | Basic JSON Types | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
@@ -43,7 +43,7 @@
 
 ## Use Case Recommendations
 
-### 🎯 When to Use SerialPy
+### 🎯 When to Use datason
 
 **Perfect for:**
 - 🤖 **ML/AI Applications**: Model serialization, experiment tracking
@@ -54,7 +54,7 @@
 
 **Example scenarios:**
 ```python
-# ✅ SerialPy excels here
+# ✅ datason excels here
 ml_experiment = {
     'model': trained_sklearn_model,
     'predictions': torch_tensor_predictions,
@@ -97,18 +97,18 @@ ml_experiment = {
 ### Simple JSON-Compatible Data (1000 user objects)
 ```
 json:      0.4ms (1.0x baseline)
-serialpy: 0.6ms (1.6x overhead)
+datason: 0.6ms (1.6x overhead)
 ```
 
 ### Complex Data (500 objects with UUIDs/datetimes)
 ```
-serialpy: 2.1ms (only option for this data)
+datason: 2.1ms (only option for this data)
 pickle:    0.7ms (3.2x faster but binary, Python-only)
 ```
 
 ### High-Throughput Scenarios
 ```
-serialpy performance:
+datason performance:
 - Large nested datasets: 272,654 items/second
 - NumPy array processing: 5.5M elements/second  
 - Pandas DataFrame rows: 195,242 rows/second
@@ -117,7 +117,7 @@ serialpy performance:
 
 ### Memory Usage (Efficient processing)
 ```
-serialpy: Optimized for streaming large datasets
+datason: Optimized for streaming large datasets
 joblib:    Good for NumPy arrays with compression
 pickle:    High memory usage for complex objects
 json:      N/A (can't serialize DataFrames/tensors)
@@ -129,7 +129,7 @@ json:      N/A (can't serialize DataFrames/tensors)
 
 ### 🤖 ML/AI Object Support
 
-SerialPy provides native support for major ML frameworks:
+datason provides native support for major ML frameworks:
 
 ```python
 # PyTorch
@@ -180,7 +180,7 @@ df = pd.DataFrame({
 @app.route('/model/predict')
 def predict():
     result = model.predict(data)
-    return jsonify(serialpy.serialize({
+    return jsonify(datason.serialize({
         'predictions': result,  # NumPy array
         'model_info': model,    # sklearn model
         'timestamp': datetime.now()
@@ -199,7 +199,7 @@ experiment = {
         'predictions': predictions_array
     }
 }
-experiment_json = serialpy.serialize(experiment)
+experiment_json = datason.serialize(experiment)
 ```
 
 ### Data Pipeline State
@@ -224,14 +224,14 @@ Use this matrix to choose the right tool:
 | Standard JSON only | json (stdlib) |
 | Python objects + High Performance | pickle |
 | NumPy arrays + Compression | joblib |
-| **ML/AI data + Human Readable** | **SerialPy** |
-| **Complex data + Cross-platform** | **SerialPy** |
-| **API responses with mixed types** | **SerialPy** |
-| **Data science workflows** | **SerialPy** |
+| **ML/AI data + Human Readable** | **datason** |
+| **Complex data + Cross-platform** | **datason** |
+| **API responses with mixed types** | **datason** |
+| **Data science workflows** | **datason** |
 
 ## Migration Guide
 
-### From `json` to SerialPy
+### From `json` to datason
 ```python
 # Before
 try:
@@ -241,10 +241,10 @@ except TypeError:
     pass
 
 # After
-json_str = json.dumps(serialpy.serialize(data))  # Just works!
+json_str = json.dumps(datason.serialize(data))  # Just works!
 ```
 
-### From `pickle` to SerialPy
+### From `pickle` to datason
 ```python
 # Before (Python-only)
 with open('data.pkl', 'wb') as f:
@@ -252,27 +252,27 @@ with open('data.pkl', 'wb') as f:
 
 # After (Cross-platform)
 with open('data.json', 'w') as f:
-    json.dump(serialpy.serialize(data), f)
+    json.dump(datason.serialize(data), f)
 ```
 
-### From `joblib` to SerialPy
+### From `joblib` to datason
 ```python
 # Before (Binary format)
 joblib.dump(sklearn_model, 'model.joblib')
 
 # After (Human-readable)
 with open('model.json', 'w') as f:
-    json.dump(serialpy.serialize(sklearn_model), f)
+    json.dump(datason.serialize(sklearn_model), f)
 ```
 
 ## Key Differentiators Explained
 
 ### 🌐 Cross-Language Compatibility
 
-**SerialPy outputs standard JSON** that any programming language can read:
+**datason outputs standard JSON** that any programming language can read:
 
 ```python
-# SerialPy output - works everywhere
+# datason output - works everywhere
 {
     "model_results": {
         "_type": "torch.Tensor",
@@ -289,7 +289,7 @@ with open('model.json', 'w') as f:
 🚀 **Microservices Architecture**
 ```python
 # Python ML service
-ml_results = serialpy.serialize({
+ml_results = datason.serialize({
     'predictions': torch_predictions,
     'model_version': '2.1.0',
     'confidence': confidence_scores
@@ -300,7 +300,7 @@ ml_results = serialpy.serialize({
 🌍 **Multi-Language Data Pipelines**
 ```python
 # Python data processing
-processed_data = serialpy.serialize({
+processed_data = datason.serialize({
     'features': numpy_features,
     'labels': pandas_series,
     'metadata': {'processed_at': datetime.now()}
@@ -313,7 +313,7 @@ processed_data = serialpy.serialize({
 # Your Python API response
 @app.route('/api/analysis')
 def get_analysis():
-    return serialpy.serialize({
+    return datason.serialize({
         'dataframe': analysis_df,
         'charts': plot_data,
         'timestamp': datetime.now()
@@ -332,7 +332,7 @@ b'\x80\x04\x95\x1a\x00\x00\x00\x00\x00\x00\x00}\x94\x8c\x04name\x94\x8c\x04John\
 
 ### 👁️ Human-Readable Output
 
-**SerialPy produces readable JSON** you can inspect, debug, and version control:
+**datason produces readable JSON** you can inspect, debug, and version control:
 
 ```json
 {
@@ -409,14 +409,14 @@ git diff experiment_results.pkl
 | Scenario | Best Tool | Why |
 |----------|-----------|-----|
 | **Python-only ML pipeline** | pickle | Fastest, perfect object reconstruction |
-| **Multi-language microservices** | **SerialPy** | JSON works everywhere |
-| **API responses** | **SerialPy** | Human-readable, debuggable |
-| **Data science collaboration** | **SerialPy** | Readable by everyone |
+| **Multi-language microservices** | **datason** | JSON works everywhere |
+| **API responses** | **datason** | Human-readable, debuggable |
+| **Data science collaboration** | **datason** | Readable by everyone |
 | **High-performance NumPy** | joblib | Optimized for arrays |
 | **Web APIs (basic JSON)** | orjson/ujson | Maximum speed |
-| **Debugging complex data** | **SerialPy** | Inspect results easily |
-| **Cross-team data sharing** | **SerialPy** | No language barriers |
-| **Scientific reproducibility** | **SerialPy** | Human-readable results |
+| **Debugging complex data** | **datason** | Inspect results easily |
+| **Cross-team data sharing** | **datason** | No language barriers |
+| **Scientific reproducibility** | **datason** | Human-readable results |
 
 ### 🎯 Concrete Use Case Examples
 
@@ -435,10 +435,10 @@ pickle.dump(ml_results, open('results.pkl', 'wb'))
 ❌ "Can't inspect experiment results directly"
 ```
 
-**✅ Solutions with SerialPy:**
+**✅ Solutions with datason:**
 ```python
 # Data science team (Python)
-json.dump(serialpy.serialize(ml_results), open('results.json', 'w'))
+json.dump(datason.serialize(ml_results), open('results.json', 'w'))
 
 # Frontend team (JavaScript)
 ✅ fetch('/api/results').then(r => r.json()) // Just works!
@@ -459,7 +459,7 @@ json.dump(manual_dict, 'api.json')     # For frontend
 # 3 different formats, data inconsistency, maintenance nightmare
 
 # After: One format for everyone
-serialpy_result = serialpy.serialize({
+datason_result = datason.serialize({
     'model': sklearn_model,
     'predictions': numpy_predictions,
     'metadata': {'timestamp': datetime.now()}

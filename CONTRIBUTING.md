@@ -1,10 +1,10 @@
-# Contributing to SerialPy 🤝
+# Contributing to datason 🤝
 
-Thank you for your interest in contributing to SerialPy! This guide will help you understand our development process, coding standards, and how to make meaningful contributions.
+Thank you for your interest in contributing to datason! This guide will help you understand our development process, coding standards, and how to make meaningful contributions.
 
 ## 🎯 Core Development Principles
 
-SerialPy follows three fundamental principles that guide all development decisions:
+datason follows three fundamental principles that guide all development decisions:
 
 ### 1. 🪶 **Minimal Dependencies**
 
@@ -51,7 +51,7 @@ def serialize_pandas_object(obj):
 **Testing Commands**:
 ```bash
 # Run all tests with coverage
-pytest --cov=serialpy --cov-report=term-missing --cov-report=html
+pytest --cov=datason --cov-report=term-missing --cov-report=html
 
 # Test core functionality only
 pytest tests/test_core.py tests/test_converters.py tests/test_deserializers.py
@@ -105,8 +105,8 @@ def test_large_dataset_performance():
 
 ```bash
 # 1. Fork and clone the repository
-git clone https://github.com/danielendler/SerialPy.git
-cd serialpy
+git clone https://github.com/danielendler/datason.git
+cd datason
 
 # 2. Create virtual environment
 python -m venv venv
@@ -127,7 +127,7 @@ pytest -v
 1. **Create feature branch**: `git checkout -b feature/your-feature-name`
 2. **Make changes** following the coding standards below
 3. **Add tests** for new functionality
-4. **Run tests**: `pytest --cov=serialpy`
+4. **Run tests**: `pytest --cov=datason`
 5. **Check coverage**: Ensure coverage stays above 80%
 6. **Run linting and formatting**: `ruff check --fix . && ruff format .`
 7. **Create pull request** with detailed description
@@ -141,7 +141,7 @@ pytest -v
 
 ### File Structure
 ```
-serialpy/
+datason/
 ├── core.py              # Core serialization logic
 ├── converters.py        # Safe type converters
 ├── deserializers.py     # Deserialization and parsing
@@ -248,28 +248,28 @@ Each new feature must include tests that maintain or improve coverage:
 
 ```bash
 # Check coverage before changes
-pytest --cov=serialpy --cov-report=term-missing
+pytest --cov=datason --cov-report=term-missing
 
 # Identify uncovered lines
 # Lines marked in red in HTML report need tests
 
 # Add tests targeting specific lines
-pytest tests/test_your_new_feature.py --cov=serialpy --cov-report=term-missing
+pytest tests/test_your_new_feature.py --cov=datason --cov-report=term-missing
 ```
 
 ## 🔄 Pull Request Process
 
 ### Before Submitting
 - [ ] All tests pass: `pytest`
-- [ ] Coverage maintained: `pytest --cov=serialpy`
+- [ ] Coverage maintained: `pytest --cov=datason`
 - [ ] Code quality: `ruff check --fix .`
 - [ ] Code formatting: `ruff format .`
-- [ ] Type checking: `mypy serialpy/`
-- [ ] Security scan: `bandit -r serialpy/`
+- [ ] Type checking: `mypy datason/`
+- [ ] Security scan: `bandit -r datason/`
 - [ ] Documentation updated if needed
 
 ### CI/CD Pipeline
-SerialPy uses a modern multi-pipeline CI/CD architecture. See our **[CI/CD Pipeline Guide](CI_PIPELINE_GUIDE.md)** for complete details on:
+datason uses a modern multi-pipeline CI/CD architecture. See our **[CI/CD Pipeline Guide](CI_PIPELINE_GUIDE.md)** for complete details on:
 - 🔍 **Quality Pipeline** - Ruff linting, formatting, security scanning (~30s)
 - 🧪 **Main CI** - Testing, coverage, package building (~2-3min)
 - 📚 **Docs Pipeline** - Documentation generation and deployment
@@ -348,4 +348,4 @@ We follow the Contributor Covenant Code of Conduct. Please be respectful and inc
 
 ---
 
-**Thank you for contributing to SerialPy!** 🙏 Your contributions help make Python data serialization better for everyone.
+**Thank you for contributing to datason!** 🙏 Your contributions help make Python data serialization better for everyone.

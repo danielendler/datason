@@ -1,4 +1,4 @@
-"""Core serialization functionality for SerialPy.
+"""Core serialization functionality for datason.
 
 This module contains the main serialize function that handles recursive
 serialization of complex Python data structures to JSON-compatible formats.

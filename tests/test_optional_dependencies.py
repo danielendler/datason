@@ -1,5 +1,5 @@
 """
-Tests for SerialPy with optional dependencies (pandas and numpy).
+Tests for datason with optional dependencies (pandas and numpy).
 
 This module tests code paths that require pandas and numpy to be installed.
 """
@@ -7,14 +7,28 @@ This module tests code paths that require pandas and numpy to be installed.
 from datetime import datetime, timezone
 from typing import Any
 
-import numpy as np
-import pandas as pd
 import pytest
 
-import serialpy as sp
-from serialpy.core import serialize
+# Optional dependency imports
+try:
+    import numpy as np
+
+    HAS_NUMPY = True
+except ImportError:
+    HAS_NUMPY = False
+
+try:
+    import pandas as pd
+
+    HAS_PANDAS = True
+except ImportError:
+    HAS_PANDAS = False
+
+import datason as ds
+from datason.core import serialize
 
 
+@pytest.mark.skipif(not HAS_NUMPY, reason="numpy not available")
 class TestNumpyIntegration:
     """Test numpy type handling in core serialization."""
 
@@ -93,6 +107,7 @@ class TestNumpyIntegration:
         assert result["array_str"] == ["hello", "world"]
 
 
+@pytest.mark.skipif(not HAS_PANDAS, reason="pandas not available")
 class TestPandasIntegration:
     """Test pandas type handling in core serialization."""
 
@@ -167,6 +182,7 @@ class TestPandasIntegration:
         assert "2023-01-01" in result["df_with_dates"][0]["date"]
 
 
+@pytest.mark.skipif(not HAS_PANDAS, reason="pandas not available")
 class TestDateTimeUtilsWithPandas:
     """Test datetime_utils.py functions with pandas installed."""
 
@@ -174,46 +190,46 @@ class TestDateTimeUtilsWithPandas:
         """Test ensure_timestamp with various inputs."""
         # Test with datetime
         dt = datetime(2023, 1, 1, 12, 0, 0)
-        result = sp.ensure_timestamp(dt)
+        result = ds.ensure_timestamp(dt)
         assert isinstance(result, pd.Timestamp)
 
         # Test with string
-        result = sp.ensure_timestamp("2023-01-01")
+        result = ds.ensure_timestamp("2023-01-01")
         assert isinstance(result, pd.Timestamp)
 
         # Test with None
-        result = sp.ensure_timestamp(None)
+        result = ds.ensure_timestamp(None)
         assert pd.isna(result)
 
     def test_ensure_timestamp_edge_cases(self) -> None:
         """Test ensure_timestamp with edge cases."""
         # Test with NaN
-        result = sp.ensure_timestamp(float("nan"))
+        result = ds.ensure_timestamp(float("nan"))
         assert pd.isna(result)
 
         # Test with existing pandas Timestamp
         ts = pd.Timestamp("2023-01-01")
-        result = sp.ensure_timestamp(ts)
+        result = ds.ensure_timestamp(ts)
         assert result == ts
 
     def test_ensure_timestamp_invalid_types(self) -> None:
         """Test ensure_timestamp with invalid types."""
         # Test with list (should raise TypeError)
         with pytest.raises(TypeError):
-            sp.ensure_timestamp([1, 2, 3])
+            ds.ensure_timestamp([1, 2, 3])
 
         # Test with dict (should raise TypeError)
         with pytest.raises(TypeError):
-            sp.ensure_timestamp({"key": "value"})
+            ds.ensure_timestamp({"key": "value"})
 
         # Test with set (should raise TypeError)
         with pytest.raises(TypeError):
-            sp.ensure_timestamp({1, 2, 3})
+            ds.ensure_timestamp({1, 2, 3})
 
     def test_ensure_timestamp_conversion_failure(self) -> None:
         """Test ensure_timestamp with values that can't be converted."""
         # Test with invalid string
-        result = sp.ensure_timestamp("not a date")
+        result = ds.ensure_timestamp("not a date")
         assert pd.isna(result)
 
     def test_ensure_dates_with_dict(self) -> None:
@@ -224,7 +240,7 @@ class TestDateTimeUtilsWithPandas:
             "created_at": "2023-06-15T10:30:00",
             "other_field": "not a date",
         }
-        result = sp.ensure_dates(data)
+        result = ds.ensure_dates(data)
 
         assert isinstance(result["first_date"], pd.Timestamp)
         assert isinstance(result["last_date"], pd.Timestamp)
@@ -238,7 +254,7 @@ class TestDateTimeUtilsWithPandas:
             "last_date": "2023-12-31",
             "invalid_field": "not convertible",
         }
-        result = sp.ensure_dates(data)
+        result = ds.ensure_dates(data)
 
         assert result["first_date"] is None
         assert isinstance(result["last_date"], pd.Timestamp)
@@ -248,7 +264,7 @@ class TestDateTimeUtilsWithPandas:
         df = pd.DataFrame(
             {"date": ["2023-01-01", "2023-01-02", "2023-01-03"], "value": [10, 20, 30]}
         )
-        result = sp.ensure_dates(df)
+        result = ds.ensure_dates(df)
 
         assert pd.api.types.is_datetime64_any_dtype(result["date"])
         assert len(result) == 3
@@ -256,7 +272,7 @@ class TestDateTimeUtilsWithPandas:
     def test_ensure_dates_empty_dataframe(self) -> None:
         """Test ensure_dates with empty DataFrame."""
         df = pd.DataFrame(columns=["date", "value"])
-        result = sp.ensure_dates(df)
+        result = ds.ensure_dates(df)
 
         assert pd.api.types.is_datetime64_any_dtype(result["date"])
         assert len(result) == 0
@@ -266,7 +282,7 @@ class TestDateTimeUtilsWithPandas:
         df = pd.DataFrame({"value": [10, 20, 30]})
 
         with pytest.raises(KeyError):
-            sp.ensure_dates(df)
+            ds.ensure_dates(df)
 
     def test_ensure_dates_invalid_date_types(self) -> None:
         """Test ensure_dates with invalid date types in DataFrame."""
@@ -275,19 +291,19 @@ class TestDateTimeUtilsWithPandas:
         )
 
         with pytest.raises(ValueError):
-            sp.ensure_dates(df)
+            ds.ensure_dates(df)
 
     def test_ensure_dates_invalid_input_type(self) -> None:
         """Test ensure_dates with invalid input type."""
         with pytest.raises(TypeError):
-            sp.ensure_dates("not a dict or dataframe")
+            ds.ensure_dates("not a dict or dataframe")
 
     def test_ensure_dates_timezone_handling(self) -> None:
         """Test ensure_dates with timezone-aware dates."""
         # Create timezone-aware datetime
         tz_aware = datetime(2023, 1, 1, tzinfo=timezone.utc)
         data = {"date": tz_aware}
-        result = sp.ensure_dates(data, strip_timezone=True)
+        result = ds.ensure_dates(data, strip_timezone=True)
 
         # Should be converted to naive datetime
         assert result["date"].tzinfo is None
@@ -296,7 +312,7 @@ class TestDateTimeUtilsWithPandas:
         """Test convert_pandas_timestamps with pandas Series."""
         ts = pd.Timestamp("2023-01-01")
         series = pd.Series([ts, pd.Timestamp("2023-01-02")])
-        result = sp.convert_pandas_timestamps(series)
+        result = ds.convert_pandas_timestamps(series)
 
         # Should convert timestamps to datetime objects
         assert isinstance(result.iloc[0], datetime)
@@ -310,15 +326,18 @@ class TestDateTimeUtilsWithPandas:
                 "value": [10, 20],
             }
         )
-        result = sp.convert_pandas_timestamps(df)
+        result = ds.convert_pandas_timestamps(df)
 
         # Timestamps should be converted to datetime objects
         assert isinstance(result.iloc[0, 0], datetime)
         assert isinstance(result.iloc[1, 0], datetime)
 
 
+@pytest.mark.skipif(
+    not (HAS_NUMPY and HAS_PANDAS), reason="numpy and pandas not available"
+)
 class TestSerializersWithDependencies:
-    """Test serializers.py with numpy and pandas."""
+    """Test serializers with optional dependencies."""
 
     def test_serialize_detection_details_with_numpy(self) -> None:
         """Test serialize_detection_details with numpy types."""
@@ -330,7 +349,7 @@ class TestSerializersWithDependencies:
                 "is_valid": np.bool_(True),
             }
         }
-        result = sp.serialize_detection_details(data)
+        result = ds.serialize_detection_details(data)
 
         assert result["method1"]["scores"] == [1.0, None, None, 2.5]
         assert result["method1"]["confidence"] == 0.95
@@ -350,7 +369,7 @@ class TestSerializersWithDependencies:
                 "nat_value": pd.NaT,
             }
         }
-        result = sp.serialize_detection_details(data)
+        result = ds.serialize_detection_details(data)
 
         assert result["method1"]["data_series"] == [1, 2, 3, 4]
         assert isinstance(result["method1"]["timestamp"], str)
@@ -380,7 +399,7 @@ class TestSerializersWithDependencies:
                 },
             }
         }
-        result = sp.serialize_detection_details(data)
+        result = ds.serialize_detection_details(data)
 
         # Check numpy conversions
         assert result["method1"]["numpy_data"]["array"] == [1, 2, None]
@@ -397,8 +416,11 @@ class TestSerializersWithDependencies:
         assert len(result["method1"]["pandas_data"]["timestamps"]) == 2
 
 
+@pytest.mark.skipif(
+    not (HAS_NUMPY and HAS_PANDAS), reason="numpy and pandas not available"
+)
 class TestMixedOptionalDependencies:
-    """Test complex scenarios mixing numpy, pandas, and regular Python types."""
+    """Test complex scenarios mixing multiple optional dependencies."""
 
     def test_complex_mixed_structure(self) -> None:
         """Test serialization of complex structure with all types."""
@@ -439,8 +461,11 @@ class TestMixedOptionalDependencies:
         assert len(result["results"]) == 3
 
 
+@pytest.mark.skipif(
+    not (HAS_NUMPY and HAS_PANDAS), reason="numpy and pandas not available"
+)
 class TestAdditionalCoverage:
-    """Additional tests to cover remaining edge cases."""
+    """Test additional edge cases for coverage."""
 
     def test_data_utils_remaining_paths(self) -> None:
         """Test remaining paths in data_utils.py."""
@@ -456,7 +481,7 @@ class TestAdditionalCoverage:
                 raise ValueError("Cannot convert to float")
 
         obj = ComplexObject()
-        result = sp.safe_float(obj)
+        result = ds.safe_float(obj)
         assert result == 0.0
 
         # Test safe_int with complex object
@@ -465,12 +490,12 @@ class TestAdditionalCoverage:
                 raise ValueError("Cannot convert to int")
 
         obj2 = ComplexObject2()
-        result = sp.safe_int(obj2)
+        result = ds.safe_int(obj2)
         assert result == 0
 
     def test_core_optimization_edge_cases(self) -> None:
         """Test optimization helper functions with edge cases."""
-        from serialpy.core import (
+        from datason.core import (
             _is_already_serialized_dict,
             _is_already_serialized_list,
         )

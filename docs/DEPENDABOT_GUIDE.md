@@ -1,14 +1,14 @@
-# Dependabot Guide for SerialPy
+# Dependabot Guide for datason
 
 ## 🤖 Overview
 
-Dependabot is GitHub's automated dependency update service that helps keep SerialPy's dependencies current and secure. It automatically scans for outdated dependencies and creates pull requests to update them.
+Dependabot is GitHub's automated dependency update service that helps keep datason's dependencies current and secure. It automatically scans for outdated dependencies and creates pull requests to update them.
 
-## 🎯 SerialPy's Dependency Strategy
+## 🎯 datason's Dependency Strategy
 
-SerialPy follows a **minimal core, modern tooling** philosophy:
+datason follows a **minimal core, modern tooling** philosophy:
 
-- **Core Dependencies**: Minimal to zero - SerialPy works without any required dependencies
+- **Core Dependencies**: Minimal to zero - datason works without any required dependencies
 - **Optional Dependencies**: Updated conservatively (ML libraries need compatibility testing)
 - **Development Dependencies**: Updated aggressively (latest tooling for best developer experience)
 
@@ -125,7 +125,7 @@ pytest tests/test_ml_serializers.py  # ML serialization tests
 # Full regression testing
 pip install -e .  # Minimal install
 pytest  # All tests should pass
-pytest --cov=serialpy --cov-fail-under=80  # Coverage check
+pytest --cov=datason --cov-fail-under=80  # Coverage check
 ```
 
 ## 🚀 Common Dependabot Scenarios
@@ -251,7 +251,7 @@ pre-commit autoupdate  # Update hook versions
 pre-commit run --all-files  # Fix formatting
 ```
 
-## 🎉 Benefits for SerialPy
+## 🎉 Benefits for datason
 
 ### Security
 - **Automated vulnerability patching**
@@ -279,7 +279,7 @@ pre-commit run --all-files  # Fix formatting
 
 - [GitHub Dependabot Documentation](https://docs.github.com/en/code-security/dependabot)
 - [Dependabot Configuration Reference](https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file)
-- [SerialPy CI/CD Pipeline Guide](CI_PIPELINE_GUIDE.md)
+- [datason CI/CD Pipeline Guide](CI_PIPELINE_GUIDE.md)
 - [Contributing Guide](CONTRIBUTING.md)
 
 ---
@@ -288,7 +288,7 @@ pre-commit run --all-files  # Fix formatting
 
 ## ⚙️ **Configuration Overview**
 
-SerialPy uses a **unified Dependabot strategy** with smart update rules:
+datason uses a **unified Dependabot strategy** with smart update rules:
 
 ### **📦 Python Dependencies**
 - **Schedule**: Weekly updates every Monday

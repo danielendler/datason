@@ -1,5 +1,5 @@
 """
-Edge case tests for SerialPy to improve coverage.
+Edge case tests for datason to improve coverage.
 
 This module contains targeted tests for specific edge cases and corner scenarios.
 """
@@ -11,8 +11,8 @@ import fractions
 from pathlib import Path
 from typing import Any, Dict
 
-import serialpy as sp
-from serialpy.core import serialize
+import datason as ds
+from datason.core import serialize
 
 
 class TestEdgeCasesForCoverage:
@@ -149,41 +149,41 @@ class TestDataUtilsEdgeCases:
 
     def test_convert_string_method_votes_none(self) -> None:
         """Test convert_string_method_votes with None input."""
-        result = sp.convert_string_method_votes(None)
+        result = ds.convert_string_method_votes(None)
         assert result is None
 
     def test_convert_string_method_votes_string_list(self) -> None:
         """Test convert_string_method_votes with string list."""
         tx = {"method_votes": "[1, 2, 3]"}
-        result = sp.convert_string_method_votes(tx)
+        result = ds.convert_string_method_votes(tx)
         assert isinstance(result, dict)
         assert result["method_votes"] == [1, 2, 3]
 
     def test_convert_string_method_votes_plain_string(self) -> None:
         """Test convert_string_method_votes with plain string."""
         tx = {"method_votes": "single_method"}
-        result = sp.convert_string_method_votes(tx)
+        result = ds.convert_string_method_votes(tx)
         assert isinstance(result, dict)
         assert result["method_votes"] == ["single_method"]
 
     def test_convert_string_method_votes_none_value(self) -> None:
         """Test convert_string_method_votes with None value."""
         tx: Dict[str, Any] = {"method_votes": None}
-        result = sp.convert_string_method_votes(tx)
+        result = ds.convert_string_method_votes(tx)
         assert isinstance(result, dict)
         assert result["method_votes"] == []
 
     def test_convert_string_method_votes_empty_list(self) -> None:
         """Test convert_string_method_votes with empty list."""
         tx: Dict[str, Any] = {"method_votes": []}
-        result = sp.convert_string_method_votes(tx)
+        result = ds.convert_string_method_votes(tx)
         assert isinstance(result, dict)
         assert result["method_votes"] == []
 
     def test_convert_string_method_votes_invalid_eval(self) -> None:
         """Test convert_string_method_votes with invalid eval string."""
         tx = {"method_votes": "[1, 2, broken"}
-        result = sp.convert_string_method_votes(tx)
+        result = ds.convert_string_method_votes(tx)
         assert isinstance(result, dict)
         # Invalid eval should be treated as plain string
         assert result["method_votes"] == ["[1, 2, broken"]
@@ -196,7 +196,7 @@ class TestDataUtilsEdgeCases:
             {"method_votes": "test"},
         ]
         # Cast to proper type to satisfy type checker
-        result = sp.convert_string_method_votes(transactions)  # type: ignore
+        result = ds.convert_string_method_votes(transactions)  # type: ignore
         assert isinstance(result, list)
         assert len(result) == 2
 
@@ -206,9 +206,9 @@ class TestSerializersEdgeCases:
 
     def test_serialize_detection_details_non_dict(self) -> None:
         """Test serialize_detection_details with non-dict input."""
-        assert sp.serialize_detection_details("not_a_dict") == "not_a_dict"
-        assert sp.serialize_detection_details(42) == 42
-        assert sp.serialize_detection_details(None) is None
+        assert ds.serialize_detection_details("not_a_dict") == "not_a_dict"
+        assert ds.serialize_detection_details(42) == 42
+        assert ds.serialize_detection_details(None) is None
 
     def test_serialize_detection_details_with_nan_inf(self) -> None:
         """Test serialize_detection_details with NaN and Inf values."""
@@ -218,7 +218,7 @@ class TestSerializersEdgeCases:
                 "timestamp": datetime(2023, 1, 1),
             }
         }
-        result = sp.serialize_detection_details(data)
+        result = ds.serialize_detection_details(data)
 
         # Check NaN/Inf conversion
         assert result["method1"]["values"][1] is None
@@ -233,8 +233,8 @@ class TestConvertersEdgeCases:
 
     def test_safe_int_string_float(self) -> None:
         """Test safe_int with string representation of float."""
-        assert sp.safe_int("42.0") == 42
-        assert sp.safe_int("3.14") == 3
+        assert ds.safe_int("42.0") == 42
+        assert ds.safe_int("3.14") == 3
 
     def test_safe_conversions_exception_handling(self) -> None:
         """Test exception handling in safe converters."""
@@ -246,8 +246,8 @@ class TestConvertersEdgeCases:
         bad_obj = BadObject()
 
         # These should not crash, should return defaults
-        assert sp.safe_float(bad_obj) == 0.0
-        assert sp.safe_int(bad_obj) == 0
+        assert ds.safe_float(bad_obj) == 0.0
+        assert ds.safe_int(bad_obj) == 0
 
 
 class TestHelperFunctions:
@@ -255,7 +255,7 @@ class TestHelperFunctions:
 
     def test_is_already_serialized_dict_edge_cases(self) -> None:
         """Test _is_already_serialized_dict with edge cases."""
-        from serialpy.core import _is_already_serialized_dict
+        from datason.core import _is_already_serialized_dict
 
         # Valid serialized dict
         assert _is_already_serialized_dict({"a": 1, "b": "hello", "c": True})
@@ -271,7 +271,7 @@ class TestHelperFunctions:
 
     def test_is_already_serialized_list_edge_cases(self) -> None:
         """Test _is_already_serialized_list with edge cases."""
-        from serialpy.core import _is_already_serialized_list
+        from datason.core import _is_already_serialized_list
 
         # Valid serialized list
         assert _is_already_serialized_list([1, "hello", True, None])
