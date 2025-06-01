@@ -101,29 +101,35 @@ jobs:
             cache-extra: "dev"
             use-dev: true
         exclude:
-          # Exclude some combinations to reduce CI load while maintaining coverage
-          # Keep minimal tests on all Python versions for core compatibility
-          # Keep full tests on 3.8, 3.11, and 3.12 for comprehensive testing
+          # Strategic test distribution for efficiency while maintaining coverage:
+          # - Python 3.8: Only minimal tests (core compatibility validation)
+          # - Python 3.9-3.10: Minimal + one dependency set each (broader compatibility)
+          # - Python 3.11: Full coverage (primary development version)
+          # - Python 3.12: Full coverage (latest stable version)
+
+          # Python 3.8 - minimal compatibility only
           - python-version: "3.8"
             dependency-set: {name: "with-numpy"}
           - python-version: "3.8"
             dependency-set: {name: "with-pandas"}
           - python-version: "3.8"
             dependency-set: {name: "with-ml-deps"}
+          - python-version: "3.8"
+            dependency-set: {name: "full"}
+
+          # Python 3.9 - minimal + pandas (data science focus)
           - python-version: "3.9"
             dependency-set: {name: "with-numpy"}
-          - python-version: "3.9"
-            dependency-set: {name: "with-pandas"}
           - python-version: "3.9"
             dependency-set: {name: "with-ml-deps"}
           - python-version: "3.9"
             dependency-set: {name: "full"}
+
+          # Python 3.10 - minimal + ml-deps (ML focus)
           - python-version: "3.10"
             dependency-set: {name: "with-numpy"}
           - python-version: "3.10"
             dependency-set: {name: "with-pandas"}
-          - python-version: "3.10"
-            dependency-set: {name: "with-ml-deps"}
           - python-version: "3.10"
             dependency-set: {name: "full"}
 
@@ -214,7 +220,7 @@ jobs:
       uses: actions/upload-artifact@v4
       if: always()
       with:
-        name: test-results-${{ matrix.dependency-set.name }}
+        name: test-results-${{ matrix.dependency-set.name }}-py${{ matrix.python-version }}
         path: |
           coverage-${{ matrix.dependency-set.name }}.xml
           junit-${{ matrix.dependency-set.name }}.xml
@@ -333,7 +339,7 @@ jobs:
       uses: actions/upload-artifact@v4
       if: always()
       with:
-        name: security-report
+        name: security-report-py3.11
         path: bandit-report.json
 
   # Build package (only runs if tests pass - but doesn't wait for ALL tests)
@@ -373,7 +379,7 @@ jobs:
     - name: 📤 Upload build artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: dist
+        name: dist-py3.11
         path: dist/
 
   # Summary job (waits for all tests, provides final status)
