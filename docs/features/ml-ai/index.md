@@ -399,13 +399,13 @@ ml_package = {
 
 ## 🔗 Related Features
 
-- **[Configuration System](../configuration/)** - ML-optimized configurations
-- **[Pickle Bridge](../pickle-bridge/)** - Migrate legacy ML pickle files
-- **[Performance](../performance/)** - Optimize for large datasets
-- **[Advanced Types](../advanced-types/)** - Complex data type handling
+- **[Configuration System](../configuration/index.md)** - ML-optimized configurations
+- **[Pickle Bridge](../pickle-bridge/index.md)** - Migrate legacy ML pickle files
+- **[Performance](../performance/index.md)** - Optimize for large datasets
+- **[Advanced Types](../advanced-types/index.md)** - Complex data type handling
 
 ## 🚀 Next Steps
 
-- **[Configuration →](../configuration/)** - ML-specific configuration options
-- **[Pickle Bridge →](../pickle-bridge/)** - Convert legacy ML models
-- **[Performance →](../performance/)** - Optimize for production ML workflows
+- **[Configuration →](../configuration/index.md)** - ML-specific configuration options
+- **[Pickle Bridge →](../pickle-bridge/index.md)** - Convert legacy ML models
+- **[Performance →](../performance/index.md)** - Optimize for production ML workflows

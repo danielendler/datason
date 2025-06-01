@@ -140,10 +140,17 @@ nav:
   - Development:
     - Contributing: CONTRIBUTING.md
     - Security: SECURITY.md
+    - Tooling Guide: TOOLING_GUIDE.md
     - CI/CD Pipeline: CI_PIPELINE_GUIDE.md
+    - CI Performance: CI_PERFORMANCE.md
+    - Pipeline Audit: PIPELINE_AUDIT.md
+    - Plugin Testing: PLUGIN_TESTING.md
+    - Dependabot Setup: DEPENDABOT_GUIDE.md
+    - GitHub Pages: GITHUB_PAGES_SETUP.md
     - Release Management: RELEASE_MANAGEMENT.md
     - Build & Deploy: BUILD_PUBLISH.md
   - Reference:
+    - AI Usage Guide: AI_USAGE_GUIDE.md
     - Changelog: CHANGELOG.md
     - Roadmap: ROADMAP.md
 

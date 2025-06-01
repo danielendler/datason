@@ -305,13 +305,13 @@ with warnings.catch_warnings(record=True) as w:
 
 ## 🔗 Related Features
 
-- **[Configuration System](../configuration/)** - Customize serialization behavior
-- **[Advanced Types](../advanced-types/)** - Extended type support  
+- **[Configuration System](../configuration/index.md)** - Customize serialization behavior
+- **[Advanced Types](../advanced-types/index.md)** - Extended type support  
 - **[Security](../../SECURITY.md)** - Security considerations and best practices
-- **[Performance](../performance/)** - Optimization techniques
+- **[Performance](../performance/index.md)** - Optimization techniques
 
 ## 🚀 Next Steps
 
-- **[Advanced Types →](../advanced-types/)** - Handle complex Python types
-- **[Configuration →](../configuration/)** - Customize behavior for your use case
-- **[ML/AI Integration →](../ml-ai/)** - Work with machine learning objects
+- **[Advanced Types →](../advanced-types/index.md)** - Handle complex Python types
+- **[Configuration →](../configuration/index.md)** - Customize behavior for your use case
+- **[ML/AI Integration →](../ml-ai/index.md)** - Work with machine learning objects

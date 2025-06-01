@@ -572,14 +572,12 @@ else:
 
 ## 🔗 Related Resources
 
-- **[Pickle Bridge](../pickle-bridge/)** - Migrate legacy pickle files
-- **[Configuration](../configuration/)** - Match your current behavior
-- **[Performance](../performance/)** - Optimize after migration
+- **[Pickle Bridge](../pickle-bridge/index.md)** - Migrate legacy pickle files
+- **[Configuration](../configuration/index.md)** - Match your current behavior
+- **[Performance](../performance/index.md)** - Optimize after migration
 - **[Security](../../SECURITY.md)** - Security improvements over pickle
 
 ## 🚀 Next Steps
 
-- **[Try the Migration Tool →](migration-tool/)** - Interactive migration assistant
-- **[Configuration Guide →](../configuration/)** - Match your current setup
-- **[Performance Optimization →](../performance/)** - Optimize after migration
-- **[Security Review →](../../SECURITY.md)** - Understand security benefits
+- **[Configuration Guide →](../configuration/index.md)** - Customize serialization behavior
+- **[Performance Tuning →](../performance/index.md)** - Optimize for your specific needs

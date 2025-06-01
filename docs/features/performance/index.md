@@ -475,13 +475,13 @@ if duration > 0.1:  # Log slow serializations
 
 ## 🔗 Related Features
 
-- **[Configuration System](../configuration/)** - Performance-tuned configurations
+- **[Configuration System](../configuration/index.md)** - Performance-tuned configurations
 - **[Benchmarking](../../BENCHMARKING.md)** - Detailed performance analysis
-- **[Core Serialization](../core/)** - Understanding the base layer
-- **[Pandas Integration](../pandas/)** - DataFrame-specific optimizations
+- **[Core Serialization](../core/index.md)** - Understanding the base layer
+- **[Pandas Integration](../pandas/index.md)** - DataFrame-specific optimizations
 
 ## 🚀 Next Steps
 
-- **[Configuration →](../configuration/)** - Fine-tune performance settings
+- **[Configuration →](../configuration/index.md)** - Fine-tune performance settings
 - **[Benchmarking →](../../BENCHMARKING.md)** - Run your own performance tests
 - **[Production Deployment →](../../CONTRIBUTING.md)** - Production best practices

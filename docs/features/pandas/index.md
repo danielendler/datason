@@ -395,13 +395,13 @@ df = df.astype({
 
 ## 🔗 Related Features
 
-- **[Configuration System](../configuration/)** - DataFrame-specific configurations
-- **[Date/Time Handling](../datetime/)** - Temporal data in DataFrames
-- **[Advanced Types](../advanced-types/)** - Complex data within DataFrames
-- **[Performance](../performance/)** - Large DataFrame optimization
+- **[Configuration System](../configuration/index.md)** - DataFrame-specific configurations
+- **[Date/Time Handling](../datetime/index.md)** - Temporal data in DataFrames
+- **[Advanced Types](../advanced-types/index.md)** - Complex data within DataFrames
+- **[Performance](../performance/index.md)** - Large DataFrame optimization
 
 ## 🚀 Next Steps
 
-- **[Configuration →](../configuration/)** - Customize DataFrame serialization
-- **[Performance →](../performance/)** - Optimize for large datasets
-- **[ML/AI Integration →](../ml-ai/)** - Use DataFrames in ML workflows
+- **[Configuration →](../configuration/index.md)** - Customize DataFrame serialization
+- **[Performance →](../performance/index.md)** - Optimize for large datasets
+- **[ML/AI Integration →](../ml-ai/index.md)** - Use DataFrames in ML workflows

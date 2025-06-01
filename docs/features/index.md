@@ -4,7 +4,7 @@ datason provides intelligent serialization through a layered architecture of fea
 
 ## 🎯 Feature Categories
 
-### [Core Serialization](core/)
+### [Core Serialization](core/index.md)
 The foundation layer providing basic JSON compatibility and safety features.
 
 - **Basic Types**: `str`, `int`, `float`, `bool`, `None`, `list`, `dict`
@@ -12,7 +12,7 @@ The foundation layer providing basic JSON compatibility and safety features.
 - **Performance**: Optimization for already-serialized data
 - **Error Handling**: Graceful fallbacks for unsupported types
 
-### [Advanced Types](advanced-types/)
+### [Advanced Types](advanced-types/index.md)
 Extended support for Python's rich type system and specialized objects.
 
 - **Built-in Types**: `complex`, `decimal.Decimal`, `uuid.UUID`, `pathlib.Path`
@@ -20,7 +20,7 @@ Extended support for Python's rich type system and specialized objects.
 - **Enums**: Support for `enum.Enum` and custom enumeration classes
 - **Type Coercion**: Configurable strategies from strict to aggressive
 
-### [Date/Time Handling](datetime/)
+### [Date/Time Handling](datetime/index.md)
 Comprehensive support for temporal data with timezone awareness.
 
 - **Formats**: ISO, Unix timestamp, Unix milliseconds, custom patterns
@@ -28,7 +28,7 @@ Comprehensive support for temporal data with timezone awareness.
 - **Pandas Integration**: `pd.Timestamp`, `pd.NaT`, `pd.DatetimeIndex`
 - **Timezone Support**: Aware and naive datetime handling
 
-### [ML/AI Integration](ml-ai/)
+### [ML/AI Integration](ml-ai/index.md)
 Native support for machine learning and scientific computing objects.
 
 - **PyTorch**: Tensors, models, parameters
@@ -38,7 +38,7 @@ Native support for machine learning and scientific computing objects.
 - **JAX**: Arrays and computation graphs
 - **PIL/Pillow**: Images with format preservation
 
-### [Pandas Integration](pandas/)
+### [Pandas Integration](pandas/index.md)
 Deep integration with the pandas ecosystem for data science workflows.
 
 - **DataFrames**: Configurable orientation (records, split, index, columns, values, table)
@@ -47,7 +47,7 @@ Deep integration with the pandas ecosystem for data science workflows.
 - **Categorical**: Category metadata and ordering
 - **NaN Handling**: Configurable strategies for missing data
 
-### [Configuration System](configuration/)
+### [Configuration System](configuration/index.md)
 Fine-grained control over serialization behavior with preset configurations.
 
 - **Presets**: ML, API, Strict, Performance optimized configurations
@@ -56,7 +56,7 @@ Fine-grained control over serialization behavior with preset configurations.
 - **Type Coercion**: 3 levels from strict type preservation to aggressive conversion
 - **Custom Serializers**: Register handlers for custom types
 
-### [Pickle Bridge](pickle-bridge/)
+### [Pickle Bridge](pickle-bridge/index.md)
 Secure migration of legacy ML pickle files to portable JSON format.
 
 - **Security-First**: Class whitelisting prevents arbitrary code execution
@@ -65,7 +65,7 @@ Secure migration of legacy ML pickle files to portable JSON format.
 - **Bulk Processing**: Directory-level conversion with statistics tracking
 - **Production Ready**: File size limits, error handling, monitoring
 
-### [Performance Features](performance/)
+### [Performance Features](performance/index.md)
 Optimizations for speed and memory efficiency in production environments.
 
 - **Early Detection**: Skip processing for JSON-compatible data
@@ -164,8 +164,8 @@ stats = datason.convert_pickle_directory(
 
 Each feature category has detailed documentation with examples, best practices, and performance considerations:
 
-- **[Core Serialization →](core/)** - Start here for basic usage
-- **[Configuration System →](configuration/)** - Control serialization behavior  
-- **[ML/AI Integration →](ml-ai/)** - Work with ML frameworks
-- **[Performance Guide →](performance/)** - Optimize for production
-- **[Migration Guide →](migration/)** - Upgrade from other serializers
+- **[Core Serialization →](core/index.md)** - Start here for basic usage
+- **[Configuration System →](configuration/index.md)** - Control serialization behavior  
+- **[ML/AI Integration →](ml-ai/index.md)** - Work with ML frameworks
+- **[Performance Guide →](performance/index.md)** - Optimize for production
+- **[Migration Guide →](migration/index.md)** - Upgrade from other serializers

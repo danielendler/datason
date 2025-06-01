@@ -335,13 +335,13 @@ def validate_datetime(dt):
 
 ## 🔗 Related Features
 
-- **[Configuration System](../configuration/)** - Control date format options
-- **[Pandas Integration](../pandas/)** - DataFrame with datetime columns
-- **[Core Serialization](../core/)** - Basic serialization principles
-- **[Performance](../performance/)** - Optimization strategies
+- **[Configuration System](../configuration/index.md)** - Control date format options
+- **[Pandas Integration](../pandas/index.md)** - DataFrame with datetime columns
+- **[Core Serialization](../core/index.md)** - Basic serialization principles
+- **[Performance](../performance/index.md)** - Optimization strategies
 
 ## 🚀 Next Steps
 
-- **[Configuration →](../configuration/)** - Customize date/time serialization
-- **[Pandas Integration →](../pandas/)** - Work with DataFrame datetime columns
-- **[Performance →](../performance/)** - Optimize datetime handling
+- **[Configuration →](../configuration/index.md)** - Customize date/time serialization
+- **[Pandas Integration →](../pandas/index.md)** - Work with DataFrame datetime columns
+- **[Performance →](../performance/index.md)** - Optimize datetime handling

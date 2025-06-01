@@ -55,19 +55,18 @@ json_data = datason.from_pickle("legacy_model.pkl")
 ## 📚 Documentation
 
 ### 🎯 **User Guides**
-- **[Features Overview](features/)** - Complete feature guide and examples
-- **[Tooling Guide](TOOLING_GUIDE.md)** - Development tools and workflows
+- **[Features Overview](features/index.md)** - Complete feature guide and examples
 - **[Feature Matrix](FEATURE_MATRIX.md)** - Capability comparison
-- **[AI/ML Usage](AI_USAGE_GUIDE.md)** - Machine learning integration
-- **[Benchmarking](BENCHMARKING.md)** - Performance metrics and optimization
 
 ### 🔧 **Development**
 - **[Contributing](CONTRIBUTING.md)** - How to contribute to datason
 - **[Security](SECURITY.md)** - Security policies and reporting
+- **[Tooling Guide](TOOLING_GUIDE.md)** - Modern Python tools and workflow
 - **[CI/CD Guide](CI_PIPELINE_GUIDE.md)** - Continuous integration workflows
 - **[Release Management](RELEASE_MANAGEMENT.md)** - Release process and versioning
 
 ### 📊 **Reference**
+- **[AI Usage Guide](AI_USAGE_GUIDE.md)** - Integration with AI systems and discovery
 - **[Changelog](CHANGELOG.md)** - Version history and changes
 - **[Roadmap](ROADMAP.md)** - Future development plans
 
