@@ -5,6 +5,36 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.4] - 2025-05-31
+
+### 🔒 Security & Testing Improvements
+- **Enhanced security test robustness**
+  - Fixed flaky CI failures in security limit tests for dict and list size validation
+  - Added comprehensive diagnostics for debugging CI-specific import issues
+  - Improved exception handling with fallback SecurityError detection
+  - Enhanced depth limit testing with multi-approach validation (recursion limit + monkey-patching)
+
+### 🧪 Test Infrastructure
+- **Dynamic environment-aware test configuration**
+  - Smart CI vs local test parameter selection based on recursion limits
+  - Conservative CI limits (depth=250, size=50k) vs thorough local testing
+  - Added extensive diagnostics for import identity verification
+  - Robust fake object testing without memory exhaustion
+
+### 🐛 Bug Fixes
+- **Resolved CI-specific test failures**
+  - Fixed SecurityError import inconsistencies in parallel test execution
+  - Eliminated flaky test behavior in GitHub Actions environment
+  - Improved exception type checking with isinstance() fallbacks
+  - Enhanced test reliability across different Python versions (3.11-3.12)
+
+### 👨‍💻 Developer Experience
+- **Comprehensive test diagnostics**
+  - Added detailed environment detection and reporting
+  - Enhanced error messages with module info and exception type analysis
+  - Improved debugging capabilities for CI environment differences
+  - Better test isolation and state management
+
 ## [0.1.3] - 2025-05-30
 
 ### 🚀 Major Changes
