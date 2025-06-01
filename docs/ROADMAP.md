@@ -45,7 +45,7 @@
 
 > **Philosophy**: Deepen what datason uniquely does well rather than expanding scope
 
-### **v0.2.0 - Pickle Bridge** *(Q2 2024)*
+### **v0.3.0 - Pickle Bridge**
 > *"Convert legacy ML pickle files to portable JSON - solve a real workflow pain point"*
 
 #### 🎯 **Unique Value Proposition**
@@ -77,7 +77,7 @@ datason.convert_pickle_directory("old_models/", "json_models/")
 
 ---
 
-### **v0.2.5 - Advanced ML Types** *(Q3 2024)*
+### **v0.3.5 - Advanced ML Types**
 > *"Handle more ML framework objects that competitors can't serialize"*
 
 #### 🎯 **Unique Value Proposition**
@@ -113,7 +113,7 @@ result = datason.serialize(data, config=get_ml_config())
 
 ---
 
-### **v0.3.0 - Performance & Memory Optimization** *(Q4 2024)*
+### **v0.4.0 - Performance & Memory Optimization**
 > *"Make datason the fastest option for ML object serialization"*
 
 #### 🎯 **Unique Value Proposition**
@@ -147,7 +147,7 @@ results = datason.serialize_parallel([model1, model2, model3])
 
 ---
 
-### **v0.3.5 - Typed Deserialization & Round-Trip Support** *(Q1 2025)*
+### **v0.4.5 - Typed Deserialization & Round-Trip Support**
 > *"Complete the portability story with safe data reconstruction"*
 
 #### 🎯 **Unique Value Proposition**
@@ -181,7 +181,7 @@ assert reconstructed["features"].dtype == np.float64  # Type guaranteed
 
 ---
 
-### **v0.4.0 - Configuration Refinement** *(Q2 2025)*
+### **v0.5.0 - Configuration Refinement**
 > *"Perfect the configuration system based on real-world usage"*
 
 #### 🎯 **Unique Value Proposition**
@@ -216,7 +216,7 @@ datason.auto_configure()  # Detects ML environment and optimizes
 
 ---
 
-### **v0.4.5 - Production Safety & Redaction** *(Q3 2025)*
+### **v0.5.5 - Production Safety & Redaction**
 > *"Make datason safe for production ML logging and compliance"*
 
 #### 🎯 **Unique Value Proposition**
@@ -254,7 +254,7 @@ result = datason.serialize(ml_experiment_data, config=config)
 
 ---
 
-### **v0.5.0 - Snapshot Testing & ML DevX** *(Q4 2025)*
+### **v0.6.0 - Snapshot Testing & ML DevX**
 > *"Turn datason's readable JSON into powerful ML testing infrastructure"*
 
 #### 🎯 **Unique Value Proposition**
@@ -295,7 +295,7 @@ datason.assert_equivalent(old_predictions, new_predictions,
 
 ---
 
-### **v0.5.5 - Test Infrastructure & Quality** *(Q1 2026)*
+### **v0.6.5 - Test Infrastructure & Quality**
 > *"Achieve industry-leading reliability for production ML workflows"*
 
 #### 🎯 **Unique Value Proposition**
@@ -331,7 +331,7 @@ with datason.monitor() as m:
 
 ---
 
-### **v0.6.0 - Delta Serialization & Efficiency** *(Q2 2026)*
+### **v0.7.0 - Delta Serialization & Efficiency**
 > *"Optimize storage and improve traceability for evolving ML objects"*
 
 #### 🎯 **Unique Value Proposition**
@@ -370,7 +370,7 @@ datason.save_experiment_delta("experiment_v2.json", new_experiment,
 
 ---
 
-### **v0.7.0 - Documentation & Ecosystem** *(Q3 2026)*
+### **v0.8.0 - Documentation & Ecosystem**
 > *"Make datason the easiest ML serialization library to adopt"*
 
 #### 🎯 **Unique Value Proposition**
@@ -469,4 +469,4 @@ datason.migrate_from_joblib(sklearn_artifacts)
 
 *Roadmap Principles: Stay focused, stay fast, stay simple, solve real problems*
 
-*Last updated: December 2024 | Next review: Q1 2025*
+*Last updated: JUne 2025 | Next review: Q3 2025*
