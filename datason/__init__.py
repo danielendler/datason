@@ -88,7 +88,21 @@ try:
 except ImportError:
     _ml_available = False
 
-__version__ = "0.2.0"
+# Pickle Bridge (new in v0.3.0) - Zero dependencies, always available
+try:
+    from .pickle_bridge import (
+        PickleBridge,
+        PickleSecurityError,
+        convert_pickle_directory,
+        from_pickle,
+        get_ml_safe_classes,
+    )
+
+    _pickle_bridge_available = True
+except ImportError:
+    _pickle_bridge_available = False
+
+__version__ = "0.3.0"
 __author__ = "datason Contributors"
 __license__ = "MIT"
 
@@ -154,6 +168,18 @@ if _ml_available:
             "serialize_scipy_sparse",
             "serialize_sklearn_model",
             "serialize_tensorflow_tensor",
+        ]
+    )
+
+# Add Pickle Bridge to __all__ if available
+if _pickle_bridge_available:
+    __all__.extend(
+        [
+            "PickleBridge",
+            "PickleSecurityError",
+            "convert_pickle_directory",
+            "from_pickle",
+            "get_ml_safe_classes",
         ]
     )
 
