@@ -83,6 +83,33 @@ else:
     SKIP_INTENSIVE = False
 
 
+# Fake object classes for size testing without memory exhaustion
+class LargeFakeDict(dict):
+    """A dict that reports a fake large size but only stores a small amount of data."""
+
+    def __init__(self, actual_size=100, reported_size=10_001_000):
+        # Store only actual_size items to avoid memory issues
+        super().__init__({f"key_{i}": i for i in range(actual_size)})
+        self._reported_size = reported_size
+        self.actual_size = actual_size
+
+    def __len__(self):
+        return self._reported_size
+
+
+class LargeFakeList(list):
+    """A list that reports a fake large size but only stores a small amount of data."""
+
+    def __init__(self, actual_size=100, reported_size=10_001_000):
+        # Store only actual_size items to avoid memory issues
+        super().__init__(list(range(actual_size)))
+        self._reported_size = reported_size
+        self.actual_size = actual_size
+
+    def __len__(self):
+        return self._reported_size
+
+
 class TestCircularReferenceProtection:
     """Test protection against circular references."""
 
@@ -254,7 +281,15 @@ class TestDepthLimits:
                 _seen.add(id(obj))
 
             try:
-                # Use the original _serialize_object for the actual serialization logic
+                # Handle the serialization with recursive calls to patched_serialize (not _serialize_object)
+                if isinstance(obj, dict):
+                    return {
+                        k: patched_serialize(v, _depth + 1, _seen)
+                        for k, v in obj.items()
+                    }
+                if isinstance(obj, (list, tuple)):
+                    return [patched_serialize(x, _depth + 1, _seen) for x in obj]
+                # For non-recursive objects, use the original logic but call patched_serialize for any nested objects
                 return _serialize_object(obj, _depth, _seen)
             finally:
                 # Clean up: remove from seen set when done processing
@@ -298,59 +333,40 @@ class TestSizeLimits:
         assert len(result) == 1000
 
     def test_excessive_dict_size_raises_error(self):
-        """Test that excessively large dicts raise SecurityError.
-
-        Note: Uses conservative size in CI environments to avoid resource exhaustion,
-        but tests full limits locally.
-        """
+        """Test that dict size limits are enforced."""
         _debug_print("🧪 Testing dict size security:")
         _debug_print(f"   MAX_OBJECT_SIZE: {MAX_OBJECT_SIZE:,}")
 
-        # For this test, we need to create a dict that actually exceeds MAX_OBJECT_SIZE
-        # Since MAX_OBJECT_SIZE = 10M, we need more than 10M items
-        # But we can't create 10M+ items without memory issues
-
-        # Instead, let's use a custom dict-like object that reports a large size
-        # but doesn't actually store that many items
-        class LargeFakeDict(dict):
-            def __init__(self, actual_items, fake_size):
-                super().__init__(actual_items)
-                self._fake_size = fake_size
-
-            def __len__(self):
-                return self._fake_size
-
-        # Create a fake dict that reports being larger than the limit
-        # Define this inside the test to ensure it's fresh for each run, especially with xdist
-        fake_size = MAX_OBJECT_SIZE + 1000
-        fake_large_dict = LargeFakeDict(
-            {f"key_{i}": i for i in range(100)},  # Only 100 actual items
-            fake_size,  # But reports being over the limit
+        # Create a fake dict that reports a large size but is actually small
+        fake_large_dict = LargeFakeDict(actual_size=100, reported_size=10_001_000)
+        _debug_print(
+            f"   Created fake dict with reported size: {len(fake_large_dict):,}"
         )
+        _debug_print(f"   Actual dict size: {fake_large_dict.actual_size}")
 
-        _debug_print(f"   Created fake dict with reported size: {fake_size:,}")
-        _debug_print(f"   Actual dict size: {len(dict(fake_large_dict))}")
-
-        # Test the SecurityError directly without wrapper function
+        # This should raise SecurityError due to reported size exceeding limit
         security_error_raised = False
-        error_message = ""
+        caught_exception = None
 
         try:
             result = serialize(fake_large_dict)
-            _debug_print("   ❌ Serialization unexpectedly succeeded")
-            pytest.fail("Expected SecurityError was not raised")
+            # If we reach here, no exception was raised - this is the failure case
+            pytest.fail(f"Expected SecurityError but serialization succeeded: {result}")
         except SecurityError as exc:
-            _debug_print(f"   ✅ SecurityError correctly raised: {exc}")
+            # This is the expected case - SecurityError was properly raised
+            _debug_print(f"   ✅ SecurityError raised as expected: {exc}")
             security_error_raised = True
-            error_message = str(exc)
+            caught_exception = exc
         except Exception as exc:
+            # Any other exception is unexpected
             _debug_print(f"   ❌ Unexpected exception: {type(exc).__name__}: {exc}")
             pytest.fail(f"Expected SecurityError, got {type(exc).__name__}: {exc}")
 
         # Perform assertions outside the except block
         assert security_error_raised, "SecurityError should have been raised"
-        assert "Dictionary size" in error_message
-        assert "exceeds maximum" in error_message
+        assert caught_exception is not None
+        assert "Dictionary size" in str(caught_exception)
+        assert "exceeds maximum" in str(caught_exception)
 
     def test_large_list_within_limits(self):
         """Test that reasonably large lists work."""
@@ -360,53 +376,40 @@ class TestSizeLimits:
         assert len(result) == 1000
 
     def test_excessive_list_size_raises_error(self):
-        """Test that excessively large lists raise SecurityError.
-
-        Note: Uses conservative size in CI environments to avoid resource exhaustion,
-        but tests actual limits locally.
-        """
+        """Test that list size limits are enforced."""
         _debug_print("🧪 Testing list size security:")
         _debug_print(f"   MAX_OBJECT_SIZE: {MAX_OBJECT_SIZE:,}")
 
-        # Similar approach to the dict test - use a fake large list
-        class LargeFakeList(list):
-            def __init__(self, actual_items, fake_size):
-                super().__init__(actual_items)
-                self._fake_size = fake_size
-
-            def __len__(self):
-                return self._fake_size
-
-        # Create a fake list that reports being larger than the limit
-        # Define this inside the test
-        fake_size = MAX_OBJECT_SIZE + 1000
-        fake_large_list = LargeFakeList(
-            list(range(100)),  # Only 100 actual items
-            fake_size,  # But reports being over the limit
+        # Create a fake list that reports a large size but is actually small
+        fake_large_list = LargeFakeList(actual_size=100, reported_size=10_001_000)
+        _debug_print(
+            f"   Created fake list with reported size: {len(fake_large_list):,}"
         )
+        _debug_print(f"   Actual list size: {fake_large_list.actual_size}")
 
-        _debug_print(f"   Created fake list with reported size: {fake_size:,}")
-        _debug_print(f"   Actual list size: {len(list(fake_large_list))}")
-
-        # Test the SecurityError directly without wrapper function
+        # This should raise SecurityError due to reported size exceeding limit
         security_error_raised = False
-        error_message = ""
+        caught_exception = None
 
         try:
             result = serialize(fake_large_list)
-            _debug_print("   ❌ Serialization unexpectedly succeeded")
-            pytest.fail("Expected SecurityError was not raised")
+            # If we reach here, no exception was raised - this is the failure case
+            pytest.fail(f"Expected SecurityError but serialization succeeded: {result}")
         except SecurityError as exc:
-            _debug_print(f"   ✅ SecurityError correctly raised: {exc}")
+            # This is the expected case - SecurityError was properly raised
+            _debug_print(f"   ✅ SecurityError raised as expected: {exc}")
             security_error_raised = True
-            error_message = str(exc)
+            caught_exception = exc
         except Exception as exc:
+            # Any other exception is unexpected
             _debug_print(f"   ❌ Unexpected exception: {type(exc).__name__}: {exc}")
             pytest.fail(f"Expected SecurityError, got {type(exc).__name__}: {exc}")
 
         # Perform assertions outside the except block
         assert security_error_raised, "SecurityError should have been raised"
-        assert "List/tuple size" in error_message
+        assert caught_exception is not None
+        assert "List/tuple size" in str(caught_exception)
+        assert "exceeds maximum" in str(caught_exception)
 
     def test_large_string_truncation(self):
         """Test that very large strings are truncated safely."""
