@@ -135,21 +135,14 @@ nav:
     - Performance: features/performance/index.md
     - Migration Guide: features/migration/index.md
   - User Guide:
-    - Tooling Guide: TOOLING_GUIDE.md
     - Feature Matrix: FEATURE_MATRIX.md
-    - AI/ML Usage: AI_USAGE_GUIDE.md
     - Benchmarking: BENCHMARKING.md
   - Development:
     - Contributing: CONTRIBUTING.md
-    - CI/CD Pipeline: CI_PIPELINE_GUIDE.md
-    - CI Performance: CI_PERFORMANCE.md
-    - Plugin Testing: PLUGIN_TESTING.md
-    - Pipeline Audit: PIPELINE_AUDIT.md
-    - Dependabot Guide: DEPENDABOT_GUIDE.md
-    - Release Management: RELEASE_MANAGEMENT.md
-    - GitHub Pages Setup: GITHUB_PAGES_SETUP.md
     - Security: SECURITY.md
-    - Building & Publishing: BUILD_PUBLISH.md
+    - CI/CD Pipeline: CI_PIPELINE_GUIDE.md
+    - Release Management: RELEASE_MANAGEMENT.md
+    - Build & Deploy: BUILD_PUBLISH.md
   - Reference:
     - Changelog: CHANGELOG.md
     - Roadmap: ROADMAP.md
