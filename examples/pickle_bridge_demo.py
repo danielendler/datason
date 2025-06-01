@@ -202,7 +202,7 @@ def demo_advanced_features():
     # Convert multiple times to build stats
     for i in range(3):
         bridge.from_pickle_bytes(pickle_bytes)
-        print(f"✅ Conversion {i+1} completed")
+        print(f"✅ Conversion {i + 1} completed")
 
     # Show conversion statistics
     stats = bridge.get_conversion_stats()

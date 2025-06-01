@@ -12,11 +12,10 @@ Features:
 - Streaming for large pickle files
 """
 
-import os
-import pickle  # noqa: S403
-import warnings
 from pathlib import Path
-from typing import Any, ClassVar, Dict, List, Optional, Set, Union
+import pickle
+from typing import Any, ClassVar, Dict, Optional, Set, Union
+import warnings
 
 from .config import SerializationConfig, get_ml_config
 from .core import SecurityError, serialize
@@ -158,7 +157,9 @@ class PickleBridge:
 
                 # Check module wildcards
                 for safe_class in safe_classes:
-                    if safe_class.endswith(".*") and full_name.startswith(safe_class[:-1]):
+                    if safe_class.endswith(".*") and full_name.startswith(
+                        safe_class[:-1]
+                    ):
                         return super().find_class(module, name)
 
                 # Class not in whitelist
@@ -232,7 +233,9 @@ class PickleBridge:
         except Exception as e:
             self._conversion_stats["files_failed"] += 1
             # Wrap other exceptions for clarity
-            raise PickleSecurityError(f"Failed to convert pickle file {pickle_path}: {e}") from e
+            raise PickleSecurityError(
+                f"Failed to convert pickle file {pickle_path}: {e}"
+            ) from e
 
     def from_pickle_bytes(self, pickle_data: bytes) -> Dict[str, Any]:
         """Convert pickle bytes to datason JSON format.
