@@ -16,6 +16,12 @@ on:
       - 'mkdocs.yml'
       - '.readthedocs.yaml'
 
+# Set explicit permissions for security
+permissions:
+  contents: read
+  packages: read
+  actions: read
+
 env:
   # Optimize pip for CI
   PIP_CACHE_DIR: ~/.cache/pip
@@ -66,9 +72,9 @@ jobs:
     strategy:
       # Allow parallel execution and don't fail fast
       fail-fast: false
-      max-parallel: 5  # Run up to 5 jobs in parallel
+      max-parallel: 8  # Increased for more Python versions
       matrix:
-        python-version: ["3.11"]
+        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
         dependency-set:
           - name: "minimal"
             packages: ""
@@ -100,8 +106,40 @@ jobs:
             test-pattern: "tests/"
             cache-extra: "dev"
             use-dev: true
+        exclude:
+          # Strategic test distribution for efficiency while maintaining coverage:
+          # - Python 3.8: Only minimal tests (core compatibility validation)
+          # - Python 3.9-3.10: Minimal + one dependency set each (broader compatibility)
+          # - Python 3.11: Full coverage (primary development version)
+          # - Python 3.12: Full coverage (latest stable version)
 
-    name: "🧪 ${{ matrix.dependency-set.name }}"
+          # Python 3.8 - minimal compatibility only
+          - python-version: "3.8"
+            dependency-set: {name: "with-numpy"}
+          - python-version: "3.8"
+            dependency-set: {name: "with-pandas"}
+          - python-version: "3.8"
+            dependency-set: {name: "with-ml-deps"}
+          - python-version: "3.8"
+            dependency-set: {name: "full"}
+
+          # Python 3.9 - minimal + pandas (data science focus)
+          - python-version: "3.9"
+            dependency-set: {name: "with-numpy"}
+          - python-version: "3.9"
+            dependency-set: {name: "with-ml-deps"}
+          - python-version: "3.9"
+            dependency-set: {name: "full"}
+
+          # Python 3.10 - minimal + ml-deps (ML focus)
+          - python-version: "3.10"
+            dependency-set: {name: "with-numpy"}
+          - python-version: "3.10"
+            dependency-set: {name: "with-pandas"}
+          - python-version: "3.10"
+            dependency-set: {name: "full"}
+
+    name: "🧪 ${{ matrix.dependency-set.name }} (Python ${{ matrix.python-version }})"
 
     steps:
     - name: 📥 Checkout code
@@ -118,20 +156,20 @@ jobs:
       with:
         path: |
           ~/.cache/pip
-          ~/.local/lib/python3.11/site-packages
-        key: ${{ needs.cache-base.outputs.cache-key }}
+          ~/.local/lib/python${{ matrix.python-version }}/site-packages
+        key: base-${{ runner.os }}-py${{ matrix.python-version }}-${{ hashFiles('**/pyproject.toml') }}
         restore-keys: |
-          base-${{ runner.os }}-py3.11-
+          base-${{ runner.os }}-py${{ matrix.python-version }}-
 
     # Specific cache for this dependency set
     - name: 💾 Cache specific dependencies
       uses: actions/cache@v4
       with:
         path: ~/.cache/pip
-        key: deps-${{ runner.os }}-${{ matrix.dependency-set.cache-extra }}-${{ hashFiles('**/pyproject.toml') }}
+        key: deps-${{ runner.os }}-py${{ matrix.python-version }}-${{ matrix.dependency-set.cache-extra }}-${{ hashFiles('**/pyproject.toml') }}
         restore-keys: |
-          deps-${{ runner.os }}-${{ matrix.dependency-set.cache-extra }}-
-          deps-${{ runner.os }}-
+          deps-${{ runner.os }}-py${{ matrix.python-version }}-${{ matrix.dependency-set.cache-extra }}-
+          deps-${{ runner.os }}-py${{ matrix.python-version }}-
 
     - name: 📦 Install package and dependencies
       run: |
@@ -173,18 +211,22 @@ jobs:
 
     - name: 📊 Upload coverage to Codecov
       uses: codecov/codecov-action@v5
-      if: always()
+      if: always() && matrix.dependency-set.name == 'full'
       with:
-        file: ./coverage-${{ matrix.dependency-set.name }}.xml
+        files: ./coverage-${{ matrix.dependency-set.name }}.xml
         flags: ${{ matrix.dependency-set.name }}
         name: ${{ matrix.dependency-set.name }}-py${{ matrix.python-version }}
         token: ${{ secrets.CODECOV_TOKEN }}
+        fail_ci_if_error: false  # Don't fail CI if codecov upload fails
+        verbose: true
+        # Only upload from full test suite for accurate coverage calculation
+        env_vars: OS,PYTHON
 
     - name: 📤 Upload test results
       uses: actions/upload-artifact@v4
       if: always()
       with:
-        name: test-results-${{ matrix.dependency-set.name }}
+        name: test-results-${{ matrix.dependency-set.name }}-py${{ matrix.python-version }}
         path: |
           coverage-${{ matrix.dependency-set.name }}.xml
           junit-${{ matrix.dependency-set.name }}.xml
@@ -303,7 +345,7 @@ jobs:
       uses: actions/upload-artifact@v4
       if: always()
       with:
-        name: security-report
+        name: security-report-py3.11
         path: bandit-report.json
 
   # Build package (only runs if tests pass - but doesn't wait for ALL tests)
@@ -343,7 +385,7 @@ jobs:
     - name: 📤 Upload build artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: dist
+        name: dist-py3.11
         path: dist/
 
   # Summary job (waits for all tests, provides final status)
@@ -364,3 +406,37 @@ jobs:
           echo "  Build: ${{ needs.build.result }}"
           exit 1
         fi
+
+  # Python version compatibility check (tests our minimum version claim)
+  python-compatibility:
+    runs-on: ubuntu-latest
+    name: "🐍 Python Compatibility Check"
+    strategy:
+      matrix:
+        python-version: ["3.8", "3.12"]  # Test minimum and current versions
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+
+    - name: 🐍 Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: 📦 Install package (minimal)
+      run: |
+        python -m pip install --upgrade pip
+        pip install -e .
+
+    - name: 🧪 Run compatibility test
+      run: |
+        python scripts/test_python_compatibility.py
+
+    - name: 📋 Generate compatibility report
+      run: |
+        echo "## 🐍 Python ${{ matrix.python-version }} Compatibility Report" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### Test Results:" >> $GITHUB_STEP_SUMMARY
+        echo '```' >> $GITHUB_STEP_SUMMARY
+        python scripts/test_python_compatibility.py >> $GITHUB_STEP_SUMMARY
+        echo '```' >> $GITHUB_STEP_SUMMARY

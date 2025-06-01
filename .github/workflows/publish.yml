@@ -14,6 +14,12 @@ on:
         default: false
         type: boolean
 
+# Set explicit permissions for security
+permissions:
+  contents: read  # Needed to read repository contents
+  id-token: write  # Needed for PyPI trusted publishing
+  actions: read  # Needed to access artifacts
+
 jobs:
   build:
     name: 🏗️ Build Package

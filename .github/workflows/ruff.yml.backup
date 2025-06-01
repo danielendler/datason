@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [ main, develop ]
 
+# Set explicit permissions for security
+permissions:
+  contents: read
+
 jobs:
   quality-and-security:
     runs-on: ubuntu-latest

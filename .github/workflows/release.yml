@@ -16,6 +16,12 @@ on:
         type: boolean
         default: false
 
+# Set explicit permissions for security
+permissions:
+  contents: write  # Needed to create releases and read repository
+  discussions: write  # Needed to create release discussions
+  actions: write  # Needed to trigger other workflows
+
 jobs:
   validate-release:
     runs-on: ubuntu-latest
@@ -129,41 +135,40 @@ jobs:
     - name: 📢 Create release discussion
       if: needs.validate-release.outputs.is_prerelease == 'false'
       uses: actions/github-script@v7
+      continue-on-error: true  # Don't fail the workflow if discussion creation fails
       with:
         script: |
           const version = '${{ needs.validate-release.outputs.version }}';
 
-          github.rest.teams.addOrUpdateRepoPermissionsInOrg({
-            org: context.repo.owner,
-            team_slug: 'maintainers',
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            permission: 'admin'
-          }).catch(() => {}); // Ignore if team doesn't exist
+          try {
+            // Create discussion for major releases (only if discussions are enabled)
+            if (!version.includes('patch')) {
+              await github.rest.discussions.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: `🎉 datason ${version} Released!`,
+                body: `
+                ## datason ${version} is now available! 🚀
 
-          // Create discussion for major releases
-          if (!version.includes('patch')) {
-            github.rest.discussions.create({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              title: `🎉 datason ${version} Released!`,
-              body: `
-              ## datason ${version} is now available! 🚀
+                ### Installation
+                \`\`\`bash
+                pip install --upgrade datason
+                \`\`\`
 
-              ### Installation
-              \`\`\`bash
-              pip install --upgrade datason
-              \`\`\`
+                ### What do you think?
+                - How are you using datason?
+                - Any feedback on the new features?
+                - Ideas for future improvements?
 
-              ### What do you think?
-              - How are you using datason?
-              - Any feedback on the new features?
-              - Ideas for future improvements?
-
-              **📚 [View Release Notes](https://github.com/danielendler/datason/releases/tag/${version})**
-              `,
-              category_id: 'announcements'
-            }).catch(err => console.log('Could not create discussion:', err.message));
+                **📚 [View Release Notes](https://github.com/danielendler/datason/releases/tag/${version})**
+                `,
+                category_id: 'announcements'
+              });
+              console.log('✅ Discussion created successfully');
+            }
+          } catch (error) {
+            console.log('ℹ️ Could not create discussion (discussions may not be enabled):', error.message);
+            // This is not a critical failure, so we continue
           }
 
   trigger-publish:

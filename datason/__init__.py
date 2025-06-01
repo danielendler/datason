@@ -48,7 +48,26 @@ Supports 20+ data types out of the box with optional dependencies for:
 - scikit-learn, scipy (scientific computing)
 """
 
+import sys
 from typing import Any
+import warnings
+
+# Python version compatibility check
+if sys.version_info < (3, 8):  # noqa: UP036
+    raise RuntimeError(
+        f"datason requires Python 3.8 or later. "
+        f"You are using Python {sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}. "
+        f"Please upgrade your Python installation."
+    )
+
+# Warn for EOL Python versions
+if sys.version_info < (3, 9):
+    warnings.warn(
+        f"You are using Python {sys.version_info.major}.{sys.version_info.minor} which reached end-of-life. "
+        f"Consider upgrading to Python 3.9+ for better performance and security.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
 
 from .converters import safe_float, safe_int
 from .core import SecurityError, serialize
