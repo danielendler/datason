@@ -24,6 +24,26 @@ datason transforms complex Python objects into JSON-serializable formats and bac
 - 🔌 **Extensible**: Easy to add custom serializers for your own types
 - 📦 **Zero Dependencies**: Core functionality works without additional packages
 
+## 🐍 Python Version Support
+
+datason officially supports **Python 3.8+** and is actively tested on:
+
+- ✅ **Python 3.8** - Minimum supported version (core functionality)
+- ✅ **Python 3.9** - Full compatibility  
+- ✅ **Python 3.10** - Full compatibility
+- ✅ **Python 3.11** - Full compatibility (primary development version)
+- ✅ **Python 3.12** - Latest stable version
+
+### Compatibility Testing
+
+We maintain compatibility through:
+- **Automated CI testing** on all supported Python versions
+- **Core functionality tests** ensuring basic serialization works on Python 3.8+
+- **Dependency compatibility checks** for optional ML/data science libraries
+- **Runtime version validation** with helpful error messages
+
+> **Note**: While core functionality works on Python 3.8, some optional dependencies (like latest ML frameworks) may require newer Python versions. The package will still work - you'll just have fewer optional features available.
+
 ## 🏃‍♂️ Quick Start
 
 ### Installation

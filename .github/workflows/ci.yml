@@ -66,9 +66,9 @@ jobs:
     strategy:
       # Allow parallel execution and don't fail fast
       fail-fast: false
-      max-parallel: 5  # Run up to 5 jobs in parallel
+      max-parallel: 8  # Increased for more Python versions
       matrix:
-        python-version: ["3.11"]
+        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
         dependency-set:
           - name: "minimal"
             packages: ""
@@ -100,8 +100,34 @@ jobs:
             test-pattern: "tests/"
             cache-extra: "dev"
             use-dev: true
+        exclude:
+          # Exclude some combinations to reduce CI load while maintaining coverage
+          # Keep minimal tests on all Python versions for core compatibility
+          # Keep full tests on 3.8, 3.11, and 3.12 for comprehensive testing
+          - python-version: "3.8"
+            dependency-set: {name: "with-numpy"}
+          - python-version: "3.8"
+            dependency-set: {name: "with-pandas"}
+          - python-version: "3.8"
+            dependency-set: {name: "with-ml-deps"}
+          - python-version: "3.9"
+            dependency-set: {name: "with-numpy"}
+          - python-version: "3.9"
+            dependency-set: {name: "with-pandas"}
+          - python-version: "3.9"
+            dependency-set: {name: "with-ml-deps"}
+          - python-version: "3.9"
+            dependency-set: {name: "full"}
+          - python-version: "3.10"
+            dependency-set: {name: "with-numpy"}
+          - python-version: "3.10"
+            dependency-set: {name: "with-pandas"}
+          - python-version: "3.10"
+            dependency-set: {name: "with-ml-deps"}
+          - python-version: "3.10"
+            dependency-set: {name: "full"}
 
-    name: "🧪 ${{ matrix.dependency-set.name }}"
+    name: "🧪 ${{ matrix.dependency-set.name }} (Python ${{ matrix.python-version }})"
 
     steps:
     - name: 📥 Checkout code
@@ -118,20 +144,20 @@ jobs:
       with:
         path: |
           ~/.cache/pip
-          ~/.local/lib/python3.11/site-packages
-        key: ${{ needs.cache-base.outputs.cache-key }}
+          ~/.local/lib/python${{ matrix.python-version }}/site-packages
+        key: base-${{ runner.os }}-py${{ matrix.python-version }}-${{ hashFiles('**/pyproject.toml') }}
         restore-keys: |
-          base-${{ runner.os }}-py3.11-
+          base-${{ runner.os }}-py${{ matrix.python-version }}-
 
     # Specific cache for this dependency set
     - name: 💾 Cache specific dependencies
       uses: actions/cache@v4
       with:
         path: ~/.cache/pip
-        key: deps-${{ runner.os }}-${{ matrix.dependency-set.cache-extra }}-${{ hashFiles('**/pyproject.toml') }}
+        key: deps-${{ runner.os }}-py${{ matrix.python-version }}-${{ matrix.dependency-set.cache-extra }}-${{ hashFiles('**/pyproject.toml') }}
         restore-keys: |
-          deps-${{ runner.os }}-${{ matrix.dependency-set.cache-extra }}-
-          deps-${{ runner.os }}-
+          deps-${{ runner.os }}-py${{ matrix.python-version }}-${{ matrix.dependency-set.cache-extra }}-
+          deps-${{ runner.os }}-py${{ matrix.python-version }}-
 
     - name: 📦 Install package and dependencies
       run: |
@@ -368,3 +394,37 @@ jobs:
           echo "  Build: ${{ needs.build.result }}"
           exit 1
         fi
+
+  # Python version compatibility check (tests our minimum version claim)
+  python-compatibility:
+    runs-on: ubuntu-latest
+    name: "🐍 Python Compatibility Check"
+    strategy:
+      matrix:
+        python-version: ["3.8", "3.12"]  # Test minimum and current versions
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+
+    - name: 🐍 Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: 📦 Install package (minimal)
+      run: |
+        python -m pip install --upgrade pip
+        pip install -e .
+
+    - name: 🧪 Run compatibility test
+      run: |
+        python scripts/test_python_compatibility.py
+
+    - name: 📋 Generate compatibility report
+      run: |
+        echo "## 🐍 Python ${{ matrix.python-version }} Compatibility Report" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### Test Results:" >> $GITHUB_STEP_SUMMARY
+        echo '```' >> $GITHUB_STEP_SUMMARY
+        python scripts/test_python_compatibility.py >> $GITHUB_STEP_SUMMARY
+        echo '```' >> $GITHUB_STEP_SUMMARY
