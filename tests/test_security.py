@@ -181,7 +181,6 @@ class TestDepthLimits:
         mechanism works within the constraints of different environments.
         """
         from datason import core
-        from datason.core import SecurityError
 
         # Choose test parameters that work in our environment
         current_recursion_limit = sys.getrecursionlimit()
