@@ -21,7 +21,13 @@ except ImportError:
 
 # Import configuration and type handling
 try:
-    from .config import DateFormat, NanHandling, SerializationConfig, get_default_config
+    from .config import (
+        DateFormat,
+        NanHandling,
+        OutputType,
+        SerializationConfig,
+        get_default_config,
+    )
     from .type_handlers import TypeHandler, is_nan_like, normalize_numpy_types
 
     _config_available = True
@@ -89,6 +95,16 @@ def serialize(
     # Initialize configuration and type handler on first call
     if config is None and _config_available:
         config = get_default_config()
+
+    # NEW: Performance optimization - skip processing if already serialized
+    if (
+        config
+        and hasattr(config, "check_if_serialized")
+        and config.check_if_serialized
+        and _depth == 0
+        and _is_json_serializable_basic_type(obj)
+    ):
+        return obj
 
     if _type_handler is None and config is not None:
         _type_handler = TypeHandler(config)
@@ -287,8 +303,17 @@ def _serialize_object(
                 for x in obj.tolist()
             ]
 
-    # Handle datetime with configurable format
+    # Handle datetime with configurable format and output type
     if isinstance(obj, datetime):
+        # NEW: Check output type preference first
+        if (
+            config
+            and hasattr(config, "datetime_output")
+            and config.datetime_output == OutputType.OBJECT
+        ):
+            return obj  # Return datetime object as-is
+
+        # Handle format configuration for JSON-safe output
         if config and hasattr(config, "date_format"):
             if config.date_format == DateFormat.ISO:
                 return obj.isoformat()
@@ -302,8 +327,17 @@ def _serialize_object(
                 return obj.strftime(config.custom_date_format)
         return obj.isoformat()  # Default to ISO format
 
-    # Handle pandas DataFrame with configurable orientation
+    # Handle pandas DataFrame with configurable orientation and output type
     if pd is not None and isinstance(obj, pd.DataFrame):
+        # NEW: Check output type preference first
+        if (
+            config
+            and hasattr(config, "dataframe_output")
+            and config.dataframe_output == OutputType.OBJECT
+        ):
+            return obj  # Return DataFrame object as-is
+
+        # Handle orientation configuration for JSON-safe output
         if config and hasattr(config, "dataframe_orient"):
             orient = config.dataframe_orient.value
             try:
@@ -316,8 +350,17 @@ def _serialize_object(
                 return obj.to_dict(orient="records")
         return obj.to_dict(orient="records")  # Default orientation
 
-    # Handle pandas Series
+    # Handle pandas Series with configurable output type
     if pd is not None and isinstance(obj, pd.Series):
+        # NEW: Check output type preference first
+        if (
+            config
+            and hasattr(config, "series_output")
+            and config.series_output == OutputType.OBJECT
+        ):
+            return obj  # Return Series object as-is
+
+        # Default: convert to dict for JSON-safe output
         return obj.to_dict()
 
     if pd is not None and isinstance(obj, (pd.Timestamp,)):

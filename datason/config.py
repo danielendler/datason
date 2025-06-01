@@ -26,14 +26,26 @@ class DateFormat(Enum):
 
 
 class DataFrameOrient(Enum):
-    """Supported pandas DataFrame orientations."""
+    """Supported pandas DataFrame orientations.
+
+    Based on pandas.DataFrame.to_dict() valid orientations.
+    """
 
     RECORDS = "records"  # List of records [{col: val}, ...]
     SPLIT = "split"  # Split into {index: [...], columns: [...], data: [...]}
     INDEX = "index"  # Dict like {index -> {column -> value}}
-    COLUMNS = "columns"  # Dict like {column -> {index -> value}}
+    DICT = "dict"  # Dict like {column -> {index -> value}} (pandas default)
+    LIST = "list"  # Dict like {column -> [values]}
+    SERIES = "series"  # Dict like {column -> Series(values)}
+    TIGHT = "tight"  # Tight format with index/columns/data
     VALUES = "values"  # Just the values array
-    TABLE = "table"  # Table schema format
+
+
+class OutputType(Enum):
+    """How to output different data types."""
+
+    JSON_SAFE = "json_safe"  # Convert to JSON-safe primitives (default)
+    OBJECT = "object"  # Keep as Python objects
 
 
 class NanHandling(Enum):
@@ -61,6 +73,10 @@ class SerializationConfig:
         date_format: How to format datetime objects
         custom_date_format: Custom strftime format when date_format is CUSTOM
         dataframe_orient: Pandas DataFrame orientation
+        datetime_output: How to output datetime objects
+        series_output: How to output pandas Series
+        dataframe_output: How to output pandas DataFrames (overrides orient for object output)
+        numpy_output: How to output numpy arrays
         nan_handling: How to handle NaN/null values
         type_coercion: Type coercion behavior
         preserve_decimals: Whether to preserve decimal.Decimal precision
@@ -71,6 +87,7 @@ class SerializationConfig:
         custom_serializers: Dict of type -> serializer function
         sort_keys: Whether to sort dictionary keys in output
         ensure_ascii: Whether to ensure ASCII output only
+        check_if_serialized: Skip processing if object is already JSON-safe
     """
 
     # Date/time formatting
@@ -79,6 +96,12 @@ class SerializationConfig:
 
     # DataFrame formatting
     dataframe_orient: DataFrameOrient = DataFrameOrient.RECORDS
+
+    # NEW: Output type control (addressing user feedback)
+    datetime_output: OutputType = OutputType.JSON_SAFE
+    series_output: OutputType = OutputType.JSON_SAFE
+    dataframe_output: OutputType = OutputType.JSON_SAFE
+    numpy_output: OutputType = OutputType.JSON_SAFE
 
     # Value handling
     nan_handling: NanHandling = NanHandling.NULL
@@ -99,6 +122,9 @@ class SerializationConfig:
     # Output formatting
     sort_keys: bool = False
     ensure_ascii: bool = False
+
+    # NEW: Performance optimization (addressing user feedback)
+    check_if_serialized: bool = False
 
 
 # Global default configuration
