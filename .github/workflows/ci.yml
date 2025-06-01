@@ -175,10 +175,14 @@ jobs:
       uses: codecov/codecov-action@v5
       if: always()
       with:
-        file: ./coverage-${{ matrix.dependency-set.name }}.xml
+        files: ./coverage-${{ matrix.dependency-set.name }}.xml
         flags: ${{ matrix.dependency-set.name }}
         name: ${{ matrix.dependency-set.name }}-py${{ matrix.python-version }}
         token: ${{ secrets.CODECOV_TOKEN }}
+        fail_ci_if_error: false  # Don't fail CI if codecov upload fails
+        verbose: true
+        # Only use full test suite for main coverage calculation
+        env_vars: OS,PYTHON
 
     - name: 📤 Upload test results
       uses: actions/upload-artifact@v4

@@ -2,11 +2,15 @@
 
 **A comprehensive Python package for intelligent serialization that handles complex data types with ease**
 
-[![PyPI version](https://badge.fury.io/py/datason.svg)](https://badge.fury.io/py/datason)
-[![Python Support](https://img.shields.io/pypi/pyversions/datason.svg)](https://pypi.org/project/datason/)
-[![Downloads](https://pepy.tech/badge/datason)](https://pepy.tech/project/datason)
+[![PyPI version](https://img.shields.io/pypi/v/datason.svg)](https://pypi.org/project/datason/)
+[![PyPI - Python Version](https://img.shields.io/pypi/pyversions/datason)](https://pypi.org/project/datason/)
+[![PyPI - Downloads](https://img.shields.io/pypi/dm/datason)](https://pypi.org/project/datason/)
+[![GitHub release (latest by date)](https://img.shields.io/github/v/release/danielendler/datason)](https://github.com/danielendler/datason/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![GitHub stars](https://img.shields.io/github/stars/danielendler/datason?style=social)](https://github.com/danielendler/datason)
 [![Code style: ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+[![codecov](https://codecov.io/github/danielendler/datason/graph/badge.svg?token=UYL9LvVb8O)](https://codecov.io/github/danielendler/datason)
+[![CI Status](https://img.shields.io/github/actions/workflow/status/danielendler/datason/ci.yml?branch=main)](https://github.com/danielendler/datason/actions)
 
 datason transforms complex Python objects into JSON-serializable formats and back with intelligence. Perfect for ML/AI workflows, data science, and any application dealing with complex nested data structures.
 
