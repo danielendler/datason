@@ -358,8 +358,8 @@ Both scripts:
 
 | Date | Version | Change | Performance Impact |
 |------|---------|--------|-------------------|
-| 2024-12 | 0.1.4 | Configuration system added | 7x speedup possible with optimization |
-| 2024-12 | 0.1.4 | Baseline benchmarks updated | Current performance documented |
+| 2025-05 | 0.1.4 | Configuration system added | 7x speedup possible with optimization |
+| 2025-06 | 0.1.4 | Baseline benchmarks updated | Current performance documented |
 
 ## Running Benchmarks
 
