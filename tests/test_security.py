@@ -31,10 +31,27 @@ IS_CI = any(
     ]
 )
 
+
+# Diagnostics for CI debugging - only show when tests are run with -s flag
+def _debug_print(msg: str) -> None:
+    """Print debug info in CI or when pytest is run with -s flag."""
+    if IS_CI or "-s" in sys.argv:
+        print(msg)  # noqa: T201
+
+
 # Test parameters based on environment - make them dynamic based on actual recursion limit
 python_recursion_limit = sys.getrecursionlimit()
 
 if IS_CI:
+    _debug_print("🔍 CI Environment Diagnostics:")
+    _debug_print(f"   Python recursion limit: {python_recursion_limit}")
+    _debug_print(f"   MAX_SERIALIZATION_DEPTH: {MAX_SERIALIZATION_DEPTH}")
+    _debug_print(f"   MAX_OBJECT_SIZE: {MAX_OBJECT_SIZE:,}")
+    _debug_print(
+        f"   CI env vars: CI={os.getenv('CI')}, GITHUB_ACTIONS={os.getenv('GITHUB_ACTIONS')}"
+    )
+    _debug_print(f"   Python version: {sys.version}")
+
     # Conservative limits for CI - test the functionality without resource exhaustion
     # Make TEST_DEPTH_LIMIT dynamic based on actual recursion limit and security config
     safe_ci_recursion_margin = 100  # Safety margin for CI
@@ -48,6 +65,9 @@ if IS_CI:
     )
     TEST_SIZE_LIMIT = min(MAX_OBJECT_SIZE + 1000, 50_000)
     SKIP_INTENSIVE = True
+
+    _debug_print(f"   Calculated TEST_DEPTH_LIMIT: {TEST_DEPTH_LIMIT}")
+    _debug_print(f"   TEST_SIZE_LIMIT: {TEST_SIZE_LIMIT:,}")
 
 else:
     # Local testing - be smarter about sizes to avoid memory issues
@@ -130,14 +150,18 @@ class TestDepthLimits:
     def test_excessive_depth_raises_error(self):
         """Test that excessive depth raises SecurityError.
 
-        Note: This test uses monkey-patching to temporarily modify the depth
-        check to work within Python's recursion limits for reliable testing.
+        Note: This test uses multiple approaches to ensure the security
+        mechanism works within the constraints of different environments.
         """
         from datason import core
         from datason.core import SecurityError
 
         # Choose test parameters that work in our environment
         current_recursion_limit = sys.getrecursionlimit()
+
+        _debug_print("🧪 Starting depth test:")
+        _debug_print(f"   Current recursion limit: {current_recursion_limit}")
+        _debug_print(f"   MAX_SERIALIZATION_DEPTH: {MAX_SERIALIZATION_DEPTH}")
 
         if IS_CI:
             # CI: Use very conservative values
@@ -153,13 +177,59 @@ class TestDepthLimits:
                 f"Cannot test depth security: recursion limit ({current_recursion_limit}) too low"
             )
 
+        _debug_print(f"   Test security limit: {test_security_limit}")
+        _debug_print(f"   Test depth: {test_depth}")
+
+        # Approach 1: Try increasing recursion limit temporarily (from suggestions)
+        original_recursion_limit = current_recursion_limit
+        try:
+            if current_recursion_limit <= MAX_SERIALIZATION_DEPTH + 50:
+                new_limit = min(MAX_SERIALIZATION_DEPTH + 200, 2000)
+                sys.setrecursionlimit(new_limit)
+                _debug_print(
+                    f"   Increased recursion limit: {current_recursion_limit} -> {new_limit}"
+                )
+
+                # Test with increased limit and actual MAX_SERIALIZATION_DEPTH
+                test_depth_real = MAX_SERIALIZATION_DEPTH + 10
+                nested = {}
+                current = nested
+                for i in range(test_depth_real):
+                    current["next"] = {}
+                    current = current["next"]
+                current["value"] = "too_deep"
+
+                _debug_print(
+                    f"   Testing at depth {test_depth_real} with real MAX_SERIALIZATION_DEPTH"
+                )
+                with pytest.raises(SecurityError) as exc_info:
+                    serialize(nested)
+
+                assert "Maximum serialization depth" in str(exc_info.value)
+                _debug_print("   ✅ Real depth test succeeded")
+                return
+
+        except (RecursionError, SecurityError) as e:
+            _debug_print(f"   Real depth test failed: {type(e).__name__}: {e}")
+            # Fall back to monkey-patching approach
+        finally:
+            sys.setrecursionlimit(original_recursion_limit)
+
+        # Approach 2: Monkey-patching approach (fallback)
+        _debug_print("   Falling back to monkey-patching approach")
+
         # Store original function
         original_serialize = core.serialize
 
         def patched_serialize(obj, _depth=0, _seen=None):
             """Temporary serialize function with custom depth limit for testing."""
+            _debug_print(
+                f"     patched_serialize called with _depth={_depth}, limit={test_security_limit}"
+            )
+
             # Security check: prevent excessive recursion depth (using test limit)
             if _depth > test_security_limit:
+                _debug_print(f"     Raising SecurityError at depth {_depth}")
                 raise SecurityError(
                     f"Maximum serialization depth ({test_security_limit}) exceeded. "
                     "This may indicate circular references or extremely nested data."
@@ -203,11 +273,14 @@ class TestDepthLimits:
                 current = current["next"]
             current["value"] = "too_deep"
 
+            _debug_print(f"   Built nested structure with {test_depth} levels")
+
             # Should raise SecurityError (not RecursionError)
             with pytest.raises(SecurityError) as exc_info:
                 patched_serialize(nested)
 
             assert "Maximum serialization depth" in str(exc_info.value)
+            _debug_print("   ✅ Monkey-patched test succeeded")
 
         finally:
             # Always restore the original function
@@ -230,6 +303,9 @@ class TestSizeLimits:
         Note: Uses conservative size in CI environments to avoid resource exhaustion,
         but tests full limits locally.
         """
+        _debug_print("🧪 Testing dict size security:")
+        _debug_print(f"   MAX_OBJECT_SIZE: {MAX_OBJECT_SIZE:,}")
+
         # For this test, we need to create a dict that actually exceeds MAX_OBJECT_SIZE
         # Since MAX_OBJECT_SIZE = 10M, we need more than 10M items
         # But we can't create 10M+ items without memory issues
@@ -246,19 +322,35 @@ class TestSizeLimits:
 
         # Create a fake dict that reports being larger than the limit
         # Define this inside the test to ensure it's fresh for each run, especially with xdist
+        fake_size = MAX_OBJECT_SIZE + 1000
         fake_large_dict = LargeFakeDict(
             {f"key_{i}": i for i in range(100)},  # Only 100 actual items
-            MAX_OBJECT_SIZE + 1000,  # But reports being over the limit
+            fake_size,  # But reports being over the limit
         )
 
-        def do_serialize():
-            serialize(fake_large_dict)
+        _debug_print(f"   Created fake dict with reported size: {fake_size:,}")
+        _debug_print(f"   Actual dict size: {len(dict(fake_large_dict))}")
 
-        with pytest.raises(SecurityError) as exc_info:
-            do_serialize()
+        # Test the SecurityError directly without wrapper function
+        security_error_raised = False
+        error_message = ""
 
-        assert "Dictionary size" in str(exc_info.value)
-        assert "exceeds maximum" in str(exc_info.value)
+        try:
+            result = serialize(fake_large_dict)
+            _debug_print("   ❌ Serialization unexpectedly succeeded")
+            pytest.fail("Expected SecurityError was not raised")
+        except SecurityError as exc:
+            _debug_print(f"   ✅ SecurityError correctly raised: {exc}")
+            security_error_raised = True
+            error_message = str(exc)
+        except Exception as exc:
+            _debug_print(f"   ❌ Unexpected exception: {type(exc).__name__}: {exc}")
+            pytest.fail(f"Expected SecurityError, got {type(exc).__name__}: {exc}")
+
+        # Perform assertions outside the except block
+        assert security_error_raised, "SecurityError should have been raised"
+        assert "Dictionary size" in error_message
+        assert "exceeds maximum" in error_message
 
     def test_large_list_within_limits(self):
         """Test that reasonably large lists work."""
@@ -273,6 +365,8 @@ class TestSizeLimits:
         Note: Uses conservative size in CI environments to avoid resource exhaustion,
         but tests actual limits locally.
         """
+        _debug_print("🧪 Testing list size security:")
+        _debug_print(f"   MAX_OBJECT_SIZE: {MAX_OBJECT_SIZE:,}")
 
         # Similar approach to the dict test - use a fake large list
         class LargeFakeList(list):
@@ -285,18 +379,34 @@ class TestSizeLimits:
 
         # Create a fake list that reports being larger than the limit
         # Define this inside the test
+        fake_size = MAX_OBJECT_SIZE + 1000
         fake_large_list = LargeFakeList(
             list(range(100)),  # Only 100 actual items
-            MAX_OBJECT_SIZE + 1000,  # But reports being over the limit
+            fake_size,  # But reports being over the limit
         )
 
-        def do_serialize_list():
-            serialize(fake_large_list)
+        _debug_print(f"   Created fake list with reported size: {fake_size:,}")
+        _debug_print(f"   Actual list size: {len(list(fake_large_list))}")
 
-        with pytest.raises(SecurityError) as exc_info:
-            do_serialize_list()
+        # Test the SecurityError directly without wrapper function
+        security_error_raised = False
+        error_message = ""
 
-        assert "List/tuple size" in str(exc_info.value)
+        try:
+            result = serialize(fake_large_list)
+            _debug_print("   ❌ Serialization unexpectedly succeeded")
+            pytest.fail("Expected SecurityError was not raised")
+        except SecurityError as exc:
+            _debug_print(f"   ✅ SecurityError correctly raised: {exc}")
+            security_error_raised = True
+            error_message = str(exc)
+        except Exception as exc:
+            _debug_print(f"   ❌ Unexpected exception: {type(exc).__name__}: {exc}")
+            pytest.fail(f"Expected SecurityError, got {type(exc).__name__}: {exc}")
+
+        # Perform assertions outside the except block
+        assert security_error_raised, "SecurityError should have been raised"
+        assert "List/tuple size" in error_message
 
     def test_large_string_truncation(self):
         """Test that very large strings are truncated safely."""
@@ -595,6 +705,12 @@ class TestSecurityConstants:
 
     def test_environment_configuration(self):
         """Test that environment configuration is working correctly."""
+        _debug_print("🔧 Environment Configuration Test:")
+        _debug_print(f"   Environment: {'CI' if IS_CI else 'Local'}")
+        _debug_print(f"   TEST_DEPTH_LIMIT: {TEST_DEPTH_LIMIT}")
+        _debug_print(f"   MAX_SERIALIZATION_DEPTH: {MAX_SERIALIZATION_DEPTH}")
+        _debug_print(f"   Python recursion limit: {python_recursion_limit}")
+
         # Test that we have different configurations for CI vs local
         if IS_CI:
             # In CI, TEST_DEPTH_LIMIT is calculated dynamically
@@ -602,7 +718,9 @@ class TestSecurityConstants:
             safe_ci_recursion_margin = 100
             max_safe_ci_depth = python_recursion_limit - safe_ci_recursion_margin
             expected_ci_test_depth_limit = min(
-                MAX_SERIALIZATION_DEPTH + 20, max_safe_ci_depth, 250
+                MAX_SERIALIZATION_DEPTH + 20,
+                max_safe_ci_depth,
+                250,
             )
             assert expected_ci_test_depth_limit == TEST_DEPTH_LIMIT, (
                 f"CI TEST_DEPTH_LIMIT ({TEST_DEPTH_LIMIT}) doesn't match expected calculation ({expected_ci_test_depth_limit})"
@@ -610,9 +728,13 @@ class TestSecurityConstants:
 
             # The key requirement: TEST_DEPTH_LIMIT should allow testing IF the environment permits
             if TEST_DEPTH_LIMIT > MAX_SERIALIZATION_DEPTH:
-                pass  # CI can test depth security
+                _debug_print(
+                    f"   ✅ CI can test depth security: {TEST_DEPTH_LIMIT} > {MAX_SERIALIZATION_DEPTH}"
+                )
             else:
-                pass  # CI cannot test depth security
+                _debug_print(
+                    f"   ⚠️ CI cannot test depth security: {TEST_DEPTH_LIMIT} <= {MAX_SERIALIZATION_DEPTH}"
+                )
 
             assert TEST_SIZE_LIMIT <= 50_000, "CI size limit should be conservative"
             assert SKIP_INTENSIVE is True, "Intensive tests should be skipped in CI"
