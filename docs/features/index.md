@@ -28,6 +28,22 @@ Comprehensive support for temporal data with timezone awareness.
 - **Pandas Integration**: `pd.Timestamp`, `pd.NaT`, `pd.DatetimeIndex`
 - **Timezone Support**: Aware and naive datetime handling
 
+### [Chunked Processing & Streaming](chunked-processing/index.md) 🆕 v0.4.0
+Memory-efficient handling of large datasets that exceed available RAM.
+
+- **Chunked Serialization**: Break large objects into manageable pieces
+- **Streaming**: Continuous data writing without memory accumulation
+- **Memory Estimation**: Automatic optimization recommendations
+- **File Formats**: JSONL and JSON array support for chunked data
+
+### [Template-Based Deserialization](template-deserialization/index.md) 🆕 v0.4.5
+Type-guided reconstruction with ML-optimized round-trip fidelity.
+
+- **Template Guidance**: Use reference objects to ensure consistent types
+- **Auto-Inference**: Generate templates from sample data
+- **ML Templates**: Specialized templates for machine learning workflows
+- **Type Validation**: Consistent data structure validation
+
 ### [ML/AI Integration](ml-ai/index.md)
 Native support for machine learning and scientific computing objects.
 
@@ -51,6 +67,7 @@ Deep integration with the pandas ecosystem for data science workflows.
 Fine-grained control over serialization behavior with preset configurations.
 
 - **Presets**: ML, API, Strict, Performance optimized configurations
+- **Domain-Specific**: Financial, Time Series, Inference, Research, Logging presets
 - **Date Formats**: 5 different datetime serialization formats
 - **NaN Handling**: 4 strategies for missing/null values
 - **Type Coercion**: 3 levels from strict type preservation to aggressive conversion
@@ -78,6 +95,8 @@ Optimizations for speed and memory efficiency in production environments.
 | Feature Category | Basic | Advanced | Enterprise |
 |------------------|-------|----------|------------|
 | **Core Types** | ✅ JSON types | ✅ + Python types | ✅ + Custom types |
+| **Large Data** | ❌ | ✅ Chunked/Streaming | ✅ + Memory optimization |
+| **Type Safety** | ❌ | ✅ Template validation | ✅ + ML round-trip |
 | **ML/AI Objects** | ❌ | ✅ Common libraries | ✅ + Custom models |
 | **Configuration** | ❌ | ✅ Presets | ✅ + Full control |
 | **Pickle Bridge** | ❌ | ✅ Safe conversion | ✅ + Bulk migration |
@@ -93,6 +112,36 @@ import datason
 # Works out of the box
 data = {"users": [1, 2, 3], "timestamp": datetime.now()}
 result = datason.serialize(data)
+```
+
+### Large Data Processing (v0.4.0)
+```python
+import datason
+
+# Memory-efficient processing of large datasets
+large_data = create_huge_dataset()  # Multi-GB dataset
+
+# Process in chunks without memory overflow
+result = datason.serialize_chunked(large_data, chunk_size=10000)
+
+# Stream data to file
+with datason.stream_serialize("output.jsonl") as stream:
+    for item in continuous_data_source():
+        stream.write(item)
+```
+
+### Type-Safe Deserialization (v0.4.5)
+```python
+import datason
+from datason.deserializers import deserialize_with_template
+
+# Ensure consistent types with templates
+template = {"user_id": 0, "created": datetime.now(), "active": True}
+data = {"user_id": "123", "created": "2023-01-01T10:00:00", "active": "true"}
+
+# Template ensures proper type conversion
+result = deserialize_with_template(data, template)
+# result["user_id"] is int(123), not string
 ```
 
 ### Configured Usage (Advanced Features)
@@ -144,12 +193,13 @@ stats = datason.convert_pickle_directory(
 - Configuration system with presets
 - Pandas deep integration
 - Performance optimizations
-- **Pickle Bridge for legacy ML migration**
+- Pickle Bridge for legacy ML migration
+- **🆕 Chunked processing & streaming (v0.4.0)**
+- **🆕 Template-based deserialization (v0.4.5)**
 
 ### 🔄 In Development
 - Schema validation
 - Compression support
-- Streaming serialization
 - Plugin architecture
 - Type hints integration
 
@@ -165,6 +215,8 @@ stats = datason.convert_pickle_directory(
 Each feature category has detailed documentation with examples, best practices, and performance considerations:
 
 - **[Core Serialization →](core/index.md)** - Start here for basic usage
+- **[Chunked Processing →](chunked-processing/index.md)** - 🆕 Handle large datasets efficiently
+- **[Template Deserialization →](template-deserialization/index.md)** - 🆕 Type-safe reconstruction
 - **[Configuration System →](configuration/index.md)** - Control serialization behavior  
 - **[ML/AI Integration →](ml-ai/index.md)** - Work with ML frameworks
 - **[Performance Guide →](performance/index.md)** - Optimize for production
