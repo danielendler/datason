@@ -256,7 +256,7 @@ This release completes the v0.4.x roadmap and establishes foundation for:
 
 ---
 
-## [0.3.0] - 2025-05-30
+## [0.3.0] - 2025-06-01
 
 ### 🚀 Major New Features
 
@@ -432,7 +432,7 @@ print(f"Migrated {stats['files_converted']} files successfully")
 
 ---
 
-## [0.2.0] - 2025-05-20
+## [0.2.0] - 2025-06-01
 
 ### 🚀 Major New Features
 
@@ -655,7 +655,9 @@ This release establishes a solid foundation for upcoming enhancements:
 - **✅ Comprehensive documentation** with real performance measurements
 - **✅ Production-proven** with extensive benchmarking and validation
 
-## [0.1.4] - 2025-05-15
+---
+
+## [0.1.4] - 2025-06-01
 
 ### 🔒 Security & Testing Improvements
 - **Enhanced security test robustness**
@@ -685,7 +687,9 @@ This release establishes a solid foundation for upcoming enhancements:
   - Improved debugging capabilities for CI environment differences
   - Better test isolation and state management
 
-## [0.1.3] - 2025-05-10
+---
+
+## [0.1.3] - 2025-05-31
 
 ### 🚀 Major Changes
 - **BREAKING**: Renamed package from `serialpy` to `datason`
@@ -748,7 +752,7 @@ This release establishes a solid foundation for upcoming enhancements:
   - Updated version management from "0.1.0" to "0.1.3"
   - Implemented proper Git tagging and release automation
   - Added comprehensive changelog documentation
-  - Fixed release date accuracy (2025-05-10)
+  - Fixed release date accuracy (2025-05-31)
 
 ### 🤖 Automation Features
 - **Comprehensive workflow management**
@@ -774,7 +778,9 @@ This release establishes a solid foundation for upcoming enhancements:
 - Better IDE support with updated type checking and linting
 - Streamlined release process with automated tagging and publishing
 
-## [0.1.1] - 2025-05-05
+---
+
+## [0.1.1] - 2025-05-30
 
 ### Added
 - Initial package structure and core serialization functionality

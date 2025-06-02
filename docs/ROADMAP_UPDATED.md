@@ -439,5 +439,5 @@ This updated roadmap directly addresses:
 
 *Roadmap Principles: Stay focused, stay fast, stay simple, solve real problems*
 
-*Updated: December 2024 based on financial ML pipeline integration feedback*  
+*Updated: June 1, 2025 based on financial ML pipeline integration feedback*  
 *Next review: Q2 2025 after v0.3.0 release*

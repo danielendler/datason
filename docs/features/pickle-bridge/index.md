@@ -343,7 +343,7 @@ def archive_experiments(source_dir, archive_dir):
 
     # Generate archive report
     report = {
-        "archive_date": "2025-06-01",
+        "archive_date": "2025-05-30",
         "source_directory": str(source_dir),
         "files_archived": stats['files_converted'],
         "files_skipped": stats['files_skipped'],

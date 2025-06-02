@@ -1,0 +1,87 @@
+datason Enhanced Benchmark Suite
+==================================================
+Python version: 0.4.5
+NumPy available: True
+Pandas available: True
+
+=== Configuration Presets Performance ===
+
+--- Advanced Types ---
+ML Config           :   0.82ms ±  0.01ms (    1220 ops/sec)
+API Config          :   0.92ms ±  0.02ms (    1089 ops/sec)
+Strict Config       :  13.35ms ±  0.95ms (      75 ops/sec)
+Performance Config  :   0.92ms ±  0.02ms (    1090 ops/sec)
+Default (No Config) :   0.96ms ±  0.03ms (    1047 ops/sec)
+
+--- Pandas Data ---
+ML Config           :   4.82ms ±  0.10ms (     207 ops/sec)
+API Config          :   4.87ms ±  0.20ms (     206 ops/sec)
+Strict Config       :   4.90ms ±  0.24ms (     204 ops/sec)
+Performance Config  :   1.74ms ±  0.05ms (     574 ops/sec)
+Default (No Config) :   4.87ms ±  0.14ms (     205 ops/sec)
+
+=== Date Format Performance ===
+ISO Format          :   3.79ms ±  0.06ms
+Unix Timestamp      :   3.77ms ±  0.12ms
+Unix Milliseconds   :   3.97ms ±  0.07ms
+String Format       :   3.97ms ±  0.13ms
+Custom Format (%Y-%m-%d):   5.73ms ±  0.26ms
+
+=== NaN Handling Performance ===
+Convert to NULL     :   3.17ms ±  0.03ms
+Convert to String   :   3.38ms ±  0.07ms
+Keep Original       :   3.33ms ±  0.05ms
+Drop Values         :   3.43ms ±  0.07ms
+
+=== Type Coercion Performance ===
+Strict (Preserve All):   1.97ms ±  0.08ms
+Safe (Default)      :   1.64ms ±  0.05ms
+Aggressive (Simplify):   1.65ms ±  0.03ms
+
+=== DataFrame Orientations Performance ===
+
+--- Small DataFrame (100 rows) ---
+Records     :   0.21ms ±  0.01ms
+Split       :   0.18ms ±  0.01ms
+Index       :   0.21ms ±  0.01ms
+Dict        :   0.16ms ±  0.03ms
+List        :   0.17ms ±  0.01ms
+Values      :   0.05ms ±  0.00ms
+
+--- Medium DataFrame (1000 rows) ---
+Records     :   0.90ms ±  0.04ms
+Split       :  14.50ms ± 27.57ms
+Index       :   0.83ms ±  0.01ms
+Dict        :   0.65ms ±  0.02ms
+List        :   0.47ms ±  0.02ms
+Values      :   0.07ms ±  0.00ms
+
+--- Large DataFrame (5000 rows) ---
+Records     :   2.51ms ±  0.04ms
+Split       :   1.70ms ±  0.04ms
+Index       :   2.56ms ±  0.09ms
+Dict        :   1.77ms ±  0.02ms
+List        :   1.27ms ±  0.03ms
+Values      :   0.26ms ±  0.01ms
+
+=== Custom Serializers Performance ===
+No Custom Serializer     :   6.85ms ±  0.07ms
+Fast Custom Serializer   :   1.87ms ±  0.05ms
+Detailed Custom Serializer:   1.99ms ±  0.08ms
+
+=== Memory Usage Analysis ===
+Performance Config  : ~185.1KB serialized size
+Strict Config       : ~387.6KB serialized size
+NaN Drop Config     : ~302.8KB serialized size
+
+==================================================
+PERFORMANCE SUMMARY
+==================================================
+Fastest Config: Performance Config (1.74ms)
+Fastest Type Coercion: Safe (Default) (1.64ms)
+
+Configuration Recommendations:
+- For ML pipelines: Use get_ml_config() (optimized for numeric data)
+- For APIs: Use get_api_config() (human-readable, consistent)
+- For performance: Use get_performance_config() (minimal overhead)
+- For debugging: Use get_strict_config() (maximum information)

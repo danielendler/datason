@@ -595,9 +595,9 @@ Both scripts:
 
 | Date | Version | Change | Performance Impact |
 |------|---------|--------|-------------------|
-| 2025-05 | 0.1.4 | Configuration system added | 7x speedup possible with optimization |
-| 2025-06 | 0.1.4 | Baseline benchmarks updated | Current performance documented |
-| 2025-01 | 0.3.0 | **Pickle Bridge feature added** | **New: ML pickle-to-JSON conversion (2,318 ops/sec)** |
+| 2025-05-31 | 0.1.4 | Configuration system added | 7x speedup possible with optimization |
+| 2025-06-01 | 0.1.4 | Baseline benchmarks updated | Current performance documented |
+| 2025-05-30 | 0.3.0 | **Pickle Bridge feature added** | **New: ML pickle-to-JSON conversion (2,318 ops/sec)** |
 
 ## Running Benchmarks
 
@@ -635,5 +635,5 @@ pytest tests/test_performance.py -v
 
 ---
 
-*Last updated: December 2024*  
-*Benchmarks reflect datason v0.1.4 with enhanced configuration system*
+*Last updated: June 2, 2025*  
+*Benchmarks reflect datason v0.4.5 with enhanced configuration system*
