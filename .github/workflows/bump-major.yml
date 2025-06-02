@@ -159,11 +159,14 @@ jobs:
     - name: 📝 Commit Version Bump
       if: steps.changes_check.outputs.has_changes == 'true'
       run: |
-        git config --local user.email "action@github.com"
-        git config --local user.name "GitHub Action"
+        git config --global user.email "actions@github.com"
+        git config --global user.name "GitHub Actions"
         git add pyproject.toml
-        git commit -m "🚀 Bump major version to ${{ steps.next_version.outputs.next }}"
+        git commit -m "🚀 Bump major version to ${{ steps.next_version.outputs.next }} [skip ci]"
         git tag ${{ steps.next_version.outputs.tag }}
+
+        # Use the GITHUB_TOKEN for pushing
+        git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}
         git push origin main
         git push origin ${{ steps.next_version.outputs.tag }}
 
