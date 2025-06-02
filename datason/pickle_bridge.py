@@ -13,7 +13,7 @@ Features:
 """
 
 from pathlib import Path
-import pickle
+import pickle  # nosec B403
 from typing import Any, ClassVar, Dict, Optional, Set, Union
 import warnings
 

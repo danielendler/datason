@@ -88,6 +88,7 @@ class SerializationConfig:
         sort_keys: Whether to sort dictionary keys in output
         ensure_ascii: Whether to ensure ASCII output only
         check_if_serialized: Skip processing if object is already JSON-safe
+        include_type_hints: Include type metadata for perfect round-trip deserialization
     """
 
     # Date/time formatting
@@ -125,6 +126,9 @@ class SerializationConfig:
 
     # NEW: Performance optimization (addressing user feedback)
     check_if_serialized: bool = False
+
+    # NEW: Type metadata for round-trip serialization
+    include_type_hints: bool = False
 
 
 # Global default configuration

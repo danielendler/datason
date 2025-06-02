@@ -13,7 +13,7 @@ Features demonstrated:
 
 import json
 from pathlib import Path
-import pickle
+import pickle  # nosec B403
 import tempfile
 import time
 

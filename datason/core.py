@@ -151,6 +151,7 @@ def serialize(
                     not config.sort_keys
                     and config.nan_handling == NanHandling.NULL
                     and not config.custom_serializers
+                    and not config.include_type_hints  # NEW: Don't optimize if type hints are enabled
                     and config.max_depth >= 1000
                 )
             )  # Only optimize with reasonable depth limits
@@ -172,6 +173,7 @@ def serialize(
                 or (
                     config.nan_handling == NanHandling.NULL
                     and not config.custom_serializers
+                    and not config.include_type_hints  # NEW: Don't optimize if type hints are enabled
                     and config.max_depth >= 1000
                 )
             )  # Only optimize with reasonable depth limits
@@ -281,6 +283,11 @@ def _serialize_object(
             ):
                 continue
             result.append(serialized_value)
+
+        # NEW: Handle type metadata for tuples
+        if isinstance(obj, tuple) and config and config.include_type_hints:
+            return _create_type_metadata("tuple", result)
+
         return result
 
     # Handle numpy data types with normalization
@@ -298,10 +305,17 @@ def _serialize_object(
                     f"NumPy array size ({obj.size}) exceeds maximum. "
                     "This may indicate a resource exhaustion attempt."
                 )
-            return [
+
+            serialized_array = [
                 serialize(x, config, _depth + 1, _seen, _type_handler)
                 for x in obj.tolist()
             ]
+
+            # NEW: Handle type metadata for numpy arrays
+            if config and config.include_type_hints:
+                return _create_type_metadata("numpy.ndarray", serialized_array)
+
+            return serialized_array
 
     # Handle datetime with configurable format and output type
     if isinstance(obj, datetime):
@@ -314,18 +328,28 @@ def _serialize_object(
             return obj  # Return datetime object as-is
 
         # Handle format configuration for JSON-safe output
+        iso_string = None
         if config and hasattr(config, "date_format"):
             if config.date_format == DateFormat.ISO:
-                return obj.isoformat()
-            if config.date_format == DateFormat.UNIX:
+                iso_string = obj.isoformat()
+            elif config.date_format == DateFormat.UNIX:
                 return obj.timestamp()
-            if config.date_format == DateFormat.UNIX_MS:
+            elif config.date_format == DateFormat.UNIX_MS:
                 return int(obj.timestamp() * 1000)
-            if config.date_format == DateFormat.STRING:
+            elif config.date_format == DateFormat.STRING:
                 return str(obj)
-            if config.date_format == DateFormat.CUSTOM and config.custom_date_format:
+            elif config.date_format == DateFormat.CUSTOM and config.custom_date_format:
                 return obj.strftime(config.custom_date_format)
-        return obj.isoformat()  # Default to ISO format
+
+        # Default to ISO format
+        if iso_string is None:
+            iso_string = obj.isoformat()
+
+        # NEW: Handle type metadata for datetimes
+        if config and config.include_type_hints:
+            return _create_type_metadata("datetime", iso_string)
+
+        return iso_string
 
     # Handle pandas DataFrame with configurable orientation and output type
     if pd is not None and isinstance(obj, pd.DataFrame):
@@ -338,17 +362,26 @@ def _serialize_object(
             return obj  # Return DataFrame object as-is
 
         # Handle orientation configuration for JSON-safe output
+        serialized_df = None
         if config and hasattr(config, "dataframe_orient"):
             orient = config.dataframe_orient.value
             try:
                 # Special handling for VALUES orientation
                 if orient == "values":
-                    return obj.values.tolist()
-                return obj.to_dict(orient=orient)
+                    serialized_df = obj.values.tolist()
+                else:
+                    serialized_df = obj.to_dict(orient=orient)
             except Exception:
                 # Fall back to records if the specified orientation fails
-                return obj.to_dict(orient="records")
-        return obj.to_dict(orient="records")  # Default orientation
+                serialized_df = obj.to_dict(orient="records")
+        else:
+            serialized_df = obj.to_dict(orient="records")  # Default orientation
+
+        # NEW: Handle type metadata for DataFrames
+        if config and config.include_type_hints:
+            return _create_type_metadata("pandas.DataFrame", serialized_df)
+
+        return serialized_df
 
     # Handle pandas Series with configurable output type
     if pd is not None and isinstance(obj, pd.Series):
@@ -361,7 +394,16 @@ def _serialize_object(
             return obj  # Return Series object as-is
 
         # Default: convert to dict for JSON-safe output
-        return obj.to_dict()
+        serialized_series = obj.to_dict()
+
+        # NEW: Handle type metadata for Series with name preservation
+        if config and config.include_type_hints:
+            # Include series name if it exists
+            if obj.name is not None:
+                serialized_series = {"_series_name": obj.name, **serialized_series}
+            return _create_type_metadata("pandas.Series", serialized_series)
+
+        return serialized_series
 
     if pd is not None and isinstance(obj, (pd.Timestamp,)):
         if pd.isna(obj):
@@ -372,11 +414,25 @@ def _serialize_object(
 
     # Handle UUID
     if isinstance(obj, uuid.UUID):
-        return str(obj)
+        uuid_string = str(obj)
+
+        # NEW: Handle type metadata for UUIDs
+        if config and config.include_type_hints:
+            return _create_type_metadata("uuid.UUID", uuid_string)
+
+        return uuid_string
 
     # Handle set (convert to list for JSON compatibility)
     if isinstance(obj, set):
-        return [serialize(x, config, _depth + 1, _seen, _type_handler) for x in obj]
+        serialized_set = [
+            serialize(x, config, _depth + 1, _seen, _type_handler) for x in obj
+        ]
+
+        # NEW: Handle type metadata for sets
+        if config and config.include_type_hints:
+            return _create_type_metadata("set", serialized_set)
+
+        return serialized_set
 
     # Try ML serializer if available
     if _ml_serializer:
@@ -407,6 +463,15 @@ def _serialize_object(
         return str_repr
     except Exception:
         return f"<{type(obj).__name__} object>"
+
+
+def _create_type_metadata(type_name: str, value: Any) -> Dict[str, Any]:
+    """NEW: Create a type metadata wrapper for round-trip serialization."""
+    # Import here to avoid circular imports
+    type_metadata_key = "__datason_type__"
+    value_metadata_key = "__datason_value__"
+
+    return {type_metadata_key: type_name, value_metadata_key: value}
 
 
 def _is_already_serialized_dict(d: dict) -> bool:

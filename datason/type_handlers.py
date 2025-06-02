@@ -302,6 +302,15 @@ class TypeHandler:
             if obj_type in self.config.custom_serializers:
                 return self.config.custom_serializers[obj_type]
 
+        # NEW: Skip built-in handlers for types that support type metadata when enabled
+        if (
+            hasattr(self.config, "include_type_hints")
+            and self.config.include_type_hints
+            and isinstance(obj, (uuid.UUID, set))
+        ):
+            # Let core handlers handle these types for type metadata
+            return None
+
         # Built-in type handlers
         if isinstance(obj, decimal.Decimal):
             return self.handle_decimal

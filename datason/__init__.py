@@ -36,6 +36,7 @@ from .datetime_utils import (
     serialize_datetimes,
 )
 from .deserializers import (
+    auto_deserialize,
     deserialize,
     deserialize_to_pandas,
     parse_datetime_string,
@@ -116,6 +117,7 @@ __all__ = [  # noqa: RUF022
     "safe_float",
     "safe_int",
     # Deserialization
+    "auto_deserialize",
     "deserialize",
     "deserialize_to_pandas",
     "parse_datetime_string",
