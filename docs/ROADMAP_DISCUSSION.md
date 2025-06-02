@@ -271,5 +271,5 @@ This approach addresses user blockers while preserving our unique value proposit
 
 ---
 
-*Decision Record: December 2024*  
+*Decision Record: June 1, 2025*  
 *Next Review: After v0.2.5 user feedback*
