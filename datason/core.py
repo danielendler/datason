@@ -63,6 +63,10 @@ _STRING_CACHE_SIZE_LIMIT = 500  # Smaller cache for strings
 _UUID_STRING_CACHE: Dict[int, str] = {}  # Maps UUID object id to string
 _UUID_CACHE_SIZE_LIMIT = 100  # Small cache for common UUIDs
 
+# OPTIMIZATION: Collection processing cache for bulk operations
+_COLLECTION_COMPATIBILITY_CACHE: Dict[int, str] = {}  # Maps collection id to compatibility status
+_COLLECTION_CACHE_SIZE_LIMIT = 200  # Smaller cache for collections
+
 
 class SecurityError(Exception):
     """Raised when security limits are exceeded during serialization."""
@@ -364,21 +368,15 @@ def _serialize_object(
         ) and _is_json_compatible_dict(obj):
             return obj  # Already JSON-compatible
 
-        # Handle dict with optional key sorting
-        result = {}
-        for k, v in obj.items():
-            serialized_value = serialize(v, config, _depth + 1, _seen, _type_handler)
-            # Handle NaN dropping at collection level
-            if config and config.nan_handling == NanHandling.DROP and serialized_value is None and is_nan_like(v):
-                continue
-            result[k] = serialized_value
+        # OPTIMIZATION: Use homogeneous processing for better performance
+        result = _process_homogeneous_dict(obj, config, _depth, _seen, _type_handler)
 
         # Sort keys if configured
         if config and config.sort_keys:
             return dict(sorted(result.items()))
         return result
 
-    # OPTIMIZATION: Handle lists/tuples with early JSON detection
+    # OPTIMIZATION: Handle lists/tuples with enhanced homogeneous processing
     if type_category == "list":
         # For simple lists of JSON-basic types, check if we can skip processing
         if (
@@ -393,13 +391,8 @@ def _serialize_object(
                 return list(obj)  # Convert tuple to list for JSON
             return obj  # Already JSON-compatible list
 
-        result = []
-        for x in obj:
-            serialized_value = serialize(x, config, _depth + 1, _seen, _type_handler)
-            # Handle NaN dropping at collection level
-            if config and config.nan_handling == NanHandling.DROP and serialized_value is None and is_nan_like(x):
-                continue
-            result.append(serialized_value)
+        # OPTIMIZATION: Use homogeneous processing for better performance
+        result = _process_homogeneous_list(obj, config, _depth, _seen, _type_handler)
 
         # NEW: Handle type metadata for tuples
         if isinstance(obj, tuple) and config and config.include_type_hints:
@@ -1156,3 +1149,134 @@ def _get_cached_type_category_fast(obj_type: type) -> Optional[str]:
 
     _TYPE_CACHE[obj_type] = category
     return category
+
+
+def _is_homogeneous_collection(obj: Union[list, tuple, dict], sample_size: int = 20) -> Optional[str]:
+    """Check if a collection contains homogeneous types for bulk processing.
+
+    Returns:
+    - 'json_basic': All items are JSON-basic types
+    - 'single_type': All items are the same non-basic type
+    - 'mixed': Mixed types (requires individual processing)
+    - None: Unable to determine or too small
+    """
+    # OPTIMIZATION: Check cache first for collections we've seen before
+    obj_id = id(obj)
+    if obj_id in _COLLECTION_COMPATIBILITY_CACHE:
+        return _COLLECTION_COMPATIBILITY_CACHE[obj_id]
+
+    homogeneity_result = None
+
+    if isinstance(obj, dict):
+        if not obj:
+            homogeneity_result = "json_basic"
+        else:
+            # Sample values for type analysis
+            values = list(obj.values())
+            sample = values[:sample_size] if len(values) > sample_size else values
+
+            if not sample:
+                homogeneity_result = "json_basic"
+            elif all(_is_json_basic_type(v) for v in sample):
+                # Check if all values are JSON-basic types
+                homogeneity_result = "json_basic"
+            else:
+                # Check if all values are the same type
+                first_type = type(sample[0])
+                homogeneity_result = "single_type" if all(isinstance(v, first_type) for v in sample) else "mixed"
+
+    elif isinstance(obj, (list, tuple)):
+        if not obj:
+            homogeneity_result = "json_basic"
+        else:
+            # Sample items for type analysis
+            sample = obj[:sample_size] if len(obj) > sample_size else obj
+
+            if all(_is_json_basic_type(item) for item in sample):
+                # Check if all items are JSON-basic types
+                homogeneity_result = "json_basic"
+            else:
+                # Check if all items are the same type
+                first_type = type(sample[0])
+                homogeneity_result = "single_type" if all(isinstance(item, first_type) for item in sample) else "mixed"
+
+    # Cache the result if we have space
+    if homogeneity_result is not None and len(_COLLECTION_COMPATIBILITY_CACHE) < _COLLECTION_CACHE_SIZE_LIMIT:
+        _COLLECTION_COMPATIBILITY_CACHE[obj_id] = homogeneity_result
+
+    return homogeneity_result
+
+
+def _process_homogeneous_dict(
+    obj: dict,
+    config: Optional["SerializationConfig"],
+    _depth: int,
+    _seen: Set[int],
+    _type_handler: Optional[TypeHandler],
+) -> dict:
+    """Optimized processing for dictionaries with homogeneous values."""
+    # For JSON-basic values, we can skip individual processing
+    homogeneity = _is_homogeneous_collection(obj)
+
+    if homogeneity == "json_basic":
+        # All values are JSON-compatible, just return as-is
+        return obj
+
+    # For single-type collections, we can optimize the processing
+    result = {}
+    if homogeneity == "single_type" and len(obj) > 10:
+        # Batch process items of the same type
+        for k, v in obj.items():
+            # Use the optimized serialization path
+            serialized_value = serialize(v, config, _depth + 1, _seen, _type_handler)
+            # Handle NaN dropping at collection level
+            if config and config.nan_handling == NanHandling.DROP and serialized_value is None and is_nan_like(v):
+                continue
+            result[k] = serialized_value
+    else:
+        # Fall back to individual processing for mixed types
+        for k, v in obj.items():
+            serialized_value = serialize(v, config, _depth + 1, _seen, _type_handler)
+            # Handle NaN dropping at collection level
+            if config and config.nan_handling == NanHandling.DROP and serialized_value is None and is_nan_like(v):
+                continue
+            result[k] = serialized_value
+
+    return result
+
+
+def _process_homogeneous_list(
+    obj: Union[list, tuple],
+    config: Optional["SerializationConfig"],
+    _depth: int,
+    _seen: Set[int],
+    _type_handler: Optional[TypeHandler],
+) -> list:
+    """Optimized processing for lists/tuples with homogeneous items."""
+    # Check homogeneity
+    homogeneity = _is_homogeneous_collection(obj)
+
+    if homogeneity == "json_basic":
+        # All items are JSON-compatible, just convert tuple to list if needed
+        return list(obj) if isinstance(obj, tuple) else obj
+
+    # For single-type collections, we can optimize the processing
+    result = []
+    if homogeneity == "single_type" and len(obj) > 10:
+        # Batch process items of the same type
+        for x in obj:
+            serialized_value = serialize(x, config, _depth + 1, _seen, _type_handler)
+            # Handle NaN dropping at collection level
+            if config and config.nan_handling == NanHandling.DROP and serialized_value is None and is_nan_like(x):
+                continue
+            result.append(serialized_value)
+    else:
+        # Fall back to individual processing for mixed types
+        for x in obj:
+            serialized_value = serialize(x, config, _depth + 1, _seen, _type_handler)
+            # Handle NaN dropping at collection level
+            if config and config.nan_handling == NanHandling.DROP and serialized_value is None and is_nan_like(x):
+                continue
+            result.append(serialized_value)
+
+    return result
