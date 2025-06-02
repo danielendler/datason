@@ -254,6 +254,7 @@ def serialize(
         and hasattr(config, "check_if_serialized")
         and config.check_if_serialized
         and _depth == 0
+        and config.max_string_length >= MAX_STRING_LENGTH  # NEW: Don't optimize if string truncation might be needed
         and _is_json_serializable_basic_type(obj)
     ):
         return obj
@@ -305,6 +306,7 @@ def serialize(
                     and not config.custom_serializers
                     and not config.include_type_hints  # NEW: Don't optimize if type hints are enabled
                     and config.max_depth >= 1000
+                    and config.max_string_length >= MAX_STRING_LENGTH  # NEW: Don't optimize if string truncation might be needed
                 )
             )  # Only optimize with reasonable depth limits
             and _is_already_serialized_dict(obj)
@@ -327,6 +329,7 @@ def serialize(
                     and not config.custom_serializers
                     and not config.include_type_hints  # NEW: Don't optimize if type hints are enabled
                     and config.max_depth >= 1000
+                    and config.max_string_length >= MAX_STRING_LENGTH  # NEW: Don't optimize if string truncation might be needed
                 )
             )  # Only optimize with reasonable depth limits
             and _is_already_serialized_list(obj)
@@ -357,7 +360,10 @@ def serialize(
                     return obj
 
                 # Quick JSON compatibility check for small dicts
-                if len(obj) <= 5 and all(isinstance(k, str) and type(v) in _JSON_BASIC_TYPES for k, v in obj.items()):
+                if (len(obj) <= 5 and 
+                    all(isinstance(k, str) and type(v) in _JSON_BASIC_TYPES and 
+                        (type(v) is not str or len(v) <= max_string_length) 
+                        for k, v in obj.items())):
                     return obj
 
                 # Needs full dict processing
@@ -373,8 +379,9 @@ def serialize(
                 if not obj:
                     return [] if obj_type is _TYPE_TUPLE else obj
 
-                # Quick JSON compatibility check for small lists
-                if len(obj) <= 5 and all(type(item) in _JSON_BASIC_TYPES for item in obj):
+                # Quick JSON compatibility check for small lists (but only if type hints are not needed)
+                if (len(obj) <= 5 and all(type(item) in _JSON_BASIC_TYPES for item in obj) 
+                    and not (config and config.include_type_hints and obj_type is _TYPE_TUPLE)):
                     return list(obj) if obj_type is _TYPE_TUPLE else obj
 
                 # Needs full list processing
@@ -398,6 +405,14 @@ def _serialize_hot_path(obj: Any, config: Optional["SerializationConfig"], max_s
     This function inlines the most common operations to minimize function call overhead.
     Returns None if the object needs full processing.
     """
+    # OPTIMIZATION: Check if type hints are enabled - if so, skip hot path for containers
+    # that might need type metadata
+    if config and config.include_type_hints:
+        obj_type = type(obj)
+        # Skip hot path for tuples, numpy arrays, sets, and complex containers when type hints are enabled
+        if obj_type in (_TYPE_TUPLE, set) or (np is not None and isinstance(obj, np.ndarray)):
+            return None  # Let full processing handle type metadata
+
     # OPTIMIZATION: Inline type checking without function calls
     obj_type = type(obj)
 
@@ -435,7 +450,7 @@ def _serialize_hot_path(obj: Any, config: Optional["SerializationConfig"], max_s
         # Handle empty dict (very common)
         if not obj:
             return obj
-
+        
         # Handle small dicts with string keys and basic values (common in APIs)
         if len(obj) <= 3:
             # Quick check: all keys strings, all values basic JSON types
@@ -457,6 +472,8 @@ def _serialize_hot_path(obj: Any, config: Optional["SerializationConfig"], max_s
                             return None  # Let full processing handle the conversion
                         else:
                             return None  # Complex type, needs full processing
+                    elif v_type is _TYPE_STR and len(v) > max_string_length:
+                        return None  # String too long, needs truncation in full processing
                 # All checks passed - dict is JSON-compatible
                 return obj
             except (AttributeError, TypeError):
@@ -468,7 +485,7 @@ def _serialize_hot_path(obj: Any, config: Optional["SerializationConfig"], max_s
         # Handle empty list (very common)
         if not obj:
             return obj
-
+        
         # Handle small lists with basic JSON types (common in APIs)
         if len(obj) <= 5:
             # Quick check: all items are basic JSON types
@@ -488,6 +505,8 @@ def _serialize_hot_path(obj: Any, config: Optional["SerializationConfig"], max_s
                             return None  # Let full processing handle the conversion
                         else:
                             return None  # Complex type, needs full processing
+                    elif item_type is _TYPE_STR and len(item) > max_string_length:
+                        return None  # String too long, needs truncation in full processing
                 # All checks passed - list is JSON-compatible
                 return obj
             except (AttributeError, TypeError):
@@ -499,7 +518,7 @@ def _serialize_hot_path(obj: Any, config: Optional["SerializationConfig"], max_s
         # Handle empty tuple (less common but still worth optimizing)
         if not obj:
             return []  # Convert empty tuple to list
-
+        
         # Handle small tuples with basic JSON types
         if len(obj) <= 5:
             # Quick check: all items are basic JSON types
@@ -519,6 +538,8 @@ def _serialize_hot_path(obj: Any, config: Optional["SerializationConfig"], max_s
                             return None  # Let full processing handle the conversion
                         else:
                             return None  # Complex type, needs full processing
+                    elif item_type is _TYPE_STR and len(item) > max_string_length:
+                        return None  # String too long, needs truncation in full processing
                 # All checks passed - convert tuple to list
                 return list(obj)
             except (AttributeError, TypeError):
