@@ -113,44 +113,41 @@ jobs:
         python -m build
         ls -la dist/
 
-    - name: 🚀 Publish to PyPI
-      uses: pypa/gh-action-pypi-publish@release/v1
-
-    - name: 🎉 Create GitHub Release
-      uses: softprops/action-gh-release@v2
+    - name: 🚀 Trigger Release Workflow
+      uses: actions/github-script@v7
       with:
-        tag_name: ${{ steps.next_version.outputs.tag }}
-        name: "Release ${{ steps.next_version.outputs.tag }}"
-        body: |
-          ## 🩹 Patch Release ${{ steps.next_version.outputs.tag }}
+        script: |
+          // Trigger the existing release workflow that's already configured for PyPI
+          await github.rest.actions.createWorkflowDispatch({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            workflow_id: 'release.yml',
+            ref: 'main',
+            inputs: {
+              version: '${{ steps.next_version.outputs.tag }}',
+              prerelease: 'false'
+            }
+          });
 
-          ${{ github.event.inputs.release_notes || 'Patch release with bug fixes' }}
-
-          ### 📦 Installation
-          ```bash
-          pip install --upgrade datason
-          ```
-
-          ### 🔗 Links
-          - **📚 Documentation**: https://datason.readthedocs.io
-          - **🐛 Issues**: https://github.com/danielendler/datason/issues
-          - **💬 Discussions**: https://github.com/danielendler/datason/discussions
-
-          **Previous version**: ${{ steps.current_version.outputs.current }}
-          **New version**: ${{ steps.next_version.outputs.next }}
-        generate_release_notes: true
+          console.log('✅ Triggered release workflow for ${{ steps.next_version.outputs.tag }}');
 
     - name: ✅ Release Summary
       run: |
         cat >> $GITHUB_STEP_SUMMARY << 'EOF'
-        ## 🩹 Patch Release Completed!
+        ## 🩹 Patch Release Initiated!
 
         **Previous version**: `${{ steps.current_version.outputs.current }}`
         **New version**: `${{ steps.next_version.outputs.next }}`
-        **PyPI**: https://pypi.org/project/datason/
-        **Release**: https://github.com/danielendler/datason/releases/tag/${{ steps.next_version.outputs.tag }}
+        **Tag created**: `${{ steps.next_version.outputs.tag }}`
+
+        ### 🔄 Next Steps
+        The release workflow has been triggered and will handle:
+        - Building and publishing to PyPI
+        - Creating the GitHub release
+
+        **Monitor**: Check the Actions tab for the release workflow progress
 
         ### 🔗 Quick Links
-        - Install: `pip install --upgrade datason`
+        - PyPI: https://pypi.org/project/datason/ (will update shortly)
         - Documentation: https://datason.readthedocs.io
         EOF
