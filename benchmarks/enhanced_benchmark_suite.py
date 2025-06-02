@@ -325,9 +325,9 @@ def benchmark_dataframe_orientations():
         (DataFrameOrient.RECORDS, "Records"),
         (DataFrameOrient.SPLIT, "Split"),
         (DataFrameOrient.INDEX, "Index"),
-        (DataFrameOrient.COLUMNS, "Columns"),
+        (DataFrameOrient.DICT, "Dict"),
+        (DataFrameOrient.LIST, "List"),
         (DataFrameOrient.VALUES, "Values"),
-        (DataFrameOrient.TABLE, "Table"),
     ]
 
     results = {}
