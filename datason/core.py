@@ -4,10 +4,12 @@ This module contains the main serialize function that handles recursive
 serialization of complex Python data structures to JSON-compatible formats.
 """
 
+import json
 import uuid
 import warnings
 from datetime import datetime
-from typing import Any, Callable, Dict, Optional, Set, Union
+from pathlib import Path
+from typing import Any, Callable, Dict, Generator, Iterator, Optional, Set, Union
 
 try:
     import pandas as pd
@@ -480,3 +482,435 @@ def _is_json_serializable_basic_type(value: Any) -> bool:
         # Recursively check if nested list is serialized
         return _is_already_serialized_list(value)
     return False
+
+
+# NEW: v0.4.0 Chunked Processing & Streaming Capabilities
+
+
+class ChunkedSerializationResult:
+    """Result container for chunked serialization operations."""
+
+    def __init__(self, chunks: Iterator[Any], metadata: Dict[str, Any]):
+        """Initialize chunked result.
+
+        Args:
+            chunks: Iterator of serialized chunks
+            metadata: Metadata about the chunking operation
+        """
+        self.chunks = chunks
+        self.metadata = metadata
+
+    def to_list(self) -> list:
+        """Convert all chunks to a list (loads everything into memory)."""
+        return list(self.chunks)
+
+    def save_to_file(self, file_path: Union[str, Path], format: str = "jsonl") -> None:
+        """Save chunks to a file.
+
+        Args:
+            file_path: Path to save the chunks
+            format: Format to save ('jsonl' for JSON lines, 'json' for array)
+        """
+        file_path = Path(file_path)
+
+        with file_path.open("w") as f:
+            if format == "jsonl":
+                # JSON Lines format - one JSON object per line
+                for chunk in self.chunks:
+                    json.dump(chunk, f, ensure_ascii=False)
+                    f.write("\n")
+            elif format == "json":
+                # JSON array format
+                chunk_list = list(self.chunks)
+                json.dump({"chunks": chunk_list, "metadata": self.metadata}, f, ensure_ascii=False, indent=2)
+            else:
+                raise ValueError(f"Unsupported format: {format}. Use 'jsonl' or 'json'")
+
+
+def serialize_chunked(
+    obj: Any,
+    chunk_size: int = 1000,
+    config: Optional["SerializationConfig"] = None,
+    memory_limit_mb: Optional[int] = None,
+) -> ChunkedSerializationResult:
+    """Serialize large objects in memory-bounded chunks.
+
+    This function breaks large objects (lists, DataFrames, arrays) into smaller chunks
+    to enable processing of datasets larger than available memory.
+
+    Args:
+        obj: Object to serialize (typically list, DataFrame, or array)
+        chunk_size: Number of items per chunk
+        config: Serialization configuration
+        memory_limit_mb: Optional memory limit in MB (not enforced yet, for future use)
+
+    Returns:
+        ChunkedSerializationResult with iterator of serialized chunks
+
+    Examples:
+        >>> large_list = list(range(10000))
+        >>> result = serialize_chunked(large_list, chunk_size=100)
+        >>> chunks = result.to_list()  # Get all chunks
+        >>> len(chunks)  # 100 chunks of 100 items each
+        100
+
+        >>> # Save directly to file without loading all chunks
+        >>> result = serialize_chunked(large_data, chunk_size=1000)
+        >>> result.save_to_file("large_data.jsonl", format="jsonl")
+    """
+    if config is None and _config_available:
+        config = get_default_config()
+
+    # Determine chunking strategy based on object type
+    if isinstance(obj, (list, tuple)):
+        return _chunk_sequence(obj, chunk_size, config)
+    elif pd is not None and isinstance(obj, pd.DataFrame):
+        return _chunk_dataframe(obj, chunk_size, config)
+    elif np is not None and isinstance(obj, np.ndarray):
+        return _chunk_numpy_array(obj, chunk_size, config)
+    elif isinstance(obj, dict):
+        return _chunk_dict(obj, chunk_size, config)
+    else:
+        # For non-chunnable objects, return single chunk
+        single_chunk = serialize(obj, config)
+        metadata = {
+            "total_chunks": 1,
+            "chunk_size": chunk_size,
+            "object_type": type(obj).__name__,
+            "chunking_strategy": "single_object",
+        }
+        return ChunkedSerializationResult(iter([single_chunk]), metadata)
+
+
+def _chunk_sequence(
+    seq: Union[list, tuple], chunk_size: int, config: Optional["SerializationConfig"]
+) -> ChunkedSerializationResult:
+    """Chunk a sequence (list or tuple) into smaller pieces."""
+    total_items = len(seq)
+    total_chunks = (total_items + chunk_size - 1) // chunk_size  # Ceiling division
+
+    def chunk_generator():
+        for i in range(0, total_items, chunk_size):
+            chunk = seq[i : i + chunk_size]
+            yield serialize(chunk, config)
+
+    metadata = {
+        "total_chunks": total_chunks,
+        "total_items": total_items,
+        "chunk_size": chunk_size,
+        "object_type": type(seq).__name__,
+        "chunking_strategy": "sequence",
+    }
+
+    return ChunkedSerializationResult(chunk_generator(), metadata)
+
+
+def _chunk_dataframe(
+    df: "pd.DataFrame", chunk_size: int, config: Optional["SerializationConfig"]
+) -> ChunkedSerializationResult:
+    """Chunk a pandas DataFrame by rows."""
+    total_rows = len(df)
+    total_chunks = (total_rows + chunk_size - 1) // chunk_size
+
+    def chunk_generator():
+        for i in range(0, total_rows, chunk_size):
+            chunk_df = df.iloc[i : i + chunk_size]
+            yield serialize(chunk_df, config)
+
+    metadata = {
+        "total_chunks": total_chunks,
+        "total_rows": total_rows,
+        "total_columns": len(df.columns),
+        "chunk_size": chunk_size,
+        "object_type": "pandas.DataFrame",
+        "chunking_strategy": "dataframe_rows",
+        "columns": list(df.columns),
+    }
+
+    return ChunkedSerializationResult(chunk_generator(), metadata)
+
+
+def _chunk_numpy_array(
+    arr: "np.ndarray", chunk_size: int, config: Optional["SerializationConfig"]
+) -> ChunkedSerializationResult:
+    """Chunk a numpy array along the first axis."""
+    total_items = arr.shape[0] if arr.ndim > 0 else 1
+    total_chunks = (total_items + chunk_size - 1) // chunk_size
+
+    def chunk_generator():
+        if arr.ndim == 0:
+            # Scalar array
+            yield serialize(arr, config)
+        else:
+            for i in range(0, total_items, chunk_size):
+                chunk_arr = arr[i : i + chunk_size]
+                yield serialize(chunk_arr, config)
+
+    metadata = {
+        "total_chunks": total_chunks,
+        "total_items": total_items,
+        "chunk_size": chunk_size,
+        "object_type": "numpy.ndarray",
+        "chunking_strategy": "array_rows",
+        "shape": arr.shape,
+        "dtype": str(arr.dtype),
+    }
+
+    return ChunkedSerializationResult(chunk_generator(), metadata)
+
+
+def _chunk_dict(d: dict, chunk_size: int, config: Optional["SerializationConfig"]) -> ChunkedSerializationResult:
+    """Chunk a dictionary by grouping key-value pairs."""
+    items = list(d.items())
+    total_items = len(items)
+    total_chunks = (total_items + chunk_size - 1) // chunk_size
+
+    def chunk_generator():
+        for i in range(0, total_items, chunk_size):
+            chunk_items = items[i : i + chunk_size]
+            chunk_dict = dict(chunk_items)
+            yield serialize(chunk_dict, config)
+
+    metadata = {
+        "total_chunks": total_chunks,
+        "total_items": total_items,
+        "chunk_size": chunk_size,
+        "object_type": "dict",
+        "chunking_strategy": "dict_items",
+    }
+
+    return ChunkedSerializationResult(chunk_generator(), metadata)
+
+
+class StreamingSerializer:
+    """Context manager for streaming serialization to files.
+
+    Enables processing of datasets larger than available memory by writing
+    serialized data directly to files without keeping everything in memory.
+    """
+
+    def __init__(
+        self,
+        file_path: Union[str, Path],
+        config: Optional["SerializationConfig"] = None,
+        format: str = "jsonl",
+        buffer_size: int = 8192,
+    ):
+        """Initialize streaming serializer.
+
+        Args:
+            file_path: Path to output file
+            config: Serialization configuration
+            format: Output format ('jsonl' or 'json')
+            buffer_size: Write buffer size in bytes
+        """
+        self.file_path = Path(file_path)
+        self.config = config or (get_default_config() if _config_available else None)
+        self.format = format
+        self.buffer_size = buffer_size
+        self._file = None
+        self._items_written = 0
+        self._json_array_started = False
+
+    def __enter__(self) -> "StreamingSerializer":
+        """Enter context manager."""
+        self._file = self.file_path.open("w", buffering=self.buffer_size)
+
+        if self.format == "json":
+            # Start JSON array
+            self._file.write('{"data": [')
+            self._json_array_started = True
+
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Exit context manager."""
+        if self._file:
+            if self.format == "json" and self._json_array_started:
+                # Close JSON array and add metadata
+                self._file.write(f'], "metadata": {{"items_written": {self._items_written}}}}}')
+
+            self._file.close()
+            self._file = None
+
+    def write(self, obj: Any) -> None:
+        """Write a single object to the stream.
+
+        Args:
+            obj: Object to serialize and write
+        """
+        if not self._file:
+            raise RuntimeError("StreamingSerializer not in context manager")
+
+        serialized = serialize(obj, self.config)
+
+        if self.format == "jsonl":
+            # JSON Lines: one object per line
+            json.dump(serialized, self._file, ensure_ascii=False)
+            self._file.write("\n")
+        elif self.format == "json":
+            # JSON array format
+            if self._items_written > 0:
+                self._file.write(", ")
+            json.dump(serialized, self._file, ensure_ascii=False)
+        else:
+            raise ValueError(f"Unsupported format: {self.format}")
+
+        self._items_written += 1
+
+    def write_chunked(self, obj: Any, chunk_size: int = 1000) -> None:
+        """Write a large object using chunked serialization.
+
+        Args:
+            obj: Large object to chunk and write
+            chunk_size: Size of each chunk
+        """
+        chunked_result = serialize_chunked(obj, chunk_size, self.config)
+
+        for chunk in chunked_result.chunks:
+            self.write(chunk)
+
+
+def stream_serialize(
+    file_path: Union[str, Path],
+    config: Optional["SerializationConfig"] = None,
+    format: str = "jsonl",
+    buffer_size: int = 8192,
+) -> StreamingSerializer:
+    """Create a streaming serializer context manager.
+
+    Args:
+        file_path: Path to output file
+        config: Serialization configuration
+        format: Output format ('jsonl' or 'json')
+        buffer_size: Write buffer size in bytes
+
+    Returns:
+        StreamingSerializer context manager
+
+    Examples:
+        >>> with stream_serialize("large_data.jsonl") as stream:
+        ...     for item in large_dataset:
+        ...         stream.write(item)
+
+        >>> # Or write chunked data
+        >>> with stream_serialize("massive_data.jsonl") as stream:
+        ...     stream.write_chunked(massive_dataframe, chunk_size=1000)
+    """
+    return StreamingSerializer(file_path, config, format, buffer_size)
+
+
+def deserialize_chunked_file(
+    file_path: Union[str, Path], format: str = "jsonl", chunk_processor: Optional[Callable[[Any], Any]] = None
+) -> Generator[Any, None, None]:
+    """Deserialize a chunked file created with streaming serialization.
+
+    Args:
+        file_path: Path to the chunked file
+        format: File format ('jsonl' or 'json')
+        chunk_processor: Optional function to process each chunk
+
+    Yields:
+        Deserialized chunks from the file
+
+    Examples:
+        >>> # Process chunks one at a time (memory efficient)
+        >>> for chunk in deserialize_chunked_file("large_data.jsonl"):
+        ...     process_chunk(chunk)
+
+        >>> # Apply custom processing to each chunk
+        >>> def process_chunk(chunk):
+        ...     return [item * 2 for item in chunk]
+        >>>
+        >>> processed_chunks = list(deserialize_chunked_file(
+        ...     "data.jsonl",
+        ...     chunk_processor=process_chunk
+        ... ))
+    """
+    file_path = Path(file_path)
+
+    if format == "jsonl":
+        # JSON Lines format - one object per line
+        with file_path.open("r") as f:
+            for line in f:
+                line = line.strip()
+                if line:
+                    chunk = json.loads(line)
+                    if chunk_processor:
+                        chunk = chunk_processor(chunk)
+                    yield chunk
+
+    elif format == "json":
+        # JSON format with array
+        with file_path.open("r") as f:
+            data = json.load(f)
+            chunks = data.get("data", [])
+            for chunk in chunks:
+                if chunk_processor:
+                    chunk = chunk_processor(chunk)
+                yield chunk
+
+    else:
+        raise ValueError(f"Unsupported format: {format}. Use 'jsonl' or 'json'")
+
+
+def estimate_memory_usage(obj: Any, config: Optional["SerializationConfig"] = None) -> Dict[str, Any]:
+    """Estimate memory usage for serializing an object.
+
+    This is a rough estimation to help users decide on chunking strategies.
+
+    Args:
+        obj: Object to analyze
+        config: Serialization configuration
+
+    Returns:
+        Dictionary with memory usage estimates
+
+    Examples:
+        >>> import pandas as pd
+        >>> df = pd.DataFrame({'a': range(10000), 'b': range(10000)})
+        >>> stats = estimate_memory_usage(df)
+        >>> print(f"Estimated serialized size: {stats['estimated_serialized_mb']:.1f} MB")
+        >>> print(f"Recommended chunk size: {stats['recommended_chunk_size']}")
+    """
+    import sys
+
+    # Get basic object size
+    object_size_bytes = sys.getsizeof(obj)
+
+    # Estimate based on object type
+    if isinstance(obj, (list, tuple)) or pd is not None and isinstance(obj, pd.DataFrame):
+        item_count = len(obj)
+        estimated_item_size = object_size_bytes / max(item_count, 1)
+    elif np is not None and isinstance(obj, np.ndarray):
+        item_count = obj.shape[0] if obj.ndim > 0 else 1
+        estimated_item_size = object_size_bytes / max(item_count, 1)
+    elif isinstance(obj, dict):
+        item_count = len(obj)
+        estimated_item_size = object_size_bytes / max(item_count, 1)
+    else:
+        item_count = 1
+        estimated_item_size = object_size_bytes
+
+    # Serialization typically increases size by 1.5-3x for complex objects
+    serialization_overhead = 2.0
+    estimated_serialized_bytes = object_size_bytes * serialization_overhead
+
+    # Recommend chunk size to keep chunks under 50MB
+    target_chunk_size_mb = 50
+    target_chunk_size_bytes = target_chunk_size_mb * 1024 * 1024
+
+    if estimated_item_size > 0:
+        recommended_chunk_size = max(1, int(target_chunk_size_bytes / (estimated_item_size * serialization_overhead)))
+    else:
+        recommended_chunk_size = 1000  # Default fallback
+
+    return {
+        "object_type": type(obj).__name__,
+        "object_size_mb": object_size_bytes / (1024 * 1024),
+        "estimated_serialized_mb": estimated_serialized_bytes / (1024 * 1024),
+        "item_count": item_count,
+        "estimated_item_size_bytes": estimated_item_size,
+        "recommended_chunk_size": recommended_chunk_size,
+        "recommended_chunks": max(1, item_count // recommended_chunk_size),
+    }

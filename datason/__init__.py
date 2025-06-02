@@ -26,7 +26,16 @@ if sys.version_info < (3, 9):
     )
 
 from .converters import safe_float, safe_int
-from .core import SecurityError, serialize
+from .core import (
+    ChunkedSerializationResult,
+    SecurityError,
+    StreamingSerializer,
+    deserialize_chunked_file,
+    estimate_memory_usage,
+    serialize,
+    serialize_chunked,
+    stream_serialize,
+)
 from .data_utils import convert_string_method_votes
 from .datetime_utils import (
     convert_pandas_timestamps,
@@ -35,9 +44,14 @@ from .datetime_utils import (
     serialize_datetimes,
 )
 from .deserializers import (
+    TemplateDeserializationError,
+    TemplateDeserializer,
     auto_deserialize,
+    create_ml_round_trip_template,
     deserialize,
     deserialize_to_pandas,
+    deserialize_with_template,
+    infer_template_from_data,
     parse_datetime_string,
     parse_uuid_string,
     safe_deserialize,
@@ -86,6 +100,13 @@ __all__ = [  # noqa: RUF022
     "SecurityError",
     # Core serialization
     "serialize",
+    # NEW: Chunked processing and streaming (v0.4.0)
+    "serialize_chunked",
+    "ChunkedSerializationResult",
+    "stream_serialize",
+    "StreamingSerializer",
+    "deserialize_chunked_file",
+    "estimate_memory_usage",
     # Data conversion utilities
     "convert_pandas_timestamps",
     "convert_string_method_votes",
@@ -98,6 +119,12 @@ __all__ = [  # noqa: RUF022
     "parse_datetime_string",
     "parse_uuid_string",
     "safe_deserialize",
+    # NEW: Template-based deserialization (v0.4.5)
+    "deserialize_with_template",
+    "TemplateDeserializer",
+    "TemplateDeserializationError",
+    "infer_template_from_data",
+    "create_ml_round_trip_template",
     # Date/time utilities
     "ensure_dates",
     "ensure_timestamp",
