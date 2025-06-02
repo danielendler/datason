@@ -70,18 +70,27 @@ jobs:
     needs: cache-base
     runs-on: ubuntu-latest
     strategy:
-      # Allow parallel execution and don't fail fast
+      # Fail-fast strategy: Start fastest + slowest tests first
       fail-fast: false
-      max-parallel: 8  # Increased for more Python versions
+      max-parallel: 12  # Increased to ensure first batch (minimal + full) starts immediately
       matrix:
         python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
         dependency-set:
+          # BATCH 1: Start fastest + slowest simultaneously for fail-fast optimization
           - name: "minimal"
             packages: ""
             description: "Core functionality only (no optional dependencies)"
             test-pattern: "tests/test_core.py tests/test_deserializers.py tests/test_converters.py"
             cache-extra: ""
 
+          - name: "full"
+            packages: ""  # Will use dev dependencies
+            description: "All dependencies (full test suite)"
+            test-pattern: "tests/"
+            cache-extra: "dev"
+            use-dev: true
+
+          # BATCH 2: Medium-speed tests (start after first batch)
           - name: "with-numpy"
             packages: "numpy"
             description: "Core + NumPy support"
@@ -99,13 +108,6 @@ jobs:
             description: "Core + ML dependencies"
             test-pattern: "tests/test_core.py tests/test_deserializers.py tests/test_converters.py tests/test_ml_serializers.py"
             cache-extra: "ml"
-
-          - name: "full"
-            packages: ""  # Will use dev dependencies
-            description: "All dependencies (full test suite)"
-            test-pattern: "tests/"
-            cache-extra: "dev"
-            use-dev: true
         exclude:
           # Strategic test distribution for efficiency while maintaining coverage:
           # - Python 3.8: Only minimal tests (core compatibility validation)
