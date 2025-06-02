@@ -111,9 +111,14 @@ if _config_available:
     from .config import (  # noqa: F401
         get_api_config,
         get_default_config,
+        get_financial_config,
+        get_inference_config,
+        get_logging_config,
         get_ml_config,
         get_performance_config,
+        get_research_config,
         get_strict_config,
+        get_time_series_config,
         reset_default_config,
         set_default_config,
     )
@@ -141,6 +146,11 @@ if _config_available:
             "get_api_config",
             "get_strict_config",
             "get_performance_config",
+            "get_financial_config",
+            "get_time_series_config",
+            "get_inference_config",
+            "get_research_config",
+            "get_logging_config",
             # Type handling
             "TypeHandler",
             "is_nan_like",

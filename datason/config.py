@@ -219,3 +219,96 @@ def get_performance_config() -> SerializationConfig:
         preserve_complex=False,  # Skip complex preservation for speed
         sort_keys=False,  # Don't sort for speed
     )
+
+
+def get_financial_config() -> SerializationConfig:
+    """Get configuration optimized for financial ML workflows.
+
+    Returns:
+        Configuration with precise decimal handling and timestamp consistency
+    """
+    return SerializationConfig(
+        date_format=DateFormat.UNIX_MS,  # Precise timestamps for trading
+        dataframe_orient=DataFrameOrient.RECORDS,  # Standard format for financial data
+        nan_handling=NanHandling.NULL,  # Clean handling of missing market data
+        type_coercion=TypeCoercion.SAFE,  # Preserve financial precision
+        preserve_decimals=True,  # Critical for monetary values
+        preserve_complex=False,  # Financial data typically real-valued
+        sort_keys=True,  # Consistent output for financial reports
+        ensure_ascii=True,  # Safe for financial system integration
+        check_if_serialized=True,  # Performance for high-frequency data
+    )
+
+
+def get_time_series_config() -> SerializationConfig:
+    """Get configuration optimized for time series analysis workflows.
+
+    Returns:
+        Configuration optimized for temporal data and chronological ordering
+    """
+    return SerializationConfig(
+        date_format=DateFormat.ISO,  # Standard temporal format
+        dataframe_orient=DataFrameOrient.SPLIT,  # Efficient for time series data
+        nan_handling=NanHandling.NULL,  # Handle missing temporal observations
+        type_coercion=TypeCoercion.SAFE,  # Preserve temporal precision
+        preserve_decimals=True,  # Important for measurement precision
+        preserve_complex=False,  # Time series typically real-valued
+        sort_keys=True,  # Maintain temporal ordering
+        datetime_output=OutputType.JSON_SAFE,  # Standardized time representation
+    )
+
+
+def get_inference_config() -> SerializationConfig:
+    """Get configuration optimized for ML model inference workflows.
+
+    Returns:
+        Configuration with minimal overhead for production model serving
+    """
+    return SerializationConfig(
+        date_format=DateFormat.UNIX,  # Fast timestamp format
+        dataframe_orient=DataFrameOrient.VALUES,  # Minimal overhead format
+        nan_handling=NanHandling.NULL,  # Clean inference inputs
+        type_coercion=TypeCoercion.AGGRESSIVE,  # Maximum inference compatibility
+        preserve_decimals=False,  # Speed over precision for inference
+        preserve_complex=False,  # Inference typically real-valued
+        sort_keys=False,  # Skip sorting for speed
+        check_if_serialized=True,  # Maximum performance
+        include_type_hints=False,  # Minimal metadata for speed
+    )
+
+
+def get_research_config() -> SerializationConfig:
+    """Get configuration optimized for research and experimentation workflows.
+
+    Returns:
+        Configuration that preserves maximum information for research reproducibility
+    """
+    return SerializationConfig(
+        date_format=DateFormat.ISO,  # Human-readable timestamps
+        dataframe_orient=DataFrameOrient.RECORDS,  # Standard research format
+        nan_handling=NanHandling.NULL,  # Clean research data
+        type_coercion=TypeCoercion.SAFE,  # Preserve research data fidelity
+        preserve_decimals=True,  # Maintain precision for analysis
+        preserve_complex=True,  # Keep complex numbers for research
+        sort_keys=True,  # Consistent output for reproducibility
+        include_type_hints=True,  # Maximum metadata for reproducibility
+    )
+
+
+def get_logging_config() -> SerializationConfig:
+    """Get configuration optimized for production logging workflows.
+
+    Returns:
+        Configuration that is safe and efficient for production logging
+    """
+    return SerializationConfig(
+        date_format=DateFormat.ISO,  # Standard log timestamp format
+        dataframe_orient=DataFrameOrient.RECORDS,  # Readable log format
+        nan_handling=NanHandling.STRING,  # Explicit NaN representation in logs
+        type_coercion=TypeCoercion.SAFE,  # Safe logging without errors
+        preserve_decimals=False,  # Simplified logging format
+        preserve_complex=False,  # Keep logs simple
+        sort_keys=True,  # Consistent log structure
+        ensure_ascii=True,  # Safe for all logging systems
+        max_string_length=1000,  # Prevent log bloat
+    )

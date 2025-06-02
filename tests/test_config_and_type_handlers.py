@@ -15,12 +15,18 @@ from datason.config import (
     DataFrameOrient,
     DateFormat,
     NanHandling,
+    OutputType,
     SerializationConfig,
     TypeCoercion,
     get_api_config,
+    get_financial_config,
+    get_inference_config,
+    get_logging_config,
     get_ml_config,
     get_performance_config,
+    get_research_config,
     get_strict_config,
+    get_time_series_config,
 )
 from datason.type_handlers import (
     TypeHandler,
@@ -28,6 +34,12 @@ from datason.type_handlers import (
     is_nan_like,
     normalize_numpy_types,
 )
+
+# Optional pandas import for tests
+try:
+    import pandas as pd
+except ImportError:
+    pd = None
 
 # Test data setup
 Person = namedtuple("Person", ["name", "age", "city"])
@@ -81,6 +93,153 @@ class TestSerializationConfig:
         assert config.date_format == DateFormat.UNIX
         assert config.dataframe_orient == DataFrameOrient.VALUES
         assert config.sort_keys is False
+
+    def test_performance_config_behavior(self):
+        """Test performance config optimizations work as expected."""
+        config = get_performance_config()
+
+        # Should use fastest options
+        assert config.date_format == DateFormat.UNIX
+        assert config.dataframe_orient == DataFrameOrient.VALUES
+        assert not config.preserve_decimals  # Skip for speed
+        assert not config.preserve_complex  # Skip for speed
+        assert not config.sort_keys  # Skip for speed
+
+    def test_financial_config_precision(self):
+        """Test financial config preserves monetary precision."""
+        config = get_financial_config()
+
+        # Should preserve decimal precision for financial data
+        assert config.preserve_decimals is True
+        assert config.date_format == DateFormat.UNIX_MS  # Precise timestamps
+        assert config.ensure_ascii is True  # Safe for financial systems
+        assert config.check_if_serialized is True  # Performance for high-frequency
+
+        # Test with financial data
+        import datetime
+
+        financial_data = {"price": 123.456789, "timestamp": datetime.datetime.now(), "volume": 1000000}
+        result = datason.serialize(financial_data, config=config)
+
+        # Should preserve precision and use millisecond timestamps
+        assert isinstance(result["price"], float)
+        assert isinstance(result["timestamp"], int)  # Unix milliseconds
+        assert result["volume"] == 1000000
+
+    def test_time_series_config_temporal_handling(self):
+        """Test time series config handles temporal data appropriately."""
+        config = get_time_series_config()
+
+        # Should use formats optimal for time series
+        assert config.date_format == DateFormat.ISO  # Standard temporal format
+        assert config.dataframe_orient == DataFrameOrient.SPLIT  # Efficient structure
+        assert config.preserve_decimals is True  # Measurement precision
+        assert config.datetime_output == OutputType.JSON_SAFE
+
+        # Test with time series data
+        if pd is not None:
+            ts_data = pd.DataFrame(
+                {"timestamp": pd.date_range("2023-01-01", periods=3, freq="H"), "value": [1.1, 2.2, 3.3]}
+            )
+            result = datason.serialize(ts_data, config=config)
+
+            # Should use split orientation
+            assert "index" in result
+            assert "columns" in result
+            assert "data" in result
+
+    def test_inference_config_performance(self):
+        """Test inference config optimizes for model serving speed."""
+        config = get_inference_config()
+
+        # Should prioritize speed over precision
+        assert config.date_format == DateFormat.UNIX  # Fast format
+        assert config.dataframe_orient == DataFrameOrient.VALUES  # Minimal overhead
+        assert config.type_coercion == TypeCoercion.AGGRESSIVE  # Maximum compatibility
+        assert not config.preserve_decimals  # Speed over precision
+        assert not config.sort_keys  # Skip sorting
+        assert config.check_if_serialized is True  # Maximum performance
+        assert config.include_type_hints is False  # Minimal metadata
+
+        # Test with inference-like data
+        inference_data = {"features": [1.0, 2.0, 3.0], "model_version": "v1.2.3"}
+        result = datason.serialize(inference_data, config=config)
+
+        # Should be fast and minimal
+        assert result == inference_data  # Simple passthrough for simple data
+
+    def test_research_config_reproducibility(self):
+        """Test research config preserves maximum information."""
+        config = get_research_config()
+
+        # Should preserve maximum information
+        assert config.date_format == DateFormat.ISO  # Human-readable
+        assert config.preserve_decimals is True  # Maintain precision
+        assert config.preserve_complex is True  # Keep complex numbers
+        assert config.sort_keys is True  # Consistent output
+        assert config.include_type_hints is True  # Maximum metadata
+
+        # Test with research data
+        research_data = {
+            "experiment_id": "exp_001",
+            "results": [1.23456789, 2.34567890],
+            "metadata": {"version": "1.0"},
+        }
+        result = datason.serialize(research_data, config=config)
+
+        # Should preserve precision and include metadata
+        assert "experiment_id" in result
+        assert len(result["results"]) == 2
+
+    def test_logging_config_safety(self):
+        """Test logging config provides safe, readable output."""
+        config = get_logging_config()
+
+        # Should be safe for production logging
+        assert config.date_format == DateFormat.ISO  # Standard log format
+        assert config.nan_handling == NanHandling.STRING  # Explicit NaN in logs
+        assert config.ensure_ascii is True  # Safe for all log systems
+        assert config.max_string_length == 1000  # Prevent log bloat
+        assert not config.preserve_decimals  # Simplified format
+        assert not config.preserve_complex  # Keep logs simple
+
+        # Test with logging data
+        log_data = {
+            "level": "INFO",
+            "message": "Test log message",
+            "timestamp": "2023-01-01T12:00:00",
+            "long_string": "x" * 2000,  # Should be truncated
+        }
+        result = datason.serialize(log_data, config=config)
+
+        # Should handle long strings safely
+        assert len(result["long_string"]) <= 1000 + 20  # Account for truncation marker
+
+    def test_all_domain_configs_work(self):
+        """Test that all domain-specific configs can be instantiated and used."""
+        configs = [
+            ("financial", get_financial_config()),
+            ("time_series", get_time_series_config()),
+            ("inference", get_inference_config()),
+            ("research", get_research_config()),
+            ("logging", get_logging_config()),
+        ]
+
+        test_data = {"value": 123.45, "name": "test"}
+
+        for domain, config in configs:
+            # Should not raise any exceptions
+            result = datason.serialize(test_data, config=config)
+            assert isinstance(result, dict)
+            assert "value" in result
+            assert "name" in result
+
+            # All configs should produce valid JSON-serializable output
+            import json
+
+            json_str = json.dumps(result, default=str)
+            assert isinstance(json_str, str)
+            assert len(json_str) > 0
 
 
 class TestDateTimeHandling:
