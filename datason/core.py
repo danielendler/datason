@@ -844,7 +844,8 @@ def deserialize_chunked_file(
         # JSON format with array
         with file_path.open("r") as f:
             data = json.load(f)
-            chunks = data.get("data", [])
+            # Support both 'chunks' (from ChunkedSerializationResult) and 'data' (from StreamingSerializer)
+            chunks = data.get("chunks", data.get("data", []))
             for chunk in chunks:
                 if chunk_processor:
                     chunk = chunk_processor(chunk)

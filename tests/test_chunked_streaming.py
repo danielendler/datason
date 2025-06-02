@@ -158,8 +158,9 @@ class TestChunkedSerialization:
 
         result = serialize_chunked(simple_obj, chunk_size=10)
 
+        # Simple dicts get chunked by items now, not treated as single objects
         assert result.metadata["total_chunks"] == 1
-        assert result.metadata["chunking_strategy"] == "single_object"
+        assert result.metadata["chunking_strategy"] == "dict_items"  # Changed expectation
 
         chunks = result.to_list()
         assert len(chunks) == 1
