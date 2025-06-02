@@ -290,6 +290,14 @@ def detect_and_serialize_ml_object(obj: Any) -> Optional[Dict[str, Any]]:
     Returns:
         Serialized object or None if not an ML/AI object
     """
+
+    # Helper function to safely check attributes
+    def safe_hasattr(obj: Any, attr: str) -> bool:
+        try:
+            return hasattr(obj, attr)
+        except Exception:
+            return False
+
     # PyTorch tensors
     if torch is not None and isinstance(obj, torch.Tensor):
         return serialize_pytorch_tensor(obj)
@@ -297,15 +305,15 @@ def detect_and_serialize_ml_object(obj: Any) -> Optional[Dict[str, Any]]:
     # TensorFlow tensors
     if (
         tf is not None
-        and hasattr(obj, "numpy")
-        and hasattr(obj, "shape")
-        and hasattr(obj, "dtype")
+        and safe_hasattr(obj, "numpy")
+        and safe_hasattr(obj, "shape")
+        and safe_hasattr(obj, "dtype")
         and "tensorflow" in str(type(obj))
     ):
         return serialize_tensorflow_tensor(obj)
 
     # JAX arrays
-    if jax is not None and hasattr(obj, "shape") and hasattr(obj, "dtype") and "jax" in str(type(obj)):
+    if jax is not None and safe_hasattr(obj, "shape") and safe_hasattr(obj, "dtype") and "jax" in str(type(obj)):
         return serialize_jax_array(obj)
 
     # Scikit-learn models
@@ -313,7 +321,7 @@ def detect_and_serialize_ml_object(obj: Any) -> Optional[Dict[str, Any]]:
         return serialize_sklearn_model(obj)
 
     # Scipy sparse matrices
-    if scipy is not None and hasattr(obj, "tocoo") and "scipy.sparse" in str(type(obj)):
+    if scipy is not None and safe_hasattr(obj, "tocoo") and "scipy.sparse" in str(type(obj)):
         return serialize_scipy_sparse(obj)
 
     # PIL Images
@@ -321,7 +329,7 @@ def detect_and_serialize_ml_object(obj: Any) -> Optional[Dict[str, Any]]:
         return serialize_pil_image(obj)
 
     # HuggingFace tokenizers
-    if transformers is not None and hasattr(obj, "encode") and "transformers" in str(type(obj)):
+    if transformers is not None and safe_hasattr(obj, "encode") and "transformers" in str(type(obj)):
         return serialize_huggingface_tokenizer(obj)
 
     return None

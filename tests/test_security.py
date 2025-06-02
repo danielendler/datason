@@ -609,36 +609,16 @@ class TestNumpySecurityLimits:
         assert result == [1, 2, 3, 4, 5]
 
     def test_large_numpy_array_raises_error(self):
-        """Test that large numpy arrays raise SecurityError.
+        """Test that excessively large NumPy arrays are handled gracefully.
 
-        IMPLEMENTATION NOTES:
-        =====================
-        This test has been flaky due to several issues:
-
-        1. FAKE ARRAY APPROACH:
-           - We create a fake numpy array subclass that reports large size
-           - This avoids actually creating large arrays in memory
-           - But numpy subclassing can be tricky and inconsistent
-
-        2. EXCEPTION CATCHING ISSUES:
-           - The SecurityError is correctly raised by core.py
-           - But in full test suite runs, pytest.raises() sometimes fails to catch it
-           - This might be due to exception class identity issues or import paths
-
-        3. WHY THIS APPROACH STICKS:
-           - Using fake objects is the only way to test security without memory issues
-           - The core security logic IS working - it detects large sizes and raises SecurityError
-           - The test framework issue is separate from the actual security functionality
-
-        4. ALTERNATIVES TRIED:
-           - Real large arrays: causes memory issues and CI failures
-           - Mocking: too complex and doesn't test real numpy integration
-           - Skip in CI: doesn't test the security feature at all
+        KNOWN BEHAVIOR:
+        ===============
+        This test uses a fake array object that reports a large size but has minimal memory footprint.
+        The security logic correctly detects the large reported size and raises SecurityError.
         """
         np = pytest.importorskip("numpy")
 
-        # APPROACH: Fake numpy array that reports large size but uses minimal memory
-        # WHY THIS WORKS: Tests the actual security logic without memory overhead
+        # Create a fake array that reports large size but uses minimal memory
         class LargeFakeArray(np.ndarray):
             def __new__(cls, input_array, fake_size):
                 obj = np.asarray(input_array).view(cls)
@@ -647,38 +627,38 @@ class TestNumpySecurityLimits:
 
             @property
             def size(self):
-                # This is the key: report fake large size to trigger security check
                 return self._fake_size
 
-        # Create a fake array that reports being larger than the limit
-        actual_data = np.array([1, 2, 3, 4, 5])  # Only 5 elements in memory
+        # Create small actual array with fake large size
+        actual_data = np.array([1, 2, 3])  # Only 3 elements in memory
         fake_large_array = LargeFakeArray(actual_data, MAX_OBJECT_SIZE + 1000)
 
-        # EXPECTATION: SecurityError should be raised due to reported size
-        # FLAKY BEHAVIOR: Sometimes works individually, fails in full suite
-        # ROOT CAUSE: Likely test isolation or import path issues
+        # Use manual try/except pattern (like other working security tests in this file)
+        # because pytest.raises() sometimes fails to catch SecurityError in full suite
+        security_error_raised = False
+        caught_exception = None
+
         try:
-            with pytest.raises(SecurityError) as exc_info:
-                serialize(fake_large_array)
-            assert "NumPy array size" in str(exc_info.value)
-        except Exception:
-            # FALLBACK: If pytest.raises fails, manually check the exception
-            # This documents the actual behavior vs expected behavior
-            try:
-                serialize(fake_large_array)
-                pytest.fail("Expected SecurityError but none was raised")
-            except SecurityError as security_exc:
-                # The security logic IS working - SecurityError was raised
-                # Note: Using warnings instead of print for better test output
-                warnings.warn(
-                    f"SecurityError was raised correctly but pytest.raises failed to catch it: {security_exc}",
-                    stacklevel=2,
-                )
-                # Verify the exception message without assert in except block
-                if "NumPy array size" not in str(security_exc):
-                    pytest.fail(f"SecurityError message incorrect: {security_exc}")
-            except Exception as other_exc:
-                pytest.fail(f"Expected SecurityError, got {type(other_exc).__name__}: {other_exc}")
+            result = serialize(fake_large_array)
+            pytest.fail(f"Expected SecurityError but serialization succeeded: {result}")
+        except SecurityError as exc:
+            # This is the expected case - SecurityError was properly raised
+            security_error_raised = True
+            caught_exception = exc
+        except Exception as exc:
+            # Check if it's actually SecurityError with different import identity
+            from datason.core import SecurityError as FreshSecurityError
+
+            if isinstance(exc, FreshSecurityError):
+                security_error_raised = True
+                caught_exception = exc
+            else:
+                pytest.fail(f"Expected SecurityError, got {type(exc).__name__}: {exc}")
+
+        # Assert outside the except block
+        assert security_error_raised, "SecurityError should have been raised"
+        assert caught_exception is not None
+        assert "NumPy array size" in str(caught_exception)
 
     def test_numpy_string_truncation(self):
         """Test that large numpy strings are truncated."""
@@ -699,26 +679,8 @@ class TestNumpySecurityLimits:
     def test_memory_intensive_numpy_limits(self):
         """Test numpy limits with memory-intensive scenarios (local only).
 
-        IMPLEMENTATION NOTES:
-        =====================
-        This test is marked as intensive and skipped in CI because:
-
-        1. MEMORY CONCERNS:
-           - Even with fake objects, some test environments are very memory-constrained
-           - CI environments often have strict memory limits
-
-        2. SKIP STRATEGY:
-           - Skip in CI (SKIP_INTENSIVE=True) to avoid resource issues
-           - Run locally (SKIP_INTENSIVE=False) for comprehensive testing
-
-        3. WHY THIS APPROACH STICKS:
-           - Balances test coverage with resource constraints
-           - The basic security test above covers the core functionality
-           - This test provides additional confidence in local development
-
-        4. ALTERNATIVE REJECTED:
-           - Running this in CI caused frequent out-of-memory failures
-           - Reducing the test size made it redundant with the basic test
+        This test is marked as intensive and skipped in CI to avoid resource constraints.
+        It uses the same fake array approach to test security limits without memory overhead.
         """
         np = pytest.importorskip("numpy")
 
@@ -740,25 +702,32 @@ class TestNumpySecurityLimits:
         actual_data = np.array([1, 2, 3])  # Only 3 elements in memory
         fake_huge_array = LargeFakeArray(actual_data, MAX_OBJECT_SIZE + 10000)
 
-        # Same flaky behavior as basic test - use try/except approach
+        # Use manual try/except pattern (like other working security tests in this file)
+        # because pytest.raises() sometimes fails to catch SecurityError in full suite
+        security_error_raised = False
+        caught_exception = None
+
         try:
-            with pytest.raises(SecurityError) as exc_info:
-                serialize(fake_huge_array)
-            assert "NumPy array size" in str(exc_info.value)
-        except Exception:
-            # Fallback for when pytest.raises fails
-            try:
-                serialize(fake_huge_array)
-                pytest.fail("Expected SecurityError but none was raised")
-            except SecurityError as security_exc:
-                warnings.warn(
-                    f"SecurityError was raised correctly but pytest.raises failed: {security_exc}",
-                    stacklevel=2,
-                )
-                if "NumPy array size" not in str(security_exc):
-                    pytest.fail(f"SecurityError message incorrect: {security_exc}")
-            except Exception as other_exc:
-                pytest.fail(f"Expected SecurityError, got {type(other_exc).__name__}: {other_exc}")
+            result = serialize(fake_huge_array)
+            pytest.fail(f"Expected SecurityError but serialization succeeded: {result}")
+        except SecurityError as exc:
+            # This is the expected case - SecurityError was properly raised
+            security_error_raised = True
+            caught_exception = exc
+        except Exception as exc:
+            # Check if it's actually SecurityError with different import identity
+            from datason.core import SecurityError as FreshSecurityError
+
+            if isinstance(exc, FreshSecurityError):
+                security_error_raised = True
+                caught_exception = exc
+            else:
+                pytest.fail(f"Expected SecurityError, got {type(exc).__name__}: {exc}")
+
+        # Assert outside the except block
+        assert security_error_raised, "SecurityError should have been raised"
+        assert caught_exception is not None
+        assert "NumPy array size" in str(caught_exception)
 
 
 class TestPandasSecurityLimits:
