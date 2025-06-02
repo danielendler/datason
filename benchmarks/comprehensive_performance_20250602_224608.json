@@ -358,28 +358,5 @@
       "\ud83d\udd25 CRITICAL: 47.2x slower than OrJSON. Consider Rust core for JSON operations (Phase 4).",
       "\ud83d\udce6 MEDIUM: 15.4x slower than pickle for complex objects. Consider binary serialization options."
     ]
-  },
-  "version_info": {
-    "timestamp": "2025-06-02T20:46:08.409372+00:00",
-    "datason_version": "0.4.5",
-    "python_version": "3.12.0 (main, Feb 22 2025, 21:43:18) [Clang 16.0.0 (clang-1600.0.26.6)]",
-    "git_info": {
-      "commit": "de7fd6f701d5bb78591fd0f08873a58267db4b87",
-      "branch": "performance-deep-dive-investigation",
-      "has_uncommitted_changes": true,
-      "status": "M benchmarks/results/latest.json\n M datason/core.py\n?? PHASE_2_OPTIMIZATION_PLAN.md\n?? benchmarks/comprehensive_performance_20250602_224237.json\n?? benchmarks/comprehensive_performance_20250602_224345"
-    },
-    "dependencies": {
-      "numpy": "1.26.3",
-      "pandas": "2.2.3",
-      "orjson": "3.10.18",
-      "ujson": "5.10.0",
-      "msgpack": [
-        1,
-        1,
-        0
-      ]
-    }
-  },
-  "analysis_type": "comprehensive"
+  }
 }

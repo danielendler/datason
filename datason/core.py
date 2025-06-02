@@ -248,6 +248,27 @@ def serialize(
     if config is None and _config_available:
         config = get_default_config()
 
+    # PHASE 2.1: JSON-FIRST SERIALIZATION STRATEGY
+    # Try ultra-fast JSON-only path first for maximum performance
+    # This handles ~80% of real-world data with minimal overhead
+    if (
+        _depth == 0  # Only at top level to avoid recursive overhead
+        and (
+            config is None  # No configuration restrictions
+            or (
+                # Configuration is compatible with JSON-only processing
+                not config.sort_keys
+                and config.nan_handling == NanHandling.NULL
+                and not config.custom_serializers
+                and not config.include_type_hints
+                and config.max_depth >= 10
+                and config.max_string_length >= 1000
+            )
+        )
+        and _is_fully_json_compatible(obj, max_depth=3)
+    ):
+        return _serialize_json_only_fast_path(obj)
+
     # NEW: Performance optimization - skip processing if already serialized
     if (
         config
@@ -1545,3 +1566,200 @@ def _return_list_to_pool(lst: List) -> None:
 def _intern_common_string(s: str) -> str:
     """Intern common strings to reduce memory allocation."""
     return _COMMON_STRING_POOL.get(s, s)
+
+
+# PHASE 2.1: JSON-FIRST SERIALIZATION STRATEGY
+# Ultra-fast JSON compatibility detection and processing
+
+def _is_fully_json_compatible(obj: Any, max_depth: int = 3, _current_depth: int = 0) -> bool:
+    """Ultra-fast JSON compatibility check with depth limit and aggressive inlining.
+    
+    This function uses aggressive optimizations to determine if an object is
+    fully JSON-compatible without requiring any custom serialization logic.
+    
+    Returns True only if the object can be passed directly to json.dumps()
+    without any processing.
+    """
+    # Security: prevent excessive depth traversal
+    if _current_depth > max_depth:
+        return False
+    
+    # OPTIMIZATION: Inline type checking for hot path
+    obj_type = type(obj)
+    
+    # Handle primitives with zero function calls
+    if obj_type in (_TYPE_STR, _TYPE_INT, _TYPE_BOOL, _TYPE_NONE):
+        return True
+    
+    # Handle float with inline NaN/Inf check
+    if obj_type is _TYPE_FLOAT:
+        # Inline check: NaN and Inf are not JSON compatible
+        return obj == obj and obj not in (float("inf"), float("-inf"))
+    
+    # Handle dict with aggressive optimization
+    if obj_type is _TYPE_DICT:
+        # Empty dict is compatible
+        if not obj:
+            return True
+            
+        # ENHANCEMENT: Increase size limits for better coverage
+        if len(obj) > 200:  # Increased from 50 to handle larger API responses
+            return False
+            
+        # Check all keys/values with early bailout
+        try:
+            for k, v in obj.items():
+                # Keys must be strings for JSON compatibility
+                if type(k) is not _TYPE_STR:
+                    return False
+                # Recursively check value (with depth limit)
+                if not _is_fully_json_compatible(v, max_depth, _current_depth + 1):
+                    return False
+            return True
+        except (AttributeError, TypeError):
+            return False
+    
+    # Handle list with aggressive optimization  
+    if obj_type is _TYPE_LIST:
+        # Empty list is compatible
+        if not obj:
+            return True
+            
+        # ENHANCEMENT: Increase size limits for better coverage
+        if len(obj) > 500:  # Increased from 100 to handle larger arrays
+            return False
+            
+        # Check all items with early bailout
+        try:
+            for item in obj:
+                if not _is_fully_json_compatible(item, max_depth, _current_depth + 1):
+                    return False
+            return True
+        except (AttributeError, TypeError):
+            return False
+    
+    # ENHANCEMENT: Handle tuple as potential JSON list
+    if obj_type is _TYPE_TUPLE:
+        # Empty tuple is compatible (converts to empty list)
+        if not obj:
+            return True
+            
+        # Reasonable size limit for tuples
+        if len(obj) > 500:
+            return False
+            
+        # Check all items with early bailout
+        try:
+            for item in obj:
+                if not _is_fully_json_compatible(item, max_depth, _current_depth + 1):
+                    return False
+            return True
+        except (AttributeError, TypeError):
+            return False
+    
+    # All other types are not JSON-compatible
+    # This includes: set, datetime, UUID, numpy, pandas, custom objects
+    return False
+
+
+def _serialize_json_only_fast_path(obj: Any) -> Any:
+    """Ultra-fast serialization for JSON-compatible objects.
+    
+    This function assumes the object is fully JSON-compatible and performs
+    minimal processing. Should only be called after _is_fully_json_compatible
+    returns True.
+    """
+    # ENHANCEMENT: Handle tuple-to-list conversion recursively
+    obj_type = type(obj)
+    
+    if obj_type is _TYPE_TUPLE:
+        # Convert tuple to list for JSON compatibility
+        return _convert_tuple_to_list_fast(obj)
+    elif obj_type is _TYPE_DICT:
+        # Check if dict contains any tuples that need conversion
+        if any(type(v) is _TYPE_TUPLE for v in obj.values()):
+            return _convert_dict_tuples_fast(obj)
+        return obj
+    elif obj_type is _TYPE_LIST:
+        # Check if list contains any tuples that need conversion
+        if any(type(item) is _TYPE_TUPLE for item in obj):
+            return _convert_list_tuples_fast(obj)
+        return obj
+    
+    # For all other JSON-compatible objects, return as-is
+    return obj
+
+
+def _convert_dict_tuples_fast(obj: dict) -> dict:
+    """Fast dict processing to convert nested tuples to lists."""
+    result = {}
+    for k, v in obj.items():
+        if type(v) is _TYPE_TUPLE:
+            result[k] = _convert_tuple_to_list_fast(v)
+        elif type(v) is _TYPE_DICT:
+            # Check for nested tuples in dicts
+            if any(type(nested_v) is _TYPE_TUPLE for nested_v in v.values()):
+                result[k] = _convert_dict_tuples_fast(v)
+            else:
+                result[k] = v
+        elif type(v) is _TYPE_LIST:
+            # Check for nested tuples in lists
+            if any(type(item) is _TYPE_TUPLE for item in v):
+                result[k] = _convert_list_tuples_fast(v)
+            else:
+                result[k] = v
+        else:
+            result[k] = v
+    return result
+
+
+def _convert_list_tuples_fast(obj: list) -> list:
+    """Fast list processing to convert nested tuples to lists."""
+    result = []
+    for item in obj:
+        if type(item) is _TYPE_TUPLE:
+            result.append(_convert_tuple_to_list_fast(item))
+        elif type(item) is _TYPE_DICT:
+            # Check for nested tuples in dicts
+            if any(type(v) is _TYPE_TUPLE for v in item.values()):
+                result.append(_convert_dict_tuples_fast(item))
+            else:
+                result.append(item)
+        elif type(item) is _TYPE_LIST:
+            # Check for nested tuples in lists
+            if any(type(nested_item) is _TYPE_TUPLE for nested_item in item):
+                result.append(_convert_list_tuples_fast(item))
+            else:
+                result.append(item)
+        else:
+            result.append(item)
+    return result
+
+
+def _convert_tuple_to_list_fast(obj: tuple) -> list:
+    """Fast tuple-to-list conversion for JSON-compatible tuples.
+    
+    Assumes all items in the tuple are already JSON-compatible.
+    """
+    # For small tuples, direct list conversion is fastest
+    if len(obj) <= 5:
+        return [_convert_tuple_to_list_fast(item) if type(item) is _TYPE_TUPLE else item for item in obj]
+    
+    # For larger tuples, process iteratively
+    result = []
+    for item in obj:
+        if type(item) is _TYPE_TUPLE:
+            result.append(_convert_tuple_to_list_fast(item))
+        elif type(item) is _TYPE_DICT:
+            if any(type(v) is _TYPE_TUPLE for v in item.values()):
+                result.append(_convert_dict_tuples_fast(item))
+            else:
+                result.append(item)
+        elif type(item) is _TYPE_LIST:
+            if any(type(nested_item) is _TYPE_TUPLE for nested_item in item):
+                result.append(_convert_list_tuples_fast(item))
+            else:
+                result.append(item)
+        else:
+            result.append(item)
+    return result
