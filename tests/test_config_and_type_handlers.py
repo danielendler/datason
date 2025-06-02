@@ -139,7 +139,7 @@ class TestSerializationConfig:
         # Test with time series data
         if pd is not None:
             ts_data = pd.DataFrame(
-                {"timestamp": pd.date_range("2023-01-01", periods=3, freq="H"), "value": [1.1, 2.2, 3.3]}
+                {"timestamp": pd.date_range("2023-01-01", periods=3, freq="h"), "value": [1.1, 2.2, 3.3]}
             )
             result = datason.serialize(ts_data, config=config)
 

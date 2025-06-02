@@ -87,7 +87,7 @@ def demonstrate_time_series_config():
 
     if pd is not None:
         # Create sample time series data
-        dates = pd.date_range("2023-01-01", periods=24, freq="H")
+        dates = pd.date_range("2023-01-01", periods=24, freq="h")
         ts_data = pd.DataFrame(
             {
                 "timestamp": dates,
