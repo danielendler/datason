@@ -1,0 +1,5 @@
+This is a test file to verify our smart bump workflow is working correctly.
+
+Current timestamp: $(date)
+
+The workflow should detect this change and proceed with bumping from 0.3.2 to 0.3.3
