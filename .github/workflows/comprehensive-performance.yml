@@ -1,0 +1,300 @@
+name: 🔬 Comprehensive Performance Analysis
+
+on:
+  workflow_dispatch:
+    inputs:
+      test_scope:
+        description: 'Test scope'
+        required: true
+        default: 'standard'
+        type: choice
+        options:
+          - standard
+          - with-ml
+          - full-competitive
+      save_results:
+        description: 'Save results as benchmark reference'
+        required: false
+        default: false
+        type: boolean
+  schedule:
+    # Run monthly comprehensive analysis
+    - cron: '0 2 1 * *'  # First day of month at 2 AM UTC
+  push:
+    branches: [ main ]
+    paths:
+      - 'benchmarks/comprehensive_performance_suite.py'
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+env:
+  PYTHONUNBUFFERED: 1
+
+jobs:
+  comprehensive-performance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      matrix:
+        python-version: ["3.11"]
+        test-config:
+          - name: "minimal"
+            deps: ""
+            description: "Core datason performance"
+          - name: "with-ml"
+            deps: "numpy pandas scikit-learn torch --index-url https://download.pytorch.org/whl/cpu"
+            description: "ML library integration performance"
+          - name: "competitive"
+            deps: "numpy pandas orjson ujson msgpack"
+            description: "Competitive analysis vs other libraries"
+
+    name: "🔬 ${{ matrix.test-config.name }} (Python ${{ matrix.python-version }})"
+
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+
+    - name: 🐍 Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: 💾 Cache dependencies
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/pip
+        key: comprehensive-${{ runner.os }}-py${{ matrix.python-version }}-${{ matrix.test-config.name }}-${{ hashFiles('**/pyproject.toml') }}
+        restore-keys: |
+          comprehensive-${{ runner.os }}-py${{ matrix.python-version }}-${{ matrix.test-config.name }}-
+          comprehensive-${{ runner.os }}-py${{ matrix.python-version }}-
+
+    - name: 📦 Install datason
+      run: |
+        python -m pip install --upgrade pip
+        pip install -e .
+
+    - name: 📦 Install test dependencies
+      if: matrix.test-config.deps != ''
+      run: |
+        pip install ${{ matrix.test-config.deps }}
+
+    - name: 📦 Install benchmarking dependencies
+      run: |
+        pip install -r benchmarks/requirements-benchmarking.txt || echo "Some benchmarking dependencies failed to install"
+
+    - name: 📦 Install competitive libraries (if requested)
+      if: github.event.inputs.test_scope == 'full-competitive' || matrix.test-config.name == 'competitive'
+      run: |
+        # Additional competitive libraries for full testing
+        pip install torch --index-url https://download.pytorch.org/whl/cpu || echo "PyTorch failed to install"
+        pip install scikit-learn || echo "Scikit-learn failed to install"
+
+    - name: 🔍 Show installed packages
+      run: pip list
+
+    - name: 🚀 Run comprehensive performance tests
+      run: |
+        cd benchmarks
+        python comprehensive_performance_suite.py
+      env:
+        TEST_CONFIG: ${{ matrix.test-config.name }}
+
+    - name: 📊 Generate performance report
+      run: |
+        cd benchmarks
+        python -c "
+        import json
+        import glob
+        import os
+        from datetime import datetime
+
+        # Find the most recent comprehensive results
+        result_files = sorted(glob.glob('comprehensive_performance_*.json'))
+        if not result_files:
+            print('No comprehensive results found')
+            exit(0)
+
+        with open(result_files[-1], 'r') as f:
+            results = json.load(f)
+
+        # Create GitHub Actions summary
+        with open(os.environ['GITHUB_STEP_SUMMARY'], 'w') as f:
+            f.write('# 🔬 Comprehensive Performance Analysis\n\n')
+            f.write(f'**Configuration**: ${{ matrix.test-config.description }}\n\n')
+
+            # ML Libraries status
+            ml_libs = results['metadata'].get('ml_libraries', {})
+            f.write('## 📚 Available Libraries\n\n')
+            if ml_libs:
+                for lib, version in ml_libs.items():
+                    f.write(f'- **{lib}**: {version}\n')
+            else:
+                f.write('- No ML libraries available\n')
+
+            # Competitive libraries
+            comp_libs = results['metadata'].get('competitive_libs', {})
+            if comp_libs:
+                f.write('\n## ⚔️ Competitive Libraries\n\n')
+                for lib, version in comp_libs.items():
+                    f.write(f'- **{lib}**: {version}\n')
+
+            # Competitive analysis
+            comp_analysis = results.get('competitive_analysis', {})
+            competitors = comp_analysis.get('datason_vs_competitors', {})
+
+            if competitors:
+                f.write('\n## 📊 Performance vs Competitors\n\n')
+                f.write('| Library | Avg Slowdown | Best Case | Worst Case | Tests |\n')
+                f.write('|---------|--------------|-----------|------------|-------|\n')
+
+                for competitor, metrics in competitors.items():
+                    f.write(f'| {competitor} | {metrics["average_slowdown_factor"]:.1f}x | {metrics["best_case"]:.1f}x | {metrics["worst_case"]:.1f}x | {metrics["test_count"]} |\n')
+
+            # Recommendations
+            recommendations = comp_analysis.get('recommendations', [])
+            if recommendations:
+                f.write('\n## 💡 Recommendations\n\n')
+                for rec in recommendations:
+                    f.write(f'- {rec}\n')
+
+            # Test coverage
+            f.write('\n## 🔬 Test Coverage\n\n')
+            ml_tests = len(results.get('ml_benchmarks', {}))
+            complex_tests = len(results.get('complex_data_benchmarks', {}))
+            f.write(f'- **ML Integration Tests**: {ml_tests}\n')
+            f.write(f'- **Complex Data Tests**: {complex_tests}\n')
+            f.write(f'- **Total Scenarios**: {ml_tests + complex_tests}\n')
+        "
+
+    - name: 💾 Upload comprehensive results
+      uses: actions/upload-artifact@v4
+      with:
+        name: comprehensive-results-${{ matrix.test-config.name }}-${{ github.run_id }}
+        path: |
+          benchmarks/comprehensive_performance_*.json
+        retention-days: 180  # Keep longer for trend analysis
+
+    - name: 📈 Create performance comparison comment (PR only)
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          const path = require('path');
+
+          // Find comprehensive results
+          const resultsDir = 'benchmarks/';
+          const files = fs.readdirSync(resultsDir).filter(f => f.startsWith('comprehensive_performance_'));
+
+          if (files.length === 0) {
+            console.log('No comprehensive results found');
+            return;
+          }
+
+          const resultsFile = path.join(resultsDir, files[files.length - 1]);
+          const results = JSON.parse(fs.readFileSync(resultsFile, 'utf8'));
+
+          const competitors = results.competitive_analysis?.datason_vs_competitors || {};
+
+          let comment = `## 🔬 Comprehensive Performance Analysis (${{ matrix.test-config.name }})\n\n`;
+
+          if (Object.keys(competitors).length > 0) {
+            comment += `### Performance vs Competitors\n\n`;
+            comment += `| Library | Average Slowdown | Range |\n`;
+            comment += `|---------|------------------|-------|\n`;
+
+            for (const [lib, metrics] of Object.entries(competitors)) {
+              comment += `| ${lib} | ${metrics.average_slowdown_factor.toFixed(1)}x | ${metrics.best_case.toFixed(1)}x - ${metrics.worst_case.toFixed(1)}x |\n`;
+            }
+
+            const recommendations = results.competitive_analysis?.recommendations || [];
+            if (recommendations.length > 0) {
+              comment += `\n### Recommendations\n\n`;
+              recommendations.forEach(rec => {
+                comment += `- ${rec}\n`;
+              });
+            }
+          } else {
+            comment += `No competitive comparison data available for this configuration.\n`;
+          }
+
+          // Only comment on PRs
+          if (context.eventName === 'pull_request') {
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+          }
+
+  # Aggregate results across all configurations
+  aggregate-results:
+    runs-on: ubuntu-latest
+    needs: comprehensive-performance
+    if: always()
+
+    steps:
+    - name: 📥 Download all results
+      uses: actions/download-artifact@v4
+      with:
+        path: results/
+        pattern: comprehensive-results-*
+
+    - name: 📊 Aggregate and analyze results
+      run: |
+        python -c "
+        import json
+        import os
+        import glob
+        from datetime import datetime
+
+        # Collect all result files
+        all_results = {}
+        for config_dir in glob.glob('results/comprehensive-results-*'):
+            config_name = os.path.basename(config_dir).replace('comprehensive-results-', '').split('-')[0]
+            result_files = glob.glob(os.path.join(config_dir, 'comprehensive_performance_*.json'))
+
+            if result_files:
+                with open(result_files[0], 'r') as f:
+                    all_results[config_name] = json.load(f)
+
+        # Create aggregated summary
+        summary = {
+            'timestamp': datetime.now().isoformat(),
+            'configurations': list(all_results.keys()),
+            'competitive_summary': {},
+            'ml_library_coverage': {},
+        }
+
+        # Aggregate competitive data
+        for config, results in all_results.items():
+            competitors = results.get('competitive_analysis', {}).get('datason_vs_competitors', {})
+            for lib, metrics in competitors.items():
+                if lib not in summary['competitive_summary']:
+                    summary['competitive_summary'][lib] = []
+                summary['competitive_summary'][lib].append({
+                    'config': config,
+                    'slowdown': metrics['average_slowdown_factor']
+                })
+
+        # Save aggregated results
+        with open('aggregated_comprehensive_results.json', 'w') as f:
+            json.dump(summary, f, indent=2)
+
+        print('📊 Aggregated Results Summary:')
+        print(f'Configurations tested: {len(all_results)}')
+        for lib, configs in summary['competitive_summary'].items():
+            avg_slowdown = sum(c['slowdown'] for c in configs) / len(configs)
+            print(f'{lib}: {avg_slowdown:.1f}x slower (average across configs)')
+        "
+
+    - name: 💾 Upload aggregated results
+      uses: actions/upload-artifact@v4
+      with:
+        name: aggregated-comprehensive-results-${{ github.run_id }}
+        path: aggregated_comprehensive_results.json
+        retention-days: 365  # Keep for yearly analysis
