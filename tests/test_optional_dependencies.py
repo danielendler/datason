@@ -56,7 +56,7 @@ class TestNumpyIntegration:
         }
         result = serialize(data)
 
-        for key, value in result.items():
+        for _key, value in result.items():
             assert isinstance(value, int)
             assert value > 0
 
@@ -285,9 +285,7 @@ class TestDateTimeUtilsWithPandas:
 
     def test_ensure_dates_with_dataframe(self) -> None:
         """Test ensure_dates with DataFrame input."""
-        df = pd.DataFrame(
-            {"date": ["2023-01-01", "2023-01-02", "2023-01-03"], "value": [10, 20, 30]}
-        )
+        df = pd.DataFrame({"date": ["2023-01-01", "2023-01-02", "2023-01-03"], "value": [10, 20, 30]})
         result = ds.ensure_dates(df)
 
         assert pd.api.types.is_datetime64_any_dtype(result["date"])
@@ -310,9 +308,7 @@ class TestDateTimeUtilsWithPandas:
 
     def test_ensure_dates_invalid_date_types(self) -> None:
         """Test ensure_dates with invalid date types in DataFrame."""
-        df = pd.DataFrame(
-            {"date": [[1, 2, 3], {"key": "value"}, {1, 2}], "value": [10, 20, 30]}
-        )
+        df = pd.DataFrame({"date": [[1, 2, 3], {"key": "value"}, {1, 2}], "value": [10, 20, 30]})
 
         with pytest.raises(ValueError):
             ds.ensure_dates(df)
@@ -357,9 +353,7 @@ class TestDateTimeUtilsWithPandas:
         assert isinstance(result.iloc[1, 0], datetime)
 
 
-@pytest.mark.skipif(
-    not (HAS_NUMPY and HAS_PANDAS), reason="numpy and pandas not available"
-)
+@pytest.mark.skipif(not (HAS_NUMPY and HAS_PANDAS), reason="numpy and pandas not available")
 class TestSerializersWithDependencies:
     """Test serializers with optional dependencies."""
 
@@ -428,9 +422,7 @@ class TestSerializersWithDependencies:
         # Check numpy conversions
         assert result["method1"]["numpy_data"]["array"] == [1, 2, None]
         assert result["method1"]["numpy_data"]["matrix"] == [[1, 2], [3, 4]]
-        assert result["method1"]["numpy_data"]["scalars"]["float"] == pytest.approx(
-            3.14
-        )
+        assert result["method1"]["numpy_data"]["scalars"]["float"] == pytest.approx(3.14)
         assert result["method1"]["numpy_data"]["scalars"]["int"] == 100
         # numpy boolean might not be converted
         assert result["method1"]["numpy_data"]["scalars"]["bool"] in [False, np.False_]
@@ -440,9 +432,7 @@ class TestSerializersWithDependencies:
         assert len(result["method1"]["pandas_data"]["timestamps"]) == 2
 
 
-@pytest.mark.skipif(
-    not (HAS_NUMPY and HAS_PANDAS), reason="numpy and pandas not available"
-)
+@pytest.mark.skipif(not (HAS_NUMPY and HAS_PANDAS), reason="numpy and pandas not available")
 class TestMixedOptionalDependencies:
     """Test complex scenarios mixing multiple optional dependencies."""
 
@@ -476,9 +466,7 @@ class TestMixedOptionalDependencies:
         assert isinstance(result["data"]["mixed_list"], list)
 
 
-@pytest.mark.skipif(
-    not (HAS_NUMPY and HAS_PANDAS), reason="numpy and pandas not available"
-)
+@pytest.mark.skipif(not (HAS_NUMPY and HAS_PANDAS), reason="numpy and pandas not available")
 class TestAdditionalCoverage:
     """Test additional edge cases for coverage."""
 

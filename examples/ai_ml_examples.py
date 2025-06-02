@@ -16,8 +16,8 @@ Examples include:
 Run: python examples/ai_ml_examples.py
 """
 
-from datetime import datetime
 import json
+from datetime import datetime
 
 import numpy as np
 
@@ -288,9 +288,7 @@ def serialize_experiment_tracking():
                 {"name": "feature_usage_score", "importance": 0.15},
                 {"name": "subscription_tenure_months", "importance": 0.12},
             ],
-            "correlation_matrix": np.random.correlation_matrix(
-                5
-            ),  # Would be actual correlation data
+            "correlation_matrix": np.random.correlation_matrix(5),  # Would be actual correlation data
             "feature_distributions": {
                 "days_since_last_login": {
                     "mean": 12.5,

@@ -12,10 +12,10 @@ Features:
 - Streaming for large pickle files
 """
 
-from pathlib import Path
 import pickle  # nosec B403
-from typing import Any, ClassVar, Dict, Optional, Set, Union
 import warnings
+from pathlib import Path
+from typing import Any, ClassVar, Dict, Optional, Set, Union
 
 from .config import SerializationConfig, get_ml_config
 from .core import SecurityError, serialize
@@ -157,9 +157,7 @@ class PickleBridge:
 
                 # Check module wildcards
                 for safe_class in safe_classes:
-                    if safe_class.endswith(".*") and full_name.startswith(
-                        safe_class[:-1]
-                    ):
+                    if safe_class.endswith(".*") and full_name.startswith(safe_class[:-1]):
                         return super().find_class(module, name)
 
                 # Class not in whitelist
@@ -194,8 +192,7 @@ class PickleBridge:
         file_size = pickle_path.stat().st_size
         if file_size > self.max_file_size:
             raise SecurityError(
-                f"Pickle file size ({file_size:,} bytes) exceeds maximum "
-                f"({self.max_file_size:,} bytes)"
+                f"Pickle file size ({file_size:,} bytes) exceeds maximum ({self.max_file_size:,} bytes)"
             )
 
         self._conversion_stats["files_processed"] += 1
@@ -216,9 +213,7 @@ class PickleBridge:
                 "metadata": {
                     "source_file": str(pickle_path),
                     "source_size_bytes": file_size,
-                    "conversion_timestamp": serialize(
-                        __import__("datetime").datetime.now(), config=self.config
-                    ),
+                    "conversion_timestamp": serialize(__import__("datetime").datetime.now(), config=self.config),
                     "datason_version": "0.3.0",  # Current version
                     "safe_classes_used": sorted(self.safe_classes),
                 },
@@ -233,9 +228,7 @@ class PickleBridge:
         except Exception as e:
             self._conversion_stats["files_failed"] += 1
             # Wrap other exceptions for clarity
-            raise PickleSecurityError(
-                f"Failed to convert pickle file {pickle_path}: {e}"
-            ) from e
+            raise PickleSecurityError(f"Failed to convert pickle file {pickle_path}: {e}") from e
 
     def from_pickle_bytes(self, pickle_data: bytes) -> Dict[str, Any]:
         """Convert pickle bytes to datason JSON format.
@@ -248,8 +241,7 @@ class PickleBridge:
         """
         if len(pickle_data) > self.max_file_size:
             raise SecurityError(
-                f"Pickle data size ({len(pickle_data):,} bytes) exceeds maximum "
-                f"({self.max_file_size:,} bytes)"
+                f"Pickle data size ({len(pickle_data):,} bytes) exceeds maximum ({self.max_file_size:,} bytes)"
             )
 
         try:
@@ -267,9 +259,7 @@ class PickleBridge:
                 "data": json_data,
                 "metadata": {
                     "source_size_bytes": len(pickle_data),
-                    "conversion_timestamp": serialize(
-                        __import__("datetime").datetime.now(), config=self.config
-                    ),
+                    "conversion_timestamp": serialize(__import__("datetime").datetime.now(), config=self.config),
                     "datason_version": "0.3.0",
                 },
             }

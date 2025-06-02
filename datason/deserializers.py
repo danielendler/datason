@@ -4,10 +4,10 @@ This module provides functions to convert JSON-compatible data back to appropria
 Python objects, including datetime parsing, UUID reconstruction, and pandas types.
 """
 
-from datetime import datetime
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
 import uuid
 import warnings
+from datetime import datetime
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 if TYPE_CHECKING:
     import numpy as np
@@ -207,9 +207,7 @@ def _deserialize_with_type_metadata(obj: Dict[str, Any]) -> Any:
                 # Handle Series with name preservation
                 if isinstance(value, dict) and "_series_name" in value:
                     series_name = value["_series_name"]
-                    series_data = {
-                        k: v for k, v in value.items() if k != "_series_name"
-                    }
+                    series_data = {k: v for k, v in value.items() if k != "_series_name"}
                     return pd.Series(series_data, name=series_name)
                 return pd.Series(value)
         elif type_name == "numpy.ndarray":

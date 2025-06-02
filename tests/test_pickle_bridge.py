@@ -4,14 +4,13 @@ Tests the safe conversion of pickle files to datason JSON format,
 including security, performance, and compatibility testing.
 """
 
-from datetime import datetime
 import json
 import os
-from pathlib import Path
 import pickle
 import tempfile
-from typing import Any, Dict
 import uuid
+from datetime import datetime
+from pathlib import Path
 
 import pytest
 
@@ -325,9 +324,7 @@ class TestConvenienceFunctions:
         }
         config = get_ml_config()
 
-        result = from_pickle(
-            temp_pickle_file, safe_classes=custom_classes, config=config
-        )
+        result = from_pickle(temp_pickle_file, safe_classes=custom_classes, config=config)
 
         assert "data" in result
         assert "metadata" in result

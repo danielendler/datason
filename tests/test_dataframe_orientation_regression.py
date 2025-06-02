@@ -37,8 +37,7 @@ class TestDataFrameOrientationRegression:
             result = datason.serialize(sample_dataframe, config=config)
 
             assert isinstance(result, expected_type), (
-                f"Orientation {orient.value} should return {expected_type.__name__}, "
-                f"got {type(result).__name__}"
+                f"Orientation {orient.value} should return {expected_type.__name__}, got {type(result).__name__}"
             )
 
             # Validate specific format expectations
@@ -200,8 +199,6 @@ class TestDataFrameOrientationRegression:
         # Result should be JSON-serializable
         import json
 
-        json_str = json.dumps(
-            result, default=str
-        )  # default=str for any remaining complex types
+        json_str = json.dumps(result, default=str)  # default=str for any remaining complex types
         assert isinstance(json_str, str)
         assert len(json_str) > 0

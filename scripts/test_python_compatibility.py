@@ -65,8 +65,8 @@ def test_basic_functionality() -> Dict[str, Any]:
 
         # Test type handlers (if available)
         try:
-            from decimal import Decimal
             import uuid
+            from decimal import Decimal
 
             complex_data = {
                 "uuid": uuid.uuid4(),
@@ -147,17 +147,13 @@ def main() -> None:
         print(f"  {dep_name}: {status}")
 
     # Summary
-    passed_tests = sum(
-        1 for result in basic_results["tests"].values() if result.startswith("✅")
-    )
+    passed_tests = sum(1 for result in basic_results["tests"].values() if result.startswith("✅"))
     total_tests = len(basic_results["tests"])
 
     print("\n🏆 Summary:")
     print(f"  Core Tests: {passed_tests}/{total_tests} passed")
 
-    available_deps = sum(
-        1 for status in dep_results.values() if status.startswith("✅")
-    )
+    available_deps = sum(1 for status in dep_results.values() if status.startswith("✅"))
     total_deps = len(dep_results)
     print(f"  Optional Dependencies: {available_deps}/{total_deps} available")
 

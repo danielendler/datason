@@ -16,15 +16,15 @@ Usage:
     python enhanced_benchmark_suite.py
 """
 
-from collections import namedtuple
-from datetime import datetime
 import decimal
 import enum
 import functools
 import json
-from pathlib import Path
 import time
 import uuid
+from collections import namedtuple
+from datetime import datetime
+from pathlib import Path
 
 # Optional dependencies
 try:
@@ -139,10 +139,8 @@ def create_pandas_test_data():
         ),
         "nan_df": pd.DataFrame(
             {
-                "values": [1, 2, float("nan"), 4, None, 6, float("inf")]
-                * 50,  # 350 items
-                "strings": ["a", "b", None, "d", "e", None, "f"]
-                * 50,  # 350 items to match
+                "values": [1, 2, float("nan"), 4, None, 6, float("inf")] * 50,  # 350 items
+                "strings": ["a", "b", None, "d", "e", None, "f"] * 50,  # 350 items to match
             }
         ),
     }
@@ -166,9 +164,7 @@ def benchmark_configuration_presets():
 
     test_datasets = [
         (advanced_data, "Advanced Types"),
-        (pandas_data, "Pandas Data")
-        if HAS_PANDAS
-        else ({"empty": True}, "Pandas Data (unavailable)"),
+        (pandas_data, "Pandas Data") if HAS_PANDAS else ({"empty": True}, "Pandas Data (unavailable)"),
     ]
 
     for data, data_name in test_datasets:
@@ -217,9 +213,7 @@ def benchmark_date_formats():
 
     for date_format, format_name in formats:
         if date_format == DateFormat.CUSTOM:
-            config = SerializationConfig(
-                date_format=date_format, custom_date_format="%Y-%m-%d"
-            )
+            config = SerializationConfig(date_format=date_format, custom_date_format="%Y-%m-%d")
         else:
             config = SerializationConfig(date_format=date_format)
 
@@ -227,9 +221,7 @@ def benchmark_date_formats():
         stats = benchmark_operation(serialize_func, data)
         results[format_name] = stats
 
-        print(
-            f"{format_name:20s}: {stats['mean'] * 1000:6.2f}ms ± {stats['stdev'] * 1000:5.2f}ms"
-        )
+        print(f"{format_name:20s}: {stats['mean'] * 1000:6.2f}ms ± {stats['stdev'] * 1000:5.2f}ms")
 
     return results
 
@@ -259,9 +251,7 @@ def benchmark_nan_handling():
         stats = benchmark_operation(serialize_func, nan_data)
         results[strategy_name] = stats
 
-        print(
-            f"{strategy_name:20s}: {stats['mean'] * 1000:6.2f}ms ± {stats['stdev'] * 1000:5.2f}ms"
-        )
+        print(f"{strategy_name:20s}: {stats['mean'] * 1000:6.2f}ms ± {stats['stdev'] * 1000:5.2f}ms")
 
     return results
 
@@ -293,9 +283,7 @@ def benchmark_type_coercion():
         stats = benchmark_operation(serialize_func, type_data)
         results[strategy_name] = stats
 
-        print(
-            f"{strategy_name:20s}: {stats['mean'] * 1000:6.2f}ms ± {stats['stdev'] * 1000:5.2f}ms"
-        )
+        print(f"{strategy_name:20s}: {stats['mean'] * 1000:6.2f}ms ± {stats['stdev'] * 1000:5.2f}ms")
 
     return results
 
@@ -356,9 +344,7 @@ def benchmark_dataframe_orientations():
             stats = benchmark_operation(serialize_func, test_data)
 
             df_results[orient_name] = stats
-            print(
-                f"{orient_name:12s}: {stats['mean'] * 1000:6.2f}ms ± {stats['stdev'] * 1000:5.2f}ms"
-            )
+            print(f"{orient_name:12s}: {stats['mean'] * 1000:6.2f}ms ± {stats['stdev'] * 1000:5.2f}ms")
 
         results[df_name] = df_results
 
@@ -409,9 +395,7 @@ def benchmark_custom_serializers():
         stats = benchmark_operation(serialize_func, test_data)
         results[config_name] = stats
 
-        print(
-            f"{config_name:25s}: {stats['mean'] * 1000:6.2f}ms ± {stats['stdev'] * 1000:5.2f}ms"
-        )
+        print(f"{config_name:25s}: {stats['mean'] * 1000:6.2f}ms ± {stats['stdev'] * 1000:5.2f}ms")
 
     return results
 
@@ -424,10 +408,7 @@ def benchmark_memory_usage():
     test_data = {
         "large_list": list(range(10000)),
         "dataframes": [
-            pd.DataFrame(
-                {"values": range(1000), "text": [f"item_{i}" for i in range(1000)]}
-            )
-            for _ in range(5)
+            pd.DataFrame({"values": range(1000), "text": [f"item_{i}" for i in range(1000)]}) for _ in range(5)
         ]
         if HAS_PANDAS
         else [],
@@ -484,11 +465,7 @@ def run_comprehensive_benchmarks():
         fastest_config = None
         fastest_time = float("inf")
         for config_name, stats in df_results.items():
-            if (
-                isinstance(stats, dict)
-                and "mean" in stats
-                and stats["mean"] < fastest_time
-            ):
+            if isinstance(stats, dict) and "mean" in stats and stats["mean"] < fastest_time:
                 fastest_time = stats["mean"]
                 fastest_config = config_name
 
@@ -499,9 +476,7 @@ def run_comprehensive_benchmarks():
     coercion_results = all_results.get("type_coercion", {})
     if coercion_results:
         fastest_coercion = min(coercion_results.items(), key=lambda x: x[1]["mean"])
-        print(
-            f"Fastest Type Coercion: {fastest_coercion[0]} ({fastest_coercion[1]['mean'] * 1000:.2f}ms)"
-        )
+        print(f"Fastest Type Coercion: {fastest_coercion[0]} ({fastest_coercion[1]['mean'] * 1000:.2f}ms)")
 
     print("\nConfiguration Recommendations:")
     print("- For ML pipelines: Use get_ml_config() (optimized for numeric data)")

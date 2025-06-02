@@ -27,9 +27,7 @@ def get_changed_python_files() -> List[str]:
 
     files = result.stdout.strip().split("\n")
     # Filter for Python files in the datason package
-    py_files = [
-        f for f in files if f.startswith(f"{PACKAGE_DIR}/") and f.endswith(".py")
-    ]
+    py_files = [f for f in files if f.startswith(f"{PACKAGE_DIR}/") and f.endswith(".py")]
 
     # Only check core datason files (exclude __init__.py)
     return [f for f in py_files if not f.endswith("__init__.py")]
@@ -76,9 +74,7 @@ def main() -> int:
         print("✅ Coverage check passed!")
     else:
         print("❌ Coverage check failed!")
-        print(
-            "\n💡 Tip: Run 'pytest --cov=datason --cov-report=html' for detailed coverage report"
-        )
+        print("\n💡 Tip: Run 'pytest --cov=datason --cov-report=html' for detailed coverage report")
 
     return exit_code
 

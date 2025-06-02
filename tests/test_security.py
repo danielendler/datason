@@ -119,9 +119,7 @@ if IS_CI:
     _debug_print(f"   Python recursion limit: {python_recursion_limit}")
     _debug_print(f"   MAX_SERIALIZATION_DEPTH: {MAX_SERIALIZATION_DEPTH}")
     _debug_print(f"   MAX_OBJECT_SIZE: {MAX_OBJECT_SIZE:,}")
-    _debug_print(
-        f"   CI env vars: CI={os.getenv('CI')}, GITHUB_ACTIONS={os.getenv('GITHUB_ACTIONS')}"
-    )
+    _debug_print(f"   CI env vars: CI={os.getenv('CI')}, GITHUB_ACTIONS={os.getenv('GITHUB_ACTIONS')}")
     _debug_print(f"   Python version: {sys.version}")
 
     # Conservative limits for CI - test the functionality without resource exhaustion
@@ -208,7 +206,7 @@ class TestCircularReferenceProtection:
         b = [a]
         a.append(b)  # Create circular reference
 
-        with warnings.catch_warnings(record=True) as w:
+        with warnings.catch_warnings(record=True):
             warnings.simplefilter("always")
             result = serialize(a)
 
@@ -220,7 +218,7 @@ class TestCircularReferenceProtection:
         a = {}
         a["self"] = a  # Self-reference
 
-        with warnings.catch_warnings(record=True) as w:
+        with warnings.catch_warnings(record=True):
             warnings.simplefilter("always")
             result = serialize(a)
 
@@ -237,7 +235,7 @@ class TestDepthLimits:
         # Create nested dict within reasonable limits (100 levels)
         nested = {}
         current = nested
-        for i in range(100):
+        for _i in range(100):
             current["next"] = {}
             current = current["next"]
         current["value"] = "deep"
@@ -271,9 +269,7 @@ class TestDepthLimits:
             test_depth = test_security_limit + 10
 
         if test_security_limit <= 10:
-            pytest.skip(
-                f"Cannot test depth security: recursion limit ({current_recursion_limit}) too low"
-            )
+            pytest.skip(f"Cannot test depth security: recursion limit ({current_recursion_limit}) too low")
 
         _debug_print(f"   Test security limit: {test_security_limit}")
         _debug_print(f"   Test depth: {test_depth}")
@@ -284,22 +280,18 @@ class TestDepthLimits:
             if current_recursion_limit <= MAX_SERIALIZATION_DEPTH + 50:
                 new_limit = min(MAX_SERIALIZATION_DEPTH + 200, 2000)
                 sys.setrecursionlimit(new_limit)
-                _debug_print(
-                    f"   Increased recursion limit: {current_recursion_limit} -> {new_limit}"
-                )
+                _debug_print(f"   Increased recursion limit: {current_recursion_limit} -> {new_limit}")
 
                 # Test with increased limit and actual MAX_SERIALIZATION_DEPTH
                 test_depth_real = MAX_SERIALIZATION_DEPTH + 10
                 nested = {}
                 current = nested
-                for i in range(test_depth_real):
+                for _i in range(test_depth_real):
                     current["next"] = {}
                     current = current["next"]
                 current["value"] = "too_deep"
 
-                _debug_print(
-                    f"   Testing at depth {test_depth_real} with real MAX_SERIALIZATION_DEPTH"
-                )
+                _debug_print(f"   Testing at depth {test_depth_real} with real MAX_SERIALIZATION_DEPTH")
                 with pytest.raises(SecurityError) as exc_info:
                     serialize(nested)
 
@@ -321,9 +313,7 @@ class TestDepthLimits:
 
         def patched_serialize(obj, _depth=0, _seen=None):
             """Temporary serialize function with custom depth limit for testing."""
-            _debug_print(
-                f"     patched_serialize called with _depth={_depth}, limit={test_security_limit}"
-            )
+            _debug_print(f"     patched_serialize called with _depth={_depth}, limit={test_security_limit}")
 
             # Security check: prevent excessive recursion depth (using test limit)
             if _depth > test_security_limit:
@@ -354,10 +344,7 @@ class TestDepthLimits:
             try:
                 # Handle the serialization with recursive calls to patched_serialize (not _serialize_object)
                 if isinstance(obj, dict):
-                    return {
-                        k: patched_serialize(v, _depth + 1, _seen)
-                        for k, v in obj.items()
-                    }
+                    return {k: patched_serialize(v, _depth + 1, _seen) for k, v in obj.items()}
                 if isinstance(obj, (list, tuple)):
                     return [patched_serialize(x, _depth + 1, _seen) for x in obj]
                 # For non-recursive objects, use the original logic but call patched_serialize for any nested objects
@@ -374,7 +361,7 @@ class TestDepthLimits:
             # Build nested structure that exceeds our temporary security limit
             nested = {}
             current = nested
-            for i in range(test_depth):
+            for _i in range(test_depth):
                 current["next"] = {}
                 current = current["next"]
             current["value"] = "too_deep"
@@ -416,9 +403,7 @@ class TestSizeLimits:
         _debug_print(f"   Python executable: {sys.executable}")
         _debug_print(f"   SecurityError from top-level import: {SecurityError}")
         _debug_print(f"   SecurityError module: {SecurityError.__module__}")
-        _debug_print(
-            f"   SecurityError file: {getattr(SecurityError, '__file__', 'N/A')}"
-        )
+        _debug_print(f"   SecurityError file: {getattr(SecurityError, '__file__', 'N/A')}")
 
         # Import fresh and compare
         from datason.core import SecurityError as FreshSecurityError
@@ -431,24 +416,17 @@ class TestSizeLimits:
         # Test isinstance relationships
         test_exception = SecurityError("test")
         _debug_print(f"   Test SecurityError instance: {test_exception}")
-        _debug_print(
-            f"   isinstance(test, SecurityError): {isinstance(test_exception, SecurityError)}"
-        )
-        _debug_print(
-            f"   isinstance(test, FreshSecurityError): {isinstance(test_exception, FreshSecurityError)}"
-        )
+        _debug_print(f"   isinstance(test, SecurityError): {isinstance(test_exception, SecurityError)}")
+        _debug_print(f"   isinstance(test, FreshSecurityError): {isinstance(test_exception, FreshSecurityError)}")
 
         # Create a fake dict that reports a large size but is actually small
         fake_large_dict = LargeFakeDict(actual_size=100, reported_size=10_001_000)
-        _debug_print(
-            f"   Created fake dict with reported size: {len(fake_large_dict):,}"
-        )
+        _debug_print(f"   Created fake dict with reported size: {len(fake_large_dict):,}")
         _debug_print(f"   Actual dict size: {fake_large_dict.actual_size}")
 
         # This should raise SecurityError due to reported size exceeding limit
         security_error_raised = False
         caught_exception = None
-        exception_type = None
 
         try:
             result = serialize(fake_large_dict)
@@ -459,42 +437,28 @@ class TestSizeLimits:
             _debug_print(f"   ✅ SecurityError caught by except SecurityError: {exc}")
             _debug_print(f"   Exception type: {type(exc)}")
             _debug_print(f"   Exception module: {type(exc).__module__}")
-            _debug_print(
-                f"   isinstance(exc, SecurityError): {isinstance(exc, SecurityError)}"
-            )
-            _debug_print(
-                f"   isinstance(exc, FreshSecurityError): {isinstance(exc, FreshSecurityError)}"
-            )
+            _debug_print(f"   isinstance(exc, SecurityError): {isinstance(exc, SecurityError)}")
+            _debug_print(f"   isinstance(exc, FreshSecurityError): {isinstance(exc, FreshSecurityError)}")
             _debug_print(f"   type(exc) is SecurityError: {type(exc) is SecurityError}")
-            _debug_print(
-                f"   type(exc) is FreshSecurityError: {type(exc) is FreshSecurityError}"
-            )
+            _debug_print(f"   type(exc) is FreshSecurityError: {type(exc) is FreshSecurityError}")
             security_error_raised = True
             caught_exception = exc
-            exception_type = type(exc)
+            type(exc)
         except Exception as exc:
             # Any other exception is unexpected
             _debug_print(f"   ❌ Unexpected exception: {type(exc).__name__}: {exc}")
             _debug_print(f"   Exception type: {type(exc)}")
             _debug_print(f"   Exception module: {type(exc).__module__}")
             _debug_print(f"   Exception MRO: {type(exc).__mro__}")
-            _debug_print(
-                f"   isinstance(exc, SecurityError): {isinstance(exc, SecurityError)}"
-            )
-            _debug_print(
-                f"   isinstance(exc, FreshSecurityError): {isinstance(exc, FreshSecurityError)}"
-            )
+            _debug_print(f"   isinstance(exc, SecurityError): {isinstance(exc, SecurityError)}")
+            _debug_print(f"   isinstance(exc, FreshSecurityError): {isinstance(exc, FreshSecurityError)}")
             _debug_print(f"   type(exc) is SecurityError: {type(exc) is SecurityError}")
-            _debug_print(
-                f"   type(exc) is FreshSecurityError: {type(exc) is FreshSecurityError}"
-            )
-            exception_type = type(exc)
+            _debug_print(f"   type(exc) is FreshSecurityError: {type(exc) is FreshSecurityError}")
+            type(exc)
 
             # Try to catch it with the fresh import
             if isinstance(exc, FreshSecurityError):
-                _debug_print(
-                    "   🔄 Exception IS instance of FreshSecurityError - treating as SecurityError"
-                )
+                _debug_print("   🔄 Exception IS instance of FreshSecurityError - treating as SecurityError")
                 security_error_raised = True
                 caught_exception = exc
             else:
@@ -533,15 +497,12 @@ class TestSizeLimits:
 
         # Create a fake list that reports a large size but is actually small
         fake_large_list = LargeFakeList(actual_size=100, reported_size=10_001_000)
-        _debug_print(
-            f"   Created fake list with reported size: {len(fake_large_list):,}"
-        )
+        _debug_print(f"   Created fake list with reported size: {len(fake_large_list):,}")
         _debug_print(f"   Actual list size: {fake_large_list.actual_size}")
 
         # This should raise SecurityError due to reported size exceeding limit
         security_error_raised = False
         caught_exception = None
-        exception_type = None
 
         try:
             result = serialize(fake_large_list)
@@ -552,42 +513,28 @@ class TestSizeLimits:
             _debug_print(f"   ✅ SecurityError caught by except SecurityError: {exc}")
             _debug_print(f"   Exception type: {type(exc)}")
             _debug_print(f"   Exception module: {type(exc).__module__}")
-            _debug_print(
-                f"   isinstance(exc, SecurityError): {isinstance(exc, SecurityError)}"
-            )
-            _debug_print(
-                f"   isinstance(exc, FreshSecurityError): {isinstance(exc, FreshSecurityError)}"
-            )
+            _debug_print(f"   isinstance(exc, SecurityError): {isinstance(exc, SecurityError)}")
+            _debug_print(f"   isinstance(exc, FreshSecurityError): {isinstance(exc, FreshSecurityError)}")
             _debug_print(f"   type(exc) is SecurityError: {type(exc) is SecurityError}")
-            _debug_print(
-                f"   type(exc) is FreshSecurityError: {type(exc) is FreshSecurityError}"
-            )
+            _debug_print(f"   type(exc) is FreshSecurityError: {type(exc) is FreshSecurityError}")
             security_error_raised = True
             caught_exception = exc
-            exception_type = type(exc)
+            type(exc)
         except Exception as exc:
             # Any other exception is unexpected
             _debug_print(f"   ❌ Unexpected exception: {type(exc).__name__}: {exc}")
             _debug_print(f"   Exception type: {type(exc)}")
             _debug_print(f"   Exception module: {type(exc).__module__}")
             _debug_print(f"   Exception MRO: {type(exc).__mro__}")
-            _debug_print(
-                f"   isinstance(exc, SecurityError): {isinstance(exc, SecurityError)}"
-            )
-            _debug_print(
-                f"   isinstance(exc, FreshSecurityError): {isinstance(exc, FreshSecurityError)}"
-            )
+            _debug_print(f"   isinstance(exc, SecurityError): {isinstance(exc, SecurityError)}")
+            _debug_print(f"   isinstance(exc, FreshSecurityError): {isinstance(exc, FreshSecurityError)}")
             _debug_print(f"   type(exc) is SecurityError: {type(exc) is SecurityError}")
-            _debug_print(
-                f"   type(exc) is FreshSecurityError: {type(exc) is FreshSecurityError}"
-            )
-            exception_type = type(exc)
+            _debug_print(f"   type(exc) is FreshSecurityError: {type(exc) is FreshSecurityError}")
+            type(exc)
 
             # Try to catch it with the fresh import
             if isinstance(exc, FreshSecurityError):
-                _debug_print(
-                    "   🔄 Exception IS instance of FreshSecurityError - treating as SecurityError"
-                )
+                _debug_print("   🔄 Exception IS instance of FreshSecurityError - treating as SecurityError")
                 security_error_raised = True
                 caught_exception = exc
             else:
@@ -616,18 +563,14 @@ class TestSizeLimits:
             assert len(result) == MAX_STRING_LENGTH + len("...[TRUNCATED]")
             assert result.endswith("...[TRUNCATED]")
 
-    @pytest.mark.skipif(
-        SKIP_INTENSIVE, reason="Intensive test skipped in CI environment"
-    )
+    @pytest.mark.skipif(SKIP_INTENSIVE, reason="Intensive test skipped in CI environment")
     def test_memory_intensive_dict_limits(self):
         """Test dictionary limits with memory-intensive scenarios (local only)."""
         # This test is now redundant with the fake object approach above
         # The main test already covers the security functionality
         pytest.skip("Redundant with main security test using fake objects")
 
-    @pytest.mark.skipif(
-        SKIP_INTENSIVE, reason="Intensive test skipped in CI environment"
-    )
+    @pytest.mark.skipif(SKIP_INTENSIVE, reason="Intensive test skipped in CI environment")
     def test_memory_intensive_list_limits(self):
         """Test list limits with memory-intensive scenarios (local only)."""
         # This test is now redundant with the fake object approach above
@@ -723,7 +666,7 @@ class TestNumpySecurityLimits:
             with pytest.raises(SecurityError) as exc_info:
                 serialize(fake_large_array)
             assert "NumPy array size" in str(exc_info.value)
-        except Exception as e:
+        except Exception:
             # FALLBACK: If pytest.raises fails, manually check the exception
             # This documents the actual behavior vs expected behavior
             try:
@@ -740,9 +683,7 @@ class TestNumpySecurityLimits:
                 if "NumPy array size" not in str(security_exc):
                     pytest.fail(f"SecurityError message incorrect: {security_exc}")
             except Exception as other_exc:
-                pytest.fail(
-                    f"Expected SecurityError, got {type(other_exc).__name__}: {other_exc}"
-                )
+                pytest.fail(f"Expected SecurityError, got {type(other_exc).__name__}: {other_exc}")
 
     def test_numpy_string_truncation(self):
         """Test that large numpy strings are truncated."""
@@ -759,9 +700,7 @@ class TestNumpySecurityLimits:
             assert isinstance(result, str)
             assert result.endswith("...[TRUNCATED]")
 
-    @pytest.mark.skipif(
-        SKIP_INTENSIVE, reason="Intensive test skipped in CI environment"
-    )
+    @pytest.mark.skipif(SKIP_INTENSIVE, reason="Intensive test skipped in CI environment")
     def test_memory_intensive_numpy_limits(self):
         """Test numpy limits with memory-intensive scenarios (local only).
 
@@ -811,7 +750,7 @@ class TestNumpySecurityLimits:
             with pytest.raises(SecurityError) as exc_info:
                 serialize(fake_huge_array)
             assert "NumPy array size" in str(exc_info.value)
-        except Exception as e:
+        except Exception:
             # Fallback for when pytest.raises fails
             try:
                 serialize(fake_huge_array)
@@ -824,9 +763,7 @@ class TestNumpySecurityLimits:
                 if "NumPy array size" not in str(security_exc):
                     pytest.fail(f"SecurityError message incorrect: {security_exc}")
             except Exception as other_exc:
-                pytest.fail(
-                    f"Expected SecurityError, got {type(other_exc).__name__}: {other_exc}"
-                )
+                pytest.fail(f"Expected SecurityError, got {type(other_exc).__name__}: {other_exc}")
 
 
 class TestPandasSecurityLimits:
@@ -872,9 +809,7 @@ class TestPandasSecurityLimits:
         assert isinstance(result, dict)
         assert len(result) == 10
 
-    @pytest.mark.skipif(
-        SKIP_INTENSIVE, reason="Intensive test skipped in CI environment"
-    )
+    @pytest.mark.skipif(SKIP_INTENSIVE, reason="Intensive test skipped in CI environment")
     def test_memory_intensive_pandas_limits(self):
         """Test pandas with larger objects.
 
@@ -1007,13 +942,9 @@ class TestSecurityConstants:
 
             # The key requirement: TEST_DEPTH_LIMIT should allow testing IF the environment permits
             if TEST_DEPTH_LIMIT > MAX_SERIALIZATION_DEPTH:
-                _debug_print(
-                    f"   ✅ CI can test depth security: {TEST_DEPTH_LIMIT} > {MAX_SERIALIZATION_DEPTH}"
-                )
+                _debug_print(f"   ✅ CI can test depth security: {TEST_DEPTH_LIMIT} > {MAX_SERIALIZATION_DEPTH}")
             else:
-                _debug_print(
-                    f"   ⚠️ CI cannot test depth security: {TEST_DEPTH_LIMIT} <= {MAX_SERIALIZATION_DEPTH}"
-                )
+                _debug_print(f"   ⚠️ CI cannot test depth security: {TEST_DEPTH_LIMIT} <= {MAX_SERIALIZATION_DEPTH}")
 
             assert TEST_SIZE_LIMIT <= 50_000, "CI size limit should be conservative"
             assert SKIP_INTENSIVE is True, "Intensive tests should be skipped in CI"

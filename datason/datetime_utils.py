@@ -4,8 +4,8 @@ This module provides functions for handling datetime objects, pandas timestamps,
 and related date/time conversion tasks.
 """
 
-from datetime import datetime, timezone
 import logging
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Union
 
 try:
@@ -30,19 +30,11 @@ def convert_pandas_timestamps(obj: Any) -> Any:
 
     # Handle pandas Series or DataFrame
     if isinstance(obj, pd.Series):
-        return obj.map(
-            lambda x: convert_pandas_timestamps(x)
-            if isinstance(x, (pd.Timestamp, list, dict))
-            else x
-        )
+        return obj.map(lambda x: convert_pandas_timestamps(x) if isinstance(x, (pd.Timestamp, list, dict)) else x)
 
     if isinstance(obj, pd.DataFrame):
         # Convert each column
-        return obj.map(
-            lambda x: convert_pandas_timestamps(x)
-            if isinstance(x, (pd.Timestamp, list, dict))
-            else x
-        )
+        return obj.map(lambda x: convert_pandas_timestamps(x) if isinstance(x, (pd.Timestamp, list, dict)) else x)
 
     # Handle pd.Timestamp
     if isinstance(obj, pd.Timestamp):
@@ -158,18 +150,12 @@ def ensure_dates(df: Any, strip_timezone: bool = True) -> Any:
                 try:
                     # Try to convert to timestamp
                     converted = pd.to_datetime(result[field])
-                    if (
-                        strip_timezone
-                        and hasattr(converted, "tzinfo")
-                        and converted.tzinfo is not None
-                    ):
+                    if strip_timezone and hasattr(converted, "tzinfo") and converted.tzinfo is not None:
                         converted = converted.replace(tzinfo=None)
                     result[field] = converted
                 except (ValueError, TypeError) as e:
                     # If conversion fails, leave as is
-                    logger.debug(
-                        f"Could not convert {field} value '{result[field]}' to timestamp: {e}"
-                    )
+                    logger.debug(f"Could not convert {field} value '{result[field]}' to timestamp: {e}")
         return result
 
     # Handle DataFrames - original implementation
@@ -199,9 +185,7 @@ def ensure_dates(df: Any, strip_timezone: bool = True) -> Any:
             df["date"] = df["date"].map(normalize_tz)
             df["date"] = pd.to_datetime(df["date"])
         except Exception as e:
-            logger.error(
-                f"ensure_dates: Could not convert date column to datetime: {e}"
-            )
+            logger.error(f"ensure_dates: Could not convert date column to datetime: {e}")
             raise ValueError(f"Invalid date format: {e!s}") from e
     if strip_timezone and hasattr(df["date"], "dt"):
         try:

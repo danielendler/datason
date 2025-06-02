@@ -4,9 +4,8 @@ Coverage boost tests for datason.
 These tests specifically target remaining uncovered lines to achieve 80-85% coverage.
 """
 
-import json
-from unittest.mock import Mock, patch
 import warnings
+from unittest.mock import Mock, patch
 
 import pytest
 
@@ -90,9 +89,7 @@ class TestCoreEdgeCases:
         """Test object where hasattr check for __dict__ raises an exception."""
         # Skip this test - the current implementation doesn't handle __getattribute__ exceptions
         # The hasattr call will propagate the exception rather than catching it
-        pytest.skip(
-            "Core implementation doesn't handle __getattribute__ exceptions in hasattr calls"
-        )
+        pytest.skip("Core implementation doesn't handle __getattribute__ exceptions in hasattr calls")
 
     def test_helper_functions_exception_handling(self) -> None:
         """Test helper functions with exception handling."""
@@ -301,10 +298,7 @@ class TestMLSerializersSpecialCases:
             assert serialize_sklearn_model(mock_obj)["_type"] == "sklearn.model"
             assert serialize_scipy_sparse(mock_obj)["_type"] == "scipy.sparse"
             assert serialize_pil_image(mock_obj)["_type"] == "PIL.Image"
-            assert (
-                serialize_huggingface_tokenizer(mock_obj)["_type"]
-                == "transformers.tokenizer"
-            )
+            assert serialize_huggingface_tokenizer(mock_obj)["_type"] == "transformers.tokenizer"
 
     @pytest.mark.skipif(not HAS_SKLEARN, reason="sklearn not available")
     def test_ml_error_paths_coverage(self) -> None:
@@ -442,9 +436,7 @@ class TestPerformanceOptimizationEdgeCases:
 class TestFullIntegrationEdgeCases:
     """Test full integration edge cases."""
 
-    @pytest.mark.skipif(
-        not (HAS_NUMPY and HAS_PANDAS), reason="numpy and pandas not available"
-    )
+    @pytest.mark.skipif(not (HAS_NUMPY and HAS_PANDAS), reason="numpy and pandas not available")
     def test_end_to_end_with_all_types(self) -> None:
         """Test end-to-end serialization with all types."""
         from datetime import datetime

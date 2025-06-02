@@ -4,12 +4,11 @@ These features address the integration feedback for round-trip scenarios
 where users need to get back the exact same types they put in.
 """
 
-from datetime import datetime
 import uuid
+from datetime import datetime
 
 import numpy as np
 import pandas as pd
-import pytest
 
 import datason
 from datason.config import SerializationConfig
@@ -363,9 +362,7 @@ class TestIntegrationScenarios:
         original_data = {
             "analysis_date": datetime.now(),
             "request_id": uuid.uuid4(),
-            "results": pd.DataFrame(
-                {"metric": ["roi", "volatility", "sharpe"], "value": [0.15, 0.25, 1.2]}
-            ),
+            "results": pd.DataFrame({"metric": ["roi", "volatility", "sharpe"], "value": [0.15, 0.25, 1.2]}),
             "parameters": {
                 "lookback_days": 252,
                 "confidence_level": 0.95,
@@ -396,8 +393,6 @@ class TestIntegrationScenarios:
         # Values should be preserved
         assert restored_data["analysis_date"] == original_data["analysis_date"]
         assert restored_data["request_id"] == original_data["request_id"]
-        pd.testing.assert_frame_equal(
-            restored_data["results"], original_data["results"]
-        )
+        pd.testing.assert_frame_equal(restored_data["results"], original_data["results"])
         assert restored_data["tags"] == original_data["tags"]
         assert restored_data["parameters"] == original_data["parameters"]

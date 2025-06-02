@@ -27,14 +27,14 @@ Environment Variables:
 """
 
 import argparse
-from collections import namedtuple
 import os
-from pathlib import Path
 import pickle  # nosec B403 - Safe usage for benchmarking only, controlled data
 import statistics
 import sys
 import tempfile
 import time
+from collections import namedtuple
+from pathlib import Path
 from typing import Any, Callable, Dict, List, Tuple
 
 # Optional dependencies with graceful fallbacks
@@ -88,13 +88,9 @@ from datason import (
 )
 
 # Benchmark utilities
-BenchmarkResult = namedtuple(
-    "BenchmarkResult", ["mean", "median", "min", "max", "stdev", "operations_per_sec"]
-)
+BenchmarkResult = namedtuple("BenchmarkResult", ["mean", "median", "min", "max", "stdev", "operations_per_sec"])
 
-FileStats = namedtuple(
-    "FileStats", ["source_size_bytes", "target_size_bytes", "compression_ratio"]
-)
+FileStats = namedtuple("FileStats", ["source_size_bytes", "target_size_bytes", "compression_ratio"])
 
 
 def time_operation(func: Callable, *args, **kwargs) -> Tuple[Any, float]:
@@ -105,9 +101,7 @@ def time_operation(func: Callable, *args, **kwargs) -> Tuple[Any, float]:
     return result, end - start
 
 
-def benchmark_operation(
-    func: Callable, data: Any = None, iterations: int = 5
-) -> BenchmarkResult:
+def benchmark_operation(func: Callable, data: Any = None, iterations: int = 5) -> BenchmarkResult:
     """Run benchmark multiple times and return statistics."""
     times = []
 
@@ -183,21 +177,15 @@ def create_test_datasets(sizes: List[int]) -> Dict[str, Dict[str, Any]]:
             "integers": list(range(size)),
             "floats": [i * 1.5 for i in range(size)],
             "booleans": [i % 2 == 0 for i in range(size)],
-            "simple_dict": {
-                f"key_{i}": i for i in range(min(size, 10))
-            },  # Simplified dict
+            "simple_dict": {f"key_{i}": i for i in range(min(size, 10))},  # Simplified dict
         }
 
         # Simple NumPy objects (if available) - use basic arrays only
         if HAS_NUMPY:
             datasets[f"size_{size}"]["numpy_simple"] = {
-                "float_array": np.random.random(
-                    size
-                ).tolist(),  # Convert to list for safety
+                "float_array": np.random.random(size).tolist(),  # Convert to list for safety
                 "int_array": np.arange(size).tolist(),  # Convert to list for safety
-                "simple_matrix": np.ones(
-                    (min(size // 10, 10), 5)
-                ).tolist(),  # Convert to list
+                "simple_matrix": np.ones((min(size // 10, 10), 5)).tolist(),  # Convert to list
             }
 
         # Simple Pandas objects (if available) - use basic structures
@@ -263,9 +251,7 @@ def create_test_datasets(sizes: List[int]) -> Dict[str, Dict[str, Any]]:
     return datasets
 
 
-def create_pickle_files(
-    datasets: Dict[str, Dict[str, Any]], temp_dir: Path
-) -> Dict[str, Path]:
+def create_pickle_files(datasets: Dict[str, Dict[str, Any]], temp_dir: Path) -> Dict[str, Path]:
     """Create pickle files from test datasets."""
     pickle_files = {}
 
@@ -306,9 +292,7 @@ def benchmark_with_fallback(
     return result, False  # False indicates safe mode worked
 
 
-def benchmark_pickle_bridge_basic(
-    pickle_files: Dict[str, Path], iterations: int
-) -> Dict[str, BenchmarkResult]:
+def benchmark_pickle_bridge_basic(pickle_files: Dict[str, Path], iterations: int) -> Dict[str, BenchmarkResult]:
     """Benchmark basic Pickle Bridge functionality."""
     print("\n=== Pickle Bridge Basic Performance ===")
 
@@ -324,9 +308,7 @@ def benchmark_pickle_bridge_basic(
 
             return convert_file
 
-        result, used_unsafe = benchmark_with_fallback(
-            make_convert_file(pickle_path), None, iterations, None
-        )
+        result, used_unsafe = benchmark_with_fallback(make_convert_file(pickle_path), None, iterations, None)
         results[f"{file_key}_file"] = result
 
         # Test bytes-based conversion
@@ -340,9 +322,7 @@ def benchmark_pickle_bridge_basic(
 
                 return convert_bytes
 
-            result, used_unsafe = benchmark_with_fallback(
-                make_convert_bytes(pickle_bytes), None, iterations, None
-            )
+            result, used_unsafe = benchmark_with_fallback(make_convert_bytes(pickle_bytes), None, iterations, None)
             results[f"{file_key}_bytes"] = result
         except Exception as e:
             print(f"Warning: Failed to benchmark bytes conversion for {file_key}: {e}")
@@ -350,9 +330,7 @@ def benchmark_pickle_bridge_basic(
     return results
 
 
-def benchmark_security_overhead(
-    pickle_files: Dict[str, Path], iterations: int
-) -> Dict[str, BenchmarkResult]:
+def benchmark_security_overhead(pickle_files: Dict[str, Path], iterations: int) -> Dict[str, BenchmarkResult]:
     """Benchmark security overhead vs unsafe operations."""
     print("\n=== Security Overhead Analysis ===")
 
@@ -369,9 +347,7 @@ def benchmark_security_overhead(
 
             return safe_convert
 
-        safe_result = benchmark_operation(
-            make_safe_convert(pickle_path), None, iterations
-        )
+        safe_result = benchmark_operation(make_safe_convert(pickle_path), None, iterations)
         results[f"{file_key}_safe"] = safe_result
 
         # Unsafe conversion (for comparison only - never use in production)
@@ -381,17 +357,13 @@ def benchmark_security_overhead(
 
             return unsafe_convert
 
-        unsafe_result = benchmark_operation(
-            make_unsafe_convert(pickle_path), None, iterations
-        )
+        unsafe_result = benchmark_operation(make_unsafe_convert(pickle_path), None, iterations)
         results[f"{file_key}_unsafe"] = unsafe_result
 
     return results
 
 
-def benchmark_vs_alternatives(
-    pickle_files: Dict[str, Path], iterations: int
-) -> Dict[str, BenchmarkResult]:
+def benchmark_vs_alternatives(pickle_files: Dict[str, Path], iterations: int) -> Dict[str, BenchmarkResult]:
     """Benchmark Pickle Bridge vs alternative approaches."""
     print("\n=== Comparison with Alternative Libraries ===")
 
@@ -406,9 +378,7 @@ def benchmark_vs_alternatives(
 
             return pickle_bridge_convert
 
-        pb_result = benchmark_operation(
-            make_pickle_bridge_convert(pickle_path), None, iterations
-        )
+        pb_result = benchmark_operation(make_pickle_bridge_convert(pickle_path), None, iterations)
         results[f"{file_key}_pickle_bridge"] = pb_result
 
         # Manual pickle.loads + datason.serialize
@@ -420,9 +390,7 @@ def benchmark_vs_alternatives(
 
             return manual_convert
 
-        manual_result = benchmark_operation(
-            make_manual_convert(pickle_path), None, iterations
-        )
+        manual_result = benchmark_operation(make_manual_convert(pickle_path), None, iterations)
         results[f"{file_key}_manual"] = manual_result
 
         # jsonpickle (if available)
@@ -436,9 +404,7 @@ def benchmark_vs_alternatives(
 
                 return jsonpickle_convert
 
-            jp_result = benchmark_operation(
-                make_jsonpickle_convert(pickle_path), None, iterations
-            )
+            jp_result = benchmark_operation(make_jsonpickle_convert(pickle_path), None, iterations)
             results[f"{file_key}_jsonpickle"] = jp_result
 
         # dill + JSON (if available)
@@ -454,17 +420,13 @@ def benchmark_vs_alternatives(
 
                 return dill_convert
 
-            dill_result = benchmark_operation(
-                make_dill_convert(pickle_path), None, iterations
-            )
+            dill_result = benchmark_operation(make_dill_convert(pickle_path), None, iterations)
             results[f"{file_key}_dill"] = dill_result
 
     return results
 
 
-def benchmark_bulk_operations(
-    pickle_files: Dict[str, Path], iterations: int
-) -> Dict[str, BenchmarkResult]:
+def benchmark_bulk_operations(pickle_files: Dict[str, Path], iterations: int) -> Dict[str, BenchmarkResult]:
     """Benchmark bulk directory conversion operations."""
     print("\n=== Bulk Operations Performance ===")
 
@@ -485,9 +447,7 @@ def benchmark_bulk_operations(
 
         # Benchmark bulk conversion
         def bulk_convert():
-            return convert_pickle_directory(
-                source_dir=source_dir, target_dir=target_dir, overwrite=True
-            )
+            return convert_pickle_directory(source_dir=source_dir, target_dir=target_dir, overwrite=True)
 
         bulk_result = benchmark_operation(bulk_convert, None, iterations)
         results["bulk_conversion"] = bulk_result
@@ -539,24 +499,18 @@ def analyze_file_sizes(pickle_files: Dict[str, Path]) -> Dict[str, FileStats]:
 def print_benchmark_results(results: Dict[str, BenchmarkResult], title: str):
     """Print formatted benchmark results."""
     print(f"\n--- {title} ---")
-    print(
-        f"{'Operation':<30} {'Mean (ms)':<12} {'±Std (ms)':<12} {'Ops/sec':<12} {'Status':<10}"
-    )
+    print(f"{'Operation':<30} {'Mean (ms)':<12} {'±Std (ms)':<12} {'Ops/sec':<12} {'Status':<10}")
     print("-" * 78)
 
     for operation, result in results.items():
         if result.mean == float("inf"):
-            print(
-                f"{operation:<30} {'FAILED':<12} {'FAILED':<12} {'0':<12} {'FAILED':<10}"
-            )
+            print(f"{operation:<30} {'FAILED':<12} {'FAILED':<12} {'0':<12} {'FAILED':<10}")
         else:
             mean_ms = result.mean * 1000
             std_ms = result.stdev * 1000
             ops_per_sec = result.operations_per_sec
             status = "SUCCESS" if result.mean < float("inf") else "FAILED"
-            print(
-                f"{operation:<30} {mean_ms:<12.2f} {std_ms:<12.2f} {ops_per_sec:<12.0f} {status:<10}"
-            )
+            print(f"{operation:<30} {mean_ms:<12.2f} {std_ms:<12.2f} {ops_per_sec:<12.0f} {status:<10}")
 
 
 def print_size_analysis(size_stats: Dict[str, FileStats]):
@@ -621,9 +575,7 @@ def run_ml_benchmarks(iterations: int, data_sizes: List[int]):
 
         # Filter to ML-related files only
         ml_files = {
-            k: v
-            for k, v in pickle_files.items()
-            if any(lib in k for lib in ["numpy", "pandas", "sklearn", "torch"])
+            k: v for k, v in pickle_files.items() if any(lib in k for lib in ["numpy", "pandas", "sklearn", "torch"])
         }
 
         if not ml_files:

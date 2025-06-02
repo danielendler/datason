@@ -66,24 +66,14 @@ except ImportError:
 
 def pytest_configure(config):
     """Register custom markers for dependency-based test categorization."""
-    config.addinivalue_line(
-        "markers", "core: Core functionality tests (no optional dependencies required)"
-    )
+    config.addinivalue_line("markers", "core: Core functionality tests (no optional dependencies required)")
     config.addinivalue_line("markers", "numpy: Tests requiring numpy")
     config.addinivalue_line("markers", "pandas: Tests requiring pandas")
     config.addinivalue_line("markers", "sklearn: Tests requiring scikit-learn")
-    config.addinivalue_line(
-        "markers", "ml: Tests requiring ML dependencies (torch, tensorflow, etc.)"
-    )
-    config.addinivalue_line(
-        "markers", "optional: Tests for optional dependency functionality"
-    )
-    config.addinivalue_line(
-        "markers", "fallback: Tests for fallback behavior when dependencies are missing"
-    )
-    config.addinivalue_line(
-        "markers", "intensive: Memory/CPU intensive tests (skipped in CI environments)"
-    )
+    config.addinivalue_line("markers", "ml: Tests requiring ML dependencies (torch, tensorflow, etc.)")
+    config.addinivalue_line("markers", "optional: Tests for optional dependency functionality")
+    config.addinivalue_line("markers", "fallback: Tests for fallback behavior when dependencies are missing")
+    config.addinivalue_line("markers", "intensive: Memory/CPU intensive tests (skipped in CI environments)")
 
 
 # Convenience skip decorators
@@ -91,14 +81,10 @@ requires_numpy = pytest.mark.skipif(not HAS_NUMPY, reason="numpy not available")
 requires_pandas = pytest.mark.skipif(not HAS_PANDAS, reason="pandas not available")
 requires_sklearn = pytest.mark.skipif(not HAS_SKLEARN, reason="sklearn not available")
 requires_torch = pytest.mark.skipif(not HAS_TORCH, reason="torch not available")
-requires_tensorflow = pytest.mark.skipif(
-    not HAS_TENSORFLOW, reason="tensorflow not available"
-)
+requires_tensorflow = pytest.mark.skipif(not HAS_TENSORFLOW, reason="tensorflow not available")
 requires_jax = pytest.mark.skipif(not HAS_JAX, reason="jax not available")
 requires_pil = pytest.mark.skipif(not HAS_PIL, reason="PIL not available")
-requires_transformers = pytest.mark.skipif(
-    not HAS_TRANSFORMERS, reason="transformers not available"
-)
+requires_transformers = pytest.mark.skipif(not HAS_TRANSFORMERS, reason="transformers not available")
 
 # Combined requirements
 requires_ml_basic = pytest.mark.skipif(

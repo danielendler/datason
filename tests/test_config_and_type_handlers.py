@@ -1,12 +1,12 @@
 """Tests for configuration system and enhanced type handling."""
 
-from collections import namedtuple
-from datetime import datetime, timezone
 import decimal
 import enum
-from pathlib import Path
-from typing import Any, Dict, List
 import uuid
+from collections import namedtuple
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -118,9 +118,7 @@ class TestDateTimeHandling:
     def test_custom_format(self):
         """Test custom strftime format."""
         dt = datetime(2023, 12, 25, 10, 30, 45)
-        config = SerializationConfig(
-            date_format=DateFormat.CUSTOM, custom_date_format="%Y-%m-%d"
-        )
+        config = SerializationConfig(date_format=DateFormat.CUSTOM, custom_date_format="%Y-%m-%d")
         result = datason.serialize(dt, config=config)
         assert result == "2023-12-25"
 

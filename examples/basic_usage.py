@@ -4,10 +4,10 @@
 This script demonstrates the key features and capabilities of the datason package.
 """
 
-from datetime import datetime, timezone
 import json
-from typing import Any, Dict
 import uuid
+from datetime import datetime
+from typing import Any, Dict
 
 import datason as ds
 

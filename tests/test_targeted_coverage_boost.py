@@ -6,7 +6,7 @@ This file contains tests specifically targeting uncovered lines in the codebase.
 
 import sys
 import unittest
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 import pytest
 

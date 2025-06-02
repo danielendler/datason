@@ -6,8 +6,8 @@ including PyTorch, TensorFlow, scikit-learn, JAX, scipy, and others.
 
 import base64
 import io
-from typing import TYPE_CHECKING, Any, Dict, Optional
 import warnings
+from typing import TYPE_CHECKING, Any, Dict, Optional
 
 if TYPE_CHECKING:
     try:
@@ -109,9 +109,7 @@ def serialize_pytorch_tensor(tensor: Any) -> Dict[str, Any]:
         "_dtype": str(cpu_tensor.dtype),
         "_data": cpu_tensor.numpy().tolist(),
         "_device": str(tensor.device),
-        "_requires_grad": tensor.requires_grad
-        if hasattr(tensor, "requires_grad")
-        else False,
+        "_requires_grad": tensor.requires_grad if hasattr(tensor, "requires_grad") else False,
     }
 
 
@@ -178,9 +176,7 @@ def serialize_sklearn_model(model: Any) -> Dict[str, Any]:
                 # Only include JSON-serializable parameters
                 if isinstance(value, (str, int, float, bool, type(None))):
                     safe_params[key] = value
-                elif isinstance(value, (list, tuple)) and all(
-                    isinstance(x, (str, int, float, bool)) for x in value
-                ):
+                elif isinstance(value, (list, tuple)) and all(isinstance(x, (str, int, float, bool)) for x in value):
                     safe_params[key] = list(value)
                 else:
                     safe_params[key] = str(value)
@@ -191,8 +187,7 @@ def serialize_sklearn_model(model: Any) -> Dict[str, Any]:
             "_type": "sklearn.model",
             "_class": f"{model.__class__.__module__}.{model.__class__.__name__}",
             "_params": safe_params,
-            "_fitted": hasattr(model, "n_features_in_")
-            or hasattr(model, "feature_names_in_"),
+            "_fitted": hasattr(model, "n_features_in_") or hasattr(model, "feature_names_in_"),
         }
     except Exception as e:
         warnings.warn(f"Could not serialize sklearn model: {e}", stacklevel=2)
@@ -310,20 +305,11 @@ def detect_and_serialize_ml_object(obj: Any) -> Optional[Dict[str, Any]]:
         return serialize_tensorflow_tensor(obj)
 
     # JAX arrays
-    if (
-        jax is not None
-        and hasattr(obj, "shape")
-        and hasattr(obj, "dtype")
-        and "jax" in str(type(obj))
-    ):
+    if jax is not None and hasattr(obj, "shape") and hasattr(obj, "dtype") and "jax" in str(type(obj)):
         return serialize_jax_array(obj)
 
     # Scikit-learn models
-    if (
-        sklearn is not None
-        and BaseEstimator is not None
-        and isinstance(obj, BaseEstimator)
-    ):
+    if sklearn is not None and BaseEstimator is not None and isinstance(obj, BaseEstimator):
         return serialize_sklearn_model(obj)
 
     # Scipy sparse matrices
@@ -335,11 +321,7 @@ def detect_and_serialize_ml_object(obj: Any) -> Optional[Dict[str, Any]]:
         return serialize_pil_image(obj)
 
     # HuggingFace tokenizers
-    if (
-        transformers is not None
-        and hasattr(obj, "encode")
-        and "transformers" in str(type(obj))
-    ):
+    if transformers is not None and hasattr(obj, "encode") and "transformers" in str(type(obj)):
         return serialize_huggingface_tokenizer(obj)
 
     return None

@@ -4,10 +4,10 @@ This module contains the main serialize function that handles recursive
 serialization of complex Python data structures to JSON-compatible formats.
 """
 
-from datetime import datetime
-from typing import Any, Callable, Dict, Optional, Set, Union
 import uuid
 import warnings
+from datetime import datetime
+from typing import Any, Callable, Dict, Optional, Set, Union
 
 try:
     import pandas as pd
@@ -38,9 +38,7 @@ except ImportError:
 try:
     from .ml_serializers import detect_and_serialize_ml_object
 
-    _ml_serializer: Optional[Callable[[Any], Optional[Dict[str, Any]]]] = (
-        detect_and_serialize_ml_object
-    )
+    _ml_serializer: Optional[Callable[[Any], Optional[Dict[str, Any]]]] = detect_and_serialize_ml_object
 except ImportError:
     _ml_serializer = None
 
@@ -189,9 +187,7 @@ def serialize(
         # Use optimization result if available
         if optimization_result is not None:
             return optimization_result
-        return _serialize_object(
-            obj, config, _depth, _seen, _type_handler, max_string_length
-        )
+        return _serialize_object(obj, config, _depth, _seen, _type_handler, max_string_length)
     finally:
         # Clean up: remove from seen set when done processing
         if isinstance(obj, (dict, list, set)):
@@ -244,9 +240,7 @@ def _serialize_object(
                 return handler(obj)
             except Exception as e:
                 # If custom handler fails, fall back to default handling
-                warnings.warn(
-                    f"Custom type handler failed for {type(obj)}: {e}", stacklevel=3
-                )
+                warnings.warn(f"Custom type handler failed for {type(obj)}: {e}", stacklevel=3)
 
     # OPTIMIZATION: Check if dict/list are already fully serialized
     # This prevents recursive processing when not needed
@@ -256,12 +250,7 @@ def _serialize_object(
         for k, v in obj.items():
             serialized_value = serialize(v, config, _depth + 1, _seen, _type_handler)
             # Handle NaN dropping at collection level
-            if (
-                config
-                and config.nan_handling == NanHandling.DROP
-                and serialized_value is None
-                and is_nan_like(v)
-            ):
+            if config and config.nan_handling == NanHandling.DROP and serialized_value is None and is_nan_like(v):
                 continue
             result[k] = serialized_value
 
@@ -275,12 +264,7 @@ def _serialize_object(
         for x in obj:
             serialized_value = serialize(x, config, _depth + 1, _seen, _type_handler)
             # Handle NaN dropping at collection level
-            if (
-                config
-                and config.nan_handling == NanHandling.DROP
-                and serialized_value is None
-                and is_nan_like(x)
-            ):
+            if config and config.nan_handling == NanHandling.DROP and serialized_value is None and is_nan_like(x):
                 continue
             result.append(serialized_value)
 
@@ -302,14 +286,10 @@ def _serialize_object(
             # Security check: prevent excessive array sizes
             if obj.size > (config.max_size if config else MAX_OBJECT_SIZE):
                 raise SecurityError(
-                    f"NumPy array size ({obj.size}) exceeds maximum. "
-                    "This may indicate a resource exhaustion attempt."
+                    f"NumPy array size ({obj.size}) exceeds maximum. This may indicate a resource exhaustion attempt."
                 )
 
-            serialized_array = [
-                serialize(x, config, _depth + 1, _seen, _type_handler)
-                for x in obj.tolist()
-            ]
+            serialized_array = [serialize(x, config, _depth + 1, _seen, _type_handler) for x in obj.tolist()]
 
             # NEW: Handle type metadata for numpy arrays
             if config and config.include_type_hints:
@@ -320,11 +300,7 @@ def _serialize_object(
     # Handle datetime with configurable format and output type
     if isinstance(obj, datetime):
         # NEW: Check output type preference first
-        if (
-            config
-            and hasattr(config, "datetime_output")
-            and config.datetime_output == OutputType.OBJECT
-        ):
+        if config and hasattr(config, "datetime_output") and config.datetime_output == OutputType.OBJECT:
             return obj  # Return datetime object as-is
 
         # Handle format configuration for JSON-safe output
@@ -354,11 +330,7 @@ def _serialize_object(
     # Handle pandas DataFrame with configurable orientation and output type
     if pd is not None and isinstance(obj, pd.DataFrame):
         # NEW: Check output type preference first
-        if (
-            config
-            and hasattr(config, "dataframe_output")
-            and config.dataframe_output == OutputType.OBJECT
-        ):
+        if config and hasattr(config, "dataframe_output") and config.dataframe_output == OutputType.OBJECT:
             return obj  # Return DataFrame object as-is
 
         # Handle orientation configuration for JSON-safe output
@@ -386,11 +358,7 @@ def _serialize_object(
     # Handle pandas Series with configurable output type
     if pd is not None and isinstance(obj, pd.Series):
         # NEW: Check output type preference first
-        if (
-            config
-            and hasattr(config, "series_output")
-            and config.series_output == OutputType.OBJECT
-        ):
+        if config and hasattr(config, "series_output") and config.series_output == OutputType.OBJECT:
             return obj  # Return Series object as-is
 
         # Default: convert to dict for JSON-safe output
@@ -424,9 +392,7 @@ def _serialize_object(
 
     # Handle set (convert to list for JSON compatibility)
     if isinstance(obj, set):
-        serialized_set = [
-            serialize(x, config, _depth + 1, _seen, _type_handler) for x in obj
-        ]
+        serialized_set = [serialize(x, config, _depth + 1, _seen, _type_handler) for x in obj]
 
         # NEW: Handle type metadata for sets
         if config and config.include_type_hints:
@@ -509,9 +475,7 @@ def _is_json_serializable_basic_type(value: Any) -> bool:
         return True
     if isinstance(value, float):
         # NaN and Inf are not JSON serializable, but we handle them specially
-        return not (
-            value != value or value in (float("inf"), float("-inf"))
-        )  # value != value checks for NaN
+        return not (value != value or value in (float("inf"), float("-inf")))  # value != value checks for NaN
     if isinstance(value, dict):
         # Recursively check if nested dict is serialized
         return _is_already_serialized_dict(value)
