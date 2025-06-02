@@ -54,14 +54,72 @@ jobs:
         if [ "$PYPI_VERSION" = "NOT_FOUND" ]; then
           # Fallback to latest git tag
           CURRENT_VERSION=$(git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//' || echo "0.3.0")
+          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.3.0")
         else
           CURRENT_VERSION="$PYPI_VERSION"
+          LATEST_TAG="v$PYPI_VERSION"
         fi
 
         echo "current=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+        echo "latest_tag=$LATEST_TAG" >> $GITHUB_OUTPUT
         echo "📋 Current version: $CURRENT_VERSION"
+        echo "📋 Latest tag: $LATEST_TAG"
+
+    - name: 🔎 Check for Code Changes
+      id: changes_check
+      run: |
+        LATEST_TAG="${{ steps.current_version.outputs.latest_tag }}"
+
+        # Get the commit hash that the latest tag points to
+        if git rev-parse --verify "$LATEST_TAG" >/dev/null 2>&1; then
+          TAG_COMMIT=$(git rev-parse "$LATEST_TAG")
+          CURRENT_COMMIT=$(git rev-parse HEAD)
+
+          echo "🏷️ Tag $LATEST_TAG points to: $TAG_COMMIT"
+          echo "📍 Current HEAD commit: $CURRENT_COMMIT"
+
+          if [ "$TAG_COMMIT" = "$CURRENT_COMMIT" ]; then
+            echo "⚠️ No code changes since last release ($LATEST_TAG)"
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+            echo "skip_reason=No code changes since $LATEST_TAG" >> $GITHUB_OUTPUT
+          else
+            # Check how many commits ahead we are
+            COMMITS_AHEAD=$(git rev-list --count "$TAG_COMMIT..HEAD" 2>/dev/null || echo "unknown")
+            echo "✅ Found $COMMITS_AHEAD commits since $LATEST_TAG"
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+            echo "commits_ahead=$COMMITS_AHEAD" >> $GITHUB_OUTPUT
+          fi
+        else
+          echo "✅ No previous tag found, proceeding with release"
+          echo "has_changes=true" >> $GITHUB_OUTPUT
+          echo "commits_ahead=unknown" >> $GITHUB_OUTPUT
+        fi
+
+    - name: ⏭️ Skip Release (No Changes)
+      if: steps.changes_check.outputs.has_changes == 'false'
+      run: |
+        cat >> $GITHUB_STEP_SUMMARY << 'EOF'
+        ## ⏭️ Major Release Skipped
+
+        **Reason**: ${{ steps.changes_check.outputs.skip_reason }}
+
+        **Current version**: `${{ steps.current_version.outputs.current }}`
+        **Latest tag**: `${{ steps.current_version.outputs.latest_tag }}`
+
+        ### 💡 Why was this skipped?
+        The current code is identical to what was already released.
+        Make some code changes first, then run the bump workflow again.
+
+        ### 🔗 Quick Links
+        - Current release: https://github.com/danielendler/datason/releases/tag/${{ steps.current_version.outputs.latest_tag }}
+        - PyPI: https://pypi.org/project/datason/
+        EOF
+
+        echo "⏭️ Skipping release - no code changes detected"
+        exit 0
 
     - name: ⬆️ Calculate Next Version
+      if: steps.changes_check.outputs.has_changes == 'true'
       id: next_version
       run: |
         CURRENT="${{ steps.current_version.outputs.current }}"
@@ -76,8 +134,10 @@ jobs:
         echo "next=$NEXT_VERSION" >> $GITHUB_OUTPUT
         echo "tag=v$NEXT_VERSION" >> $GITHUB_OUTPUT
         echo "🎯 Next version: $NEXT_VERSION"
+        echo "📈 Changes: ${{ steps.changes_check.outputs.commits_ahead }} commits since last release"
 
     - name: ✏️ Update pyproject.toml
+      if: steps.changes_check.outputs.has_changes == 'true'
       run: |
         python -c "
         import toml
@@ -97,6 +157,7 @@ jobs:
         "
 
     - name: 📝 Commit Version Bump
+      if: steps.changes_check.outputs.has_changes == 'true'
       run: |
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
@@ -107,12 +168,14 @@ jobs:
         git push origin ${{ steps.next_version.outputs.tag }}
 
     - name: 🏗️ Build Package
+      if: steps.changes_check.outputs.has_changes == 'true'
       run: |
         python -m pip install build
         python -m build
         ls -la dist/
 
     - name: 🚀 Trigger Release Workflow
+      if: steps.changes_check.outputs.has_changes == 'true'
       uses: actions/github-script@v7
       with:
         script: |
@@ -131,6 +194,7 @@ jobs:
           console.log('✅ Triggered release workflow for ${{ steps.next_version.outputs.tag }}');
 
     - name: ✅ Release Summary
+      if: steps.changes_check.outputs.has_changes == 'true'
       run: |
         cat >> $GITHUB_STEP_SUMMARY << 'EOF'
         ## 🚀 Major Release Initiated!
@@ -138,6 +202,7 @@ jobs:
         **Previous version**: `${{ steps.current_version.outputs.current }}`
         **New version**: `${{ steps.next_version.outputs.next }}`
         **Tag created**: `${{ steps.next_version.outputs.tag }}`
+        **Commits included**: ${{ steps.changes_check.outputs.commits_ahead }}
 
         ### 🔄 Next Steps
         The release workflow has been triggered and will handle:
