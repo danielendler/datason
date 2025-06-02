@@ -87,6 +87,22 @@ _RESULT_DICT_POOL: List[Dict] = []
 _RESULT_LIST_POOL: List[List] = []
 _POOL_SIZE_LIMIT = 20  # Limit pool size to prevent memory bloat
 
+# OPTIMIZATION: Function call overhead reduction - Phase 1 Step 1.5
+# Pre-computed type sets for ultra-fast membership testing
+_JSON_BASIC_TYPES = (str, int, bool, type(None))
+_NUMERIC_TYPES = (int, float)
+_CONTAINER_TYPES = (dict, list, tuple)
+
+# Inline type checking constants for hot path optimization
+_TYPE_STR = str
+_TYPE_INT = int
+_TYPE_BOOL = bool
+_TYPE_NONE = type(None)
+_TYPE_FLOAT = float
+_TYPE_DICT = dict
+_TYPE_LIST = list
+_TYPE_TUPLE = tuple
+
 
 class SecurityError(Exception):
     """Raised when security limits are exceeded during serialization."""
@@ -326,14 +342,99 @@ def serialize(
         # Use optimization result if available
         if optimization_result is not None:
             return optimization_result
-        return _serialize_object(obj, config, _depth, _seen, _type_handler, max_string_length)
+
+        # OPTIMIZATION: Try hot path first for maximum performance
+        hot_result = _serialize_hot_path(obj, config, max_string_length)
+        if hot_result is not None or obj is None:
+            return hot_result
+
+        # OPTIMIZATION: Try fast path for common containers
+        obj_type = type(obj)
+        if obj_type in _CONTAINER_TYPES:
+            # Handle dict with minimal function calls
+            if obj_type is _TYPE_DICT:
+                # Quick check for empty dict
+                if not obj:
+                    return obj
+
+                # Quick JSON compatibility check for small dicts
+                if len(obj) <= 5 and all(isinstance(k, str) and type(v) in _JSON_BASIC_TYPES for k, v in obj.items()):
+                    return obj
+
+                # Needs full dict processing
+                result = _process_homogeneous_dict(obj, config, _depth, _seen, _type_handler)
+                # Sort keys if configured
+                if config and config.sort_keys:
+                    return dict(sorted(result.items()))
+                return result
+
+            # Handle list/tuple with minimal function calls
+            elif obj_type in (_TYPE_LIST, _TYPE_TUPLE):
+                # Quick check for empty list/tuple
+                if not obj:
+                    return [] if obj_type is _TYPE_TUPLE else obj
+
+                # Quick JSON compatibility check for small lists
+                if len(obj) <= 5 and all(type(item) in _JSON_BASIC_TYPES for item in obj):
+                    return list(obj) if obj_type is _TYPE_TUPLE else obj
+
+                # Needs full list processing
+                result = _process_homogeneous_list(obj, config, _depth, _seen, _type_handler)
+                # Handle type metadata for tuples
+                if isinstance(obj, tuple) and config and config.include_type_hints:
+                    return _create_type_metadata("tuple", result)
+                return result
+
+        # Fall back to full processing for complex types
+        return _serialize_full_path(obj, config, _depth, _seen, _type_handler, max_string_length)
     finally:
         # Clean up: remove from seen set when done processing
         if isinstance(obj, (dict, list, set)):
             _seen.discard(id(obj))
 
 
-def _serialize_object(
+def _serialize_hot_path(obj: Any, config: Optional["SerializationConfig"], max_string_length: int) -> Any:
+    """Ultra-optimized hot path for common serialization cases.
+
+    This function inlines the most common operations to minimize function call overhead.
+    Returns None if the object needs full processing.
+    """
+    # OPTIMIZATION: Inline type checking without function calls
+    obj_type = type(obj)
+
+    # Handle None first (most common in sparse data)
+    if obj_type is _TYPE_NONE:
+        return None
+
+    # Handle basic JSON types with minimal overhead
+    if obj_type is _TYPE_STR:
+        # Inline string processing for short strings
+        if len(obj) <= 10:
+            # Try to intern common strings
+            interned = _COMMON_STRING_POOL.get(obj, obj)
+            return interned
+        elif len(obj) <= max_string_length:
+            return obj
+        else:
+            # Needs full string processing
+            return None
+
+    elif obj_type is _TYPE_INT or obj_type is _TYPE_BOOL:
+        return obj
+
+    elif obj_type is _TYPE_FLOAT:
+        # Inline NaN/Inf check
+        if obj == obj and obj not in (float("inf"), float("-inf")):
+            return obj
+        else:
+            # Needs NaN handling
+            return None
+
+    # For complex types, return None to indicate full processing needed
+    return None
+
+
+def _serialize_full_path(
     obj: Any,
     config: Optional["SerializationConfig"],
     _depth: int,
@@ -341,26 +442,20 @@ def _serialize_object(
     _type_handler: Optional[TypeHandler],
     max_string_length: int,
 ) -> Any:
-    """Internal serialization logic without circular reference management."""
-    # Handle None first (most common in sparse data)
-    if obj is None:
-        return None
-
+    """Full serialization path for complex objects."""
     # OPTIMIZATION: Use faster type cache for type detection
     obj_type = type(obj)
     type_category = _get_cached_type_category_fast(obj_type)
 
-    # OPTIMIZATION: Handle most common JSON-basic types first with minimal overhead
-    if type_category == "json_basic":
-        if isinstance(obj, str):
-            return _process_string_optimized(obj, max_string_length)
-        return obj  # int, bool are already JSON-compatible
-
-    # OPTIMIZATION: Handle float early with streamlined NaN/Inf checking
+    # Handle float with streamlined NaN/Inf checking
     if type_category == "float":
         if obj != obj or obj in (float("inf"), float("-inf")):  # obj != obj checks for NaN
             return _type_handler.handle_nan_value(obj) if _type_handler else None
         return obj
+
+    # Handle string processing
+    if type_category == "json_basic" and obj_type is _TYPE_STR:
+        return _process_string_optimized(obj, max_string_length)
 
     # Check for NaN-like values if type handler is available (for non-float types)
     if _type_handler and type_category != "float" and is_nan_like(obj):
@@ -376,56 +471,25 @@ def _serialize_object(
                 # If custom handler fails, fall back to default handling
                 warnings.warn(f"Custom type handler failed for {type(obj)}: {e}", stacklevel=3)
 
-    # OPTIMIZATION: Fast path for JSON-compatible dicts (very common case)
+    # Handle dicts with full processing
     if type_category == "dict":
-        # Quick compatibility check for simple dicts
-        if (
-            _depth == 0
-            and config is None
-            or (
-                config
-                and not config.sort_keys
-                and not config.include_type_hints
-                and config.nan_handling == NanHandling.NULL
-            )
-        ) and _is_json_compatible_dict(obj):
-            return obj  # Already JSON-compatible
-
-        # OPTIMIZATION: Use homogeneous processing for better performance
         result = _process_homogeneous_dict(obj, config, _depth, _seen, _type_handler)
-
         # Sort keys if configured
         if config and config.sort_keys:
             return dict(sorted(result.items()))
         return result
 
-    # OPTIMIZATION: Handle lists/tuples with enhanced homogeneous processing
+    # Handle lists/tuples with full processing
     if type_category == "list":
-        # For simple lists of JSON-basic types, check if we can skip processing
-        if (
-            (
-                _depth == 0
-                and not config
-                or (config and not config.include_type_hints and config.nan_handling == NanHandling.NULL)
-            )
-            and all(_is_json_basic_type(item) for item in obj[:10])  # Sample first 10 items
-        ):
-            if isinstance(obj, tuple):
-                return list(obj)  # Convert tuple to list for JSON
-            return obj  # Already JSON-compatible list
-
-        # OPTIMIZATION: Use homogeneous processing for better performance
         result = _process_homogeneous_list(obj, config, _depth, _seen, _type_handler)
-
-        # NEW: Handle type metadata for tuples
+        # Handle type metadata for tuples
         if isinstance(obj, tuple) and config and config.include_type_hints:
             return _create_type_metadata("tuple", result)
-
         return result
 
     # OPTIMIZATION: Streamlined datetime handling (frequent type)
     if type_category == "datetime":
-        # NEW: Check output type preference first
+        # Check output type preference first
         if config and hasattr(config, "datetime_output") and config.datetime_output == OutputType.OBJECT:
             return obj  # Return datetime object as-is
 
@@ -447,27 +511,27 @@ def _serialize_object(
         if iso_string is None:
             iso_string = obj.isoformat()
 
-        # NEW: Handle type metadata for datetimes
+        # Handle type metadata for datetimes
         if config and config.include_type_hints:
             return _create_type_metadata("datetime", iso_string)
 
         return iso_string
 
-    # OPTIMIZATION: Handle UUID efficiently with caching (frequent in APIs)
+    # Handle UUID efficiently with caching (frequent in APIs)
     if type_category == "uuid":
         uuid_string = _uuid_to_string_optimized(obj)
 
-        # NEW: Handle type metadata for UUIDs
+        # Handle type metadata for UUIDs
         if config and config.include_type_hints:
             return _create_type_metadata("uuid.UUID", uuid_string)
 
         return uuid_string
 
-    # OPTIMIZATION: Handle sets efficiently
+    # Handle sets efficiently
     if type_category == "set":
         serialized_set = [serialize(x, config, _depth + 1, _seen, _type_handler) for x in obj]
 
-        # NEW: Handle type metadata for sets
+        # Handle type metadata for sets
         if config and config.include_type_hints:
             return _create_type_metadata("set", serialized_set)
 
@@ -490,7 +554,7 @@ def _serialize_object(
 
             serialized_array = [serialize(x, config, _depth + 1, _seen, _type_handler) for x in obj.tolist()]
 
-            # NEW: Handle type metadata for numpy arrays
+            # Handle type metadata for numpy arrays
             if config and config.include_type_hints:
                 return _create_type_metadata("numpy.ndarray", serialized_array)
 
@@ -500,7 +564,7 @@ def _serialize_object(
     if type_category == "pandas" and pd is not None:
         # Handle pandas DataFrame with configurable orientation and output type
         if isinstance(obj, pd.DataFrame):
-            # NEW: Check output type preference first
+            # Check output type preference first
             if config and hasattr(config, "dataframe_output") and config.dataframe_output == OutputType.OBJECT:
                 return obj  # Return DataFrame object as-is
 
@@ -517,7 +581,7 @@ def _serialize_object(
             else:
                 serialized_df = obj.to_dict(orient="records")  # Default orientation
 
-            # NEW: Handle type metadata for DataFrames
+            # Handle type metadata for DataFrames
             if config and config.include_type_hints:
                 return _create_type_metadata("pandas.DataFrame", serialized_df)
 
@@ -525,14 +589,14 @@ def _serialize_object(
 
         # Handle pandas Series with configurable output type
         if isinstance(obj, pd.Series):
-            # NEW: Check output type preference first
+            # Check output type preference first
             if config and hasattr(config, "series_output") and config.series_output == OutputType.OBJECT:
                 return obj  # Return Series object as-is
 
             # Default: convert to dict for JSON-safe output
             serialized_series = obj.to_dict()
 
-            # NEW: Handle type metadata for Series with name preservation
+            # Handle type metadata for Series with name preservation
             if config and config.include_type_hints:
                 # Include series name if it exists
                 if obj.name is not None:
