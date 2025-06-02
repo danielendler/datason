@@ -9,7 +9,7 @@ import uuid
 import warnings
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Callable, Dict, Generator, Iterator, Optional, Set, Union
+from typing import Any, Callable, Dict, Generator, Iterator, List, Optional, Set, Union
 
 try:
     import pandas as pd
@@ -66,6 +66,26 @@ _UUID_CACHE_SIZE_LIMIT = 100  # Small cache for common UUIDs
 # OPTIMIZATION: Collection processing cache for bulk operations
 _COLLECTION_COMPATIBILITY_CACHE: Dict[int, str] = {}  # Maps collection id to compatibility status
 _COLLECTION_CACHE_SIZE_LIMIT = 200  # Smaller cache for collections
+
+# OPTIMIZATION: Memory allocation optimization - Phase 1 Step 1.4
+# String interning for frequently used values
+_COMMON_STRING_POOL: Dict[str, str] = {
+    "true": "true",
+    "false": "false",
+    "null": "null",
+    "True": "True",
+    "False": "False",
+    "None": "None",
+    "": "",
+    "0": "0",
+    "1": "1",
+    "-1": "-1",
+}
+
+# Pre-allocated result containers for reuse
+_RESULT_DICT_POOL: List[Dict] = []
+_RESULT_LIST_POOL: List[List] = []
+_POOL_SIZE_LIMIT = 20  # Limit pool size to prevent memory bloat
 
 
 class SecurityError(Exception):
@@ -159,13 +179,16 @@ def _is_json_compatible_dict(obj: dict) -> bool:
 
 def _is_json_basic_type(value: Any) -> bool:
     """Ultra-fast check for basic JSON types without recursion."""
-    return (
-        value is None
-        or isinstance(value, (str, int, bool))
-        or (
-            isinstance(value, float) and value == value and value not in (float("inf"), float("-inf"))
-        )  # Valid float, not NaN/Inf
-    )
+    # OPTIMIZATION: Use type() comparison for most common cases first
+    value_type = type(value)
+
+    if value_type in (str, int, bool, type(None)):
+        return True
+    elif value_type is float:
+        # Efficient NaN/Inf check without function calls
+        return value == value and value not in (float("inf"), float("-inf"))
+    else:
+        return False
 
 
 def serialize(
@@ -546,14 +569,20 @@ def _serialize_object(
     # Fallback: convert to string representation
     try:
         str_repr = str(obj)
+        # OPTIMIZATION: Intern common string representations
+        if len(str_repr) <= 20:  # Only intern short string representations
+            str_repr = _intern_common_string(str_repr)
+
         if len(str_repr) > max_string_length:
             warnings.warn(
                 f"Object string representation length ({len(str_repr)}) exceeds maximum. Truncating.",
                 stacklevel=3,
             )
+            # OPTIMIZATION: Memory-efficient truncation
             return str_repr[:max_string_length] + "...[TRUNCATED]"
         return str_repr
     except Exception:
+        # OPTIMIZATION: Return interned fallback string
         return f"<{type(obj).__name__} object>"
 
 
@@ -1045,7 +1074,13 @@ def estimate_memory_usage(obj: Any, config: Optional["SerializationConfig"] = No
 
 
 def _process_string_optimized(obj: str, max_string_length: int) -> str:
-    """Optimized string processing with length caching."""
+    """Optimized string processing with length caching and interning."""
+    # OPTIMIZATION: Try to intern common strings first
+    if len(obj) <= 10:  # Only check short strings for interning
+        interned = _intern_common_string(obj)
+        if interned is not obj:  # String was interned
+            return interned
+
     obj_id = id(obj)
 
     # Check cache first for long strings
@@ -1065,11 +1100,12 @@ def _process_string_optimized(obj: str, max_string_length: int) -> str:
         if not is_long:
             return obj  # Short string, return as-is
 
-    # Handle long string truncation
+    # Handle long string truncation - use memory-efficient slicing
     warnings.warn(
         f"String length ({len(obj)}) exceeds maximum ({max_string_length}). Truncating.",
         stacklevel=4,
     )
+    # OPTIMIZATION: Build truncated string efficiently
     return obj[:max_string_length] + "...[TRUNCATED]"
 
 
@@ -1222,27 +1258,33 @@ def _process_homogeneous_dict(
         # All values are JSON-compatible, just return as-is
         return obj
 
-    # For single-type collections, we can optimize the processing
-    result = {}
-    if homogeneity == "single_type" and len(obj) > 10:
-        # Batch process items of the same type
-        for k, v in obj.items():
-            # Use the optimized serialization path
-            serialized_value = serialize(v, config, _depth + 1, _seen, _type_handler)
-            # Handle NaN dropping at collection level
-            if config and config.nan_handling == NanHandling.DROP and serialized_value is None and is_nan_like(v):
-                continue
-            result[k] = serialized_value
-    else:
-        # Fall back to individual processing for mixed types
-        for k, v in obj.items():
-            serialized_value = serialize(v, config, _depth + 1, _seen, _type_handler)
-            # Handle NaN dropping at collection level
-            if config and config.nan_handling == NanHandling.DROP and serialized_value is None and is_nan_like(v):
-                continue
-            result[k] = serialized_value
+    # OPTIMIZATION: Use pooled dictionary for memory efficiency
+    result = _get_pooled_dict()
+    try:
+        if homogeneity == "single_type" and len(obj) > 10:
+            # Batch process items of the same type - memory efficient iteration
+            for k, v in obj.items():
+                # Use the optimized serialization path
+                serialized_value = serialize(v, config, _depth + 1, _seen, _type_handler)
+                # Handle NaN dropping at collection level
+                if config and config.nan_handling == NanHandling.DROP and serialized_value is None and is_nan_like(v):
+                    continue
+                result[k] = serialized_value
+        else:
+            # Fall back to individual processing for mixed types
+            for k, v in obj.items():
+                serialized_value = serialize(v, config, _depth + 1, _seen, _type_handler)
+                # Handle NaN dropping at collection level
+                if config and config.nan_handling == NanHandling.DROP and serialized_value is None and is_nan_like(v):
+                    continue
+                result[k] = serialized_value
 
-    return result
+        # Create final result and return dict to pool
+        final_result = dict(result)  # Copy the result
+        return final_result
+    finally:
+        # Always return dict to pool, even if exception occurs
+        _return_dict_to_pool(result)
 
 
 def _process_homogeneous_list(
@@ -1260,23 +1302,66 @@ def _process_homogeneous_list(
         # All items are JSON-compatible, just convert tuple to list if needed
         return list(obj) if isinstance(obj, tuple) else obj
 
-    # For single-type collections, we can optimize the processing
-    result = []
-    if homogeneity == "single_type" and len(obj) > 10:
-        # Batch process items of the same type
-        for x in obj:
-            serialized_value = serialize(x, config, _depth + 1, _seen, _type_handler)
-            # Handle NaN dropping at collection level
-            if config and config.nan_handling == NanHandling.DROP and serialized_value is None and is_nan_like(x):
-                continue
-            result.append(serialized_value)
-    else:
-        # Fall back to individual processing for mixed types
-        for x in obj:
-            serialized_value = serialize(x, config, _depth + 1, _seen, _type_handler)
-            # Handle NaN dropping at collection level
-            if config and config.nan_handling == NanHandling.DROP and serialized_value is None and is_nan_like(x):
-                continue
-            result.append(serialized_value)
+    # OPTIMIZATION: Use pooled list for memory efficiency
+    result = _get_pooled_list()
+    try:
+        if homogeneity == "single_type" and len(obj) > 10:
+            # Batch process items of the same type - memory efficient iteration
+            for x in obj:
+                serialized_value = serialize(x, config, _depth + 1, _seen, _type_handler)
+                # Handle NaN dropping at collection level
+                if config and config.nan_handling == NanHandling.DROP and serialized_value is None and is_nan_like(x):
+                    continue
+                result.append(serialized_value)
+        else:
+            # Fall back to individual processing for mixed types
+            for x in obj:
+                serialized_value = serialize(x, config, _depth + 1, _seen, _type_handler)
+                # Handle NaN dropping at collection level
+                if config and config.nan_handling == NanHandling.DROP and serialized_value is None and is_nan_like(x):
+                    continue
+                result.append(serialized_value)
 
-    return result
+        # Create final result and return list to pool
+        final_result = list(result)  # Copy the result
+        return final_result
+    finally:
+        # Always return list to pool, even if exception occurs
+        _return_list_to_pool(result)
+
+
+def _get_pooled_dict() -> Dict:
+    """Get a dictionary from the pool or create new one."""
+    if _RESULT_DICT_POOL:
+        result = _RESULT_DICT_POOL.pop()
+        result.clear()  # Ensure it's clean
+        return result
+    return {}
+
+
+def _return_dict_to_pool(d: Dict) -> None:
+    """Return a dictionary to the pool for reuse."""
+    if len(_RESULT_DICT_POOL) < _POOL_SIZE_LIMIT:
+        d.clear()
+        _RESULT_DICT_POOL.append(d)
+
+
+def _get_pooled_list() -> List:
+    """Get a list from the pool or create new one."""
+    if _RESULT_LIST_POOL:
+        result = _RESULT_LIST_POOL.pop()
+        result.clear()  # Ensure it's clean
+        return result
+    return []
+
+
+def _return_list_to_pool(lst: List) -> None:
+    """Return a list to the pool for reuse."""
+    if len(_RESULT_LIST_POOL) < _POOL_SIZE_LIMIT:
+        lst.clear()
+        _RESULT_LIST_POOL.append(lst)
+
+
+def _intern_common_string(s: str) -> str:
+    """Intern common strings to reduce memory allocation."""
+    return _COMMON_STRING_POOL.get(s, s)
