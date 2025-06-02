@@ -114,7 +114,7 @@ jobs:
     name: 🚀 Publish to PyPI
     needs: build
     runs-on: ubuntu-latest
-    if: (github.event_name == 'release' && github.event.action == 'published') || (github.event_name == 'workflow_dispatch' && github.event.inputs.test_pypi != 'true')
+    if: github.event_name == 'release' && github.event.action == 'published'
     environment: pypi  # Use the pypi environment for trusted publishing
     permissions:
       id-token: write  # For trusted publishing

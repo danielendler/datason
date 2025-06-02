@@ -1,0 +1,156 @@
+name: 🩹 Bump Patch Version & Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_notes:
+        description: 'Release notes (optional)'
+        required: false
+        type: string
+        default: 'Patch release with bug fixes'
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  bump-and-release:
+    runs-on: ubuntu-latest
+    environment: pypi
+
+    steps:
+    - name: 📥 Checkout Code
+      uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        fetch-depth: 0
+
+    - name: 🐍 Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: 📦 Install Dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install requests toml
+
+    - name: 🔍 Get Current Version
+      id: current_version
+      run: |
+        # Try to get version from PyPI first
+        PYPI_VERSION=$(python -c "
+        import requests
+        try:
+            response = requests.get('https://pypi.org/pypi/datason/json', timeout=10)
+            if response.status_code == 200:
+                data = response.json()
+                print(data['info']['version'])
+            else:
+                print('NOT_FOUND')
+        except:
+            print('NOT_FOUND')
+        " 2>/dev/null)
+
+        if [ "$PYPI_VERSION" = "NOT_FOUND" ]; then
+          # Fallback to latest git tag
+          CURRENT_VERSION=$(git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//' || echo "0.3.0")
+        else
+          CURRENT_VERSION="$PYPI_VERSION"
+        fi
+
+        echo "current=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+        echo "📋 Current version: $CURRENT_VERSION"
+
+    - name: 🔧 Calculate Next Version
+      id: next_version
+      run: |
+        CURRENT="${{ steps.current_version.outputs.current }}"
+
+        # Parse version (e.g., "0.3.1" -> major=0, minor=3, patch=1)
+        IFS='.' read -r major minor patch <<< "$CURRENT"
+
+        # Bump patch version only
+        next_patch=$((patch + 1))
+        NEXT_VERSION="${major}.${minor}.${next_patch}"
+
+        echo "next=$NEXT_VERSION" >> $GITHUB_OUTPUT
+        echo "tag=v$NEXT_VERSION" >> $GITHUB_OUTPUT
+        echo "🎯 Next version: $NEXT_VERSION"
+
+    - name: ✏️ Update pyproject.toml
+      run: |
+        python -c "
+        import toml
+
+        # Read current pyproject.toml
+        with open('pyproject.toml', 'r') as f:
+            data = toml.load(f)
+
+        # Update version
+        data['project']['version'] = '${{ steps.next_version.outputs.next }}'
+
+        # Write back
+        with open('pyproject.toml', 'w') as f:
+            toml.dump(data, f)
+
+        print('✅ Updated pyproject.toml version to ${{ steps.next_version.outputs.next }}')
+        "
+
+    - name: 📝 Commit Version Bump
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add pyproject.toml
+        git commit -m "🩹 Bump patch version to ${{ steps.next_version.outputs.next }}"
+        git tag ${{ steps.next_version.outputs.tag }}
+        git push origin main
+        git push origin ${{ steps.next_version.outputs.tag }}
+
+    - name: 🏗️ Build Package
+      run: |
+        python -m pip install build
+        python -m build
+        ls -la dist/
+
+    - name: 🚀 Publish to PyPI
+      uses: pypa/gh-action-pypi-publish@release/v1
+
+    - name: 🎉 Create GitHub Release
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: ${{ steps.next_version.outputs.tag }}
+        name: "Release ${{ steps.next_version.outputs.tag }}"
+        body: |
+          ## 🩹 Patch Release ${{ steps.next_version.outputs.tag }}
+
+          ${{ github.event.inputs.release_notes || 'Patch release with bug fixes' }}
+
+          ### 📦 Installation
+          ```bash
+          pip install --upgrade datason
+          ```
+
+          ### 🔗 Links
+          - **📚 Documentation**: https://datason.readthedocs.io
+          - **🐛 Issues**: https://github.com/danielendler/datason/issues
+          - **💬 Discussions**: https://github.com/danielendler/datason/discussions
+
+          **Previous version**: ${{ steps.current_version.outputs.current }}
+          **New version**: ${{ steps.next_version.outputs.next }}
+        generate_release_notes: true
+
+    - name: ✅ Release Summary
+      run: |
+        cat >> $GITHUB_STEP_SUMMARY << 'EOF'
+        ## 🩹 Patch Release Completed!
+
+        **Previous version**: `${{ steps.current_version.outputs.current }}`
+        **New version**: `${{ steps.next_version.outputs.next }}`
+        **PyPI**: https://pypi.org/project/datason/
+        **Release**: https://github.com/danielendler/datason/releases/tag/${{ steps.next_version.outputs.tag }}
+
+        ### 🔗 Quick Links
+        - Install: `pip install --upgrade datason`
+        - Documentation: https://datason.readthedocs.io
+        EOF
