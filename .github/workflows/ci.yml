@@ -182,7 +182,7 @@ jobs:
 
         # Install specific optional dependencies
         if [ "${{ matrix.dependency-set.use-dev }}" = "true" ]; then
-          pip install -e ".[dev]"
+          pip install -e ".[dev,all]"
         elif [ -n "${{ matrix.dependency-set.packages }}" ]; then
           pip install ${{ matrix.dependency-set.packages }}
         fi
