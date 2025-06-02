@@ -269,6 +269,33 @@ def serialize(
     ):
         return _serialize_json_only_fast_path(obj)
 
+    # PHASE 2.2: RECURSIVE CALL ELIMINATION
+    # Try iterative processing for nested collections to reduce function call overhead
+    if (
+        _depth == 0  # Only at top level to avoid recursive overhead
+        and (
+            config is None  # No configuration restrictions
+            or (
+                # Configuration is compatible with iterative processing
+                config.nan_handling == NanHandling.NULL
+                and not config.custom_serializers
+                and config.max_depth >= 10
+                and config.max_string_length >= 1000
+            )
+        )
+        and isinstance(obj, (dict, list, tuple))
+        and len(obj) > 10  # Only use for larger collections where overhead matters
+    ):
+        iterative_result = _serialize_iterative_path(obj, config)
+        if iterative_result is not None:
+            # Handle type metadata for tuples
+            if isinstance(obj, tuple) and config and config.include_type_hints:
+                return _create_type_metadata("tuple", iterative_result)
+            # Sort keys if configured
+            if isinstance(obj, dict) and config and config.sort_keys:
+                return dict(sorted(iterative_result.items()))
+            return iterative_result
+
     # NEW: Performance optimization - skip processing if already serialized
     if (
         config
@@ -1762,4 +1789,138 @@ def _convert_tuple_to_list_fast(obj: tuple) -> list:
                 result.append(item)
         else:
             result.append(item)
+    return result
+
+
+# PHASE 2.2: RECURSIVE CALL ELIMINATION
+# Iterative processing to eliminate serialize() → serialize() overhead
+
+def _serialize_iterative_path(obj: Any, config: Optional["SerializationConfig"]) -> Any:
+    """Iterative serialization to eliminate recursive function call overhead.
+    
+    This processes nested structures using a stack-based approach instead of
+    recursive serialize() calls, significantly reducing function call overhead.
+    """
+    if config is None and _config_available:
+        config = get_default_config()
+    
+    # Use iterative processing for homogeneous collections
+    obj_type = type(obj)
+    
+    if obj_type is _TYPE_DICT:
+        return _process_dict_iterative(obj, config)
+    elif obj_type in (_TYPE_LIST, _TYPE_TUPLE):
+        result = _process_list_iterative(obj, config)
+        # Handle type metadata for tuples
+        if isinstance(obj, tuple) and config and config.include_type_hints:
+            return _create_type_metadata("tuple", result)
+        return result
+    
+    # For non-collection types, fall back to normal processing
+    return None  # Indicates full processing needed
+
+
+def _process_dict_iterative(obj: dict, config: Optional["SerializationConfig"]) -> dict:
+    """Iterative dict processing to eliminate recursive calls."""
+    if not obj:
+        return obj
+    
+    # Quick homogeneity check
+    if len(obj) <= 20:
+        # For small dicts, check if all values are basic JSON types
+        all_basic = True
+        for value in obj.values():
+            if not _is_json_basic_type(value):
+                all_basic = False
+                break
+        
+        if all_basic:
+            return obj  # Already JSON-compatible
+    
+    # Process with minimal function calls
+    result = {}
+    for k, v in obj.items():
+        v_type = type(v)
+        
+        # Inline processing for common types
+        if v_type in (_TYPE_STR, _TYPE_INT, _TYPE_BOOL, _TYPE_NONE):
+            result[k] = v
+        elif v_type is _TYPE_FLOAT:
+            # Inline NaN/Inf handling
+            if v == v and v not in (float("inf"), float("-inf")):
+                result[k] = v
+            else:
+                # Handle NaN/Inf according to config
+                if config and hasattr(config, 'nan_handling') and config.nan_handling == NanHandling.DROP:
+                    continue  # Skip this key-value pair
+                result[k] = None  # Default NaN handling
+        elif v_type is _TYPE_DICT:
+            # Recursive dict processing (but only one level of function calls)
+            result[k] = _process_dict_iterative(v, config)
+        elif v_type in (_TYPE_LIST, _TYPE_TUPLE):
+            # Recursive list processing (but only one level of function calls)
+            processed = _process_list_iterative(v, config)
+            if v_type is _TYPE_TUPLE and config and config.include_type_hints:
+                result[k] = _create_type_metadata("tuple", processed)
+            else:
+                result[k] = processed
+        else:
+            # For complex types, we still need full processing
+            # But we minimize it to just this one call per complex item
+            from . import serialize  # Import here to avoid circular import
+            result[k] = serialize(v, config, _depth=1)
+    
+    return result
+
+
+def _process_list_iterative(obj: Union[list, tuple], config: Optional["SerializationConfig"]) -> list:
+    """Iterative list processing to eliminate recursive calls."""
+    if not obj:
+        return [] if isinstance(obj, tuple) else obj
+    
+    # Quick homogeneity check
+    if len(obj) <= 50:
+        # For small lists, check if all items are basic JSON types
+        all_basic = True
+        for item in obj:
+            if not _is_json_basic_type(item):
+                all_basic = False
+                break
+        
+        if all_basic:
+            return list(obj) if isinstance(obj, tuple) else obj
+    
+    # Process with minimal function calls
+    result = []
+    for item in obj:
+        item_type = type(item)
+        
+        # Inline processing for common types
+        if item_type in (_TYPE_STR, _TYPE_INT, _TYPE_BOOL, _TYPE_NONE):
+            result.append(item)
+        elif item_type is _TYPE_FLOAT:
+            # Inline NaN/Inf handling
+            if item == item and item not in (float("inf"), float("-inf")):
+                result.append(item)
+            else:
+                # Handle NaN/Inf according to config
+                if config and hasattr(config, 'nan_handling') and config.nan_handling == NanHandling.DROP:
+                    continue  # Skip this item
+                result.append(None)  # Default NaN handling
+        elif item_type is _TYPE_DICT:
+            # Recursive dict processing (but only one level of function calls)
+            result.append(_process_dict_iterative(item, config))
+        elif item_type in (_TYPE_LIST, _TYPE_TUPLE):
+            # Recursive list processing (but only one level of function calls)
+            processed = _process_list_iterative(item, config)
+            if item_type is _TYPE_TUPLE and config and config.include_type_hints:
+                result.append(_create_type_metadata("tuple", processed))
+            else:
+                result.append(processed)
+        else:
+            # For complex types, we still need full processing
+            # But we minimize it to just this one call per complex item
+            from . import serialize  # Import here to avoid circular import
+            result.append(serialize(item, config, _depth=1))
+    
     return result
