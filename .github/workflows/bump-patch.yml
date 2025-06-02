@@ -164,12 +164,26 @@ jobs:
         git config --global user.name "GitHub Actions"
         git add pyproject.toml
         git commit -m "🩹 Bump patch version to ${{ steps.next_version.outputs.next }} [skip ci]"
-        git tag ${{ steps.next_version.outputs.tag }}
+
+        # Check if tag already exists before creating it
+        if git rev-parse --verify "${{ steps.next_version.outputs.tag }}" >/dev/null 2>&1; then
+          echo "⚠️ Tag ${{ steps.next_version.outputs.tag }} already exists, skipping tag creation"
+        else
+          echo "✅ Creating new tag ${{ steps.next_version.outputs.tag }}"
+          git tag ${{ steps.next_version.outputs.tag }}
+        fi
 
         # Use the GITHUB_TOKEN for pushing
         git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}
         git push origin main
-        git push origin ${{ steps.next_version.outputs.tag }}
+
+        # Only push tag if it was newly created locally
+        if git show-ref --tags "${{ steps.next_version.outputs.tag }}" >/dev/null 2>&1; then
+          echo "✅ Pushing new tag ${{ steps.next_version.outputs.tag }}"
+          git push origin ${{ steps.next_version.outputs.tag }}
+        else
+          echo "ℹ️ Tag ${{ steps.next_version.outputs.tag }} was not created locally, skipping tag push"
+        fi
 
     - name: 🏗️ Build Package
       if: steps.changes_check.outputs.has_changes == 'true'
