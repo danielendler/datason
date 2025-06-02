@@ -55,6 +55,14 @@ MAX_STRING_LENGTH = 1_000_000  # Prevent excessive string processing
 _TYPE_CACHE: Dict[type, str] = {}
 _TYPE_CACHE_SIZE_LIMIT = 1000  # Prevent memory growth
 
+# OPTIMIZATION: String length cache for repeated string processing
+_STRING_LENGTH_CACHE: Dict[int, bool] = {}  # Maps string id to "is_long" boolean
+_STRING_CACHE_SIZE_LIMIT = 500  # Smaller cache for strings
+
+# OPTIMIZATION: Common UUID string cache for frequently used UUIDs
+_UUID_STRING_CACHE: Dict[int, str] = {}  # Maps UUID object id to string
+_UUID_CACHE_SIZE_LIMIT = 100  # Small cache for common UUIDs
+
 
 class SecurityError(Exception):
     """Raised when security limits are exceeded during serialization."""
@@ -311,19 +319,15 @@ def _serialize_object(
     if obj is None:
         return None
 
-    # OPTIMIZATION: Use type cache for faster type detection
+    # OPTIMIZATION: Use faster type cache for type detection
     obj_type = type(obj)
-    type_category = _get_cached_type_category(obj_type)
+    type_category = _get_cached_type_category_fast(obj_type)
 
     # OPTIMIZATION: Handle most common JSON-basic types first with minimal overhead
     if type_category == "json_basic":
-        if isinstance(obj, str) and len(obj) > max_string_length:
-            warnings.warn(
-                f"String length ({len(obj)}) exceeds maximum ({max_string_length}). Truncating.",
-                stacklevel=3,
-            )
-            return obj[:max_string_length] + "...[TRUNCATED]"
-        return obj  # str, int, bool are already JSON-compatible
+        if isinstance(obj, str):
+            return _process_string_optimized(obj, max_string_length)
+        return obj  # int, bool are already JSON-compatible
 
     # OPTIMIZATION: Handle float early with streamlined NaN/Inf checking
     if type_category == "float":
@@ -433,9 +437,9 @@ def _serialize_object(
 
         return iso_string
 
-    # OPTIMIZATION: Handle UUID efficiently (frequent in APIs)
+    # OPTIMIZATION: Handle UUID efficiently with caching (frequent in APIs)
     if type_category == "uuid":
-        uuid_string = str(obj)
+        uuid_string = _uuid_to_string_optimized(obj)
 
         # NEW: Handle type metadata for UUIDs
         if config and config.include_type_hints:
@@ -1045,3 +1049,110 @@ def estimate_memory_usage(obj: Any, config: Optional["SerializationConfig"] = No
         "recommended_chunk_size": recommended_chunk_size,
         "recommended_chunks": max(1, item_count // recommended_chunk_size),
     }
+
+
+def _process_string_optimized(obj: str, max_string_length: int) -> str:
+    """Optimized string processing with length caching."""
+    obj_id = id(obj)
+
+    # Check cache first for long strings
+    if obj_id in _STRING_LENGTH_CACHE:
+        is_long = _STRING_LENGTH_CACHE[obj_id]
+        if not is_long:
+            return obj  # Short string, return as-is
+    else:
+        # Calculate and cache length check
+        obj_len = len(obj)
+        is_long = obj_len > max_string_length
+
+        # Only cache if we haven't hit the limit
+        if len(_STRING_LENGTH_CACHE) < _STRING_CACHE_SIZE_LIMIT:
+            _STRING_LENGTH_CACHE[obj_id] = is_long
+
+        if not is_long:
+            return obj  # Short string, return as-is
+
+    # Handle long string truncation
+    warnings.warn(
+        f"String length ({len(obj)}) exceeds maximum ({max_string_length}). Truncating.",
+        stacklevel=4,
+    )
+    return obj[:max_string_length] + "...[TRUNCATED]"
+
+
+def _uuid_to_string_optimized(obj: uuid.UUID) -> str:
+    """Optimized UUID to string conversion with caching."""
+    obj_id = id(obj)
+
+    # Check cache first
+    if obj_id in _UUID_STRING_CACHE:
+        return _UUID_STRING_CACHE[obj_id]
+
+    # Convert and cache if space available
+    uuid_string = str(obj)
+    if len(_UUID_STRING_CACHE) < _UUID_CACHE_SIZE_LIMIT:
+        _UUID_STRING_CACHE[obj_id] = uuid_string
+
+    return uuid_string
+
+
+def _get_cached_type_category_fast(obj_type: type) -> Optional[str]:
+    """Faster version of type category lookup with optimized cache access."""
+    # Direct cache lookup (most common case)
+    cached = _TYPE_CACHE.get(obj_type)
+    if cached is not None:
+        return cached
+
+    # Only compute and cache if we have space
+    if len(_TYPE_CACHE) >= _TYPE_CACHE_SIZE_LIMIT:
+        # Cache full, do direct type checking without caching
+        if obj_type in (str, int, bool, type(None)):
+            return "json_basic"
+        elif obj_type is float:
+            return "float"
+        elif obj_type is dict:
+            return "dict"
+        elif obj_type in (list, tuple):
+            return "list"
+        elif obj_type is datetime:
+            return "datetime"
+        elif obj_type is uuid.UUID:
+            return "uuid"
+        else:
+            return "other"  # Skip expensive checks when cache is full
+
+    # Compute and cache (same logic as before, but optimized)
+    if obj_type in (str, int, bool, type(None)):
+        category = "json_basic"
+    elif obj_type is float:
+        category = "float"
+    elif obj_type is dict:
+        category = "dict"
+    elif obj_type in (list, tuple):
+        category = "list"
+    elif obj_type is datetime:
+        category = "datetime"
+    elif obj_type is uuid.UUID:
+        category = "uuid"
+    elif obj_type is set:
+        category = "set"
+    elif np is not None and (
+        obj_type is np.ndarray
+        or hasattr(np, "number")
+        and issubclass(obj_type, np.number)
+        or hasattr(np, "ndarray")
+        and issubclass(obj_type, np.ndarray)
+    ):
+        category = "numpy"
+    elif pd is not None and (
+        obj_type is pd.DataFrame
+        or obj_type is pd.Series
+        or obj_type is pd.Timestamp
+        or issubclass(obj_type, (pd.DataFrame, pd.Series, pd.Timestamp))
+    ):
+        category = "pandas"
+    else:
+        category = "other"
+
+    _TYPE_CACHE[obj_type] = category
+    return category
