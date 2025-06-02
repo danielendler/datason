@@ -61,8 +61,9 @@ except ImportError:
 # ML/AI serializers (optional - only available if ML libraries are installed)
 try:
     import importlib
+
     # Test if ml_serializers module is available
-    importlib.import_module('.ml_serializers', package='datason')
+    importlib.import_module(".ml_serializers", package="datason")
     _ml_available = True
 except ImportError:
     _ml_available = False
@@ -70,8 +71,9 @@ except ImportError:
 # Pickle Bridge (new in v0.3.0) - Zero dependencies, always available
 try:
     import importlib
+
     # Test if pickle_bridge module is available
-    importlib.import_module('.pickle_bridge', package='datason')
+    importlib.import_module(".pickle_bridge", package="datason")
     _pickle_bridge_available = True
 except ImportError:
     _pickle_bridge_available = False
@@ -175,7 +177,7 @@ if _ml_available:
 
 # Add Pickle Bridge to __all__ if available
 if _pickle_bridge_available:
-    from .pickle_bridge import (  # noqa: F401, B403
+    from .pickle_bridge import (  # noqa: F401  # nosec B403
         PickleBridge,
         PickleSecurityError,
         convert_pickle_directory,

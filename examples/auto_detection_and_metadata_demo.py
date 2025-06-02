@@ -454,9 +454,7 @@ def verify_round_trip(original: Any, restored: Any, path: str = "", show_details
 
     if type(original) is not type(restored):
         if show_details:
-            print(
-                f"  ❌ Type mismatch at {path}: {type(original).__name__} != {type(restored).__name__}"
-            )
+            print(f"  ❌ Type mismatch at {path}: {type(original).__name__} != {type(restored).__name__}")
         return False
 
     if isinstance(original, dict):
