@@ -4,17 +4,14 @@ Targeted Coverage Boost Tests
 This file contains tests specifically targeting uncovered lines in the codebase.
 """
 
+import importlib.util
 import sys
 import unittest
-from unittest.mock import Mock, patch
-
-import pytest
+from unittest.mock import patch
 
 # Optional dependency imports
 try:
-    import pandas as pd
-
-    HAS_PANDAS = True
+    HAS_PANDAS = importlib.util.find_spec("pandas") is not None
 except ImportError:
     HAS_PANDAS = False
 
@@ -168,7 +165,6 @@ class TestDateTimeUtilsUncoveredLines(unittest.TestCase):
         except ImportError:
             self.skipTest("pandas not available")
 
-    @pytest.mark.skipif(not HAS_PANDAS, reason="pandas not available")
     def test_datetime_lines_183_189_190_type_validation(self):
         """Test datetime_utils.py lines 183, 189-190: Type validation."""
         from datason.datetime_utils import ensure_dates

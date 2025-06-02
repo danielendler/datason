@@ -5,8 +5,8 @@ This module tests the ML serialization functionality with actual ML libraries
 when available, and fallback behavior when they're not.
 """
 
-from unittest.mock import Mock, patch
 import warnings
+from unittest.mock import Mock, patch
 
 import pytest
 
@@ -46,7 +46,7 @@ except ImportError:
     HAS_SKLEARN = False
 
 try:
-    import jax
+    import jax  # noqa: F401 - Used in patch testing on line 374
     import jax.numpy as jnp
 
     HAS_JAX = True
@@ -95,7 +95,7 @@ class TestMLLibraryAvailability:
         assert set(info.keys()) == expected_keys
 
         # All values should be boolean
-        for key, value in info.items():
+        for _key, value in info.items():
             assert isinstance(value, bool)
 
     def test_library_availability_matches_actual(self) -> None:
@@ -321,9 +321,7 @@ class TestTransformersSerialization:
         """Test serialization of tokenizer metadata."""
         # Use a small, fast tokenizer for testing
         try:
-            tokenizer = AutoTokenizer.from_pretrained(
-                "bert-base-uncased", trust_remote_code=True
-            )
+            tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased", trust_remote_code=True)
             result = serialize_huggingface_tokenizer(tokenizer)
 
             assert result["_type"] == "transformers.tokenizer"
@@ -337,9 +335,7 @@ class TestTransformersSerialization:
     def test_detect_transformers_tokenizer(self) -> None:
         """Test automatic detection of transformers tokenizers."""
         try:
-            tokenizer = AutoTokenizer.from_pretrained(
-                "bert-base-uncased", trust_remote_code=True
-            )
+            tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased", trust_remote_code=True)
             result = detect_and_serialize_ml_object(tokenizer)
 
             assert result is not None
@@ -366,9 +362,8 @@ class TestMLSerializersFallbacks:
         mock_model = Mock()
         mock_model.__str__ = Mock(return_value="MockSKLearnModel")
 
-        with patch("datason.ml_serializers.sklearn", None):
-            with patch("datason.ml_serializers.BaseEstimator", None):
-                result = serialize_sklearn_model(mock_model)
+        with patch("datason.ml_serializers.sklearn", None), patch("datason.ml_serializers.BaseEstimator", None):
+            result = serialize_sklearn_model(mock_model)
 
         assert result == {"_type": "sklearn.model", "_data": "MockSKLearnModel"}
 

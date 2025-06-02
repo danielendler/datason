@@ -1,12 +1,13 @@
+#!/usr/bin/env python3
 """
 Coverage boost tests for datason.
 
 These tests specifically target remaining uncovered lines to achieve 80-85% coverage.
 """
 
-import json
-from unittest.mock import Mock, patch
+import importlib.util
 import warnings
+from unittest.mock import Mock, patch
 
 import pytest
 
@@ -26,12 +27,15 @@ except ImportError:
     HAS_PANDAS = False
 
 try:
-    from sklearn.base import BaseEstimator
+    import sklearn  # noqa: F401
 
-    HAS_SKLEARN = True
+    has_sklearn_module = True
 except ImportError:
-    HAS_SKLEARN = False
+    has_sklearn_module = False
 
+HAS_SKLEARN = importlib.util.find_spec("sklearn") is not None
+
+# Import datason modules after dependency checks
 from datason.converters import safe_float, safe_int
 from datason.core import (
     _is_already_serialized_dict,
@@ -90,9 +94,7 @@ class TestCoreEdgeCases:
         """Test object where hasattr check for __dict__ raises an exception."""
         # Skip this test - the current implementation doesn't handle __getattribute__ exceptions
         # The hasattr call will propagate the exception rather than catching it
-        pytest.skip(
-            "Core implementation doesn't handle __getattribute__ exceptions in hasattr calls"
-        )
+        pytest.skip("Core implementation doesn't handle __getattribute__ exceptions in hasattr calls")
 
     def test_helper_functions_exception_handling(self) -> None:
         """Test helper functions with exception handling."""
@@ -183,7 +185,7 @@ class TestDateTimeUtilsEdgeCases:
         mock_df.__getitem__ = Mock(side_effect=Exception("Column access failed"))
 
         # This should raise the exception from column access
-        with pytest.raises(Exception):
+        with pytest.raises(Exception, match="'Mock' object is not subscriptable"):
             ensure_dates(mock_df)
 
     def test_convert_pandas_timestamps_edge_cases(self) -> None:
@@ -301,12 +303,9 @@ class TestMLSerializersSpecialCases:
             assert serialize_sklearn_model(mock_obj)["_type"] == "sklearn.model"
             assert serialize_scipy_sparse(mock_obj)["_type"] == "scipy.sparse"
             assert serialize_pil_image(mock_obj)["_type"] == "PIL.Image"
-            assert (
-                serialize_huggingface_tokenizer(mock_obj)["_type"]
-                == "transformers.tokenizer"
-            )
+            assert serialize_huggingface_tokenizer(mock_obj)["_type"] == "transformers.tokenizer"
 
-    @pytest.mark.skipif(not HAS_SKLEARN, reason="sklearn not available")
+    @pytest.mark.skipif(not has_sklearn_module, reason="sklearn not available")
     def test_ml_error_paths_coverage(self) -> None:
         """Test ML serializer error handling paths."""
         from datason.ml_serializers import (
@@ -322,7 +321,7 @@ class TestMLSerializersSpecialCases:
             result = serialize_sklearn_model(mock_model)
             assert "_error" in result
 
-    @pytest.mark.skipif(not HAS_SKLEARN, reason="sklearn not available")
+    @pytest.mark.skipif(not has_sklearn_module, reason="sklearn not available")
     def test_sklearn_parameter_filtering(self) -> None:
         """Test sklearn parameter filtering in serialization."""
         from datason.ml_serializers import serialize_sklearn_model
@@ -442,9 +441,7 @@ class TestPerformanceOptimizationEdgeCases:
 class TestFullIntegrationEdgeCases:
     """Test full integration edge cases."""
 
-    @pytest.mark.skipif(
-        not (HAS_NUMPY and HAS_PANDAS), reason="numpy and pandas not available"
-    )
+    @pytest.mark.skipif(not (HAS_NUMPY and HAS_PANDAS), reason="numpy and pandas not available")
     def test_end_to_end_with_all_types(self) -> None:
         """Test end-to-end serialization with all types."""
         from datetime import datetime
@@ -481,3 +478,10 @@ class TestFullIntegrationEdgeCases:
         assert deserialized["numpy_data"]["array"] == [1, 2, 3]
         # pd.NaT now becomes None by default
         assert deserialized["pandas_data"]["nat"] is None
+
+    def test_sklearn_unavailable_scenario(self) -> None:
+        """Test scenario when sklearn is unavailable."""
+        # Test with unavailable sklearn
+        has_sklearn = importlib.util.find_spec("sklearn") is not None
+        if has_sklearn:
+            pytest.skip("sklearn is available, can't test unavailable case")

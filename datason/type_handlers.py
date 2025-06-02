@@ -7,9 +7,9 @@ to JSON-compatible formats with configurable coercion strategies.
 import decimal
 import enum
 import logging
+import uuid
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
-import uuid
 
 try:
     import pandas as pd
@@ -48,9 +48,7 @@ class TypeHandler:
                 "_type": "decimal",
                 "value": str(obj),
                 "precision": len(str(obj).replace(".", "").replace("-", "")),
-                "scale": abs(obj.as_tuple().exponent)
-                if obj.as_tuple().exponent < 0
-                else 0,
+                "scale": abs(obj.as_tuple().exponent) if obj.as_tuple().exponent < 0 else 0,
             }
         # Convert to float (may lose precision)
         try:
@@ -146,9 +144,7 @@ class TypeHandler:
             result = obj._asdict()
             if self.config.type_coercion == TypeCoercion.STRICT:
                 result["_type"] = "namedtuple"
-                result["_class"] = (
-                    f"{obj.__class__.__module__}.{obj.__class__.__qualname__}"
-                )
+                result["_class"] = f"{obj.__class__.__module__}.{obj.__class__.__qualname__}"
             return result
         # Regular tuple, handle elsewhere
         raise ValueError("Not a namedtuple")
@@ -302,6 +298,15 @@ class TypeHandler:
             if obj_type in self.config.custom_serializers:
                 return self.config.custom_serializers[obj_type]
 
+        # NEW: Skip built-in handlers for types that support type metadata when enabled
+        if (
+            hasattr(self.config, "include_type_hints")
+            and self.config.include_type_hints
+            and isinstance(obj, (uuid.UUID, set))
+        ):
+            # Let core handlers handle these types for type metadata
+            return None
+
         # Built-in type handlers
         if isinstance(obj, decimal.Decimal):
             return self.handle_decimal
@@ -355,9 +360,7 @@ def is_nan_like(obj: Any) -> bool:
             return True
 
     # Check for pandas NaT and NA (but not DataFrames/Series)
-    if pd is not None and (
-        not hasattr(obj, "__len__") or isinstance(obj, (str, bytes))
-    ):
+    if pd is not None and (not hasattr(obj, "__len__") or isinstance(obj, (str, bytes))):
         try:
             if pd.isna(obj):
                 return True
@@ -425,11 +428,7 @@ def get_object_info(obj: Any) -> Dict[str, Any]:
             pass  # nosec B110
 
     # Special handling for different types
-    if (
-        isinstance(obj, (list, tuple, set, frozenset))
-        and info["size"]
-        and info["size"] > 0
-    ):
+    if isinstance(obj, (list, tuple, set, frozenset)) and info["size"] and info["size"] > 0:
         info["sample_types"] = list({type(item).__name__ for item in list(obj)[:5]})
     elif isinstance(obj, dict) and info["size"] and info["size"] > 0:
         sample_keys = list(obj.keys())[:3]

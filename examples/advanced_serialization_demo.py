@@ -8,14 +8,14 @@ This script demonstrates the enhanced features of datason including:
 - Custom type serializers
 """
 
+import decimal
+import json
+import uuid
 from collections import namedtuple
 from datetime import datetime, timezone
-import decimal
 from enum import Enum
-import json
 from pathlib import Path
 from typing import Any, Dict
-import uuid
 
 # Import datason with new features
 import datason
@@ -90,11 +90,7 @@ def create_sample_data():
             due_date=datetime(2024, 1, 15),
         ),
         # Nested structures
-        "nested_dict": {
-            "level1": {
-                "level2": {"data": [1, 2, 3], "meta": {"created": datetime.now()}}
-            }
-        },
+        "nested_dict": {"level1": {"level2": {"data": [1, 2, 3], "meta": {"created": datetime.now()}}}},
         "mixed_list": ["string", 42, {"nested": True}, uuid.uuid4(), datetime.now()],
     }
 
@@ -166,9 +162,7 @@ def demo_date_formats():
         print(f"📅 {description}: {result}")
 
     # Custom format
-    custom_config = SerializationConfig(
-        date_format=DateFormat.CUSTOM, custom_date_format="%B %d, %Y at %I:%M %p"
-    )
+    custom_config = SerializationConfig(date_format=DateFormat.CUSTOM, custom_date_format="%B %d, %Y at %I:%M %p")
     result = datason.serialize(dt, config=custom_config)
     print(f"📅 Custom format: {result}")
 
@@ -202,9 +196,7 @@ def demo_dataframe_orientations():
     print("\n📊 DataFrame Orientation Demo")
     print("=" * 50)
 
-    df = pd.DataFrame(
-        {"name": ["Alice", "Bob"], "age": [25, 30], "city": ["New York", "London"]}
-    )
+    df = pd.DataFrame({"name": ["Alice", "Bob"], "age": [25, 30], "city": ["New York", "London"]})
 
     orientations = [
         (DataFrameOrient.RECORDS, "Records (default)"),
@@ -217,11 +209,7 @@ def demo_dataframe_orientations():
         config = SerializationConfig(dataframe_orient=orient)
         result = datason.serialize(df, config=config)
         print(f"\n📋 {description}:")
-        print(
-            json.dumps(result, indent=2)[:200] + "..."
-            if len(str(result)) > 200
-            else json.dumps(result, indent=2)
-        )
+        print(json.dumps(result, indent=2)[:200] + "..." if len(str(result)) > 200 else json.dumps(result, indent=2))
 
 
 def demo_type_coercion():
@@ -271,9 +259,7 @@ def demo_preset_configurations():
         print(f"\n🎛️  {description}:")
         print(f"  📅 Date format: {result.get('datetime_naive', 'N/A')}")
         print(f"  🔢 Decimal: {type(result.get('decimal', 'N/A'))}")
-        print(
-            f"  📊 Keys sorted: {list(result.keys())[:3] == sorted(list(result.keys())[:3])}"
-        )
+        print(f"  📊 Keys sorted: {list(result.keys())[:3] == sorted(list(result.keys())[:3])}")
 
         if HAS_PANDAS and "dataframe" in result:
             df_result = result["dataframe"]

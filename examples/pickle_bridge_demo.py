@@ -11,19 +11,18 @@ Features demonstrated:
 - Performance monitoring
 """
 
-import json
-from pathlib import Path
-import pickle
+import pickle  # nosec B403
 import tempfile
 import time
+from pathlib import Path
 
 import datason
 
 
 def create_sample_ml_data():
     """Create sample ML-like data for demonstration."""
-    from datetime import datetime
     import uuid
+    from datetime import datetime
 
     # Simulate typical ML workflow data
     return {
@@ -76,9 +75,7 @@ def demo_basic_conversion():
         print(f"📊 Source size: {result['metadata']['source_size_bytes']:,} bytes")
         print(f"🕒 Converted at: {result['metadata']['conversion_timestamp']}")
         print(f"🎯 Experiment ID: {result['data']['experiment']['id']}")
-        print(
-            f"📈 Model accuracy: {result['data']['experiment']['metrics']['accuracy']}"
-        )
+        print(f"📈 Model accuracy: {result['data']['experiment']['metrics']['accuracy']}")
 
     finally:
         # Clean up

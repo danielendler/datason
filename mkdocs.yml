@@ -139,6 +139,7 @@ nav:
     - Benchmarking: BENCHMARKING.md
   - Development:
     - Contributing: CONTRIBUTING.md
+    - Testing & Integration: TESTING_INTEGRATION_IMPROVEMENTS.md
     - Security: SECURITY.md
     - Tooling Guide: TOOLING_GUIDE.md
     - CI/CD Pipeline: CI_PIPELINE_GUIDE.md

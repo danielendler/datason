@@ -5,8 +5,8 @@ This file contains tests specifically designed to cover the remaining uncovered 
 in the datason.datetime_utils module to push coverage above 95%.
 """
 
-from datetime import datetime, timezone
 import unittest
+from datetime import datetime, timezone
 from unittest.mock import Mock, patch
 
 import pytest
@@ -240,7 +240,7 @@ except ImportError:
             try:
                 return __import__(module_name)
             except ImportError:
-                raise unittest.SkipTest(f"{module_name} not available")
+                raise unittest.SkipTest(f"{module_name} not available") from None
 
     pytest = DummyPytest()
 

@@ -4,8 +4,8 @@ This module provides specialized serialization functions for specific use cases
 and data structures that require custom handling.
 """
 
-from datetime import datetime
 import math
+from datetime import datetime
 from typing import Any
 
 try:

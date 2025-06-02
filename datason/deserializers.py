@@ -4,10 +4,10 @@ This module provides functions to convert JSON-compatible data back to appropria
 Python objects, including datetime parsing, UUID reconstruction, and pandas types.
 """
 
-from datetime import datetime
-from typing import TYPE_CHECKING, Any, Optional
 import uuid
 import warnings
+from datetime import datetime
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 if TYPE_CHECKING:
     import numpy as np
@@ -22,6 +22,11 @@ else:
         import numpy as np
     except ImportError:
         np = None
+
+
+# NEW: Type metadata constants for round-trip serialization
+TYPE_METADATA_KEY = "__datason_type__"
+VALUE_METADATA_KEY = "__datason_value__"
 
 
 def deserialize(obj: Any, parse_dates: bool = True, parse_uuids: bool = True) -> Any:
@@ -45,6 +50,10 @@ def deserialize(obj: Any, parse_dates: bool = True, parse_uuids: bool = True) ->
     """
     if obj is None:
         return None
+
+    # NEW: Handle type metadata for round-trip serialization
+    if isinstance(obj, dict) and TYPE_METADATA_KEY in obj:
+        return _deserialize_with_type_metadata(obj)
 
     # Handle basic types (already in correct format)
     if isinstance(obj, (int, float, bool)):
@@ -86,6 +95,74 @@ def deserialize(obj: Any, parse_dates: bool = True, parse_uuids: bool = True) ->
     return obj
 
 
+def auto_deserialize(obj: Any, aggressive: bool = False) -> Any:
+    """NEW: Intelligent auto-detection deserialization with heuristics.
+
+    Uses pattern recognition and heuristics to automatically detect and restore
+    complex data types without explicit configuration.
+
+    Args:
+        obj: JSON-compatible object to deserialize
+        aggressive: Whether to use aggressive type detection (may have false positives)
+
+    Returns:
+        Python object with auto-detected types restored
+
+    Examples:
+        >>> data = {"records": [{"a": 1, "b": 2}, {"a": 3, "b": 4}]}
+        >>> auto_deserialize(data, aggressive=True)
+        {"records": DataFrame(...)}  # May detect as DataFrame
+    """
+    if obj is None:
+        return None
+
+    # Handle type metadata first
+    if isinstance(obj, dict) and TYPE_METADATA_KEY in obj:
+        return _deserialize_with_type_metadata(obj)
+
+    # Handle basic types
+    if isinstance(obj, (int, float, bool)):
+        return obj
+
+    # Handle strings with auto-detection
+    if isinstance(obj, str):
+        return _auto_detect_string_type(obj, aggressive)
+
+    # Handle lists with auto-detection
+    if isinstance(obj, list):
+        deserialized_list = [auto_deserialize(item, aggressive) for item in obj]
+
+        if aggressive and pd is not None and _looks_like_series_data(deserialized_list):
+            # Try to detect if this should be a pandas Series or DataFrame
+            try:
+                return pd.Series(deserialized_list)
+            except Exception:  # nosec B110
+                pass
+
+        return deserialized_list
+
+    # Handle dictionaries with auto-detection
+    if isinstance(obj, dict):
+        # Check for pandas DataFrame patterns first
+        if aggressive and pd is not None and _looks_like_dataframe_dict(obj):
+            try:
+                return _reconstruct_dataframe(obj)
+            except Exception:  # nosec B110
+                pass
+
+        # Check for pandas split format
+        if pd is not None and _looks_like_split_format(obj):
+            try:
+                return _reconstruct_from_split(obj)
+            except Exception:  # nosec B110
+                pass
+
+        # Standard dictionary deserialization
+        return {k: auto_deserialize(v, aggressive) for k, v in obj.items()}
+
+    return obj
+
+
 def deserialize_to_pandas(obj: Any, **kwargs: Any) -> Any:
     """Deserialize with pandas-specific optimizations.
 
@@ -107,6 +184,175 @@ def deserialize_to_pandas(obj: Any, **kwargs: Any) -> Any:
 
     # Then apply pandas-specific post-processing
     return _restore_pandas_types(result)
+
+
+def _deserialize_with_type_metadata(obj: Dict[str, Any]) -> Any:
+    """NEW: Deserialize objects with embedded type metadata for perfect round-trips."""
+    if TYPE_METADATA_KEY not in obj or VALUE_METADATA_KEY not in obj:
+        return obj
+
+    type_name = obj[TYPE_METADATA_KEY]
+    value = obj[VALUE_METADATA_KEY]
+
+    try:
+        if type_name == "datetime":
+            return datetime.fromisoformat(value)
+        if type_name == "uuid.UUID":
+            return uuid.UUID(value)
+        if type_name == "pandas.DataFrame":
+            if pd is not None:
+                return pd.DataFrame.from_dict(value)
+        elif type_name == "pandas.Series":
+            if pd is not None:
+                # Handle Series with name preservation
+                if isinstance(value, dict) and "_series_name" in value:
+                    series_name = value["_series_name"]
+                    series_data = {k: v for k, v in value.items() if k != "_series_name"}
+                    return pd.Series(series_data, name=series_name)
+                return pd.Series(value)
+        elif type_name == "numpy.ndarray":
+            if np is not None:
+                return np.array(value)
+        elif type_name == "set":
+            return set(value)
+        elif type_name == "tuple":
+            return tuple(value)
+        elif type_name == "complex":
+            return complex(value["real"], value["imag"])
+        # Add more type reconstructors as needed
+
+    except Exception as e:
+        warnings.warn(f"Failed to reconstruct type {type_name}: {e}", stacklevel=2)
+
+    # Fallback to the original value
+    return value
+
+
+def _auto_detect_string_type(s: str, aggressive: bool = False) -> Any:
+    """NEW: Auto-detect the most likely type for a string value."""
+    # Always try datetime and UUID detection
+    if _looks_like_datetime(s):
+        try:
+            return datetime.fromisoformat(s.replace("Z", "+00:00"))
+        except ValueError:
+            pass
+
+    if _looks_like_uuid(s):
+        try:
+            return uuid.UUID(s)
+        except ValueError:
+            pass
+
+    if not aggressive:
+        return s
+
+    # Aggressive detection - more prone to false positives
+    # Try to detect numbers
+    if _looks_like_number(s):
+        try:
+            if "." in s or "e" in s.lower():
+                return float(s)
+            return int(s)
+        except ValueError:
+            pass
+
+    # Try to detect boolean
+    if s.lower() in ("true", "false"):
+        return s.lower() == "true"
+
+    return s
+
+
+def _looks_like_series_data(data: List[Any]) -> bool:
+    """NEW: Check if a list looks like it should be a pandas Series."""
+    if len(data) < 2:
+        return False
+
+    # Check if all items are the same type and numeric/datetime
+    first_type = type(data[0])
+    if not all(isinstance(item, first_type) for item in data):
+        return False
+
+    return first_type in (int, float, datetime)
+
+
+def _looks_like_dataframe_dict(obj: Dict[str, Any]) -> bool:
+    """NEW: Check if a dict looks like it represents a DataFrame."""
+    if not isinstance(obj, dict) or len(obj) < 1:
+        return False
+
+    # Check if all values are lists of the same length
+    values = list(obj.values())
+    if not all(isinstance(v, list) for v in values):
+        return False
+
+    if len({len(v) for v in values}) != 1:  # All lists same length
+        return False
+
+    # Must have at least a few rows to be worth converting
+    return len(values[0]) >= 2
+
+
+def _looks_like_split_format(obj: Dict[str, Any]) -> bool:
+    """NEW: Check if a dict looks like pandas split format."""
+    if not isinstance(obj, dict):
+        return False
+
+    required_keys = {"index", "columns", "data"}
+    return required_keys.issubset(obj.keys())
+
+
+def _reconstruct_dataframe(obj: Dict[str, Any]) -> "pd.DataFrame":
+    """NEW: Reconstruct a DataFrame from a column-oriented dict."""
+    return pd.DataFrame(obj)
+
+
+def _reconstruct_from_split(obj: Dict[str, Any]) -> "pd.DataFrame":
+    """NEW: Reconstruct a DataFrame from split format."""
+    return pd.DataFrame(data=obj["data"], index=obj["index"], columns=obj["columns"])
+
+
+def _looks_like_number(s: str) -> bool:
+    """NEW: Check if a string looks like a number."""
+    if not s:
+        return False
+
+    # Handle negative/positive signs
+    s = s.strip()
+    if s.startswith(("+", "-")):
+        s = s[1:]
+
+    if not s:
+        return False
+
+    # Scientific notation
+    if "e" in s.lower():
+        parts = s.lower().split("e")
+        if len(parts) == 2:
+            mantissa, exponent = parts
+            # Check mantissa
+            if not _is_numeric_part(mantissa):
+                return False
+            # Check exponent (can have +/- sign)
+            exp = exponent.strip()
+            if exp.startswith(("+", "-")):
+                exp = exp[1:]
+            return exp.isdigit() if exp else False
+
+    # Regular number (integer or float)
+    return _is_numeric_part(s)
+
+
+def _is_numeric_part(s: str) -> bool:
+    """Helper to check if a string part is numeric."""
+    if not s:
+        return False
+    # Allow decimal points but only one
+    if s.count(".") > 1:
+        return False
+    # Remove decimal point for digit check
+    s_no_decimal = s.replace(".", "")
+    return s_no_decimal.isdigit() if s_no_decimal else False
 
 
 def _looks_like_datetime(s: str) -> bool:

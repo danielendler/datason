@@ -5,9 +5,9 @@ This module tests the bidirectional serialization capabilities by testing
 the deserialize functions and round-trip serialization/deserialization.
 """
 
-from datetime import datetime
 import json
 import uuid
+from datetime import datetime
 
 import pytest
 
@@ -175,7 +175,7 @@ class TestRoundTripSerialization:
         assert len(deserialized["users"]) == 2
 
         # Check types are restored
-        for i, user in enumerate(deserialized["users"]):
+        for _i, user in enumerate(deserialized["users"]):
             assert isinstance(user["id"], uuid.UUID)
             assert isinstance(user["created_at"], datetime)
             assert isinstance(user["metadata"]["last_login"], datetime)

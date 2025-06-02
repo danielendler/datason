@@ -5,9 +5,9 @@ including PyTorch, TensorFlow, scikit-learn, scipy, and others. Shows both
 serialization and deserialization in realistic ML workflows.
 """
 
-from datetime import datetime
 import json
 import uuid
+from datetime import datetime
 
 import datason as ds
 
@@ -18,9 +18,7 @@ def demonstrate_pytorch_workflow() -> None:
     print("=" * 50)
 
     try:
-        import numpy as np
         import torch
-        from torch import nn
 
         # Simulate a training experiment
         experiment_data = {
@@ -44,9 +42,7 @@ def demonstrate_pytorch_workflow() -> None:
                 "accuracy": torch.tensor(0.923),
                 "learning_rate": 0.001,
             },
-            "device_info": str(
-                torch.cuda.get_device_name(0) if torch.cuda.is_available() else "CPU"
-            ),
+            "device_info": str(torch.cuda.get_device_name(0) if torch.cuda.is_available() else "CPU"),
         }
 
         print("Original PyTorch experiment:")
@@ -68,9 +64,7 @@ def demonstrate_pytorch_workflow() -> None:
         deserialized = ds.deserialize(parsed)
 
         print("✅ Round-trip completed")
-        print(
-            f"  Experiment ID restored: {type(deserialized['experiment_id']).__name__}"
-        )
+        print(f"  Experiment ID restored: {type(deserialized['experiment_id']).__name__}")
         print(f"  Timestamp restored: {type(deserialized['created_at']).__name__}")
         print()
 
@@ -92,9 +86,7 @@ def demonstrate_sklearn_pipeline() -> None:
         from sklearn.preprocessing import StandardScaler
 
         # Create sample data and train model
-        X, y = make_classification(
-            n_samples=100, n_features=20, n_classes=2, random_state=42
-        )
+        X, y = make_classification(n_samples=100, n_features=20, n_classes=2, random_state=42)
 
         # Create and train pipeline
         pipeline = Pipeline(
@@ -118,9 +110,7 @@ def demonstrate_sklearn_pipeline() -> None:
                 "n_samples": X.shape[0],
                 "n_features": X.shape[1],
                 "feature_names": [f"feature_{i}" for i in range(X.shape[1])],
-                "target_distribution": {
-                    int(k): int(v) for k, v in zip(*np.unique(y, return_counts=True))
-                },
+                "target_distribution": {int(k): int(v) for k, v in zip(*np.unique(y, return_counts=True))},
             },
             "model_pipeline": {
                 "steps": [step[0] for step in pipeline.steps],
@@ -129,9 +119,7 @@ def demonstrate_sklearn_pipeline() -> None:
             },
             "performance": {
                 "training_accuracy": accuracy,
-                "feature_importances": pipeline.named_steps[
-                    "classifier"
-                ].feature_importances_.tolist(),
+                "feature_importances": pipeline.named_steps["classifier"].feature_importances_.tolist(),
                 "n_trees": len(pipeline.named_steps["classifier"].estimators_),
             },
             "arrays": {
@@ -145,20 +133,14 @@ def demonstrate_sklearn_pipeline() -> None:
         print("Original ML Pipeline:")
         print(f"  Dataset shape: {X.shape}")
         print(f"  Training accuracy: {accuracy:.4f}")
-        print(
-            f"  Feature importances shape: {len(ml_experiment['performance']['feature_importances'])}"
-        )
+        print(f"  Feature importances shape: {len(ml_experiment['performance']['feature_importances'])}")
         print()
 
         # Serialize
         serialized = ds.serialize(ml_experiment)
         print("✅ Serialized ML pipeline metadata")
-        print(
-            f"  All numpy arrays converted: {isinstance(serialized['performance']['feature_importances'], list)}"
-        )
-        print(
-            f"  Model parameters preserved: {len(serialized['model_pipeline']['classifier_params'])}"
-        )
+        print(f"  All numpy arrays converted: {isinstance(serialized['performance']['feature_importances'], list)}")
+        print(f"  Model parameters preserved: {len(serialized['model_pipeline']['classifier_params'])}")
         print()
 
         # Round trip
@@ -168,9 +150,7 @@ def demonstrate_sklearn_pipeline() -> None:
 
         print("✅ Round-trip completed")
         print(f"  Experiment ID: {type(deserialized['experiment_id']).__name__}")
-        print(
-            f"  Accuracy preserved: {deserialized['performance']['training_accuracy']:.4f}"
-        )
+        print(f"  Accuracy preserved: {deserialized['performance']['training_accuracy']:.4f}")
         print()
 
     except ImportError:
@@ -229,27 +209,21 @@ def demonstrate_computer_vision_workflow() -> None:
                 "epochs": 20,
                 "batch_size": 32,
                 "loss_history": np.random.exponential(0.5, 20).tolist(),
-                "accuracy_history": (
-                    0.5 + 0.5 * (1 - np.exp(-np.linspace(0, 3, 20)))
-                ).tolist(),
+                "accuracy_history": (0.5 + 0.5 * (1 - np.exp(-np.linspace(0, 3, 20)))).tolist(),
                 "validation_split": 0.2,
             },
         }
 
         print("Original CV Experiment:")
         print(f"  Image shape: {img_array.shape}")
-        print(
-            f"  Final accuracy: {cv_experiment['training_metrics']['accuracy_history'][-1]:.4f}"
-        )
+        print(f"  Final accuracy: {cv_experiment['training_metrics']['accuracy_history'][-1]:.4f}")
         print(f"  Model layers: {len(cv_experiment['model_architecture']['layers'])}")
         print()
 
         # Serialize
         serialized = ds.serialize(cv_experiment)
         print("✅ Serialized CV experiment")
-        print(
-            f"  Numpy arrays converted: {isinstance(serialized['sample_image']['pixel_stats']['mean'], list)}"
-        )
+        print(f"  Numpy arrays converted: {isinstance(serialized['sample_image']['pixel_stats']['mean'], list)}")
         print(f"  Image metadata preserved: {serialized['sample_image']['size']}")
         print()
 
@@ -260,9 +234,7 @@ def demonstrate_computer_vision_workflow() -> None:
 
         print("✅ Round-trip completed")
         print(f"  Experiment ID: {type(deserialized['experiment_id']).__name__}")
-        print(
-            f"  Loss history preserved: {len(deserialized['training_metrics']['loss_history'])}"
-        )
+        print(f"  Loss history preserved: {len(deserialized['training_metrics']['loss_history'])}")
         print()
 
     except ImportError:
@@ -306,9 +278,7 @@ def demonstrate_time_series_analysis() -> None:
                 "std": ts_data.std(),
                 "min": ts_data.min(),
                 "max": ts_data.max(),
-                "trend": "increasing"
-                if ts_data.iloc[-1] > ts_data.iloc[0]
-                else "decreasing",
+                "trend": "increasing" if ts_data.iloc[-1] > ts_data.iloc[0] else "decreasing",
                 "volatility": ts_data.std() / ts_data.mean(),
             },
             "forecasting": {
@@ -329,9 +299,7 @@ def demonstrate_time_series_analysis() -> None:
         # Serialize
         serialized = ds.serialize(ts_analysis)
         print("✅ Serialized time series analysis")
-        print(
-            f"  Timestamps converted: {isinstance(serialized['time_series']['timestamps'][0], str)}"
-        )
+        print(f"  Timestamps converted: {isinstance(serialized['time_series']['timestamps'][0], str)}")
         print(f"  Statistics preserved: {serialized['statistics']['mean']:.2f}")
         print()
 
@@ -342,12 +310,8 @@ def demonstrate_time_series_analysis() -> None:
 
         print("✅ Round-trip completed")
         print(f"  Analysis ID: {type(deserialized['analysis_id']).__name__}")
-        print(
-            f"  Start date restored: {type(deserialized['data_info']['start_date']).__name__}"
-        )
-        print(
-            f"  Timestamps restored: {type(deserialized['time_series']['timestamps'][0]).__name__}"
-        )
+        print(f"  Start date restored: {type(deserialized['data_info']['start_date']).__name__}")
+        print(f"  Timestamps restored: {type(deserialized['time_series']['timestamps'][0]).__name__}")
         print()
 
     except ImportError:
@@ -416,8 +380,7 @@ def demonstrate_nlp_workflow() -> None:
                     "dropout": 0.1,
                     "max_position_embeddings": 512,
                 },
-                "total_parameters": vocab_size * embedding_dim
-                + 1_000_000,  # Rough estimate
+                "total_parameters": vocab_size * embedding_dim + 1_000_000,  # Rough estimate
             },
             "training_results": {
                 "epochs": 10,
@@ -432,12 +395,8 @@ def demonstrate_nlp_workflow() -> None:
                 },
             },
             "embeddings_sample": {
-                "word_vectors": np.random.randn(
-                    10, embedding_dim
-                ).tolist(),  # Sample embeddings
-                "similarity_matrix": np.corrcoef(
-                    np.random.randn(5, embedding_dim)
-                ).tolist(),
+                "word_vectors": np.random.randn(10, embedding_dim).tolist(),  # Sample embeddings
+                "similarity_matrix": np.corrcoef(np.random.randn(5, embedding_dim)).tolist(),
                 "nearest_neighbors": {
                     "king": ["queen", "monarch", "ruler", "royal"],
                     "good": ["great", "excellent", "fine", "nice"],
@@ -449,23 +408,15 @@ def demonstrate_nlp_workflow() -> None:
         print("Original NLP Experiment:")
         print(f"  Total documents: {nlp_experiment['dataset']['n_documents']}")
         print(f"  Vocabulary size: {nlp_experiment['dataset']['vocabulary_size']:,}")
-        print(
-            f"  Model parameters: {nlp_experiment['model_config']['total_parameters']:,}"
-        )
-        print(
-            f"  Final perplexity: {nlp_experiment['training_results']['metrics']['perplexity']}"
-        )
+        print(f"  Model parameters: {nlp_experiment['model_config']['total_parameters']:,}")
+        print(f"  Final perplexity: {nlp_experiment['training_results']['metrics']['perplexity']}")
         print()
 
         # Serialize
         serialized = ds.serialize(nlp_experiment)
         print("✅ Serialized NLP experiment")
-        print(
-            f"  Numpy arrays converted: {isinstance(serialized['embeddings_sample']['word_vectors'], list)}"
-        )
-        print(
-            f"  Loss curve preserved: {len(serialized['training_results']['loss_curve'])}"
-        )
+        print(f"  Numpy arrays converted: {isinstance(serialized['embeddings_sample']['word_vectors'], list)}")
+        print(f"  Loss curve preserved: {len(serialized['training_results']['loss_curve'])}")
         print()
 
         # Round trip
@@ -476,9 +427,7 @@ def demonstrate_nlp_workflow() -> None:
         print("✅ Round-trip completed")
         print(f"  Experiment ID: {type(deserialized['experiment_id']).__name__}")
         print(f"  Timestamp: {type(deserialized['timestamp']).__name__}")
-        print(
-            f"  Embeddings shape preserved: {len(deserialized['embeddings_sample']['word_vectors'][0])}"
-        )
+        print(f"  Embeddings shape preserved: {len(deserialized['embeddings_sample']['word_vectors'][0])}")
         print()
 
     except ImportError:
@@ -551,34 +500,23 @@ def demonstrate_experiment_tracking() -> None:
                 },
             },
             "convergence_analysis": {
-                "accuracy_progression": [
-                    exp["results"]["validation_accuracy"] for exp in experiments
-                ],
-                "time_per_experiment": [
-                    exp["results"]["training_time"] for exp in experiments
-                ],
-                "efficiency_score": best_exp["results"]["validation_accuracy"]
-                / best_exp["results"]["training_time"],
+                "accuracy_progression": [exp["results"]["validation_accuracy"] for exp in experiments],
+                "time_per_experiment": [exp["results"]["training_time"] for exp in experiments],
+                "efficiency_score": best_exp["results"]["validation_accuracy"] / best_exp["results"]["training_time"],
             },
         }
 
         print("Original Experiment Tracking:")
         print(f"  Total experiments: {len(experiments)}")
         print(f"  Best accuracy: {best_exp['results']['validation_accuracy']:.4f}")
-        print(
-            f"  Best learning rate: {best_exp['hyperparameters']['learning_rate']:.2e}"
-        )
+        print(f"  Best learning rate: {best_exp['hyperparameters']['learning_rate']:.2e}")
         print()
 
         # Serialize
         serialized = ds.serialize(tracking_data)
         print("✅ Serialized experiment tracking data")
-        print(
-            f"  All experiment IDs converted: {isinstance(serialized['experiments'][0]['experiment_id'], str)}"
-        )
-        print(
-            f"  Numpy arrays preserved: {len(serialized['convergence_analysis']['accuracy_progression'])}"
-        )
+        print(f"  All experiment IDs converted: {isinstance(serialized['experiments'][0]['experiment_id'], str)}")
+        print(f"  Numpy arrays preserved: {len(serialized['convergence_analysis']['accuracy_progression'])}")
         print()
 
         # Round trip
@@ -588,9 +526,7 @@ def demonstrate_experiment_tracking() -> None:
 
         print("✅ Round-trip completed")
         print(f"  Session ID: {type(deserialized['tracking_session_id']).__name__}")
-        print(
-            f"  Best experiment ID: {type(deserialized['optimization_summary']['best_experiment_id']).__name__}"
-        )
+        print(f"  Best experiment ID: {type(deserialized['optimization_summary']['best_experiment_id']).__name__}")
         print(f"  Timestamps restored: {type(deserialized['created_at']).__name__}")
         print()
 

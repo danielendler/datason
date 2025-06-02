@@ -7,14 +7,13 @@ with ease, perfect for ML/AI workflows and data science applications.
 # Test codecov upload after permissions and configuration fixes
 
 import sys
-from typing import Any
 import warnings
+from typing import Any
 
 # Python version compatibility check
 if sys.version_info < (3, 8):  # noqa: UP036
     raise RuntimeError(
-        "datason requires Python 3.8 or higher. "
-        f"Your Python version: {sys.version_info.major}.{sys.version_info.minor}"
+        f"datason requires Python 3.8 or higher. Your Python version: {sys.version_info.major}.{sys.version_info.minor}"
     )
 
 # Warn for EOL Python versions
@@ -36,6 +35,7 @@ from .datetime_utils import (
     serialize_datetimes,
 )
 from .deserializers import (
+    auto_deserialize,
     deserialize,
     deserialize_to_pandas,
     parse_datetime_string,
@@ -52,19 +52,6 @@ try:
         NanHandling,
         SerializationConfig,
         TypeCoercion,
-        get_api_config,
-        get_default_config,
-        get_ml_config,
-        get_performance_config,
-        get_strict_config,
-        reset_default_config,
-        set_default_config,
-    )
-    from .type_handlers import (
-        TypeHandler,
-        get_object_info,
-        is_nan_like,
-        normalize_numpy_types,
     )
 
     _config_available = True
@@ -73,36 +60,25 @@ except ImportError:
 
 # ML/AI serializers (optional - only available if ML libraries are installed)
 try:
-    from .ml_serializers import (
-        detect_and_serialize_ml_object,
-        get_ml_library_info,
-        serialize_huggingface_tokenizer,
-        serialize_pil_image,
-        serialize_pytorch_tensor,
-        serialize_scipy_sparse,
-        serialize_sklearn_model,
-        serialize_tensorflow_tensor,
-    )
+    import importlib
 
+    # Test if ml_serializers module is available
+    importlib.import_module(".ml_serializers", package="datason")
     _ml_available = True
 except ImportError:
     _ml_available = False
 
 # Pickle Bridge (new in v0.3.0) - Zero dependencies, always available
 try:
-    from .pickle_bridge import (
-        PickleBridge,
-        PickleSecurityError,
-        convert_pickle_directory,
-        from_pickle,
-        get_ml_safe_classes,
-    )
+    import importlib
 
+    # Test if pickle_bridge module is available
+    importlib.import_module(".pickle_bridge", package="datason")
     _pickle_bridge_available = True
 except ImportError:
     _pickle_bridge_available = False
 
-__version__ = "0.3.0"
+__version__ = "0.3.1"
 __author__ = "datason Contributors"
 __license__ = "MIT"
 
@@ -116,6 +92,7 @@ __all__ = [  # noqa: RUF022
     "safe_float",
     "safe_int",
     # Deserialization
+    "auto_deserialize",
     "deserialize",
     "deserialize_to_pandas",
     "parse_datetime_string",
@@ -131,9 +108,25 @@ __all__ = [  # noqa: RUF022
 
 # Add configuration exports if available
 if _config_available:
+    from .config import (  # noqa: F401
+        get_api_config,
+        get_default_config,
+        get_ml_config,
+        get_performance_config,
+        get_strict_config,
+        reset_default_config,
+        set_default_config,
+    )
+    from .type_handlers import (  # noqa: F401
+        TypeHandler,
+        get_object_info,
+        is_nan_like,
+        normalize_numpy_types,
+    )
+
     __all__.extend(
         [  # noqa: RUF022
-            # Configuration classes
+            # Configuration classes (already imported above)
             "SerializationConfig",
             "DateFormat",
             "DataFrameOrient",
@@ -158,6 +151,17 @@ if _config_available:
 
 # Add ML serializers to __all__ if available
 if _ml_available:
+    from .ml_serializers import (  # noqa: F401
+        detect_and_serialize_ml_object,
+        get_ml_library_info,
+        serialize_huggingface_tokenizer,
+        serialize_pil_image,
+        serialize_pytorch_tensor,
+        serialize_scipy_sparse,
+        serialize_sklearn_model,
+        serialize_tensorflow_tensor,
+    )
+
     __all__.extend(
         [
             "detect_and_serialize_ml_object",
@@ -173,6 +177,14 @@ if _ml_available:
 
 # Add Pickle Bridge to __all__ if available
 if _pickle_bridge_available:
+    from .pickle_bridge import (  # noqa: F401  # nosec B403
+        PickleBridge,
+        PickleSecurityError,
+        convert_pickle_directory,
+        from_pickle,
+        get_ml_safe_classes,
+    )
+
     __all__.extend(
         [
             "PickleBridge",

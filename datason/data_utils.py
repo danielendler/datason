@@ -32,14 +32,10 @@ def convert_string_method_votes(
         if "method_votes" in transactions:
             # Convert string to list if needed
             if isinstance(transactions["method_votes"], str):
-                if transactions["method_votes"].startswith("[") and transactions[
-                    "method_votes"
-                ].endswith("]"):
+                if transactions["method_votes"].startswith("[") and transactions["method_votes"].endswith("]"):
                     # This is a string representation of a list, safely parse it to convert to an actual list
                     try:
-                        transactions["method_votes"] = ast.literal_eval(
-                            transactions["method_votes"]
-                        )
+                        transactions["method_votes"] = ast.literal_eval(transactions["method_votes"])
                     except (SyntaxError, ValueError):
                         # If eval fails, set to empty list as fallback
                         transactions["method_votes"] = []
@@ -49,8 +45,7 @@ def convert_string_method_votes(
 
             # Handle None or empty values
             if transactions["method_votes"] is None or (
-                isinstance(transactions["method_votes"], list)
-                and len(transactions["method_votes"]) == 0
+                isinstance(transactions["method_votes"], list) and len(transactions["method_votes"]) == 0
             ):
                 transactions["method_votes"] = []
 

@@ -5,11 +5,11 @@ This module contains performance tests to ensure datason remains fast
 and efficient, especially compared to standard JSON serialization.
 """
 
-from datetime import datetime
 import json
 import time
-from typing import Any, Dict
 import uuid
+from datetime import datetime
+from typing import Any, Dict
 
 import pytest
 
@@ -29,7 +29,7 @@ class TestPerformanceBenchmarks:
                 "timestamp": datetime.now(),
                 "value": i * 1.5,
                 "active": i % 2 == 0,
-                "data": [j for j in range(10)],
+                "data": list(range(10)),
             }
 
         # Benchmark serialization
@@ -40,9 +40,7 @@ class TestPerformanceBenchmarks:
         serialize_time = end_time - start_time
 
         # Should complete in reasonable time (< 1 second for 1000 items)
-        assert serialize_time < 1.0, (
-            f"Serialization took {serialize_time:.3f}s, too slow!"
-        )
+        assert serialize_time < 1.0, f"Serialization took {serialize_time:.3f}s, too slow!"
 
         # Result should be JSON-compatible
         assert isinstance(result, dict)
@@ -100,7 +98,7 @@ class TestPerformanceBenchmarks:
         # First serialization (should be optimized)
         start_time = time.time()
         result1 = ds.serialize(json_compatible)
-        first_time = time.time() - start_time
+        time.time() - start_time
 
         # Second serialization (should be even faster due to optimization)
         start_time = time.time()
@@ -140,9 +138,7 @@ class TestPerformanceBenchmarks:
         deserialize_time = end_time - start_time
 
         # Should complete in reasonable time
-        assert deserialize_time < 1.0, (
-            f"Deserialization took {deserialize_time:.3f}s, too slow!"
-        )
+        assert deserialize_time < 1.0, f"Deserialization took {deserialize_time:.3f}s, too slow!"
 
         # Check that parsing worked
         assert len(result["timestamps"]) == 300
@@ -188,9 +184,7 @@ class TestPerformanceBenchmarks:
         round_trip_time = end_time - start_time
 
         # Should complete in reasonable time
-        assert round_trip_time < 2.0, (
-            f"Round trip took {round_trip_time:.3f}s, too slow!"
-        )
+        assert round_trip_time < 2.0, f"Round trip took {round_trip_time:.3f}s, too slow!"
 
         # Check data integrity
         assert isinstance(deserialized["metadata"]["created_at"], datetime)
@@ -201,7 +195,7 @@ class TestPerformanceBenchmarks:
         """Test that we don't have excessive memory usage."""
         # Create a reasonably large dataset
         large_dataset = []
-        for i in range(1000):
+        for _i in range(1000):
             large_dataset.append(
                 {
                     "id": uuid.uuid4(),
@@ -245,9 +239,7 @@ class TestPerformanceBenchmarks:
         serialize_time = end_time - start_time
 
         # Should handle numpy efficiently
-        assert serialize_time < 2.0, (
-            f"Numpy serialization took {serialize_time:.3f}s, too slow!"
-        )
+        assert serialize_time < 2.0, f"Numpy serialization took {serialize_time:.3f}s, too slow!"
 
         # Check results
         assert len(result["large_array"]) == 1000
@@ -284,9 +276,7 @@ class TestPerformanceBenchmarks:
         serialize_time = end_time - start_time
 
         # Should handle pandas efficiently
-        assert serialize_time < 3.0, (
-            f"Pandas serialization took {serialize_time:.3f}s, too slow!"
-        )
+        assert serialize_time < 3.0, f"Pandas serialization took {serialize_time:.3f}s, too slow!"
 
         # Check results
         assert len(result["dataframe"]) == 1000
@@ -309,14 +299,12 @@ class TestScalabilityEdgeCases:
             current = current["next"]
 
         start_time = time.time()
-        result = ds.serialize(nested)
+        ds.serialize(nested)
         end_time = time.time()
 
         # Should handle deep nesting efficiently
         serialize_time = end_time - start_time
-        assert serialize_time < 1.0, (
-            f"Deep nesting took {serialize_time:.3f}s, too slow!"
-        )
+        assert serialize_time < 1.0, f"Deep nesting took {serialize_time:.3f}s, too slow!"
 
     def test_wide_structure_performance(self) -> None:
         """Test performance with very wide structures."""
@@ -335,9 +323,7 @@ class TestScalabilityEdgeCases:
 
         # Should handle wide structures efficiently
         serialize_time = end_time - start_time
-        assert serialize_time < 1.0, (
-            f"Wide structure took {serialize_time:.3f}s, too slow!"
-        )
+        assert serialize_time < 1.0, f"Wide structure took {serialize_time:.3f}s, too slow!"
         assert len(result) == 1000
 
     def test_mixed_type_performance(self) -> None:
@@ -354,7 +340,7 @@ class TestScalabilityEdgeCases:
                     "none": None,
                     "datetime": datetime.now(),
                     "uuid": uuid.uuid4(),
-                    "list": [j for j in range(10)],
+                    "list": list(range(10)),
                     "nested_dict": {
                         "timestamp": datetime.now(),
                         "data": [k * 2 for k in range(5)],
@@ -368,7 +354,5 @@ class TestScalabilityEdgeCases:
 
         # Should handle mixed types efficiently
         serialize_time = end_time - start_time
-        assert serialize_time < 2.0, (
-            f"Mixed types took {serialize_time:.3f}s, too slow!"
-        )
+        assert serialize_time < 2.0, f"Mixed types took {serialize_time:.3f}s, too slow!"
         assert len(result) == 100

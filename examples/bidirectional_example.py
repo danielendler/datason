@@ -6,9 +6,9 @@ objects can be serialized to JSON-compatible formats and then restored
 back to their original types.
 """
 
-from datetime import datetime
 import json
 import uuid
+from datetime import datetime
 
 import datason as ds
 
@@ -40,9 +40,7 @@ def demonstrate_basic_round_trip() -> None:
     # Step 1: Serialize to JSON-compatible format
     serialized = ds.serialize(original_data)
     print("✅ Serialized to JSON-compatible format")
-    print(
-        f"  user_id: {type(serialized['user_id']).__name__} = {serialized['user_id']}"
-    )
+    print(f"  user_id: {type(serialized['user_id']).__name__} = {serialized['user_id']}")
     print(f"  created_at: {type(serialized['created_at']).__name__}")
     print()
 
@@ -55,9 +53,7 @@ def demonstrate_basic_round_trip() -> None:
     # Step 3: Parse JSON string back to Python objects
     parsed_data = json.loads(json_string)
     print("✅ Parsed JSON string back to Python dict")
-    print(
-        f"  user_id: {type(parsed_data['user_id']).__name__} = {parsed_data['user_id']}"
-    )
+    print(f"  user_id: {type(parsed_data['user_id']).__name__} = {parsed_data['user_id']}")
     print()
 
     # Step 4: Deserialize back to original types
@@ -189,12 +185,8 @@ def demonstrate_complex_data_structures() -> None:
     deserialized = ds.deserialize(parsed)
 
     print("✅ Round-trip completed successfully")
-    print(
-        f"  Application ID type: {type(deserialized['application']['instance_id']).__name__}"
-    )
-    print(
-        f"  Deployment time type: {type(deserialized['application']['deployed_at']).__name__}"
-    )
+    print(f"  Application ID type: {type(deserialized['application']['instance_id']).__name__}")
+    print(f"  Deployment time type: {type(deserialized['application']['deployed_at']).__name__}")
     print(f"  User count preserved: {len(deserialized['users'])}")
 
     # Check nested data integrity

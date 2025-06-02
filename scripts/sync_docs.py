@@ -5,8 +5,8 @@ This script copies key documentation files from the root directory
 to the docs/ directory to ensure they are available for mkdocs.
 """
 
-from pathlib import Path
 import shutil
+from pathlib import Path
 
 # Files to sync from root to docs/
 FILES_TO_SYNC = ["CONTRIBUTING.md", "SECURITY.md", "CHANGELOG.md"]

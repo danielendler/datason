@@ -1,18 +1,14 @@
 # Codecov Configuration for datason
 # See: https://docs.codecov.com/docs/codecov-yaml
 
-# Project information
-name: "datason"
-project: "datason"
-
 codecov:
   # Require CI to pass before coverage is collected
-  require_ci_to_pass: false  # Changed to false to allow coverage even if some CI jobs fail
+  require_ci_to_pass: false
   # Notify us if coverage drops
   notify:
     # After this many builds (we only upload from full test suite now)
-    after_n_builds: 1  # Reduced since we only get coverage from "full" jobs
-    # Wait at most this long (in seconds) for coverage reports
+    after_n_builds: 1
+    # Wait at most this long for coverage reports
     wait_for_ci: true
 
 # Coverage targets and thresholds
@@ -31,23 +27,17 @@ coverage:
       default:
         # Fail if coverage drops by more than 2%
         threshold: 2%
-        # Coverage target (we're currently at ~83%)
+        # Coverage target (we're currently at ~84%)
         target: 80%
-        # Only check against base branch, not arbitrary commits
+        # Only check against base branch
         base: auto
         # Don't fail if CI failed - still want to see coverage
         if_ci_failed: success
-        # Run on all branches
-        branches:
-          - main
-          - develop
-          - "release/*"
-          - "feature/*"
 
     # Coverage on PR changes only
     patch:
       default:
-        # Require 70% coverage on new code (more realistic)
+        # Require 70% coverage on new code
         target: 70%
         # Allow new code to drop slightly
         threshold: 10%
@@ -83,15 +73,10 @@ comment:
   layout: "reach,diff,flags,tree"
   # Behavior settings
   behavior: default
-  # Require changes to post comment (don't spam on every commit)
-  require_changes: false  # Show coverage on every commit
-  # Show coverage for these file types
+  # Require changes to post comment
+  require_changes: false
+  # Show coverage after builds
   after_n_builds: 1
-
-# GitHub App integration
-github_checks:
-  # Enable codecov checks in GitHub
-  annotations: true
 
 # Flag configuration for different test types
 flags:

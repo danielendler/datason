@@ -66,12 +66,12 @@ This script is referenced in:
     - CONTRIBUTING.md performance standards
 """
 
-from datetime import datetime
 import json
 import pickle  # nosec B403 - Safe usage for benchmarking only, no untrusted data
 import statistics
 import time
 import uuid
+from datetime import datetime
 
 try:
     import numpy as np
@@ -120,10 +120,7 @@ def create_test_data():
 
     # Simple data (JSON-compatible)
     datasets["simple"] = {
-        "users": [
-            {"id": i, "name": f"user_{i}", "active": True, "score": i * 1.5}
-            for i in range(1000)
-        ],
+        "users": [{"id": i, "name": f"user_{i}", "active": True, "score": i * 1.5} for i in range(1000)],
         "metadata": {"total": 1000, "generated": "2024-01-01", "version": "1.0"},
     }
 
@@ -181,17 +178,13 @@ def create_test_data():
                 ),
                 "large": pd.DataFrame(
                     {
-                        "values": np.random.random(5000)
-                        if HAS_NUMPY
-                        else list(range(5000)),
+                        "values": np.random.random(5000) if HAS_NUMPY else list(range(5000)),
                         "timestamps": pd.date_range("2023-01-01", periods=5000),
                         "categories": [f"cat_{i % 10}" for i in range(5000)],
                     }
                 ),
             },
-            "series": pd.Series(
-                np.random.random(1000) if HAS_NUMPY else list(range(1000))
-            ),
+            "series": pd.Series(np.random.random(1000) if HAS_NUMPY else list(range(1000))),
         }
 
     return datasets
@@ -213,15 +206,11 @@ def run_comparison_benchmarks():
 
     # Standard JSON
     json_stats = benchmark_operation(json.dumps, simple_data)
-    print(
-        f"Standard JSON:     {json_stats['mean'] * 1000:.2f}ms ± {json_stats['stdev'] * 1000:.2f}ms"
-    )
+    print(f"Standard JSON:     {json_stats['mean'] * 1000:.2f}ms ± {json_stats['stdev'] * 1000:.2f}ms")
 
     # datason
     sp_stats = benchmark_operation(ds.serialize, simple_data)
-    print(
-        f"datason:         {sp_stats['mean'] * 1000:.2f}ms ± {sp_stats['stdev'] * 1000:.2f}ms"
-    )
+    print(f"datason:         {sp_stats['mean'] * 1000:.2f}ms ± {sp_stats['stdev'] * 1000:.2f}ms")
 
     # Ratio
     ratio = sp_stats["mean"] / json_stats["mean"]
@@ -236,15 +225,11 @@ def run_comparison_benchmarks():
     print("-" * 55)
 
     sp_complex_stats = benchmark_operation(ds.serialize, complex_data)
-    print(
-        f"datason:         {sp_complex_stats['mean'] * 1000:.2f}ms ± {sp_complex_stats['stdev'] * 1000:.2f}ms"
-    )
+    print(f"datason:         {sp_complex_stats['mean'] * 1000:.2f}ms ± {sp_complex_stats['stdev'] * 1000:.2f}ms")
 
     # Try to serialize with pickle for comparison
     pickle_stats = benchmark_operation(pickle.dumps, complex_data)
-    print(
-        f"Pickle:            {pickle_stats['mean'] * 1000:.2f}ms ± {pickle_stats['stdev'] * 1000:.2f}ms"
-    )
+    print(f"Pickle:            {pickle_stats['mean'] * 1000:.2f}ms ± {pickle_stats['stdev'] * 1000:.2f}ms")
 
     pickle_ratio = sp_complex_stats["mean"] / pickle_stats["mean"]
     print(f"datason/Pickle:  {pickle_ratio:.2f}x")
@@ -262,9 +247,7 @@ def run_comparison_benchmarks():
     print("-" * 50)
 
     sp_large_stats = benchmark_operation(ds.serialize, large_data)
-    print(
-        f"datason:         {sp_large_stats['mean'] * 1000:.2f}ms ± {sp_large_stats['stdev'] * 1000:.2f}ms"
-    )
+    print(f"datason:         {sp_large_stats['mean'] * 1000:.2f}ms ± {sp_large_stats['stdev'] * 1000:.2f}ms")
 
     # Calculate throughput
     item_count = 100 * 50  # 5000 items
@@ -281,14 +264,10 @@ def run_comparison_benchmarks():
         print("-" * 30)
 
         sp_numpy_stats = benchmark_operation(ds.serialize, numpy_data)
-        print(
-            f"datason:         {sp_numpy_stats['mean'] * 1000:.2f}ms ± {sp_numpy_stats['stdev'] * 1000:.2f}ms"
-        )
+        print(f"datason:         {sp_numpy_stats['mean'] * 1000:.2f}ms ± {sp_numpy_stats['stdev'] * 1000:.2f}ms")
 
         # Calculate data size
-        total_elements = (
-            100 + 1000 + 10000 + (100 * 100) + 1000 + 1000
-        )  # ~122K elements
+        total_elements = 100 + 1000 + 10000 + (100 * 100) + 1000 + 1000  # ~122K elements
         elements_per_sec = total_elements / sp_numpy_stats["mean"]
         print(f"Elements/sec:      {elements_per_sec:.0f}")
 
@@ -305,14 +284,10 @@ def run_comparison_benchmarks():
         print("-" * 30)
 
         sp_pandas_stats = benchmark_operation(ds.serialize, pandas_data)
-        print(
-            f"datason:         {sp_pandas_stats['mean'] * 1000:.2f}ms ± {sp_pandas_stats['stdev'] * 1000:.2f}ms"
-        )
+        print(f"datason:         {sp_pandas_stats['mean'] * 1000:.2f}ms ± {sp_pandas_stats['stdev'] * 1000:.2f}ms")
 
         # DataFrame size
-        df_rows = len(pandas_data["dataframes"]["small"]) + len(
-            pandas_data["dataframes"]["large"]
-        )
+        df_rows = len(pandas_data["dataframes"]["small"]) + len(pandas_data["dataframes"]["large"])
         rows_per_sec = df_rows / sp_pandas_stats["mean"]
         print(f"DataFrame rows/sec: {rows_per_sec:.0f}")
 
@@ -345,15 +320,11 @@ def test_round_trip_performance():
         return ds.deserialize(parsed)
 
     rt_stats = benchmark_operation(round_trip_test, test_data)
-    print(
-        f"Round-trip:        {rt_stats['mean'] * 1000:.2f}ms ± {rt_stats['stdev'] * 1000:.2f}ms"
-    )
+    print(f"Round-trip:        {rt_stats['mean'] * 1000:.2f}ms ± {rt_stats['stdev'] * 1000:.2f}ms")
 
     # Test just serialization
     ser_stats = benchmark_operation(ds.serialize, test_data)
-    print(
-        f"Serialize only:    {ser_stats['mean'] * 1000:.2f}ms ± {ser_stats['stdev'] * 1000:.2f}ms"
-    )
+    print(f"Serialize only:    {ser_stats['mean'] * 1000:.2f}ms ± {ser_stats['stdev'] * 1000:.2f}ms")
 
     # Test just deserialization
     serialized = ds.serialize(test_data)
@@ -361,13 +332,9 @@ def test_round_trip_performance():
     parsed = json.loads(json_str)
 
     deser_stats = benchmark_operation(ds.deserialize, parsed)
-    print(
-        f"Deserialize only:  {deser_stats['mean'] * 1000:.2f}ms ± {deser_stats['stdev'] * 1000:.2f}ms"
-    )
+    print(f"Deserialize only:  {deser_stats['mean'] * 1000:.2f}ms ± {deser_stats['stdev'] * 1000:.2f}ms")
 
-    print(
-        f"Total check:       {(ser_stats['mean'] + deser_stats['mean']) * 1000:.2f}ms"
-    )
+    print(f"Total check:       {(ser_stats['mean'] + deser_stats['mean']) * 1000:.2f}ms")
 
     return {"round_trip": rt_stats, "serialize": ser_stats, "deserialize": deser_stats}
 
@@ -403,13 +370,9 @@ def generate_performance_summary(results, round_trip_results):
         print(f"- Pandas DataFrames: {pandas_data['rows_per_sec']:.0f} rows/second")
 
     print("\n**Round-trip Performance:**")
-    print(
-        f"- Serialize + JSON + Deserialize: {round_trip_results['round_trip']['mean'] * 1000:.1f}ms"
-    )
+    print(f"- Serialize + JSON + Deserialize: {round_trip_results['round_trip']['mean'] * 1000:.1f}ms")
     print(f"- Serialize only: {round_trip_results['serialize']['mean'] * 1000:.1f}ms")
-    print(
-        f"- Deserialize only: {round_trip_results['deserialize']['mean'] * 1000:.1f}ms"
-    )
+    print(f"- Deserialize only: {round_trip_results['deserialize']['mean'] * 1000:.1f}ms")
 
 
 if __name__ == "__main__":

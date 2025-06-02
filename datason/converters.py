@@ -38,9 +38,7 @@ def safe_float(value: Any, default: float = 0.0) -> float:
         return default
     try:
         float_val = float(value)
-        return (
-            default if (math.isnan(float_val) or math.isinf(float_val)) else float_val
-        )
+        return default if (math.isnan(float_val) or math.isinf(float_val)) else float_val
     except (ValueError, TypeError):
         return default
 

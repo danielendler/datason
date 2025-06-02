@@ -6,8 +6,8 @@ in the datason.ml_serializers module to push coverage above 75%.
 """
 
 import unittest
-from unittest.mock import Mock, patch
 import warnings
+from unittest.mock import Mock, patch
 
 from datason.ml_serializers import (
     detect_and_serialize_ml_object,
@@ -152,15 +152,14 @@ class TestMLSerializersErrorPaths(unittest.TestCase):
         mock_matrix.format = "csr"
         mock_matrix.shape = (3, 3)
 
-        with patch("datason.ml_serializers.scipy", Mock()):
-            with warnings.catch_warnings(record=True) as w:
-                warnings.simplefilter("always")
-                result = serialize_scipy_sparse(mock_matrix)
+        with patch("datason.ml_serializers.scipy", Mock()), warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            result = serialize_scipy_sparse(mock_matrix)
 
-                # Should handle error gracefully
-                self.assertEqual(result["_type"], "scipy.sparse")
-                self.assertIn("_error", result)
-                self.assertTrue(len(w) > 0)
+            # Should handle error gracefully
+            self.assertEqual(result["_type"], "scipy.sparse")
+            self.assertIn("_error", result)
+            self.assertTrue(len(w) > 0)
 
     def test_pil_error_handling(self):
         """Test PIL image serialization error handling."""
@@ -178,11 +177,10 @@ class TestMLDetectionEdgeCases(unittest.TestCase):
         mock_obj.__class__.__module__ = "unknown_module"
 
         # Patch some libraries to None
-        with patch("datason.ml_serializers.torch", None):
-            with patch("datason.ml_serializers.tf", Mock()):
-                result = detect_and_serialize_ml_object(mock_obj)
-                # Should return None for unknown objects
-                self.assertIsNone(result)
+        with patch("datason.ml_serializers.torch", None), patch("datason.ml_serializers.tf", Mock()):
+            result = detect_and_serialize_ml_object(mock_obj)
+            # Should return None for unknown objects
+            self.assertIsNone(result)
 
     def test_detect_with_hasattr_exceptions(self):
         """Test detection when hasattr calls raise exceptions."""

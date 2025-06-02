@@ -1,9 +1,9 @@
 """Tests for the core serialization functionality."""
 
-from datetime import datetime
 import json
-from typing import Any, Dict
 import uuid
+from datetime import datetime
+from typing import Any, Dict
 
 import pytest
 
