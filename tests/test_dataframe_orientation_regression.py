@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """Regression tests for DataFrame orientation configuration.
 
 This test suite ensures that the DataFrame orientation bug discovered in
@@ -5,8 +6,10 @@ integration feedback doesn't resurface. It validates that all pandas-supported
 orientations work correctly and invalid orientations are handled gracefully.
 """
 
-import pandas as pd
 import pytest
+
+# Conditional import for optional dependency
+pd = pytest.importorskip("pandas", reason="pandas not available")
 
 import datason
 from datason.config import DataFrameOrient, OutputType, SerializationConfig

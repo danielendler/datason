@@ -436,7 +436,7 @@ class TestMemoryBenchmarks:
             )
 
         # Verify all configurations produce valid results
-        for name, config in configs.items():
+        for _name, config in configs.items():
             result = serialize(test_data, config=config)
             assert isinstance(result, dict)
             assert "records" in result

@@ -4,67 +4,46 @@ Test configuration for datason plugin architecture.
 This module defines pytest markers to categorize tests based on dependency requirements.
 """
 
+import importlib.util
+from typing import Any
+
 import pytest
 
 # Dependency availability flags
-try:
-    import numpy as np
 
-    HAS_NUMPY = True
-except ImportError:
-    HAS_NUMPY = False
+# Check for numpy
+HAS_NUMPY = importlib.util.find_spec("numpy") is not None
 
-try:
-    import pandas as pd
+# Check for pandas
+HAS_PANDAS = importlib.util.find_spec("pandas") is not None
 
-    HAS_PANDAS = True
-except ImportError:
-    HAS_PANDAS = False
+# Check for scikit-learn
+HAS_SKLEARN = importlib.util.find_spec("sklearn") is not None
 
-try:
-    import sklearn
+# Check for PyTorch
+HAS_TORCH = importlib.util.find_spec("torch") is not None
 
-    HAS_SKLEARN = True
-except ImportError:
-    HAS_SKLEARN = False
+# Check for TensorFlow
+HAS_TENSORFLOW = importlib.util.find_spec("tensorflow") is not None
 
-try:
-    import torch
+# Check for JAX
+HAS_JAX = importlib.util.find_spec("jax") is not None
 
-    HAS_TORCH = True
-except ImportError:
-    HAS_TORCH = False
+# Check for PIL
+HAS_PIL = importlib.util.find_spec("PIL") is not None
+
+# Check for transformers
+HAS_TRANSFORMERS = importlib.util.find_spec("transformers") is not None
 
 try:
-    import tensorflow as tf
-
-    HAS_TENSORFLOW = True
-except ImportError:
-    HAS_TENSORFLOW = False
-
-try:
-    import jax
-
-    HAS_JAX = True
-except ImportError:
-    HAS_JAX = False
-
-try:
-    from PIL import Image
+    from PIL import Image  # noqa: F401
 
     HAS_PIL = True
 except ImportError:
     HAS_PIL = False
 
-try:
-    import transformers
 
-    HAS_TRANSFORMERS = True
-except ImportError:
-    HAS_TRANSFORMERS = False
-
-
-def pytest_configure(config):
+def pytest_configure(config: Any) -> None:
     """Register custom markers for dependency-based test categorization."""
     config.addinivalue_line("markers", "core: Core functionality tests (no optional dependencies required)")
     config.addinivalue_line("markers", "numpy: Tests requiring numpy")

@@ -1,14 +1,15 @@
-"""Tests for auto-detection deserialization and type metadata support.
+#!/usr/bin/env python3
+"""Tests for auto-detection deserialization and type metadata features."""
 
-These features address the integration feedback for round-trip scenarios
-where users need to get back the exact same types they put in.
-"""
-
+import json
 import uuid
 from datetime import datetime
 
-import numpy as np
-import pandas as pd
+import pytest
+
+# Conditional imports for optional dependencies
+np = pytest.importorskip("numpy", reason="numpy not available")
+pd = pytest.importorskip("pandas", reason="pandas not available")
 
 import datason
 from datason.config import SerializationConfig
@@ -376,8 +377,6 @@ class TestIntegrationScenarios:
         serialized = datason.serialize(original_data, config=config)
 
         # Convert to JSON and back (simulating storage/transmission)
-        import json
-
         json_str = json.dumps(serialized, default=str)
         parsed_back = json.loads(json_str)
 
