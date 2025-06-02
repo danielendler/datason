@@ -178,9 +178,8 @@ class TestSimpleErrorPaths(unittest.TestCase):
         mock_model.__class__.__module__ = "sklearn.linear_model"
         mock_model.__class__.__name__ = "LinearRegression"
 
-        with patch("datason.ml_serializers.sklearn", Mock()):
-            with patch("datason.ml_serializers.BaseEstimator", Mock()):
-                result = serialize_sklearn_model(mock_model)
+        with patch("datason.ml_serializers.sklearn", Mock()), patch("datason.ml_serializers.BaseEstimator", Mock()):
+            result = serialize_sklearn_model(mock_model)
 
         # Should handle error and return error info
         self.assertEqual(result["_type"], "sklearn.model")

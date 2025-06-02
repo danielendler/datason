@@ -339,10 +339,7 @@ def _serialize_object(
             orient = config.dataframe_orient.value
             try:
                 # Special handling for VALUES orientation
-                if orient == "values":
-                    serialized_df = obj.values.tolist()
-                else:
-                    serialized_df = obj.to_dict(orient=orient)
+                serialized_df = obj.values.tolist() if orient == "values" else obj.to_dict(orient=orient)
             except Exception:
                 # Fall back to records if the specified orientation fails
                 serialized_df = obj.to_dict(orient="records")

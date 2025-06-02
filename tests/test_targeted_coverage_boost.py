@@ -12,8 +12,6 @@ import pytest
 
 # Optional dependency imports
 try:
-    import pandas as pd
-
     HAS_PANDAS = True
 except ImportError:
     HAS_PANDAS = False

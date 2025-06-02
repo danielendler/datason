@@ -144,12 +144,7 @@ else:
     # Use sizes that exceed our security limit but are practical for testing
     TEST_DEPTH_LIMIT = MAX_SERIALIZATION_DEPTH + 50
     # For size tests, ensure we exceed the limit but use reasonable sizes
-    if MAX_OBJECT_SIZE >= 1_000_000:
-        # Large security limit - add a reasonable amount that exceeds the limit
-        TEST_SIZE_LIMIT = MAX_OBJECT_SIZE + 50_000
-    else:
-        # Smaller security limit - safe to test close to the limit
-        TEST_SIZE_LIMIT = MAX_OBJECT_SIZE + 1000
+    TEST_SIZE_LIMIT = MAX_OBJECT_SIZE + 50_000 if MAX_OBJECT_SIZE >= 1_000_000 else MAX_OBJECT_SIZE + 1000
     SKIP_INTENSIVE = False
 
 

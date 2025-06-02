@@ -397,19 +397,17 @@ def print_data_types(data: Any, indent: str = "", max_depth: int = 3, current_de
                 print(
                     f"{indent}{key}: {type(value).__name__} = {repr(value)[:50]}{'...' if len(repr(value)) > 50 else ''}"
                 )
-    elif isinstance(data, (list, tuple)):
-        if data:
-            first_item = data[0]
-            if isinstance(first_item, (dict, list, tuple)):
-                print(f"{indent}[0]: {type(first_item).__name__}")
-                print_data_types(first_item, indent + "  ", max_depth, current_depth + 1)
-                if len(data) > 1:
-                    print(f"{indent}... ({len(data)} total items)")
-            else:
-                types = [type(item).__name__ for item in data[:3]]
-                if len(data) > 3:
-                    types.append(f"... ({len(data)} total)")
-                print(f"{indent}items: {types}")
+    elif isinstance(data, (list, tuple)) and data and isinstance(data[0], (dict, list, tuple)):
+        first_item = data[0]
+        print(f"{indent}[0]: {type(first_item).__name__}")
+        print_data_types(first_item, indent + "  ", max_depth, current_depth + 1)
+        if len(data) > 1:
+            print(f"{indent}... ({len(data)} total items)")
+    elif isinstance(data, (list, tuple)) and data:
+        types = [type(item).__name__ for item in data[:3]]
+        if len(data) > 3:
+            types.append(f"... ({len(data)} total)")
+        print(f"{indent}items: {types}")
 
 
 def verify_round_trip(original: Any, restored: Any, path: str = "", show_details: bool = True) -> bool:

@@ -46,7 +46,7 @@ except ImportError:
     HAS_SKLEARN = False
 
 try:
-    import jax
+    import jax  # noqa: F401 - Used in patch testing on line 374
     import jax.numpy as jnp
 
     HAS_JAX = True

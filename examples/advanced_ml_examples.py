@@ -18,9 +18,7 @@ def demonstrate_pytorch_workflow() -> None:
     print("=" * 50)
 
     try:
-        import numpy as np
         import torch
-        from torch import nn
 
         # Simulate a training experiment
         experiment_data = {

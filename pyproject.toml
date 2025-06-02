@@ -172,6 +172,7 @@ ignore = [
     "B008",    # do not perform function calls in argument defaults
     "C901",    # too complex (let developers decide)
     "SIM105",  # Use contextlib.suppress - too pedantic for import error handling
+    "SIM117",  # Use single with statement with multiple contexts - style preference
     "B017",    # assert raises - sometimes needed for testing exception types
     "B007",    # Loop control variable not used - sometimes needed for counting
 ]

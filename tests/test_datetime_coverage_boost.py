@@ -240,7 +240,7 @@ except ImportError:
             try:
                 return __import__(module_name)
             except ImportError:
-                raise unittest.SkipTest(f"{module_name} not available")
+                raise unittest.SkipTest(f"{module_name} not available") from None
 
     pytest = DummyPytest()
 
