@@ -92,7 +92,7 @@ try:
 except ImportError:
     _pickle_bridge_available = False
 
-__version__ = "0.3.1"
+__version__ = "0.4.5"
 __author__ = "datason Contributors"
 __license__ = "MIT"
 
