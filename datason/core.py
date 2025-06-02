@@ -148,10 +148,9 @@ def _get_cached_type_category(obj_type: type) -> Optional[str]:
         category = "set"
     elif np is not None and (
         obj_type is np.ndarray
-        or hasattr(np, "number")
-        and issubclass(obj_type, np.number)
-        or hasattr(np, "ndarray")
-        and issubclass(obj_type, np.ndarray)
+        or (hasattr(np, "generic") and issubclass(obj_type, np.generic))
+        or (hasattr(np, "number") and issubclass(obj_type, np.number))
+        or (hasattr(np, "ndarray") and issubclass(obj_type, np.ndarray))
     ):
         category = "numpy"
     elif pd is not None and (
@@ -429,6 +428,103 @@ def _serialize_hot_path(obj: Any, config: Optional["SerializationConfig"], max_s
         else:
             # Needs NaN handling
             return None
+
+    # PHASE 1.6: CONTAINER HOT PATH EXPANSION
+    # Handle containers with aggressive inlining for common cases
+    elif obj_type is _TYPE_DICT:
+        # Handle empty dict (very common)
+        if not obj:
+            return obj
+
+        # Handle small dicts with string keys and basic values (common in APIs)
+        if len(obj) <= 3:
+            # Quick check: all keys strings, all values basic JSON types
+            try:
+                for k, v in obj.items():
+                    if type(k) is not _TYPE_STR:
+                        return None  # Non-string key, needs full processing
+                    v_type = type(v)
+                    if v_type not in (_TYPE_STR, _TYPE_INT, _TYPE_BOOL, _TYPE_NONE):
+                        if v_type is _TYPE_FLOAT:
+                            # Inline float check
+                            if v != v or v in (float("inf"), float("-inf")):
+                                return None  # NaN/Inf, needs full processing
+                        elif np is not None and isinstance(v, (np.bool_, np.integer, np.floating)):
+                            # Inline numpy scalar normalization for hot path
+                            if isinstance(v, np.floating) and (np.isnan(v) or np.isinf(v)):
+                                return None  # NaN/Inf numpy float, needs full processing
+                            # Simple numpy scalars are fine, will be normalized in full processing
+                            return None  # Let full processing handle the conversion
+                        else:
+                            return None  # Complex type, needs full processing
+                # All checks passed - dict is JSON-compatible
+                return obj
+            except (AttributeError, TypeError):
+                return None  # Some issue with iteration, needs full processing
+        else:
+            return None  # Large dict, needs full processing
+
+    elif obj_type is _TYPE_LIST:
+        # Handle empty list (very common)
+        if not obj:
+            return obj
+
+        # Handle small lists with basic JSON types (common in APIs)
+        if len(obj) <= 5:
+            # Quick check: all items are basic JSON types
+            try:
+                for item in obj:
+                    item_type = type(item)
+                    if item_type not in (_TYPE_STR, _TYPE_INT, _TYPE_BOOL, _TYPE_NONE):
+                        if item_type is _TYPE_FLOAT:
+                            # Inline float check
+                            if item != item or item in (float("inf"), float("-inf")):
+                                return None  # NaN/Inf, needs full processing
+                        elif np is not None and isinstance(item, (np.bool_, np.integer, np.floating)):
+                            # Inline numpy scalar normalization for hot path
+                            if isinstance(item, np.floating) and (np.isnan(item) or np.isinf(item)):
+                                return None  # NaN/Inf numpy float, needs full processing
+                            # Simple numpy scalars are fine, will be normalized in full processing
+                            return None  # Let full processing handle the conversion
+                        else:
+                            return None  # Complex type, needs full processing
+                # All checks passed - list is JSON-compatible
+                return obj
+            except (AttributeError, TypeError):
+                return None  # Some issue with iteration, needs full processing
+        else:
+            return None  # Large list, needs full processing
+
+    elif obj_type is _TYPE_TUPLE:
+        # Handle empty tuple (less common but still worth optimizing)
+        if not obj:
+            return []  # Convert empty tuple to list
+
+        # Handle small tuples with basic JSON types
+        if len(obj) <= 5:
+            # Quick check: all items are basic JSON types
+            try:
+                for item in obj:
+                    item_type = type(item)
+                    if item_type not in (_TYPE_STR, _TYPE_INT, _TYPE_BOOL, _TYPE_NONE):
+                        if item_type is _TYPE_FLOAT:
+                            # Inline float check
+                            if item != item or item in (float("inf"), float("-inf")):
+                                return None  # NaN/Inf, needs full processing
+                        elif np is not None and isinstance(item, (np.bool_, np.integer, np.floating)):
+                            # Inline numpy scalar normalization for hot path
+                            if isinstance(item, np.floating) and (np.isnan(item) or np.isinf(item)):
+                                return None  # NaN/Inf numpy float, needs full processing
+                            # Simple numpy scalars are fine, will be normalized in full processing
+                            return None  # Let full processing handle the conversion
+                        else:
+                            return None  # Complex type, needs full processing
+                # All checks passed - convert tuple to list
+                return list(obj)
+            except (AttributeError, TypeError):
+                return None  # Some issue with iteration, needs full processing
+        else:
+            return None  # Large tuple, needs full processing
 
     # For complex types, return None to indicate full processing needed
     return None
@@ -1231,10 +1327,9 @@ def _get_cached_type_category_fast(obj_type: type) -> Optional[str]:
         category = "set"
     elif np is not None and (
         obj_type is np.ndarray
-        or hasattr(np, "number")
-        and issubclass(obj_type, np.number)
-        or hasattr(np, "ndarray")
-        and issubclass(obj_type, np.ndarray)
+        or (hasattr(np, "generic") and issubclass(obj_type, np.generic))
+        or (hasattr(np, "number") and issubclass(obj_type, np.number))
+        or (hasattr(np, "ndarray") and issubclass(obj_type, np.ndarray))
     ):
         category = "numpy"
     elif pd is not None and (

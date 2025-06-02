@@ -19,13 +19,18 @@ import importlib.util
 import json
 import subprocess
 import sys
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict
 
+# Add parent directory to path to import datason
+sys.path.insert(0, str(Path(__file__).parent.parent))
 # Import our test suites
 from ci_performance_tracker import StableBenchmarkSuite
 from comprehensive_performance_suite import ComprehensivePerformanceSuite
+
+import datason
 
 
 class OnDemandPerformanceAnalyzer:
@@ -373,6 +378,42 @@ class OnDemandPerformanceAnalyzer:
         if compare:
             comparison = self.compare_with_previous(results)
             results["comparison"] = comparison
+
+        # Add memory optimization benchmark
+        print("\n🧠 Memory Allocation Optimization Benchmarks:")
+        print("-" * 50)
+
+        # Test memory efficiency with different data patterns
+        memory_test_cases = {
+            "large_homogeneous_ints": list(range(2000)),
+            "large_homogeneous_strings": ["test_string"] * 1000,
+            "repeated_small_dicts": [{"id": i, "active": True} for i in range(500)],
+            "deep_nested_structure": {"level1": {"level2": {"level3": {"data": [{"item": i} for i in range(100)]}}}},
+            "mixed_collection_types": {
+                "lists": [[i] * 10 for i in range(50)],
+                "dicts": [{"key": f"value_{i}"} for i in range(50)],
+                "primitives": [1, "a", True, None] * 25,
+            },
+        }
+
+        memory_results = {}
+        for test_name, test_data in memory_test_cases.items():
+            print(f"  🧠 Testing {test_name}...")
+
+            # Measure multiple runs for consistency
+            times = []
+            for _ in range(5):
+                start_time = time.time()
+                result = datason.serialize(test_data)
+                end_time = time.time()
+                times.append((end_time - start_time) * 1000)
+
+            avg_time = sum(times) / len(times)
+            memory_results[test_name] = {"avg_time_ms": avg_time, "min_time_ms": min(times), "max_time_ms": max(times)}
+            print(f"    Datason: {avg_time:.2f}ms (avg)")
+
+        # Store memory optimization results
+        results["memory_optimization"] = memory_results
 
         return results
 
