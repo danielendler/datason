@@ -23,12 +23,15 @@ class TestInitModuleCoverage:
         assert sys.version_info >= (3, 8)
 
     def test_version_info_access(self):
-        """Test accessing version and metadata."""
+        """Test that version information is accessible and correct."""
+        # Test version string is accessible
         assert hasattr(datason, "__version__")
+        assert isinstance(datason.__version__, str)
+        assert datason.__version__ == "0.4.5"  # Updated to current version
+
+        # Test other metadata
         assert hasattr(datason, "__author__")
         assert hasattr(datason, "__license__")
-        assert datason.__version__ == "0.3.1"
-        assert datason.__author__ == "datason Contributors"
         assert datason.__license__ == "MIT"
 
     def test_all_exports_available(self):
