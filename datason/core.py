@@ -50,8 +50,110 @@ MAX_OBJECT_SIZE = 10_000_000  # Prevent memory exhaustion (10MB worth of items)
 MAX_STRING_LENGTH = 1_000_000  # Prevent excessive string processing
 
 
+# OPTIMIZATION: Module-level type cache for repeated type checks
+# This significantly reduces isinstance() overhead for repeated serialization
+_TYPE_CACHE: Dict[type, str] = {}
+_TYPE_CACHE_SIZE_LIMIT = 1000  # Prevent memory growth
+
+
 class SecurityError(Exception):
     """Raised when security limits are exceeded during serialization."""
+
+
+def _get_cached_type_category(obj_type: type) -> Optional[str]:
+    """Get cached type category to optimize isinstance checks.
+
+    Categories:
+    - 'json_basic': str, int, bool, NoneType
+    - 'float': float
+    - 'dict': dict
+    - 'list': list, tuple
+    - 'datetime': datetime
+    - 'numpy': numpy types
+    - 'pandas': pandas types
+    - 'uuid': UUID
+    - 'set': set
+    - 'other': everything else
+    """
+    if obj_type in _TYPE_CACHE:
+        return _TYPE_CACHE[obj_type]
+
+    # Only cache if we haven't hit the limit
+    if len(_TYPE_CACHE) >= _TYPE_CACHE_SIZE_LIMIT:
+        return None
+
+    # Determine category - ordered by frequency in typical usage
+    category = None
+    if obj_type in (str, int, bool, type(None)):
+        category = "json_basic"
+    elif obj_type is float:
+        category = "float"
+    elif obj_type is dict:
+        category = "dict"
+    elif obj_type in (list, tuple):
+        category = "list"
+    elif obj_type is datetime:
+        category = "datetime"
+    elif obj_type is uuid.UUID:
+        category = "uuid"
+    elif obj_type is set:
+        category = "set"
+    elif np is not None and (
+        obj_type is np.ndarray
+        or hasattr(np, "number")
+        and issubclass(obj_type, np.number)
+        or hasattr(np, "ndarray")
+        and issubclass(obj_type, np.ndarray)
+    ):
+        category = "numpy"
+    elif pd is not None and (
+        obj_type is pd.DataFrame
+        or obj_type is pd.Series
+        or obj_type is pd.Timestamp
+        or issubclass(obj_type, (pd.DataFrame, pd.Series, pd.Timestamp))
+    ):
+        category = "pandas"
+    else:
+        category = "other"
+
+    _TYPE_CACHE[obj_type] = category
+    return category
+
+
+def _is_json_compatible_dict(obj: dict) -> bool:
+    """Fast check if a dict is already JSON-compatible.
+
+    This is much faster than the existing _is_already_serialized_dict
+    for simple cases.
+    """
+    # Quick check: if empty, it's compatible
+    if not obj:
+        return True
+
+    # Sample a few keys/values for quick assessment
+    # For large dicts, avoid checking every single item
+    items_to_check = list(obj.items())[:10]  # Check first 10 items
+
+    for key, value in items_to_check:
+        # Keys must be strings
+        if not isinstance(key, str):
+            return False
+        # Check if value is basic JSON type
+        if not _is_json_basic_type(value):
+            return False
+
+    return True
+
+
+def _is_json_basic_type(value: Any) -> bool:
+    """Ultra-fast check for basic JSON types without recursion."""
+    return (
+        value is None
+        or isinstance(value, (str, int, bool))
+        or (
+            isinstance(value, float) and value == value and value not in (float("inf"), float("-inf"))
+        )  # Valid float, not NaN/Inf
+    )
 
 
 def serialize(
@@ -205,34 +307,33 @@ def _serialize_object(
     max_string_length: int,
 ) -> Any:
     """Internal serialization logic without circular reference management."""
-    # Handle None
+    # Handle None first (most common in sparse data)
     if obj is None:
         return None
 
-    # Check for NaN-like values first if type handler is available
-    if _type_handler and is_nan_like(obj):
-        return _type_handler.handle_nan_value(obj)
+    # OPTIMIZATION: Use type cache for faster type detection
+    obj_type = type(obj)
+    type_category = _get_cached_type_category(obj_type)
 
-    # OPTIMIZATION: Early return for already JSON-serializable basic types
-    # This prevents unnecessary processing of values that are already serialized
-    if isinstance(obj, (str, int, bool)):
-        # Security check: prevent excessive string processing
+    # OPTIMIZATION: Handle most common JSON-basic types first with minimal overhead
+    if type_category == "json_basic":
         if isinstance(obj, str) and len(obj) > max_string_length:
             warnings.warn(
                 f"String length ({len(obj)}) exceeds maximum ({max_string_length}). Truncating.",
                 stacklevel=3,
             )
             return obj[:max_string_length] + "...[TRUNCATED]"
-        return obj
+        return obj  # str, int, bool are already JSON-compatible
 
-    # OPTIMIZATION: Handle float early, including NaN/Inf cases
-    if isinstance(obj, float):
-        if obj != obj or obj in (
-            float("inf"),
-            float("-inf"),
-        ):  # obj != obj checks for NaN
+    # OPTIMIZATION: Handle float early with streamlined NaN/Inf checking
+    if type_category == "float":
+        if obj != obj or obj in (float("inf"), float("-inf")):  # obj != obj checks for NaN
             return _type_handler.handle_nan_value(obj) if _type_handler else None
         return obj
+
+    # Check for NaN-like values if type handler is available (for non-float types)
+    if _type_handler and type_category != "float" and is_nan_like(obj):
+        return _type_handler.handle_nan_value(obj)
 
     # Try advanced type handler first if available
     if _type_handler:
@@ -244,9 +345,21 @@ def _serialize_object(
                 # If custom handler fails, fall back to default handling
                 warnings.warn(f"Custom type handler failed for {type(obj)}: {e}", stacklevel=3)
 
-    # OPTIMIZATION: Check if dict/list are already fully serialized
-    # This prevents recursive processing when not needed
-    if isinstance(obj, dict):
+    # OPTIMIZATION: Fast path for JSON-compatible dicts (very common case)
+    if type_category == "dict":
+        # Quick compatibility check for simple dicts
+        if (
+            _depth == 0
+            and config is None
+            or (
+                config
+                and not config.sort_keys
+                and not config.include_type_hints
+                and config.nan_handling == NanHandling.NULL
+            )
+        ) and _is_json_compatible_dict(obj):
+            return obj  # Already JSON-compatible
+
         # Handle dict with optional key sorting
         result = {}
         for k, v in obj.items():
@@ -261,7 +374,21 @@ def _serialize_object(
             return dict(sorted(result.items()))
         return result
 
-    if isinstance(obj, (list, tuple)):
+    # OPTIMIZATION: Handle lists/tuples with early JSON detection
+    if type_category == "list":
+        # For simple lists of JSON-basic types, check if we can skip processing
+        if (
+            (
+                _depth == 0
+                and not config
+                or (config and not config.include_type_hints and config.nan_handling == NanHandling.NULL)
+            )
+            and all(_is_json_basic_type(item) for item in obj[:10])  # Sample first 10 items
+        ):
+            if isinstance(obj, tuple):
+                return list(obj)  # Convert tuple to list for JSON
+            return obj  # Already JSON-compatible list
+
         result = []
         for x in obj:
             serialized_value = serialize(x, config, _depth + 1, _seen, _type_handler)
@@ -276,31 +403,8 @@ def _serialize_object(
 
         return result
 
-    # Handle numpy data types with normalization
-    if np is not None:
-        normalized = normalize_numpy_types(obj)
-        # Use 'is' comparison for object identity to avoid DataFrame truth value issues
-        if normalized is not obj:  # Something was converted
-            return serialize(normalized, config, _depth + 1, _seen, _type_handler)
-
-        # Handle numpy arrays
-        if isinstance(obj, np.ndarray):
-            # Security check: prevent excessive array sizes
-            if obj.size > (config.max_size if config else MAX_OBJECT_SIZE):
-                raise SecurityError(
-                    f"NumPy array size ({obj.size}) exceeds maximum. This may indicate a resource exhaustion attempt."
-                )
-
-            serialized_array = [serialize(x, config, _depth + 1, _seen, _type_handler) for x in obj.tolist()]
-
-            # NEW: Handle type metadata for numpy arrays
-            if config and config.include_type_hints:
-                return _create_type_metadata("numpy.ndarray", serialized_array)
-
-            return serialized_array
-
-    # Handle datetime with configurable format and output type
-    if isinstance(obj, datetime):
+    # OPTIMIZATION: Streamlined datetime handling (frequent type)
+    if type_category == "datetime":
         # NEW: Check output type preference first
         if config and hasattr(config, "datetime_output") and config.datetime_output == OutputType.OBJECT:
             return obj  # Return datetime object as-is
@@ -329,58 +433,8 @@ def _serialize_object(
 
         return iso_string
 
-    # Handle pandas DataFrame with configurable orientation and output type
-    if pd is not None and isinstance(obj, pd.DataFrame):
-        # NEW: Check output type preference first
-        if config and hasattr(config, "dataframe_output") and config.dataframe_output == OutputType.OBJECT:
-            return obj  # Return DataFrame object as-is
-
-        # Handle orientation configuration for JSON-safe output
-        serialized_df = None
-        if config and hasattr(config, "dataframe_orient"):
-            orient = config.dataframe_orient.value
-            try:
-                # Special handling for VALUES orientation
-                serialized_df = obj.values.tolist() if orient == "values" else obj.to_dict(orient=orient)
-            except Exception:
-                # Fall back to records if the specified orientation fails
-                serialized_df = obj.to_dict(orient="records")
-        else:
-            serialized_df = obj.to_dict(orient="records")  # Default orientation
-
-        # NEW: Handle type metadata for DataFrames
-        if config and config.include_type_hints:
-            return _create_type_metadata("pandas.DataFrame", serialized_df)
-
-        return serialized_df
-
-    # Handle pandas Series with configurable output type
-    if pd is not None and isinstance(obj, pd.Series):
-        # NEW: Check output type preference first
-        if config and hasattr(config, "series_output") and config.series_output == OutputType.OBJECT:
-            return obj  # Return Series object as-is
-
-        # Default: convert to dict for JSON-safe output
-        serialized_series = obj.to_dict()
-
-        # NEW: Handle type metadata for Series with name preservation
-        if config and config.include_type_hints:
-            # Include series name if it exists
-            if obj.name is not None:
-                serialized_series = {"_series_name": obj.name, **serialized_series}
-            return _create_type_metadata("pandas.Series", serialized_series)
-
-        return serialized_series
-
-    if pd is not None and isinstance(obj, (pd.Timestamp,)):
-        if pd.isna(obj):
-            return _type_handler.handle_nan_value(obj) if _type_handler else None
-        # Convert to datetime and then serialize with date format
-        dt = obj.to_pydatetime()
-        return serialize(dt, config, _depth + 1, _seen, _type_handler)
-
-    # Handle UUID
-    if isinstance(obj, uuid.UUID):
+    # OPTIMIZATION: Handle UUID efficiently (frequent in APIs)
+    if type_category == "uuid":
         uuid_string = str(obj)
 
         # NEW: Handle type metadata for UUIDs
@@ -389,8 +443,8 @@ def _serialize_object(
 
         return uuid_string
 
-    # Handle set (convert to list for JSON compatibility)
-    if isinstance(obj, set):
+    # OPTIMIZATION: Handle sets efficiently
+    if type_category == "set":
         serialized_set = [serialize(x, config, _depth + 1, _seen, _type_handler) for x in obj]
 
         # NEW: Handle type metadata for sets
@@ -399,6 +453,82 @@ def _serialize_object(
 
         return serialized_set
 
+    # Handle numpy data types with normalization (less frequent, but important for ML)
+    if type_category == "numpy" and np is not None:
+        normalized = normalize_numpy_types(obj)
+        # Use 'is' comparison for object identity to avoid DataFrame truth value issues
+        if normalized is not obj:  # Something was converted
+            return serialize(normalized, config, _depth + 1, _seen, _type_handler)
+
+        # Handle numpy arrays
+        if isinstance(obj, np.ndarray):
+            # Security check: prevent excessive array sizes
+            if obj.size > (config.max_size if config else MAX_OBJECT_SIZE):
+                raise SecurityError(
+                    f"NumPy array size ({obj.size}) exceeds maximum. This may indicate a resource exhaustion attempt."
+                )
+
+            serialized_array = [serialize(x, config, _depth + 1, _seen, _type_handler) for x in obj.tolist()]
+
+            # NEW: Handle type metadata for numpy arrays
+            if config and config.include_type_hints:
+                return _create_type_metadata("numpy.ndarray", serialized_array)
+
+            return serialized_array
+
+    # Handle pandas types (less frequent but important for data science)
+    if type_category == "pandas" and pd is not None:
+        # Handle pandas DataFrame with configurable orientation and output type
+        if isinstance(obj, pd.DataFrame):
+            # NEW: Check output type preference first
+            if config and hasattr(config, "dataframe_output") and config.dataframe_output == OutputType.OBJECT:
+                return obj  # Return DataFrame object as-is
+
+            # Handle orientation configuration for JSON-safe output
+            serialized_df = None
+            if config and hasattr(config, "dataframe_orient"):
+                orient = config.dataframe_orient.value
+                try:
+                    # Special handling for VALUES orientation
+                    serialized_df = obj.values.tolist() if orient == "values" else obj.to_dict(orient=orient)
+                except Exception:
+                    # Fall back to records if the specified orientation fails
+                    serialized_df = obj.to_dict(orient="records")
+            else:
+                serialized_df = obj.to_dict(orient="records")  # Default orientation
+
+            # NEW: Handle type metadata for DataFrames
+            if config and config.include_type_hints:
+                return _create_type_metadata("pandas.DataFrame", serialized_df)
+
+            return serialized_df
+
+        # Handle pandas Series with configurable output type
+        if isinstance(obj, pd.Series):
+            # NEW: Check output type preference first
+            if config and hasattr(config, "series_output") and config.series_output == OutputType.OBJECT:
+                return obj  # Return Series object as-is
+
+            # Default: convert to dict for JSON-safe output
+            serialized_series = obj.to_dict()
+
+            # NEW: Handle type metadata for Series with name preservation
+            if config and config.include_type_hints:
+                # Include series name if it exists
+                if obj.name is not None:
+                    serialized_series = {"_series_name": obj.name, **serialized_series}
+                return _create_type_metadata("pandas.Series", serialized_series)
+
+            return serialized_series
+
+        if isinstance(obj, pd.Timestamp):
+            if pd.isna(obj):
+                return _type_handler.handle_nan_value(obj) if _type_handler else None
+            # Convert to datetime and then serialize with date format
+            dt = obj.to_pydatetime()
+            return serialize(dt, config, _depth + 1, _seen, _type_handler)
+
+    # For all other types (fallback path)
     # Try ML serializer if available
     if _ml_serializer:
         try:

@@ -1,0 +1,170 @@
+{
+  "metadata": {
+    "timestamp": "2025-06-02T17:23:42.831919+00:00",
+    "python_version": "3.12.0 (main, Feb 22 2025, 21:43:18) [Clang 16.0.0 (clang-1600.0.26.6)]",
+    "platform": "macOS-15.5-arm64-arm-64bit",
+    "datason_version": "0.4.5",
+    "git_commit": "unknown",
+    "git_ref": "unknown",
+    "ci_run_id": "local",
+    "runner": "local"
+  },
+  "benchmarks": {
+    "serialization": {
+      "api_response": {
+        "standard": {
+          "mean": 0.0013763580995146186,
+          "min": 0.0013404999917838722,
+          "max": 0.0015291250019799918,
+          "std": 5.6583542864839544e-05,
+          "median": 0.0013571660092566162,
+          "iterations": 10
+        },
+        "performance_config": {
+          "mean": 0.0012375955033348874,
+          "min": 0.0012012080114800483,
+          "max": 0.001295499998377636,
+          "std": 2.875762216378519e-05,
+          "median": 0.0012329579913057387,
+          "iterations": 10
+        },
+        "performance_improvement_pct": 10.081867228351888
+      },
+      "config_data": {
+        "standard": {
+          "mean": 2.620000159367919e-05,
+          "min": 2.387500717304647e-05,
+          "max": 3.270801971666515e-05,
+          "std": 3.6431459262033813e-06,
+          "median": 2.400000812485814e-05,
+          "iterations": 10
+        },
+        "performance_config": {
+          "mean": 2.327899564988911e-05,
+          "min": 2.3125001462176442e-05,
+          "max": 2.3499975213781e-05,
+          "std": 1.272454059147168e-07,
+          "median": 2.329100971110165e-05,
+          "iterations": 10
+        },
+        "performance_improvement_pct": 11.148876969895978
+      },
+      "simple_types": {
+        "standard": {
+          "mean": 3.5249016946181654e-06,
+          "min": 3.416003892198205e-06,
+          "max": 3.667024429887533e-06,
+          "std": 1.1325938762532129e-07,
+          "median": 3.541994374245405e-06,
+          "iterations": 10
+        },
+        "performance_config": {
+          "mean": 2.7041998691856863e-06,
+          "min": 2.6249908842146397e-06,
+          "max": 2.7500209398567677e-06,
+          "std": 3.657922018986582e-08,
+          "median": 2.708984538912773e-06,
+          "iterations": 10
+        },
+        "performance_improvement_pct": 23.282970605549938
+      }
+    },
+    "deserialization": {
+      "api_response": {
+        "standard": {
+          "mean": 0.00033164559572469444,
+          "min": 0.0003212499723304063,
+          "max": 0.0003416250110603869,
+          "std": 6.352471519803181e-06,
+          "median": 0.000334082986228168,
+          "iterations": 10
+        }
+      },
+      "config_data": {
+        "standard": {
+          "mean": 4.770996747538448e-06,
+          "min": 4.6670029405504465e-06,
+          "max": 5.165988113731146e-06,
+          "std": 1.5213008164866048e-07,
+          "median": 4.749977961182594e-06,
+          "iterations": 10
+        }
+      },
+      "simple_types": {
+        "standard": {
+          "mean": 3.179203486070037e-06,
+          "min": 3.082997864112258e-06,
+          "max": 3.3329997677356005e-06,
+          "std": 7.868043781774469e-08,
+          "median": 3.1669915188103914e-06,
+          "iterations": 10
+        }
+      }
+    },
+    "type_detection": {
+      "simple_dict": {
+        "mean": 1.066800905391574e-06,
+        "min": 9.999785106629133e-07,
+        "max": 1.2080126907676458e-06,
+        "std": 6.260548654821845e-08,
+        "median": 1.0420044418424368e-06,
+        "iterations": 10
+      },
+      "datetime_objects": {
+        "mean": 0.00014000420342199504,
+        "min": 0.00013716702233068645,
+        "max": 0.00015224999515339732,
+        "std": 5.250331424329259e-06,
+        "median": 0.00013749999925494194,
+        "iterations": 10
+      },
+      "uuid_objects": {
+        "mean": 3.266701241955161e-06,
+        "min": 3.209017449989915e-06,
+        "max": 3.2920215744525194e-06,
+        "std": 2.8954532922510273e-08,
+        "median": 3.2910029403865337e-06,
+        "iterations": 10
+      },
+      "decimal_objects": {
+        "mean": 9.708330035209655e-05,
+        "min": 9.624997619539499e-05,
+        "max": 9.92499990388751e-05,
+        "std": 8.395836867712997e-07,
+        "median": 9.68750100582838e-05,
+        "iterations": 10
+      },
+      "mixed_list": {
+        "mean": 0.00016578749346081169,
+        "min": 0.00016174998017959297,
+        "max": 0.00016949998098425567,
+        "std": 3.0560201550282697e-06,
+        "median": 0.00016624998534098268,
+        "iterations": 10
+      }
+    }
+  },
+  "version_info": {
+    "timestamp": "2025-06-02T17:23:42.767880+00:00",
+    "datason_version": "0.4.5",
+    "python_version": "3.12.0 (main, Feb 22 2025, 21:43:18) [Clang 16.0.0 (clang-1600.0.26.6)]",
+    "git_info": {
+      "commit": "31657c9f127fad81fba41c4740dceac676f79e23",
+      "branch": "performance-deep-dive-investigation",
+      "has_uncommitted_changes": true,
+      "status": "?? ESSENTIAL_FILES_FOR_PERFORMANCE_SYSTEM.md\n?? benchmarks/MULTI_TIER_BENCHMARKING_STRATEGY.md\n?? benchmarks/PERFORMANCE_ANALYSIS_FINDINGS.md\n?? benchmarks/PERFORMANCE_DEEP_DIVE_ANALYSIS.md\n?? benchma"
+    },
+    "dependencies": {
+      "numpy": "1.26.3",
+      "pandas": "2.2.3",
+      "orjson": "3.10.18",
+      "ujson": "5.10.0",
+      "msgpack": [
+        1,
+        1,
+        0
+      ]
+    }
+  },
+  "analysis_type": "quick"
+}
