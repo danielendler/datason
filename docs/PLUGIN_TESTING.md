@@ -37,22 +37,38 @@ Our CI tests multiple dependency scenarios:
 - Error handling
 - Security features
 
-**Files**: `test_core.py`, `test_deserializers.py`, `test_converters.py`, `test_data_utils.py`
+**Files**: `tests/core/test_core.py`, `tests/core/test_deserializers.py`, `tests/core/test_converters.py`, `tests/core/test_security.py`, `tests/core/test_edge_cases.py`, `tests/core/test_circular_references.py`, `tests/core/test_dataframe_orientation_regression.py`
 
-#### 🟡 Optional Dependency Tests (Conditional)
+#### 🟡 Feature Tests (Conditional)
 - NumPy array serialization
 - Pandas DataFrame handling
 - ML model serialization
-- Image processing
+- Chunked streaming
+- Template deserialization
+- Auto-detection and metadata
 
-**Files**: `test_ml_serializers.py`, `test_optional_dependencies.py`
+**Files**: `tests/features/test_ml_serializers.py`, `tests/features/test_chunked_streaming.py`, `tests/features/test_auto_detection_and_metadata.py`, `tests/features/test_template_deserialization.py`
 
-#### 🔴 Fallback Behavior Tests (Mock-based)
-- Test what happens when optional deps aren't available
-- Verify graceful degradation
-- Test import error handling
+#### 🔵 Integration Tests (Multi-component)
+- Configuration system integration
+- Optional dependency integration
+- Pickle bridge functionality
 
-**Files**: `test_targeted_coverage_boost.py`, `test_fallback_behavior.py`
+**Files**: `tests/integration/test_config_and_type_handlers.py`, `tests/integration/test_optional_dependencies.py`, `tests/integration/test_pickle_bridge.py`
+
+#### ⚪ Coverage Tests (Edge cases)
+- Coverage boost for specific modules
+- Edge case testing
+- Error condition testing
+
+**Files**: `tests/coverage/test_*_coverage_boost.py`
+
+#### 🔴 Performance Tests (Separate Pipeline)
+- Benchmark tests
+- Performance regression detection
+- Memory usage analysis
+
+**Files**: `tests/benchmarks/test_*_benchmarks.py` (runs in separate performance pipeline)
 
 ## 📝 Test Markers
 
@@ -98,28 +114,34 @@ pip install -e .
 pip install pytest pytest-cov
 
 # Run core tests only
-pytest tests/test_core.py tests/test_deserializers.py -v
+pytest tests/core/ -v
 ```
 
 ### Test With Specific Dependencies
 ```bash
 # Test with numpy
 pip install numpy
-pytest -m "core or numpy" -v
+pytest tests/core/ tests/features/test_ml_serializers.py -v
 
 # Test with pandas
 pip install pandas  
-pytest -m "core or pandas" -v
+pytest tests/core/ tests/features/test_auto_detection_and_metadata.py tests/features/test_chunked_streaming.py tests/features/test_template_deserialization.py -v
 
 # Test ML features
 pip install numpy pandas scikit-learn
-pytest -m "core or ml" -v
+pytest tests/core/ tests/features/ tests/integration/test_optional_dependencies.py -v
 ```
 
 ### Test Full Suite
 ```bash
 pip install -e ".[dev]"
-pytest tests/ -v
+pytest tests/core/ tests/features/ tests/integration/ tests/coverage/ -v
+```
+
+### Test Performance (Separate)
+```bash
+# Performance tests run in separate pipeline
+pytest tests/benchmarks/ --benchmark-only -v
 ```
 
 ## 📋 CI Test Matrix
@@ -128,11 +150,12 @@ Each CI job tests a specific scenario:
 
 | Job | Dependencies | Tests Run | Purpose |
 |-----|-------------|-----------|---------|
-| `minimal` | None | Core only | Verify zero-dependency functionality |
-| `with-numpy` | numpy | Core + NumPy | Basic array support |
-| `with-pandas` | pandas | Core + Pandas | DataFrame support |
-| `with-ml-deps` | numpy, pandas, sklearn | Core + ML | ML model serialization |
-| `full` | All deps | Complete suite | Integration testing |
+| `minimal` | None | tests/core/ | Verify zero-dependency functionality |
+| `with-numpy` | numpy | tests/core/ + ML features | Basic array support |
+| `with-pandas` | pandas | tests/core/ + data features | DataFrame support |
+| `with-ml-deps` | numpy, pandas, sklearn | tests/core/ + tests/features/ + integration | ML model serialization |
+| `full` | All deps | tests/core/ + tests/features/ + tests/integration/ + tests/coverage/ | Complete functional testing |
+| `performance` | All deps | tests/benchmarks/ (separate pipeline) | Performance regression tracking |
 
 ## 🔧 Adding New Optional Features
 
