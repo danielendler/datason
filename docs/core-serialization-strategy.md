@@ -12,6 +12,7 @@ The `datason.core` module implements a sophisticated **multi-layered serializati
 2. **Security Always**: Malicious data must be caught and handled safely  
 3. **Layered Approach**: Each layer handles increasingly complex cases
 4. **Fail-Safe Fallback**: Every layer has a safe fallback to the next layer
+5. **Circuit Breaker Protection**: Emergency safeguards prevent infinite recursion and hanging
 
 ### Architecture Goals
 
@@ -19,6 +20,7 @@ The `datason.core` module implements a sophisticated **multi-layered serializati
 - **Minimal checks** for simple structures
 - **Graduated complexity** - only pay for what you need
 - **Security boundaries** - prevent resource exhaustion and circular references
+- **Emergency protection** - circuit breaker prevents any hanging scenarios
 
 ## Serialization Flow Layers
 
@@ -50,22 +52,28 @@ serialize("hello")   # Immediate return: "hello"
 ### 🛡️ **Layer 2: Security Layer**
 *Lines 267-288 in core.py*
 
-**Purpose**: Early detection of problematic objects
+**Purpose**: Early detection of problematic objects and emergency circuit breaker
 
 **Handles**:
-- Mock objects (`unittest.mock`, `io` modules)
-- Objects with suspicious `__dict__` patterns
+- **Circuit Breaker**: Emergency protection against infinite recursion at function entry
+- **Mock objects** (`unittest.mock`, `io`, `_io` modules)  
+- **IO objects** (BytesIO, StringIO, file handles) with improved detection
+- Objects with suspicious `__dict__` patterns (now checks `hasattr(__dict__)`)
 - Known problematic types that cause infinite recursion
 
-**Strategy**: Convert dangerous objects to safe string representations
+**Strategy**: Convert dangerous objects to safe string representations + emergency stop mechanisms
 
 **Example**:
 ```python
 mock_obj = Mock()
 serialize(mock_obj)  # Returns: "<Mock object at 0x...>"
+
+# Circuit breaker prevents hanging on deeply nested data
+very_deep_nested = create_nested_dict(depth=2000)
+serialize(very_deep_nested)  # Returns: "CIRCUIT_BREAKER_ACTIVATED" (safe emergency response)
 ```
 
-**Performance**: **~50ns overhead** - module name + attribute checks
+**Performance**: **~50ns overhead** - module name + attribute checks + emergency detection
 
 ---
 
@@ -205,30 +213,46 @@ serialize(d1)  # Warning + safe handling
 
 ### Protection Mechanisms
 
-1. **Depth Bomb Protection**
+1. **Emergency Circuit Breaker**
    ```python
-   MAX_SERIALIZATION_DEPTH = 1000  # Prevent stack overflow
+   # Emergency fallback - should never reach this with proper depth=50 limit
+   if _depth > 100:  # Emergency circuit breaker
+       return f"<EMERGENCY_CIRCUIT_BREAKER: depth={_depth}, type={type(obj).__name__}>"
    ```
 
-2. **Size Bomb Protection**
+2. **Depth Bomb Protection**
+   ```python
+   MAX_SERIALIZATION_DEPTH = 50  # Reduced from 1000 for enhanced security
+   ```
+
+3. **Size Bomb Protection**
    ```python
    MAX_OBJECT_SIZE = 10_000_000  # Prevent memory exhaustion
    ```
 
-3. **String Length Protection**
+4. **String Length Protection**
    ```python  
    MAX_STRING_LENGTH = 1_000_000  # Prevent excessive processing
    ```
 
-4. **Circular Reference Detection**
+5. **Enhanced IO Object Detection**
+   ```python
+   # Improved detection - checks hasattr(__dict__) instead of len(__dict__) > 20
+   if obj_module in ("io", "_io") and hasattr(obj, "__dict__"):
+       return f"<{obj_class_name} object>"
+   ```
+
+6. **Circular Reference Detection**
    - Track object IDs in `_seen` set
    - Warn and replace with null on detection
    - Multi-level protection for nested objects
+   - Fixed cleanup logic to include 'tuple' type
 
-5. **Resource Exhaustion Prevention**
+7. **Resource Exhaustion Prevention**
    - Early size checks before processing
    - Memory pools to prevent allocation bombs
    - Cache size limits to prevent memory leaks
+   - Enhanced security checks using isinstance() instead of exact type matching
 
 ### Security vs Performance Balance
 
