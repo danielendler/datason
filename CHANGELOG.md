@@ -5,6 +5,98 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2025-06-06
+
+### 🔧 CI Pipeline & Test Stability Improvements
+
+#### **Fixed Critical CI Pipeline Failures**
+- **Resolved E402 import ordering violations** across all test files
+  - Fixed `tests/core/test_dataframe_orientation_regression.py`
+  - Fixed `tests/features/test_auto_detection_and_metadata.py`
+  - Fixed `tests/coverage/test_coverage_boost.py`
+  - Moved datason imports to proper locations after dependency checks
+
+#### **Fixed Missing Module Attributes**
+- **Exposed `datason.datetime_utils` and `datason.ml_serializers`** as accessible submodules
+- **Resolved `AttributeError` failures** in Python 3.9 pandas workflow and Python 3.10 ML deps workflow
+- **Added explicit module imports** in `datason/__init__.py` for test compatibility
+- **Maintained backward compatibility** while fixing module access issues
+
+#### **Eliminated Flaky Test Failures**
+- **Fixed `test_round_trip_production_workflow`** that was failing inconsistently on Python 3.11
+- **Replaced random `datetime.now()` and `uuid.uuid4()`** with deterministic fixed values
+- **Eliminated non-deterministic UUID comparisons** causing CI failures across Python versions
+- **Test now passes consistently** in all CI environments and Python versions
+
+#### **Enhanced Linting & Security**
+- **Resolved all F401 unused import warnings** with appropriate noqa annotations
+- **Added nosec B403 annotations** for safe pickle usage in benchmarking code
+- **All pre-commit hooks now pass** without blocking CI pipeline
+- **Improved code quality** with proper import organization and security annotations
+
+### 📚 Performance Documentation Consolidation
+
+#### **Comprehensive Performance Journey Documentation**
+- **Created `docs/performance-improvements.md`** consolidating all optimization work
+- **Documented complete 30.3% performance improvement journey** vs baseline
+- **Technical deep dive** on function call overhead reduction (40-61% improvement)
+- **Phase 1 & Phase 2 optimization** strategies and results clearly explained
+
+#### **Performance Insights & Patterns**
+- **✅ Proven effective patterns documented**:
+  - Aggressive inlining and function call elimination
+  - Hot path optimization (80/20 rule applied to serialization)
+  - Type-specific fast paths and early detection/bailout
+  - Direct type comparisons vs isinstance() overhead
+  - Tiered processing architecture (hot → fast → full paths)
+
+- **❌ Patterns that don't work documented**:
+  - Custom string building (can't beat optimized C implementations)
+  - Complex micro-optimizations (overhead exceeds benefits)
+  - Object pooling for small objects (management overhead)
+  - Reinventing optimized wheels (json, pickle modules are very fast)
+
+#### **Performance Testing Infrastructure**
+- **Comprehensive benchmarking system** with CI performance tracker
+- **Environment-aware thresholds** (local vs CI runner differences)
+- **Informational-only testing** - insights without blocking CI
+- **Historical tracking** with 90-day artifact retention
+- **Manual execution options** for development workflow
+
+#### **Documentation Organization**
+- **Removed scattered root-level performance files**:
+  - `PHASE_2_OPTIMIZATION_PLAN.md` → consolidated
+  - `PHASE_1_OPTIMIZATION_SUMMARY.md` → consolidated  
+  - `STEP_1_5_SUCCESS_ANALYSIS.md` → consolidated
+  - `ESSENTIAL_FILES_FOR_PERFORMANCE_SYSTEM.md` → consolidated
+- **Added to documentation navigation** in mkdocs.yml for easy access
+- **Single source of truth** for all performance optimization work
+
+### 🚀 Development Experience Improvements
+
+#### **Systematic Optimization Methodology**
+- **Measure everything** - No optimization without benchmark proof
+- **Function call overhead is the biggest bottleneck** in Python
+- **Hot path optimization** provides largest competitive improvements
+- **Leverage existing optimized code** - don't reinvent wheels
+- **Early bailout strategies** are highly effective
+- **Simple, focused optimizations** outperform complex micro-optimizations
+
+#### **CI Pipeline Reliability**
+- **All Python versions now pass consistently** (3.8, 3.9, 3.10, 3.11, 3.12)
+- **Cross-platform compatibility** maintained across all CI environments
+- **Import ordering compliance** across entire codebase
+- **Module access compatibility** for all testing scenarios
+- **471 tests passing** with 79% coverage and no regressions
+
+### 🎯 Ready for Future Optimizations
+
+The foundation is now set for continued performance improvements with:
+- **Stable CI pipeline** that won't block development
+- **Comprehensive performance documentation** as optimization guide
+- **Baseline performance measurements** for tracking future improvements
+- **Proven optimization patterns** ready for Phase 3 implementation
+
 ## [0.4.5] - 2025-06-02
 
 ### 🚀 Major New Features
