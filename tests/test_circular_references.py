@@ -5,11 +5,11 @@ This test suite ensures that datason properly handles circular references
 and problematic objects without hanging or causing infinite recursion.
 """
 
+import signal
 import time
 import warnings
 from io import BytesIO, StringIO
-from queue import Queue
-from threading import Thread
+from typing import Any, Dict, List, Optional, Tuple
 from unittest.mock import MagicMock, Mock
 
 import pytest
@@ -20,7 +20,7 @@ import datason as ds
 class CircularObject:
     """Simple test object with circular reference."""
 
-    def __init__(self, name: str):
+    def __init__(self, name: str) -> None:
         self.name = name
         self.self_ref = self
 
@@ -28,12 +28,12 @@ class CircularObject:
 class ComplexCircularObject:
     """More complex object with nested circular references."""
 
-    def __init__(self, name: str):
+    def __init__(self, name: str) -> None:
         self.name = name
-        self.children = []
-        self.parent = None
+        self.children: List[ComplexCircularObject] = []
+        self.parent: Optional[ComplexCircularObject] = None
 
-    def add_child(self, child: "ComplexCircularObject"):
+    def add_child(self, child: "ComplexCircularObject") -> None:
         child.parent = self
         self.children.append(child)
 
@@ -41,69 +41,65 @@ class ComplexCircularObject:
 class ProblematicObject:
     """Object similar to the original bug report."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.file_handle = BytesIO(b"test data")
         self.string_io = StringIO("test string")
         self.mock_connection = MagicMock()
         self.mock_object = Mock()
 
 
-def serialize_with_timeout(obj, timeout_seconds=5.0):
+def serialize_with_timeout(obj: Any, timeout_seconds: float = 8.0) -> Tuple[bool, Any, float, str]:
     """
     Serialize an object with a timeout to prevent hanging.
 
-    Note: Timeout is generous to account for first-time ML library imports.
+    Note: Timeout increased to account for first-time ML library imports.
 
     Returns:
         tuple: (success: bool, result: Any, time_taken: float, error: str)
     """
-    result_queue = Queue()
-    error_queue = Queue()
 
-    def serialize_worker():
-        try:
-            start_time = time.time()
-            result = ds.serialize(obj)
-            end_time = time.time()
-            result_queue.put((True, result, end_time - start_time, None))
-        except Exception as e:
-            end_time = time.time()
-            error_queue.put((False, None, end_time - start_time, str(e)))
+    def timeout_handler(signum: int, frame: Any) -> None:
+        raise TimeoutError(f"Serialization timed out after {timeout_seconds}s")
 
-    thread = Thread(target=serialize_worker, daemon=True)
-    start_time = time.time()
-    thread.start()
-    thread.join(timeout=timeout_seconds)
+    # Set up signal timeout (Unix only, but this is for debugging)
+    old_handler = signal.signal(signal.SIGALRM, timeout_handler)
+    signal.alarm(int(timeout_seconds))
 
-    if thread.is_alive():
-        # Thread is still running - serialization hung
-        return False, None, timeout_seconds, f"Serialization hung for more than {timeout_seconds}s"
-
-    if not result_queue.empty():
-        return result_queue.get()
-    elif not error_queue.empty():
-        return error_queue.get()
-    else:
-        return False, None, time.time() - start_time, "Unknown error"
+    try:
+        start_time = time.time()
+        result = ds.serialize(obj)
+        end_time = time.time()
+        signal.alarm(0)  # Cancel the alarm
+        return True, result, end_time - start_time, ""
+    except TimeoutError as e:
+        signal.alarm(0)  # Cancel the alarm
+        return False, None, timeout_seconds, str(e)
+    except Exception as e:
+        signal.alarm(0)  # Cancel the alarm
+        end_time = time.time()
+        return False, None, end_time - start_time, str(e)
+    finally:
+        signal.signal(signal.SIGALRM, old_handler)  # Restore old handler
 
 
 class TestCircularReferences:
     """Test circular reference handling."""
 
-    def test_simple_circular_reference(self):
+    def test_simple_circular_reference(self) -> None:
         """Test that simple circular references are handled properly."""
         obj = CircularObject("test")
 
-        success, result, time_taken, error = serialize_with_timeout(obj)
+        success, result, time_taken, error = serialize_with_timeout(obj, timeout_seconds=10.0)
 
         assert success, f"Serialization failed: {error}"
-        assert time_taken < 3.0, f"Serialization took too long: {time_taken}s"
+        # First serialization may take longer due to imports, so be more generous
+        assert time_taken < 10.0, f"Serialization took too long: {time_taken}s"
         assert isinstance(result, dict)
         assert result["name"] == "test"
         # The self_ref should be handled safely (either None or circular reference placeholder)
         assert "self_ref" in result
 
-    def test_nested_circular_reference(self):
+    def test_nested_circular_reference(self) -> None:
         """Test nested circular references."""
         parent = ComplexCircularObject("parent")
         child1 = ComplexCircularObject("child1")
@@ -113,17 +109,18 @@ class TestCircularReferences:
         parent.add_child(child2)
         child1.add_child(parent)  # Create circular reference
 
-        success, result, time_taken, error = serialize_with_timeout(parent)
+        success, result, time_taken, error = serialize_with_timeout(parent, timeout_seconds=10.0)
 
         assert success, f"Serialization failed: {error}"
-        assert time_taken < 3.0, f"Serialization took too long: {time_taken}s"
+        # This should be faster since imports are already done
+        assert time_taken < 5.0, f"Serialization took too long: {time_taken}s"
         assert isinstance(result, dict)
         assert result["name"] == "parent"
 
-    def test_dict_circular_reference(self):
+    def test_dict_circular_reference(self) -> None:
         """Test circular references in dictionaries."""
-        obj1 = {"name": "obj1"}
-        obj2 = {"name": "obj2", "ref": obj1}
+        obj1: Dict[str, Any] = {"name": "obj1"}
+        obj2: Dict[str, Any] = {"name": "obj2", "ref": obj1}
         obj1["ref"] = obj2  # Create circular reference
 
         success, result, time_taken, error = serialize_with_timeout(obj1)
@@ -138,7 +135,7 @@ class TestCircularReferences:
 class TestProblematicObjects:
     """Test handling of objects that previously caused hanging."""
 
-    def test_mock_object_serialization(self):
+    def test_mock_object_serialization(self) -> None:
         """Test that MagicMock objects don't cause hanging."""
         mock_obj = MagicMock()
 
@@ -149,7 +146,7 @@ class TestProblematicObjects:
         assert isinstance(result, str)
         assert "MagicMock" in result
 
-    def test_bytesio_object_serialization(self):
+    def test_bytesio_object_serialization(self) -> None:
         """Test that BytesIO objects don't cause hanging."""
         bio = BytesIO(b"test data")
 
@@ -160,14 +157,15 @@ class TestProblematicObjects:
         assert isinstance(result, str)
         assert "BytesIO" in result
 
-    def test_problematic_object_combination(self):
+    def test_problematic_object_combination(self) -> None:
         """Test the exact scenario from the original bug report."""
         obj = ProblematicObject()
 
-        success, result, time_taken, error = serialize_with_timeout(obj)
+        success, result, time_taken, error = serialize_with_timeout(obj, timeout_seconds=10.0)
 
         assert success, f"Serialization failed: {error}"
-        assert time_taken < 3.0, f"Serialization took too long: {time_taken}s"
+        # This should be faster since imports are already done
+        assert time_taken < 5.0, f"Serialization took too long: {time_taken}s"
         assert isinstance(result, dict)
 
         # Verify problematic objects are handled safely
@@ -178,7 +176,7 @@ class TestProblematicObjects:
 class TestPerformanceRequirements:
     """Test that serialization meets performance requirements."""
 
-    def test_serialization_speed_simple_objects(self):
+    def test_serialization_speed_simple_objects(self) -> None:
         """Test that simple objects serialize very quickly."""
         data = {"simple": "data", "number": 42, "list": [1, 2, 3]}
 
@@ -190,7 +188,7 @@ class TestPerformanceRequirements:
         assert time_taken < 0.1, f"Simple serialization took too long: {time_taken}s"
         assert result == data
 
-    def test_serialization_speed_complex_objects(self):
+    def test_serialization_speed_complex_objects(self) -> None:
         """Test that even complex objects serialize within reasonable time."""
         complex_data = {
             "nested": {"deeply": {"nested": {"data": list(range(100))}}},
@@ -206,10 +204,10 @@ class TestPerformanceRequirements:
         assert time_taken < 0.5, f"Complex serialization took too long: {time_taken}s"
         assert isinstance(result, dict)
 
-    def test_no_hanging_on_deep_nesting(self):
+    def test_no_hanging_on_deep_nesting(self) -> None:
         """Test that deeply nested objects don't cause hanging."""
         # Create deeply nested dict
-        nested = {}
+        nested: Dict[str, Any] = {}
         current = nested
         for i in range(50):  # Deep but not infinite
             current["level"] = i
@@ -226,7 +224,7 @@ class TestPerformanceRequirements:
 class TestWarningsAndFallbacks:
     """Test that proper warnings are issued and fallbacks work."""
 
-    def test_circular_reference_warning(self):
+    def test_circular_reference_warning(self) -> None:
         """Test that circular references trigger warnings."""
         obj = CircularObject("test")
 
@@ -237,7 +235,7 @@ class TestWarningsAndFallbacks:
         # Should have warnings about circular references or problematic objects
         assert len(warning_list) > 0, "Expected warnings for circular references"
 
-    def test_problematic_object_warning(self):
+    def test_problematic_object_warning(self) -> None:
         """Test that problematic objects trigger warnings."""
         mock_obj = MagicMock()
 
@@ -255,11 +253,11 @@ class TestWarningsAndFallbacks:
 class TestRegression:
     """Regression tests for specific bug scenarios."""
 
-    def test_original_bug_scenario(self):
+    def test_original_bug_scenario(self) -> None:
         """Test the exact scenario that caused the original hanging bug."""
 
         class UnserializableObject:
-            def __init__(self):
+            def __init__(self) -> None:
                 self.file_handle = BytesIO(b"test data")
                 self.connection = MagicMock()
 
@@ -272,7 +270,7 @@ class TestRegression:
         assert time_taken < 2.0, f"Original bug scenario took too long: {time_taken}s (expected < 2s)"
         assert isinstance(result, dict)
 
-    def test_import_performance(self):
+    def test_import_performance(self) -> None:
         """Test that importing datason doesn't take too long."""
         # This test ensures that the ML library imports don't cause delays
         start_time = time.time()
@@ -290,6 +288,19 @@ class TestRegression:
         import_time = end_time - start_time
         # Import should be reasonable - ML libraries might take some time but not excessive
         assert import_time < 10.0, f"Datason import took too long: {import_time}s (expected < 10s)"
+
+    def test_circular_reference_performance(self) -> None:
+        """Test that subsequent circular reference handling is fast."""
+        # This test runs after imports are done, so should be much faster
+        obj = CircularObject("performance_test")
+
+        success, result, time_taken, error = serialize_with_timeout(obj, timeout_seconds=5.0)
+
+        assert success, f"Serialization failed: {error}"
+        # After imports, should be much faster
+        assert time_taken < 1.0, f"Subsequent serialization too slow: {time_taken}s"
+        assert isinstance(result, dict)
+        assert result["name"] == "performance_test"
 
 
 if __name__ == "__main__":

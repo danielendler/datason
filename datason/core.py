@@ -19,7 +19,7 @@ except ImportError:
 try:
     import numpy as np
 except ImportError:
-    np = None
+    np = None  # type: ignore
 
 # Import configuration and type handling
 try:
@@ -35,14 +35,14 @@ try:
     _config_available = True
 except ImportError:
     _config_available = False
-    # Define dummy functions/classes for when imports fail
-    TypeHandler = None
+    # Define dummy functions/classes for when imports fail with matching signatures
+    TypeHandler = None  # type: ignore
 
-    def is_nan_like(x):
+    def is_nan_like(obj: Any) -> bool:  # Match exact signature from type_handlers.py
         return False
 
-    def normalize_numpy_types(x):
-        return x
+    def normalize_numpy_types(obj: Any) -> Any:  # Match exact signature from type_handlers.py
+        return obj
 
 
 # Import ML serializers
@@ -207,9 +207,25 @@ def _is_json_basic_type(value: Any) -> bool:
     value_type = type(value)
 
     if value_type in (str, int, bool, type(None)):
+        # Note: For strings, this only checks if it's a string type
+        # Length validation should be done separately when config is available
         return True
     elif value_type is float:
         # Efficient NaN/Inf check without function calls
+        return value == value and value not in (float("inf"), float("-inf"))
+    else:
+        return False
+
+
+def _is_json_basic_type_with_config(value: Any, max_string_length: int) -> bool:
+    """Check for basic JSON types with string length validation."""
+    value_type = type(value)
+
+    if value_type in (int, bool, type(None)):
+        return True
+    elif value_type is str:
+        return len(value) <= max_string_length
+    elif value_type is float:
         return value == value and value not in (float("inf"), float("-inf"))
     else:
         return False
@@ -363,7 +379,7 @@ def serialize(
         return None
 
     # For mutable objects, check optimization BEFORE adding to _seen
-    optimization_result = None
+    optimization_result: Any = None
     if isinstance(obj, dict):
         # Security check: prevent excessive object sizes
         if len(obj) > max_size:
@@ -468,11 +484,11 @@ def serialize(
                     return list(obj) if obj_type is _TYPE_TUPLE else obj
 
                 # Needs full list processing
-                result = _process_homogeneous_list(obj, config, _depth, _seen, _type_handler)
+                result_list = _process_homogeneous_list(obj, config, _depth, _seen, _type_handler)
                 # Handle type metadata for tuples
                 if isinstance(obj, tuple) and config and config.include_type_hints:
-                    return _create_type_metadata("tuple", result)
-                return result
+                    return _create_type_metadata("tuple", result_list)
+                return result_list
 
         # Fall back to full processing for complex types
         return _serialize_full_path(obj, config, _depth, _seen, _type_handler, max_string_length)
@@ -670,6 +686,7 @@ def _serialize_full_path(
             except Exception as e:
                 # If custom handler fails, fall back to default handling
                 warnings.warn(f"Custom type handler failed for {type(obj)}: {e}", stacklevel=3)
+                # Continue with default processing below
 
     # Handle dicts with full processing
     if type_category == "dict":
@@ -681,11 +698,11 @@ def _serialize_full_path(
 
     # Handle lists/tuples with full processing
     if type_category == "list":
-        result = _process_homogeneous_list(obj, config, _depth, _seen, _type_handler)
+        result_list = _process_homogeneous_list(obj, config, _depth, _seen, _type_handler)
         # Handle type metadata for tuples
         if isinstance(obj, tuple) and config and config.include_type_hints:
-            return _create_type_metadata("tuple", result)
-        return result
+            return _create_type_metadata("tuple", result_list)
+        return result_list
 
     # OPTIMIZATION: Streamlined datetime handling (frequent type)
     if type_category == "datetime":
@@ -1075,7 +1092,7 @@ def _chunk_sequence(
     total_items = len(seq)
     total_chunks = (total_items + chunk_size - 1) // chunk_size  # Ceiling division
 
-    def chunk_generator():
+    def chunk_generator() -> Generator[Any, None, None]:
         for i in range(0, total_items, chunk_size):
             chunk = seq[i : i + chunk_size]
             yield serialize(chunk, config)
@@ -1098,7 +1115,7 @@ def _chunk_dataframe(
     total_rows = len(df)
     total_chunks = (total_rows + chunk_size - 1) // chunk_size
 
-    def chunk_generator():
+    def chunk_generator() -> Generator[Any, None, None]:
         for i in range(0, total_rows, chunk_size):
             chunk_df = df.iloc[i : i + chunk_size]
             yield serialize(chunk_df, config)
@@ -1123,7 +1140,7 @@ def _chunk_numpy_array(
     total_items = arr.shape[0] if arr.ndim > 0 else 1
     total_chunks = (total_items + chunk_size - 1) // chunk_size
 
-    def chunk_generator():
+    def chunk_generator() -> Generator[Any, None, None]:
         if arr.ndim == 0:
             # Scalar array
             yield serialize(arr, config)
@@ -1151,7 +1168,7 @@ def _chunk_dict(d: dict, chunk_size: int, config: Optional["SerializationConfig"
     total_items = len(items)
     total_chunks = (total_items + chunk_size - 1) // chunk_size
 
-    def chunk_generator():
+    def chunk_generator() -> Generator[Any, None, None]:
         for i in range(0, total_items, chunk_size):
             chunk_items = items[i : i + chunk_size]
             chunk_dict = dict(chunk_items)
@@ -1194,7 +1211,7 @@ class StreamingSerializer:
         self.config = config or (get_default_config() if _config_available else None)
         self.format = format
         self.buffer_size = buffer_size
-        self._file = None
+        self._file: Optional[Any] = None
         self._items_written = 0
         self._json_array_started = False
 
@@ -1209,7 +1226,7 @@ class StreamingSerializer:
 
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         """Exit context manager."""
         if self._file:
             if self.format == "json" and self._json_array_started:
@@ -1554,16 +1571,18 @@ def _is_homogeneous_collection(obj: Union[list, tuple, dict], sample_size: int =
         if not obj:
             homogeneity_result = "json_basic"
         else:
-            # Sample items for type analysis
-            sample = obj[:sample_size] if len(obj) > sample_size else obj
+            # Sample items for type analysis - handle Union type properly
+            sample_items = list(obj[:sample_size]) if len(obj) > sample_size else list(obj)
 
-            if all(_is_json_basic_type(item) for item in sample):
+            if all(_is_json_basic_type(item) for item in sample_items):
                 # Check if all items are JSON-basic types
                 homogeneity_result = "json_basic"
             else:
                 # Check if all items are the same type
-                first_type = type(sample[0])
-                homogeneity_result = "single_type" if all(isinstance(item, first_type) for item in sample) else "mixed"
+                first_type = type(sample_items[0])
+                homogeneity_result = (
+                    "single_type" if all(isinstance(item, first_type) for item in sample_items) else "mixed"
+                )
 
     # Cache the result if we have space
     if homogeneity_result is not None and len(_COLLECTION_COMPATIBILITY_CACHE) < _COLLECTION_CACHE_SIZE_LIMIT:
@@ -1584,8 +1603,19 @@ def _process_homogeneous_dict(
     homogeneity = _is_homogeneous_collection(obj)
 
     if homogeneity == "json_basic":
-        # All values are JSON-compatible, just return as-is
-        return obj
+        # All values are JSON-compatible, but need to check string lengths with config
+        if config and config.max_string_length < MAX_STRING_LENGTH:
+            # Need to validate string lengths
+            for v in obj.values():
+                if isinstance(v, str) and len(v) > config.max_string_length:
+                    # Has long strings, needs full processing
+                    break
+            else:
+                # All strings are within limits, can return as-is
+                return obj
+        else:
+            # No length limits or using defaults, just return as-is
+            return obj
 
     # OPTIMIZATION: Use pooled dictionary for memory efficiency
     result = _get_pooled_dict()
@@ -1628,8 +1658,19 @@ def _process_homogeneous_list(
     homogeneity = _is_homogeneous_collection(obj)
 
     if homogeneity == "json_basic":
-        # All items are JSON-compatible, just convert tuple to list if needed
-        return list(obj) if isinstance(obj, tuple) else obj
+        # All items are JSON-compatible, but need to check string lengths with config
+        if config and config.max_string_length < MAX_STRING_LENGTH:
+            # Need to validate string lengths
+            for item in obj:
+                if isinstance(item, str) and len(item) > config.max_string_length:
+                    # Has long strings, needs full processing
+                    break
+            else:
+                # All strings are within limits, can convert and return
+                return list(obj) if isinstance(obj, tuple) else obj
+        else:
+            # No length limits or using defaults, just convert tuple to list if needed
+            return list(obj) if isinstance(obj, tuple) else obj
 
     # OPTIMIZATION: Use pooled list for memory efficiency
     result = _get_pooled_list()
@@ -1815,7 +1856,7 @@ def _serialize_json_only_fast_path(obj: Any) -> Any:
 
 def _convert_dict_tuples_fast(obj: dict) -> dict:
     """Fast dict processing to convert nested tuples to lists."""
-    result = {}
+    result: Dict[str, Any] = {}
     for k, v in obj.items():
         if type(v) is _TYPE_TUPLE:
             result[k] = _convert_tuple_to_list_fast(v)
@@ -1838,7 +1879,7 @@ def _convert_dict_tuples_fast(obj: dict) -> dict:
 
 def _convert_list_tuples_fast(obj: list) -> list:
     """Fast list processing to convert nested tuples to lists."""
-    result = []
+    result: List[Any] = []
     for item in obj:
         if type(item) is _TYPE_TUPLE:
             result.append(_convert_tuple_to_list_fast(item))
@@ -1869,7 +1910,7 @@ def _convert_tuple_to_list_fast(obj: tuple) -> list:
         return [_convert_tuple_to_list_fast(item) if type(item) is _TYPE_TUPLE else item for item in obj]
 
     # For larger tuples, process iteratively
-    result = []
+    result: List[Any] = []
     for item in obj:
         if type(item) is _TYPE_TUPLE:
             result.append(_convert_tuple_to_list_fast(item))
