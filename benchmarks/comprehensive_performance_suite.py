@@ -40,6 +40,13 @@ try:
 except ImportError:
     pd = None
 
+try:
+    import torch
+
+    ML_LIBRARIES["torch"] = torch.__version__
+except ImportError:
+    torch = None
+
 # Competitive serialization libraries
 COMPETITIVE_LIBS = {}
 try:
@@ -135,6 +142,17 @@ class ComprehensivePerformanceSuite:
                         "decimals": [Decimal(str(i * 0.01)) for i in range(100)],
                     }
                 ).to_dict("records"),
+            }
+
+        # PyTorch tensors (common in deep learning)
+        if torch is not None:
+            datasets["torch_tensors"] = {
+                "small_tensor": torch.randn(50, 10).tolist(),  # Convert to list for JSON compatibility
+                "mixed_tensors": {
+                    "float_tensor": torch.randn(100, 5).tolist(),
+                    "int_tensor": torch.randint(0, 100, (100, 3)).tolist(),
+                    "bool_tensor": torch.randint(0, 2, (50, 2), dtype=torch.bool).tolist(),
+                },
             }
 
         return datasets

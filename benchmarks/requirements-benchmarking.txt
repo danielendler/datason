@@ -13,14 +13,17 @@ ujson>=5.8.0       # Fast JSON library (C-based)
 msgpack>=1.0.7     # Binary serialization format
 
 # Optional ML Libraries (for comprehensive testing)
-# Uncomment these for full ML integration testing:
-# torch>=2.0.0 --index-url https://download.pytorch.org/whl/cpu
+# Note: PyTorch should be installed separately with:
+# pip install torch --index-url https://download.pytorch.org/whl/cpu
+#
+# For full ML integration testing, also install:
 # scikit-learn>=1.3.0
 # tensorflow>=2.13.0
 
 # Performance Profiling Tools
 # memory_profiler>=0.61.0
-# line_profiler>=4.1.0
+# line_profiler>=0.4.1
 # py-spy>=0.3.14
 
 # Note: Install with: pip install -r requirements-benchmarking.txt
+# For PyTorch: pip install torch --index-url https://download.pytorch.org/whl/cpu
