@@ -114,7 +114,7 @@ class SerializationConfig:
 
     # Security limits
     max_depth: int = 50  # SECURITY FIX: Changed from 1000 to 50 to match MAX_SERIALIZATION_DEPTH
-    max_size: int = 10_000_000
+    max_size: int = 100_000  # SECURITY FIX: Reduced from 10_000_000 to 100_000 to prevent size bomb attacks
     max_string_length: int = 1_000_000
 
     # Extensibility
