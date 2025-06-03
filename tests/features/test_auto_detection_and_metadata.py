@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Tests for auto-detection deserialization and type metadata features."""
+"""Tests for auto-detection and metadata capabilities.
+
+This module tests the automatic detection of data types and the inclusion
+of metadata for roundtrip serialization/deserialization.
+"""
 
 import json
 import uuid
@@ -7,12 +11,12 @@ from datetime import datetime
 
 import pytest
 
-# Conditional imports for optional dependencies
-np = pytest.importorskip("numpy", reason="numpy not available")
-pd = pytest.importorskip("pandas", reason="pandas not available")
-
 import datason
 from datason.config import SerializationConfig
+
+# Conditional imports for optional dependencies
+pd = pytest.importorskip("pandas", reason="pandas not available")
+np = pytest.importorskip("numpy", reason="numpy not available")
 
 
 class TestAutoDetectionDeserialization:

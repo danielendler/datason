@@ -13,7 +13,7 @@ This complements the basic CI tracker with deeper analysis.
 """
 
 import json
-import pickle
+import pickle  # nosec B403 - Safe usage for benchmarking only, controlled data
 import sys
 import time
 import uuid
