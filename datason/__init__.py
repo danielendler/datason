@@ -119,7 +119,7 @@ def _get_version() -> str:
         pass
 
     # Fallback version if pyproject.toml is not found or version not found
-    return "0.4.5"
+    return "0.5.0"
 
 
 __version__ = _get_version()
@@ -314,3 +314,67 @@ def serialize_with_config(obj: Any, **kwargs: Any) -> Any:
 # Add convenience functions to __all__ if config is available
 if _config_available:
     __all__.extend(["configure", "serialize_with_config"])
+
+# Add redaction exports if available (v0.5.5)
+try:
+    from .redaction import (  # noqa: F401
+        RedactionEngine,
+        create_financial_redaction_engine,
+        create_healthcare_redaction_engine,
+        create_minimal_redaction_engine,
+    )
+
+    _redaction_available = True
+except ImportError:
+    _redaction_available = False
+
+# Add data utilities (v0.5.5)
+try:
+    from .utils import (  # noqa: F401
+        UtilityConfig,
+        UtilitySecurityError,
+        deep_compare,
+        enhance_data_types,
+        enhance_numpy_array,
+        enhance_pandas_dataframe,
+        extract_temporal_features,
+        find_data_anomalies,
+        get_available_utilities,
+        get_default_utility_config,
+        normalize_data_structure,
+        standardize_datetime_formats,
+    )
+
+    _utils_available = True
+except ImportError:
+    _utils_available = False
+
+# Add redaction exports to __all__ if available (v0.5.5)
+if _redaction_available:
+    __all__.extend(
+        [
+            "RedactionEngine",
+            "create_financial_redaction_engine",
+            "create_healthcare_redaction_engine",
+            "create_minimal_redaction_engine",
+        ]
+    )
+
+# Add utility exports to __all__ if available (v0.5.5)
+if _utils_available:
+    __all__.extend(
+        [
+            "deep_compare",
+            "find_data_anomalies",
+            "enhance_data_types",
+            "normalize_data_structure",
+            "standardize_datetime_formats",
+            "extract_temporal_features",
+            "get_available_utilities",
+            "UtilityConfig",
+            "UtilitySecurityError",
+            "get_default_utility_config",
+            "enhance_pandas_dataframe",
+            "enhance_numpy_array",
+        ]
+    )

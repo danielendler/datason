@@ -261,6 +261,60 @@ def serialize(
         ValueError: If the object cannot be serialized.
         TypeError: If an unsupported type is encountered.
     """
+    # NEW: Apply redaction if configured and at root level (v0.5.5)
+    if _depth == 0 and config and any([config.redact_fields, config.redact_patterns, config.redact_large_objects]):
+        try:
+            from .redaction import RedactionEngine
+
+            redaction_engine = RedactionEngine(
+                redact_fields=config.redact_fields,
+                redact_patterns=config.redact_patterns,
+                redact_large_objects=config.redact_large_objects,
+                redaction_replacement=config.redaction_replacement,
+                include_redaction_summary=config.include_redaction_summary,
+                audit_trail=config.audit_trail,
+            )
+
+            # Apply redaction to the object
+            obj = redaction_engine.process_object(obj)
+
+            # Serialize the redacted object
+            serialized_result = _serialize_core(obj, config, _depth, _seen, _type_handler)
+
+            # Add redaction metadata to result if requested
+            if config.include_redaction_summary or config.audit_trail:
+                # Create metadata container
+                result_with_metadata = {"data": serialized_result}
+
+                if config.include_redaction_summary:
+                    summary = redaction_engine.get_redaction_summary()
+                    if summary:
+                        result_with_metadata.update(summary)
+
+                if config.audit_trail:
+                    audit_trail = redaction_engine.get_audit_trail()
+                    if audit_trail:
+                        result_with_metadata["audit_trail"] = audit_trail
+
+                return result_with_metadata
+            else:
+                return serialized_result
+        except ImportError:
+            # Redaction module not available, proceed without redaction
+            pass
+
+    # Proceed with normal serialization
+    return _serialize_core(obj, config, _depth, _seen, _type_handler)
+
+
+def _serialize_core(
+    obj: Any,
+    config: Optional["SerializationConfig"],
+    _depth: int,
+    _seen: Optional[Set[int]],
+    _type_handler: Optional["TypeHandler"],
+) -> Any:
+    """Core serialization logic without redaction."""
     # ==================================================================================
     # EMERGENCY CIRCUIT BREAKER: Prevent infinite recursion at all costs
     # ==================================================================================
@@ -420,6 +474,9 @@ def _serialize_hot_path(obj: Any, config: Optional["SerializationConfig"], max_s
 
     This function inlines the most common operations to minimize function call overhead.
     Returns None if the object needs full processing.
+
+    SECURITY: This function ONLY handles leaf nodes (non-recursive types).
+    All containers MUST go through full processing for depth checking.
     """
     # OPTIMIZATION: Check if type hints are enabled - if so, skip hot path for containers
     # that might need type metadata
@@ -460,110 +517,19 @@ def _serialize_hot_path(obj: Any, config: Optional["SerializationConfig"], max_s
             # Needs NaN handling
             return None
 
-    # PHASE 1.6: CONTAINER HOT PATH EXPANSION
-    # Handle containers with aggressive inlining for common cases
-    elif obj_type is _TYPE_DICT:
-        # Handle empty dict (very common)
-        if not obj:
-            return obj
+    # SECURITY FIX: Remove container processing from hot path
+    # All containers (dict, list, tuple) MUST go through full processing
+    # to ensure proper depth checking and security validation
 
-        # Handle small dicts with string keys and basic values (common in APIs)
-        if len(obj) <= 3:
-            # Quick check: all keys strings, all values basic JSON types
-            try:
-                for k, v in obj.items():
-                    if type(k) is not _TYPE_STR:
-                        return None  # Non-string key, needs full processing
-                    v_type = type(v)
-                    if v_type not in (_TYPE_STR, _TYPE_INT, _TYPE_BOOL, _TYPE_NONE):
-                        if v_type is _TYPE_FLOAT:
-                            # Inline float check
-                            if v != v or v in (float("inf"), float("-inf")):
-                                return None  # NaN/Inf, needs full processing
-                        elif np is not None and isinstance(v, (np.bool_, np.integer, np.floating)):
-                            # Inline numpy scalar normalization for hot path
-                            if isinstance(v, np.floating) and (np.isnan(v) or np.isinf(v)):
-                                return None  # NaN/Inf numpy float, needs full processing
-                            # Simple numpy scalars are fine, will be normalized in full processing
-                            return None  # Let full processing handle the conversion
-                        else:
-                            return None  # Complex type, needs full processing
-                    elif v_type is _TYPE_STR and len(v) > max_string_length:
-                        return None  # String too long, needs truncation in full processing
-                # All checks passed - dict is JSON-compatible
-                return obj
-            except (AttributeError, TypeError):
-                return None  # Some issue with iteration, needs full processing
-        else:
-            return None  # Large dict, needs full processing
+    # Handle numpy scalars if available
+    elif np is not None and isinstance(obj, (np.bool_, np.integer, np.floating)):
+        # Quick numpy scalar normalization
+        if isinstance(obj, np.floating) and (np.isnan(obj) or np.isinf(obj)):
+            return None  # NaN/Inf numpy float, needs full processing
+        # Convert numpy scalars to Python types
+        return obj.item()
 
-    elif obj_type is _TYPE_LIST:
-        # Handle empty list (very common)
-        if not obj:
-            return obj
-
-        # Handle small lists with basic JSON types (common in APIs)
-        if len(obj) <= 5:
-            # Quick check: all items are basic JSON types
-            try:
-                for item in obj:
-                    item_type = type(item)
-                    if item_type not in (_TYPE_STR, _TYPE_INT, _TYPE_BOOL, _TYPE_NONE):
-                        if item_type is _TYPE_FLOAT:
-                            # Inline float check
-                            if item != item or item in (float("inf"), float("-inf")):
-                                return None  # NaN/Inf, needs full processing
-                        elif np is not None and isinstance(item, (np.bool_, np.integer, np.floating)):
-                            # Inline numpy scalar normalization for hot path
-                            if isinstance(item, np.floating) and (np.isnan(item) or np.isinf(item)):
-                                return None  # NaN/Inf numpy float, needs full processing
-                            # Simple numpy scalars are fine, will be normalized in full processing
-                            return None  # Let full processing handle the conversion
-                        else:
-                            return None  # Complex type, needs full processing
-                    elif item_type is _TYPE_STR and len(item) > max_string_length:
-                        return None  # String too long, needs truncation in full processing
-                # All checks passed - list is JSON-compatible
-                return obj
-            except (AttributeError, TypeError):
-                return None  # Some issue with iteration, needs full processing
-        else:
-            return None  # Large list, needs full processing
-
-    elif obj_type is _TYPE_TUPLE:
-        # Handle empty tuple (less common but still worth optimizing)
-        if not obj:
-            return []  # Convert empty tuple to list
-
-        # Handle small tuples with basic JSON types
-        if len(obj) <= 5:
-            # Quick check: all items are basic JSON types
-            try:
-                for item in obj:
-                    item_type = type(item)
-                    if item_type not in (_TYPE_STR, _TYPE_INT, _TYPE_BOOL, _TYPE_NONE):
-                        if item_type is _TYPE_FLOAT:
-                            # Inline float check
-                            if item != item or item in (float("inf"), float("-inf")):
-                                return None  # NaN/Inf, needs full processing
-                        elif np is not None and isinstance(item, (np.bool_, np.integer, np.floating)):
-                            # Inline numpy scalar normalization for hot path
-                            if isinstance(item, np.floating) and (np.isnan(item) or np.isinf(item)):
-                                return None  # NaN/Inf numpy float, needs full processing
-                            # Simple numpy scalars are fine, will be normalized in full processing
-                            return None  # Let full processing handle the conversion
-                        else:
-                            return None  # Complex type, needs full processing
-                    elif item_type is _TYPE_STR and len(item) > max_string_length:
-                        return None  # String too long, needs truncation in full processing
-                # All checks passed - convert tuple to list
-                return list(obj)
-            except (AttributeError, TypeError):
-                return None  # Some issue with iteration, needs full processing
-        else:
-            return None  # Large tuple, needs full processing
-
-    # For complex types, return None to indicate full processing needed
+    # All other types need full processing
     return None
 
 
@@ -599,12 +565,10 @@ def _serialize_full_path(
         handler = _type_handler.get_type_handler(obj)
         if handler:
             try:
-                result = handler(obj)
-                return result
+                return handler(obj)
             except Exception as e:
                 # If custom handler fails, log warning and continue with default handling
                 warnings.warn(f"Custom type handler failed for {type(obj)}: {e}", stacklevel=3)
-        # If no handler or handler failed, continue with default processing below
 
     # Handle dicts with full processing - SECURITY: Apply homogeneity bypass protection here too!
     if type_category == "dict":

@@ -4,12 +4,35 @@ This test suite specifically targets uncovered lines and branches in the __init_
 to improve the overall code coverage.
 """
 
+import os
+import re
 import sys
 from unittest.mock import Mock, patch
 
 import pytest
 
 import datason
+
+
+def _get_version_from_pyproject() -> str:
+    """Get version from pyproject.toml, same logic as __init__.py."""
+    # Get the project root directory (two levels up from test file)
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    project_root = os.path.dirname(os.path.dirname(current_dir))
+    pyproject_path = os.path.join(project_root, "pyproject.toml")
+
+    try:
+        with open(pyproject_path, encoding="utf-8") as f:
+            content = f.read()
+            # Use regex to find version = "x.y.z" in the project section
+            match = re.search(r'^\s*version\s*=\s*["\']([^"\']+)["\']', content, re.MULTILINE)
+            if match:
+                return match.group(1)
+    except (FileNotFoundError, OSError):
+        pass
+
+    # Fallback if pyproject.toml is not found
+    return "0.5.0"
 
 
 class TestInitModuleCoverage:
@@ -27,7 +50,7 @@ class TestInitModuleCoverage:
         # Test version string is accessible
         assert hasattr(datason, "__version__")
         assert isinstance(datason.__version__, str)
-        assert datason.__version__ == "0.4.5"  # Updated to current version
+        assert datason.__version__ == _get_version_from_pyproject()
 
         # Test other metadata
         assert hasattr(datason, "__author__")

@@ -12,7 +12,7 @@ datason serializes different data types. Users can configure:
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 
 class DateFormat(Enum):
@@ -89,6 +89,12 @@ class SerializationConfig:
         ensure_ascii: Whether to ensure ASCII output only
         check_if_serialized: Skip processing if object is already JSON-safe
         include_type_hints: Include type metadata for perfect round-trip deserialization
+        redact_fields: Field patterns to redact (e.g., ["password", "api_key", "*.secret"])
+        redact_patterns: Regex patterns to redact (e.g., credit card numbers)
+        redact_large_objects: Auto-redact objects >10MB
+        redaction_replacement: Replacement text for redacted content
+        include_redaction_summary: Include summary of what was redacted
+        audit_trail: Track all redaction operations for compliance
     """
 
     # Date/time formatting
@@ -129,6 +135,14 @@ class SerializationConfig:
 
     # NEW: Type metadata for round-trip serialization
     include_type_hints: bool = False
+
+    # NEW: Production Safety & Redaction (v0.5.5)
+    redact_fields: Optional[List[str]] = None  # Field patterns to redact (e.g., ["password", "api_key", "*.secret"])
+    redact_patterns: Optional[List[str]] = None  # Regex patterns to redact (e.g., credit card numbers)
+    redact_large_objects: bool = False  # Auto-redact objects >10MB
+    redaction_replacement: str = "<REDACTED>"  # Replacement text for redacted content
+    include_redaction_summary: bool = False  # Include summary of what was redacted
+    audit_trail: bool = False  # Track all redaction operations for compliance
 
 
 # Global default configuration
