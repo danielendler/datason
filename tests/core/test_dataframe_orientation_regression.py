@@ -8,11 +8,11 @@ orientations work correctly and invalid orientations are handled gracefully.
 
 import pytest
 
-# Conditional import for optional dependency
-pd = pytest.importorskip("pandas", reason="pandas not available")
-
 import datason
 from datason.config import DataFrameOrient, OutputType, SerializationConfig
+
+# Conditional import for optional dependency
+pd = pytest.importorskip("pandas", reason="pandas not available")
 
 
 class TestDataFrameOrientationRegression:

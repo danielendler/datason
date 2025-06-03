@@ -33,8 +33,6 @@ try:
 except ImportError:
     has_sklearn_module = False
 
-HAS_SKLEARN = importlib.util.find_spec("sklearn") is not None
-
 # Import datason modules after dependency checks
 from datason.converters import safe_float, safe_int
 from datason.core import (
@@ -56,6 +54,8 @@ from datason.deserializers import (
     parse_uuid_string,
 )
 from datason.serializers import serialize_detection_details
+
+HAS_SKLEARN = importlib.util.find_spec("sklearn") is not None
 
 
 class TestCoreEdgeCases:

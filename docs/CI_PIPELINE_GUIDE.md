@@ -35,7 +35,12 @@ jobs:
     - 🐍 Setup Python 3.11
     - 💾 Cache pip dependencies
     - 📦 Install dev dependencies
-    - 🧪 Run core tests (coverage)
+    - 🧪 Run core tests with plugin matrix:
+        • minimal: tests/core/ (no optional deps)
+        • with-numpy: tests/core/ + ML features (numpy)
+        • with-pandas: tests/core/ + data features (pandas)
+        • with-ml-deps: tests/core/ + tests/features/ (full ML stack)
+        • full: tests/core/ + tests/features/ + tests/integration/ + tests/coverage/
     - 📊 Upload coverage to Codecov
     - 🔒 Security scan (bandit)
     - 📤 Upload security report
@@ -165,7 +170,69 @@ paths: ['docs/**', 'mkdocs.yml', 'README.md']
 | **Main CI** | Core functionality validation | ~2-3 min | Code changes |
 | **Quality** | Code quality & security | ~30-60s | All changes |
 | **Docs** | Documentation generation | ~1-2 min | Docs changes |
+| **Performance** | Performance regression tracking (informational) | ~3-5 min | Performance changes, weekly |
 | **Publish** | Package distribution | ~2-3 min | Releases |
+
+## 🏗️ **Test Structure & CI Matrix Alignment**
+
+### **New Organized Test Structure**
+
+Our test suite is organized into logical directories for optimal CI performance:
+
+```
+tests/
+├── core/           # Fast core functionality tests (~7 seconds)
+│   ├── test_core.py                    # Basic serialization
+│   ├── test_security.py                # Security features  
+│   ├── test_circular_references.py     # Circular reference handling
+│   ├── test_edge_cases.py              # Edge cases and error handling
+│   ├── test_converters.py              # Type converters
+│   ├── test_deserializers.py           # Deserialization functionality
+│   └── test_dataframe_orientation_regression.py
+│
+├── features/       # Feature-specific tests (~10-20 seconds)
+│   ├── test_ml_serializers.py          # ML library integrations
+│   ├── test_chunked_streaming.py       # Streaming/chunking features
+│   ├── test_auto_detection_and_metadata.py  # Auto-detection
+│   └── test_template_deserialization.py     # Template deserialization
+│
+├── integration/    # Integration tests (~5-15 seconds)
+│   ├── test_config_and_type_handlers.py     # Configuration integration
+│   ├── test_optional_dependencies.py        # Dependency integrations
+│   └── test_pickle_bridge.py                # Pickle bridge functionality
+│
+├── coverage/       # Coverage boost tests (~10-30 seconds)
+│   └── test_*_coverage_boost.py             # Targeted coverage improvement
+│
+└── benchmarks/     # Performance tests (separate pipeline, ~60-120 seconds)
+    └── test_*_benchmarks.py                 # Performance measurements
+```
+
+### **CI Test Matrix Mapping**
+
+| **CI Job** | **Test Directories** | **Dependencies** | **Purpose** | **Speed** |
+|------------|----------------------|------------------|-------------|-----------|
+| **minimal** | `tests/core/` | None | Core functionality only | ~7s |
+| **with-numpy** | `tests/core/` + ML features | numpy | Basic array support | ~15s |
+| **with-pandas** | `tests/core/` + data features | pandas | DataFrame support | ~25s |
+| **with-ml-deps** | `tests/core/` + `tests/features/` | numpy, pandas, sklearn | Full ML stack | ~45s |
+| **full** | `tests/core/` + `tests/features/` + `tests/integration/` + `tests/coverage/` | All dependencies | Complete test suite | ~60s |
+| **Performance** | `tests/benchmarks/` | All dependencies | Performance tracking | ~120s (separate) |
+
+### **Plugin Testing Strategy**
+
+Our CI implements **plugin-style testing** where the core package has zero required dependencies but gains functionality when optional dependencies are available:
+
+- **Core Tests** (`tests/core/`): Always run, no optional dependencies
+- **Feature Tests** (`tests/features/`): Run only when relevant dependencies are available
+- **Integration Tests** (`tests/integration/`): Test cross-component functionality
+- **Coverage Tests** (`tests/coverage/`): Improve coverage metrics for edge cases
+
+This ensures:
+- ✅ **Zero dependency install works**: `pip install datason`
+- ✅ **Enhanced features work**: `pip install datason[ml]`
+- ✅ **Cross-platform compatibility**: Tests run on multiple Python versions
+- ✅ **Fast feedback**: Core tests complete in ~7 seconds
 
 ## 🔍 **Quality Gates**
 
@@ -373,6 +440,56 @@ strategy:
 - **Quality Pipeline**: 95%+ pass rate (fast feedback catches most issues)
 - **Main CI**: 90%+ pass rate (comprehensive testing)
 - **Docs**: 99%+ pass rate (simple build process)
+
+### **📊 Performance Pipeline Strategy**
+
+**Why Performance Tests Don't Block CI:**
+
+The performance pipeline is **informational only** and doesn't block CI for these important reasons:
+
+1. **Environment Variability**: GitHub Actions runners have inconsistent performance
+2. **Micro-benchmark Noise**: Tests measuring <1ms are highly sensitive to environment
+3. **Hardware Differences**: Local vs CI environments produce different baseline measurements
+4. **False Positive Prevention**: Avoid blocking legitimate code changes due to infrastructure noise
+
+**Environment-Aware Thresholds:**
+
+| Environment | Threshold | Reasoning |
+|-------------|-----------|-----------|
+| **Local Development** | 5% | Stable environment, consistent hardware |
+| **CI (Same Environment)** | 25% | Account for runner variability |
+| **CI (Cross Environment)** | 25%+ | Local baseline vs CI execution |
+
+**How to Interpret Performance Results:**
+
+✅ **Safe to Ignore:**
+- Changes <50% (likely environment noise)
+- First run after environment change
+- Micro-benchmarks showing high variance
+
+⚠️ **Worth Investigating:**
+- Consistent patterns across multiple tests
+- Changes >100% without code explanation
+- Memory usage regressions
+
+🔥 **Action Required:**
+- Changes >200% with clear code correlation
+- New algorithmic complexity introduced
+- Memory leaks or resource issues
+
+**Performance Baseline Management:**
+
+```bash
+# Create new CI baseline (if needed)
+gh workflow run performance.yml -f save_baseline=true
+
+# Local performance testing
+cd benchmarks
+python ci_performance_tracker.py
+
+# Test with different threshold
+PERFORMANCE_REGRESSION_THRESHOLD=15 python ci_performance_tracker.py
+```
 
 ## 🔍 **Troubleshooting**
 

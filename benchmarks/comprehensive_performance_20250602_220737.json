@@ -1,0 +1,362 @@
+{
+  "metadata": {
+    "timestamp": "2025-06-02T20:07:37.353153+00:00",
+    "python_version": "3.12.0 (main, Feb 22 2025, 21:43:18) [Clang 16.0.0 (clang-1600.0.26.6)]",
+    "datason_version": "0.4.5",
+    "ml_libraries": {
+      "numpy": "1.26.3",
+      "pandas": "2.2.3"
+    },
+    "competitive_libs": {
+      "orjson": "3.10.18",
+      "ujson": "5.10.0"
+    }
+  },
+  "ml_benchmarks": {
+    "numpy_arrays": {
+      "small_array": {
+        "test_name": "numpy_arrays.small_array",
+        "datason_standard": {
+          "mean": 0.0002177418034989387,
+          "min": 0.00021466700127348304,
+          "max": 0.0002272500132676214,
+          "std": 5.343638106556152e-06,
+          "iterations": 5,
+          "result_size": 20821
+        },
+        "datason_performance": {
+          "mean": 0.000219717004802078,
+          "min": 0.00021670901332981884,
+          "max": 0.00022266700398176908,
+          "std": 2.828794916655761e-06,
+          "iterations": 5,
+          "result_size": 20821
+        },
+        "json_standard": {
+          "mean": 0.0003334083885420114,
+          "min": 0.0003262499812990427,
+          "max": 0.00034795800456777215,
+          "std": 9.568497910495044e-06,
+          "iterations": 5,
+          "result_size": 20821
+        },
+        "orjson": {
+          "mean": 1.9408005755394697e-05,
+          "min": 1.6583013348281384e-05,
+          "max": 2.549999044276774e-05,
+          "std": 3.771879979495007e-06,
+          "iterations": 5,
+          "result_size": 19822
+        },
+        "ujson": {
+          "mean": 8.73084063641727e-05,
+          "min": 8.58750136103481e-05,
+          "max": 9.06249915715307e-05,
+          "std": 1.9087716173067124e-06,
+          "iterations": 5,
+          "result_size": 19822
+        },
+        "pickle": {
+          "mean": 1.1449801968410611e-05,
+          "min": 1.1083000572398305e-05,
+          "max": 1.200000406242907e-05,
+          "std": 3.3784997870168913e-07,
+          "iterations": 5,
+          "result_size": 25449
+        }
+      },
+      "medium_array": {
+        "test_name": "numpy_arrays.medium_array",
+        "datason_standard": {
+          "mean": 0.0022150670003611593,
+          "min": 0.0020327920210547745,
+          "max": 0.002840708999428898,
+          "std": 0.0003504317987626468,
+          "iterations": 5,
+          "result_size": 207333
+        },
+        "datason_performance": {
+          "mean": 0.0020454249926842747,
+          "min": 0.0019892919808626175,
+          "max": 0.0021346670109778643,
+          "std": 5.515269951666772e-05,
+          "iterations": 5,
+          "result_size": 207333
+        },
+        "json_standard": {
+          "mean": 0.0033996083948295563,
+          "min": 0.0033075420069508255,
+          "max": 0.0035273329995106906,
+          "std": 8.864357407314454e-05,
+          "iterations": 5,
+          "result_size": 207333
+        },
+        "orjson": {
+          "mean": 0.00020426639821380377,
+          "min": 0.00017958300304599106,
+          "max": 0.00024333299370482564,
+          "std": 2.6872493847456018e-05,
+          "iterations": 5,
+          "result_size": 197335
+        },
+        "ujson": {
+          "mean": 0.0008699082012753933,
+          "min": 0.0008479160023853183,
+          "max": 0.0008954170043580234,
+          "std": 1.7198568749512246e-05,
+          "iterations": 5,
+          "result_size": 197333
+        },
+        "pickle": {
+          "mean": 8.877479122020304e-05,
+          "min": 8.333299774676561e-05,
+          "max": 9.512499673292041e-05,
+          "std": 5.389259941967958e-06,
+          "iterations": 5,
+          "result_size": 250487
+        }
+      },
+      "mixed_types": {
+        "test_name": "numpy_arrays.mixed_types",
+        "datason_standard": {
+          "mean": 0.00019774159882217645,
+          "min": 0.00019454199355095625,
+          "max": 0.00020483299158513546,
+          "std": 4.388582369874388e-06,
+          "iterations": 5,
+          "result_size": 13420
+        },
+        "datason_performance": {
+          "mean": 0.0001962586014997214,
+          "min": 0.00019291701028123498,
+          "max": 0.00019975000759586692,
+          "std": 2.8898658757865993e-06,
+          "iterations": 5,
+          "result_size": 13420
+        },
+        "json_standard": {
+          "mean": 0.00020614180248230697,
+          "min": 0.00020241699530743062,
+          "max": 0.00021091700182296336,
+          "std": 3.3538185741466386e-06,
+          "iterations": 5,
+          "result_size": 13420
+        },
+        "orjson": {
+          "mean": 1.2599804904311895e-05,
+          "min": 1.158300437964499e-05,
+          "max": 1.5249999705702066e-05,
+          "std": 1.5118171895879985e-06,
+          "iterations": 5,
+          "result_size": 12418
+        },
+        "ujson": {
+          "mean": 6.572499987669289e-05,
+          "min": 6.466699414886534e-05,
+          "max": 6.741698598489165e-05,
+          "std": 1.0712513682512018e-06,
+          "iterations": 5,
+          "result_size": 12418
+        },
+        "pickle": {
+          "mean": 1.734960242174566e-05,
+          "min": 1.7000013031065464e-05,
+          "max": 1.8082995666190982e-05,
+          "std": 4.47433335863772e-07,
+          "iterations": 5,
+          "result_size": 16194
+        }
+      }
+    },
+    "pandas_dataframes": {
+      "small_df": {
+        "test_name": "pandas_dataframes.small_df",
+        "datason_standard": {
+          "mean": 3.2858201302587985e-05,
+          "min": 3.258301876485348e-05,
+          "max": 3.316599759273231e-05,
+          "std": 2.27298766049012e-07,
+          "iterations": 5,
+          "result_size": 3865
+        },
+        "datason_performance": {
+          "mean": 3.3766403794288637e-05,
+          "min": 3.2750016544014215e-05,
+          "max": 3.662501694634557e-05,
+          "std": 1.6081099546837898e-06,
+          "iterations": 5,
+          "result_size": 3865
+        },
+        "json_standard": {
+          "mean": 3.686640411615372e-05,
+          "min": 3.649998689070344e-05,
+          "max": 3.720802487805486e-05,
+          "std": 2.5229759622061134e-07,
+          "iterations": 5,
+          "result_size": 3865
+        },
+        "orjson": {
+          "mean": 3.999797627329826e-06,
+          "min": 3.91600769944489e-06,
+          "max": 4.125002305954695e-06,
+          "std": 7.817631251185841e-08,
+          "iterations": 5,
+          "result_size": 3466
+        },
+        "ujson": {
+          "mean": 1.703319721855223e-05,
+          "min": 1.6915990272536874e-05,
+          "max": 1.7166981706395745e-05,
+          "std": 9.9814838667924e-08,
+          "iterations": 5,
+          "result_size": 3466
+        },
+        "pickle": {
+          "mean": 7.766799535602332e-06,
+          "min": 7.5830030255019665e-06,
+          "max": 8.25000461190939e-06,
+          "std": 2.741703848649933e-07,
+          "iterations": 5,
+          "result_size": 4036
+        }
+      },
+      "mixed_df": {
+        "test_name": "pandas_dataframes.mixed_df",
+        "datason_standard": {
+          "mean": 0.0005718501983210444,
+          "min": 0.0005412499886006117,
+          "max": 0.0006350000039674342,
+          "std": 3.8124572092981884e-05,
+          "iterations": 5,
+          "result_size": 11934
+        },
+        "datason_performance": {
+          "mean": 0.0004819834022782743,
+          "min": 0.0004627919988706708,
+          "max": 0.0005341250216588378,
+          "std": 3.0229237680783595e-05,
+          "iterations": 5,
+          "result_size": 5814
+        },
+        "json_standard": {
+          "mean": 4.629159811884165e-05,
+          "min": 4.516600165516138e-05,
+          "max": 4.9416994443163276e-05,
+          "std": 1.8001316007159751e-06,
+          "iterations": 5,
+          "result_size": 6014
+        },
+        "orjson": {
+          "mean": 1.3675005175173282e-05,
+          "min": 1.3540993677452207e-05,
+          "max": 1.391698606312275e-05,
+          "std": 1.8497107747251128e-07,
+          "iterations": 5,
+          "result_size": 5415
+        },
+        "ujson": {
+          "mean": 3.491659299470484e-05,
+          "min": 3.4666998544707894e-05,
+          "max": 3.53749783243984e-05,
+          "std": 2.7472680657164076e-07,
+          "iterations": 5,
+          "result_size": 5215
+        },
+        "pickle": {
+          "mean": 4.907500115223229e-05,
+          "min": 4.7124980483204126e-05,
+          "max": 5.2291026804596186e-05,
+          "std": 2.5069865423776725e-06,
+          "iterations": 5,
+          "result_size": 8052
+        }
+      }
+    }
+  },
+  "complex_data_benchmarks": {
+    "enterprise_api_response": {
+      "test_name": "enterprise_api_response",
+      "datason_standard": {
+        "mean": 0.0021359832026064396,
+        "min": 0.0021036659891251475,
+        "max": 0.0022025829821359366,
+        "std": 4.040464726040258e-05,
+        "iterations": 5,
+        "result_size": 46657
+      },
+      "datason_performance": {
+        "mean": 0.0020731665950734167,
+        "min": 0.0019554999889805913,
+        "max": 0.002139624994015321,
+        "std": 7.351337268935736e-05,
+        "iterations": 5,
+        "result_size": 43272
+      },
+      "json_standard": {
+        "mean": 0.00038495819899253547,
+        "min": 0.0003813330258708447,
+        "max": 0.00039029199979268014,
+        "std": 4.014562410686369e-06,
+        "iterations": 5,
+        "result_size": 46657
+      },
+      "orjson": {
+        "mean": 4.879999905824661e-05,
+        "min": 4.620797699317336e-05,
+        "max": 5.233401316218078e-05,
+        "std": 2.564545922885407e-06,
+        "iterations": 5,
+        "result_size": 43573
+      },
+      "ujson": {
+        "mean": 0.0003180085972417146,
+        "min": 0.000311624986352399,
+        "max": 0.0003244580002501607,
+        "std": 5.861605194210644e-06,
+        "iterations": 5,
+        "result_size": 43573
+      },
+      "pickle": {
+        "mean": 0.00015066659543663263,
+        "min": 0.0001424579822923988,
+        "max": 0.0001623330172151327,
+        "std": 8.244485670048875e-06,
+        "iterations": 5,
+        "result_size": 42808
+      }
+    }
+  },
+  "competitive_analysis": {
+    "competitive_summary": {},
+    "datason_vs_competitors": {
+      "json_standard": {
+        "average_slowdown_factor": 5.548610753573942,
+        "best_case": 5.548610753573942,
+        "worst_case": 5.548610753573942,
+        "test_count": 1
+      },
+      "orjson": {
+        "average_slowdown_factor": 43.77014843908044,
+        "best_case": 43.77014843908044,
+        "worst_case": 43.77014843908044,
+        "test_count": 1
+      },
+      "ujson": {
+        "average_slowdown_factor": 6.716746720475937,
+        "best_case": 6.716746720475937,
+        "worst_case": 6.716746720475937,
+        "test_count": 1
+      },
+      "pickle": {
+        "average_slowdown_factor": 14.176886365662863,
+        "best_case": 14.176886365662863,
+        "worst_case": 14.176886365662863,
+        "test_count": 1
+      }
+    },
+    "recommendations": [
+      "\ud83d\udd25 CRITICAL: 43.8x slower than OrJSON. Consider Rust core for JSON operations (Phase 4).",
+      "\ud83d\udce6 MEDIUM: 14.2x slower than pickle for complex objects. Consider binary serialization options."
+    ]
+  }
+}

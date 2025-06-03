@@ -141,6 +141,8 @@ nav:
     - Benchmarking: BENCHMARKING.md
   - Development:
     - Contributing: CONTRIBUTING.md
+    - Core Serialization Strategy: core-serialization-strategy.md
+    - Performance Improvements: performance-improvements.md
     - Testing & Integration: TESTING_INTEGRATION_IMPROVEMENTS.md
     - Security: SECURITY.md
     - Tooling Guide: TOOLING_GUIDE.md

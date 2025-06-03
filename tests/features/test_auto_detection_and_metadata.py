@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Tests for auto-detection deserialization and type metadata features."""
+"""Tests for auto-detection and metadata capabilities.
+
+This module tests the automatic detection of data types and the inclusion
+of metadata for roundtrip serialization/deserialization.
+"""
 
 import json
 import uuid
@@ -7,12 +11,12 @@ from datetime import datetime
 
 import pytest
 
-# Conditional imports for optional dependencies
-np = pytest.importorskip("numpy", reason="numpy not available")
-pd = pytest.importorskip("pandas", reason="pandas not available")
-
 import datason
 from datason.config import SerializationConfig
+
+# Conditional imports for optional dependencies
+pd = pytest.importorskip("pandas", reason="pandas not available")
+np = pytest.importorskip("numpy", reason="numpy not available")
 
 
 class TestAutoDetectionDeserialization:
@@ -137,7 +141,7 @@ class TestTypeMetadataSupport:
 
     def test_serialize_with_type_hints_uuid(self):
         """Test UUID serialization with type hints."""
-        test_uuid = uuid.uuid4()
+        test_uuid = uuid.UUID("12345678-1234-5678-9012-123456789abc")
         config = SerializationConfig(include_type_hints=True)
 
         result = datason.serialize(test_uuid, config=config)
@@ -223,7 +227,7 @@ class TestRoundTripSerialization:
 
     def test_round_trip_uuid(self):
         """Test perfect round-trip for UUID objects."""
-        original = uuid.uuid4()
+        original = uuid.UUID("12345678-1234-5678-9012-123456789abc")
         config = SerializationConfig(include_type_hints=True)
 
         serialized = datason.serialize(original, config=config)
@@ -293,11 +297,11 @@ class TestRoundTripSerialization:
         assert isinstance(restored, np.ndarray)
         np.testing.assert_array_equal(restored, original)
 
-    def test_round_trip_complex_nested_structure(self):
+    def test_round_trip_complex_nested_structure(self) -> None:
         """Test round-trip for complex nested data with multiple types."""
         original = {
             "timestamp": datetime(2023, 1, 1, 12, 0, 0),
-            "user_id": uuid.uuid4(),
+            "user_id": uuid.UUID("12345678-1234-5678-9012-123456789abc"),
             "data": pd.DataFrame({"a": [1, 2], "b": [3, 4]}),
             "tags": {"python", "datason", "serialization"},
             "coordinates": (1.23, 4.56),
@@ -357,12 +361,16 @@ class TestIntegrationScenarios:
         assert isinstance(assets[0]["price"], float)
         assert abs(assets[0]["price"] - 150.25) < 0.001
 
-    def test_round_trip_production_workflow(self):
+    def test_round_trip_production_workflow(self) -> None:
         """Test a complete round-trip workflow for production scenarios."""
+        # Use fixed values to avoid flakiness between test runs
+        fixed_datetime = datetime(2023, 12, 1, 15, 30, 45, 123456)
+        fixed_uuid = uuid.UUID("12345678-1234-5678-9012-123456789abc")
+
         # Original data with various types (similar to user's use case)
         original_data = {
-            "analysis_date": datetime.now(),
-            "request_id": uuid.uuid4(),
+            "analysis_date": fixed_datetime,
+            "request_id": fixed_uuid,
             "results": pd.DataFrame({"metric": ["roi", "volatility", "sharpe"], "value": [0.15, 0.25, 1.2]}),
             "parameters": {
                 "lookback_days": 252,

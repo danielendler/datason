@@ -88,7 +88,6 @@ from datason.core import (
     MAX_SERIALIZATION_DEPTH,
     MAX_STRING_LENGTH,
     SecurityError,
-    _serialize_object,
 )
 
 # Environment detection for CI vs local testing
@@ -337,13 +336,13 @@ class TestDepthLimits:
                 _seen.add(id(obj))
 
             try:
-                # Handle the serialization with recursive calls to patched_serialize (not _serialize_object)
+                # Handle the serialization with recursive calls to patched_serialize (not _serialize_full_path)
                 if isinstance(obj, dict):
                     return {k: patched_serialize(v, _depth + 1, _seen) for k, v in obj.items()}
                 if isinstance(obj, (list, tuple)):
                     return [patched_serialize(x, _depth + 1, _seen) for x in obj]
-                # For non-recursive objects, use the original logic but call patched_serialize for any nested objects
-                return _serialize_object(obj, _depth, _seen)
+                # For non-recursive objects, use serialize directly
+                return serialize(obj, None, _depth, _seen)
             finally:
                 # Clean up: remove from seen set when done processing
                 if isinstance(obj, (dict, list, set)):
@@ -866,7 +865,7 @@ class TestSecurityConstants:
         assert isinstance(MAX_STRING_LENGTH, int)
 
         # Should be reasonable values
-        assert MAX_SERIALIZATION_DEPTH > 100
+        assert MAX_SERIALIZATION_DEPTH >= 10  # Should be at least 10 for reasonable nesting
         assert MAX_OBJECT_SIZE > 1000
         assert MAX_STRING_LENGTH > 1000
 

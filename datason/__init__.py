@@ -78,6 +78,8 @@ try:
 
     # Test if ml_serializers module is available
     importlib.import_module(".ml_serializers", package="datason")
+    from . import ml_serializers  # Make the module accessible as datason.ml_serializers  # noqa: F401
+
     _ml_available = True
 except ImportError:
     _ml_available = False
@@ -91,6 +93,9 @@ try:
     _pickle_bridge_available = True
 except ImportError:
     _pickle_bridge_available = False
+
+# Always import datetime_utils module for tests
+from . import datetime_utils  # noqa: F401
 
 __version__ = "0.4.5"
 __author__ = "datason Contributors"

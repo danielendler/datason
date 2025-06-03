@@ -185,3 +185,13 @@ bandit-report.json
 
 # Benchmark outputs
 benchmark-*.json
+
+# Performance benchmark results (generated data, not to be committed)
+benchmarks/results/performance_*.json
+benchmarks/results/baseline*.json
+benchmarks/results/latest*.json
+benchmarks/performance-history/performance_*.json
+benchmarks/performance-history/latest_analysis.json
+
+# Temporary performance files
+benchmarks/results/*comparison*.json
