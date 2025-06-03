@@ -344,19 +344,18 @@ def serialize(
                 # Safe homogeneity check with strict limits
                 homogeneity = _is_homogeneous_collection(obj, sample_size=10, _max_check_depth=2)
 
-            if homogeneity == "json_basic":
-                # Quick JSON compatibility check for small dicts
-                if (
-                    homogeneity == "json_basic"
-                    and len(obj) <= 5
-                    and all(
-                        isinstance(k, str)
-                        and type(v) in _JSON_BASIC_TYPES
-                        and (type(v) is not str or len(v) <= max_string_length)
-                        for k, v in obj.items()
-                    )
-                ):
-                    return obj
+            # Quick JSON compatibility check for small dicts
+            if (
+                homogeneity == "json_basic"
+                and len(obj) <= 5
+                and all(
+                    isinstance(k, str)
+                    and type(v) in _JSON_BASIC_TYPES
+                    and (type(v) is not str or len(v) <= max_string_length)
+                    for k, v in obj.items()
+                )
+            ):
+                return obj
 
             # GUARANTEED SAFE PROCESSING: Each recursive call has verified depth increment
             result = {}
@@ -382,14 +381,14 @@ def serialize(
                 # Safe homogeneity check with strict limits
                 homogeneity = _is_homogeneous_collection(obj, sample_size=10, _max_check_depth=2)
 
-            if homogeneity == "json_basic":
                 # Quick JSON compatibility check for small lists
-                if (
-                    len(obj) <= 5
-                    and all(type(item) in _JSON_BASIC_TYPES for item in obj)
-                    and not (config and config.include_type_hints and obj_type is _TYPE_TUPLE)
-                ):
-                    return list(obj) if obj_type is _TYPE_TUPLE else obj
+            if (
+                homogeneity == "json_basic"
+                and len(obj) <= 5
+                and all(type(item) in _JSON_BASIC_TYPES for item in obj)
+                and not (config and config.include_type_hints and obj_type is _TYPE_TUPLE)
+            ):
+                return list(obj) if obj_type is _TYPE_TUPLE else obj
 
             # GUARANTEED SAFE PROCESSING: Each recursive call has verified depth increment
             result_list = []
