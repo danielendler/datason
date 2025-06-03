@@ -209,7 +209,7 @@ class TestStringBombAttacks:
 
     def test_string_bomb_many_long_strings(self):
         """ATTACK: Many long strings to exhaust string processing"""
-        data = {f"key_{i}": "X" * 500_000 for i in range(10)}
+        data = {f"key_{i}": "X" * 1_000_001 for i in range(10)}  # Each string exceeds limit
 
         with warnings.catch_warnings(record=True) as w:
             serialize(data)

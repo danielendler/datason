@@ -90,7 +90,7 @@ markers = [
     "optional: marks tests for optional dependency functionality",
     "fallback: marks tests for fallback behavior when dependencies are missing",
 ]
-filterwarnings = [ "error", "ignore::UserWarning", "ignore::DeprecationWarning", "ignore::PendingDeprecationWarning",]
+filterwarnings = [ "error", "default::UserWarning", "ignore::DeprecationWarning", "ignore::PendingDeprecationWarning",]
 
 [tool.coverage.run]
 source = [ "datason",]
