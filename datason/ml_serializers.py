@@ -2,90 +2,123 @@
 
 This module provides specialized serialization support for popular ML/AI libraries
 including PyTorch, TensorFlow, scikit-learn, JAX, scipy, and others.
+
+ML libraries are imported lazily to improve startup performance.
 """
 
 import base64
 import io
 import warnings
-from typing import TYPE_CHECKING, Any, Dict, Optional
+from typing import Any, Dict, Optional
 
-if TYPE_CHECKING:
-    try:
-        import torch  # type: ignore
-    except ImportError:
-        pass
+# Lazy import cache - libraries are imported only when first used
+_LAZY_IMPORTS = {
+    "torch": None,
+    "tensorflow": None,
+    "jax": None,
+    "jnp": None,
+    "sklearn": None,
+    "BaseEstimator": None,
+    "scipy": None,
+    "PIL_Image": None,
+    "transformers": None,
+}
 
-    try:
-        import tensorflow as tf  # type: ignore
-    except ImportError:
-        pass
 
-    try:
-        import jax  # type: ignore
-        import jax.numpy as jnp  # type: ignore
-    except ImportError:
-        pass
+def _lazy_import_torch():
+    """Lazily import torch."""
+    if _LAZY_IMPORTS["torch"] is None:
+        try:
+            import torch
 
-    try:
-        import sklearn  # type: ignore
-        from sklearn.base import BaseEstimator  # type: ignore
-    except ImportError:
-        pass
+            _LAZY_IMPORTS["torch"] = torch
+        except ImportError:
+            _LAZY_IMPORTS["torch"] = False
+    return _LAZY_IMPORTS["torch"] if _LAZY_IMPORTS["torch"] is not False else None
 
-    try:
-        import scipy.sparse  # type: ignore
-    except ImportError:
-        pass
 
-    try:
-        from PIL import Image  # type: ignore
-    except ImportError:
-        pass
+def _lazy_import_tensorflow():
+    """Lazily import tensorflow."""
+    if _LAZY_IMPORTS["tensorflow"] is None:
+        try:
+            import tensorflow as tf
 
-    try:
-        import transformers  # type: ignore
-    except ImportError:
-        pass
+            _LAZY_IMPORTS["tensorflow"] = tf
+        except ImportError:
+            _LAZY_IMPORTS["tensorflow"] = False
+    return _LAZY_IMPORTS["tensorflow"] if _LAZY_IMPORTS["tensorflow"] is not False else None
 
-# Runtime imports with fallbacks
-try:
-    import torch
-except ImportError:
-    torch = None
 
-try:
-    import tensorflow as tf
-except ImportError:
-    tf = None
+def _lazy_import_jax():
+    """Lazily import jax."""
+    if _LAZY_IMPORTS["jax"] is None or _LAZY_IMPORTS["jnp"] is None:
+        try:
+            import jax
+            import jax.numpy as jnp
 
-try:
-    import jax
-    import jax.numpy as jnp
-except ImportError:
-    jax = None
-    jnp = None
+            _LAZY_IMPORTS["jax"] = jax
+            _LAZY_IMPORTS["jnp"] = jnp
+        except ImportError:
+            _LAZY_IMPORTS["jax"] = False
+            _LAZY_IMPORTS["jnp"] = False
+    return (
+        _LAZY_IMPORTS["jax"] if _LAZY_IMPORTS["jax"] is not False else None,
+        _LAZY_IMPORTS["jnp"] if _LAZY_IMPORTS["jnp"] is not False else None,
+    )
 
-try:
-    import sklearn
-    from sklearn.base import BaseEstimator
-except ImportError:
-    sklearn = None
-    BaseEstimator = None
 
-try:
-    import scipy.sparse
-except ImportError:
-    scipy = None
+def _lazy_import_sklearn():
+    """Lazily import sklearn."""
+    if _LAZY_IMPORTS["sklearn"] is None or _LAZY_IMPORTS["BaseEstimator"] is None:
+        try:
+            import sklearn
+            from sklearn.base import BaseEstimator
 
-try:
-    from PIL import Image
-except ImportError:
-    Image = None
+            _LAZY_IMPORTS["sklearn"] = sklearn
+            _LAZY_IMPORTS["BaseEstimator"] = BaseEstimator
+        except ImportError:
+            _LAZY_IMPORTS["sklearn"] = False
+            _LAZY_IMPORTS["BaseEstimator"] = False
+    return (
+        _LAZY_IMPORTS["sklearn"] if _LAZY_IMPORTS["sklearn"] is not False else None,
+        _LAZY_IMPORTS["BaseEstimator"] if _LAZY_IMPORTS["BaseEstimator"] is not False else None,
+    )
 
-try:
-    import transformers
-except ImportError:
-    transformers = None
+
+def _lazy_import_scipy():
+    """Lazily import scipy."""
+    if _LAZY_IMPORTS["scipy"] is None:
+        try:
+            import scipy.sparse
+
+            _LAZY_IMPORTS["scipy"] = scipy
+        except ImportError:
+            _LAZY_IMPORTS["scipy"] = False
+    return _LAZY_IMPORTS["scipy"] if _LAZY_IMPORTS["scipy"] is not False else None
+
+
+def _lazy_import_pil():
+    """Lazily import PIL."""
+    if _LAZY_IMPORTS["PIL_Image"] is None:
+        try:
+            from PIL import Image
+
+            _LAZY_IMPORTS["PIL_Image"] = Image
+        except ImportError:
+            _LAZY_IMPORTS["PIL_Image"] = False
+    return _LAZY_IMPORTS["PIL_Image"] if _LAZY_IMPORTS["PIL_Image"] is not False else None
+
+
+def _lazy_import_transformers():
+    """Lazily import transformers."""
+    if _LAZY_IMPORTS["transformers"] is None:
+        try:
+            import transformers
+
+            _LAZY_IMPORTS["transformers"] = transformers
+        except ImportError:
+            _LAZY_IMPORTS["transformers"] = False
+    return _LAZY_IMPORTS["transformers"] if _LAZY_IMPORTS["transformers"] is not False else None
 
 
 def serialize_pytorch_tensor(tensor: Any) -> Dict[str, Any]:
@@ -97,6 +130,7 @@ def serialize_pytorch_tensor(tensor: Any) -> Dict[str, Any]:
     Returns:
         Dictionary containing tensor data and metadata
     """
+    torch = _lazy_import_torch()
     if torch is None:
         return {"_type": "torch.Tensor", "_data": str(tensor)}
 
@@ -122,6 +156,7 @@ def serialize_tensorflow_tensor(tensor: Any) -> Dict[str, Any]:
     Returns:
         Dictionary containing tensor data and metadata
     """
+    tf = _lazy_import_tensorflow()
     if tf is None:
         return {"_type": "tf.Tensor", "_data": str(tensor)}
 
@@ -142,6 +177,7 @@ def serialize_jax_array(array: Any) -> Dict[str, Any]:
     Returns:
         Dictionary containing array data and metadata
     """
+    jax, jnp = _lazy_import_jax()
     if jax is None:
         return {"_type": "jax.Array", "_data": str(array)}
 
@@ -162,6 +198,7 @@ def serialize_sklearn_model(model: Any) -> Dict[str, Any]:
     Returns:
         Dictionary containing model metadata and parameters
     """
+    sklearn, BaseEstimator = _lazy_import_sklearn()
     if sklearn is None or BaseEstimator is None:
         return {"_type": "sklearn.model", "_data": str(model)}
 
@@ -203,6 +240,7 @@ def serialize_scipy_sparse(matrix: Any) -> Dict[str, Any]:
     Returns:
         Dictionary containing sparse matrix data and metadata
     """
+    scipy = _lazy_import_scipy()
     if scipy is None:
         return {"_type": "scipy.sparse", "_data": str(matrix)}
 
@@ -234,6 +272,7 @@ def serialize_pil_image(image: Any) -> Dict[str, Any]:
     Returns:
         Dictionary containing image data and metadata
     """
+    Image = _lazy_import_pil()
     if Image is None:
         return {"_type": "PIL.Image", "_data": str(image)}
 
@@ -265,6 +304,7 @@ def serialize_huggingface_tokenizer(tokenizer: Any) -> Dict[str, Any]:
     Returns:
         Dictionary containing tokenizer metadata
     """
+    transformers = _lazy_import_transformers()
     if transformers is None:
         return {"_type": "transformers.tokenizer", "_data": str(tokenizer)}
 
@@ -299,10 +339,12 @@ def detect_and_serialize_ml_object(obj: Any) -> Optional[Dict[str, Any]]:
             return False
 
     # PyTorch tensors
+    torch = _lazy_import_torch()
     if torch is not None and isinstance(obj, torch.Tensor):
         return serialize_pytorch_tensor(obj)
 
     # TensorFlow tensors
+    tf = _lazy_import_tensorflow()
     if (
         tf is not None
         and safe_hasattr(obj, "numpy")
@@ -313,22 +355,27 @@ def detect_and_serialize_ml_object(obj: Any) -> Optional[Dict[str, Any]]:
         return serialize_tensorflow_tensor(obj)
 
     # JAX arrays
+    jax, jnp = _lazy_import_jax()
     if jax is not None and safe_hasattr(obj, "shape") and safe_hasattr(obj, "dtype") and "jax" in str(type(obj)):
         return serialize_jax_array(obj)
 
     # Scikit-learn models
+    sklearn, BaseEstimator = _lazy_import_sklearn()
     if sklearn is not None and BaseEstimator is not None and isinstance(obj, BaseEstimator):
         return serialize_sklearn_model(obj)
 
     # Scipy sparse matrices
+    scipy = _lazy_import_scipy()
     if scipy is not None and safe_hasattr(obj, "tocoo") and "scipy.sparse" in str(type(obj)):
         return serialize_scipy_sparse(obj)
 
     # PIL Images
+    Image = _lazy_import_pil()
     if Image is not None and isinstance(obj, Image.Image):
         return serialize_pil_image(obj)
 
     # HuggingFace tokenizers
+    transformers = _lazy_import_transformers()
     if transformers is not None and safe_hasattr(obj, "encode") and "transformers" in str(type(obj)):
         return serialize_huggingface_tokenizer(obj)
 
@@ -342,11 +389,11 @@ def get_ml_library_info() -> Dict[str, bool]:
         Dictionary mapping library names to availability status
     """
     return {
-        "torch": torch is not None,
-        "tensorflow": tf is not None,
-        "jax": jax is not None,
-        "sklearn": sklearn is not None,
-        "scipy": scipy is not None,
-        "PIL": Image is not None,
-        "transformers": transformers is not None,
+        "torch": _lazy_import_torch() is not None,
+        "tensorflow": _lazy_import_tensorflow() is not None,
+        "jax": _lazy_import_jax()[0] is not None,
+        "sklearn": _lazy_import_sklearn()[0] is not None,
+        "scipy": _lazy_import_scipy() is not None,
+        "PIL": _lazy_import_pil() is not None,
+        "transformers": _lazy_import_transformers() is not None,
     }
