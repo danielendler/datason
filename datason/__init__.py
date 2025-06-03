@@ -119,7 +119,7 @@ def _get_version() -> str:
         pass
 
     # Fallback version if pyproject.toml is not found or version not found
-    return "0.4.5"
+    return "0.5.0"
 
 
 __version__ = _get_version()
