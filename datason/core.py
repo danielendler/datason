@@ -2216,10 +2216,8 @@ def _contains_potentially_exploitable_nested_list_structure(obj: list, _depth: i
         # At shallow depths, only block the specific attack pattern
         if len(obj) == 1 and isinstance(obj[0], (list, tuple)) and len(obj[0]) == 1:
             # CRITICAL: Don't flag circular references - those are legitimate and handled elsewhere
-            if id(obj[0]) == id(obj):
-                return False  # This is a circular reference, not an attack
-            # Single-item list containing single-item list - classic attack pattern
-            return True
+            # Single-item list containing single-item list - classic attack pattern (unless circular ref)
+            return id(obj[0]) != id(obj)  # False if circular reference, True if attack pattern
         return False
 
     # At deeper levels (depth >= 3), check for nested lists (but not circular refs)
