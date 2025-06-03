@@ -42,15 +42,18 @@ jobs:
         python-version: ["3.11"]
         test-config:
           - name: "minimal"
-            deps: ""
+            ml: false
+            competitive: false
             pytorch: false
             description: "Core datason performance"
           - name: "with-ml"
-            deps: "numpy pandas scikit-learn"
+            ml: true
+            competitive: false
             pytorch: true
             description: "ML library integration performance"
           - name: "competitive"
-            deps: "numpy pandas orjson ujson msgpack"
+            ml: true
+            competitive: true
             pytorch: false
             description: "Competitive analysis vs other libraries"
 
@@ -65,40 +68,43 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
 
-    - name: 💾 Cache dependencies
+    - name: 💾 Cache pip dependencies
       uses: actions/cache@v4
       with:
         path: ~/.cache/pip
-        key: comprehensive-${{ runner.os }}-py${{ matrix.python-version }}-${{ matrix.test-config.name }}-${{ hashFiles('**/pyproject.toml') }}
+        key: comprehensive-performance-${{ runner.os }}-py3.11-${{ matrix.test-config.name }}-${{ hashFiles('**/pyproject.toml', '**/requirements-benchmarking.txt') }}
         restore-keys: |
-          comprehensive-${{ runner.os }}-py${{ matrix.python-version }}-${{ matrix.test-config.name }}-
-          comprehensive-${{ runner.os }}-py${{ matrix.python-version }}-
+          comprehensive-performance-${{ runner.os }}-py3.11-${{ matrix.test-config.name }}-
+          comprehensive-performance-${{ runner.os }}-py3.11-
 
-    - name: 📦 Install datason
+    - name: 📦 Install base package and dependencies
       run: |
         python -m pip install --upgrade pip
         pip install -e .
 
-    - name: 📦 Install standard dependencies
-      if: matrix.test-config.deps != ''
+    - name: 📦 Install ML libraries (if enabled)
+      if: matrix.test-config.ml == true
       run: |
-        pip install ${{ matrix.test-config.deps }}
+        # Install in smaller chunks to avoid timeouts
+        echo "Installing numpy and pandas..."
+        pip install numpy pandas scikit-learn --timeout=300
+        echo "✅ ML libraries installed successfully"
 
-    - name: 📦 Install PyTorch (CPU)
-      if: matrix.test-config.pytorch
+    - name: 📦 Install competitive libraries (if enabled)
+      if: matrix.test-config.competitive == true
       run: |
-        pip install torch --index-url https://download.pytorch.org/whl/cpu
+        # Install competitive libraries with timeout protection
+        echo "Installing competitive libraries..."
+        pip install orjson ujson msgpack --timeout=300
+        echo "✅ Competitive libraries installed successfully"
 
-    - name: 📦 Install benchmarking dependencies
+    - name: 📦 Install PyTorch (if enabled)
+      if: matrix.test-config.pytorch == true
       run: |
-        pip install -r benchmarks/requirements-benchmarking.txt || echo "Some benchmarking dependencies failed to install"
-
-    - name: 📦 Install competitive libraries (if requested)
-      if: github.event.inputs.test_scope == 'full-competitive' || matrix.test-config.name == 'competitive'
-      run: |
-        # Additional competitive libraries for full testing
-        pip install torch --index-url https://download.pytorch.org/whl/cpu || echo "PyTorch failed to install"
-        pip install scikit-learn || echo "Scikit-learn failed to install"
+        # Install PyTorch with CPU-only to save time and space
+        echo "Installing PyTorch CPU..."
+        pip install torch --index-url https://download.pytorch.org/whl/cpu --timeout=600
+        echo "✅ PyTorch CPU installed successfully"
 
     - name: 🔍 Show installed packages
       run: pip list
@@ -284,10 +290,13 @@ jobs:
             for lib, metrics in competitors.items():
                 if lib not in summary['competitive_summary']:
                     summary['competitive_summary'][lib] = []
-                summary['competitive_summary'][lib].append({
-                    'config': config,
-                    'slowdown': metrics['average_slowdown_factor']
-                })
+                # Safely access average_slowdown_factor with fallback
+                slowdown = metrics.get('average_slowdown_factor', 0)
+                if slowdown > 0:  # Only include valid slowdown factors
+                    summary['competitive_summary'][lib].append({
+                        'config': config,
+                        'slowdown': slowdown
+                    })
 
         # Save aggregated results
         with open('aggregated_comprehensive_results.json', 'w') as f:
@@ -295,9 +304,14 @@ jobs:
 
         print('📊 Aggregated Results Summary:')
         print(f'Configurations tested: {len(all_results)}')
-        for lib, configs in summary['competitive_summary'].items():
-            avg_slowdown = sum(c['slowdown'] for c in configs) / len(configs)
-            print(f'{lib}: {avg_slowdown:.1f}x slower (average across configs)')
+
+        if summary['competitive_summary']:
+            for lib, configs in summary['competitive_summary'].items():
+                if configs:  # Only process libraries with valid data
+                    avg_slowdown = sum(c['slowdown'] for c in configs) / len(configs)
+                    print(f'{lib}: {avg_slowdown:.1f}x slower (average across {len(configs)} configs)')
+        else:
+            print('No competitive analysis data found across configurations')
         "
 
     - name: 💾 Upload aggregated results
