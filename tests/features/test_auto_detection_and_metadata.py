@@ -141,7 +141,7 @@ class TestTypeMetadataSupport:
 
     def test_serialize_with_type_hints_uuid(self):
         """Test UUID serialization with type hints."""
-        test_uuid = uuid.uuid4()
+        test_uuid = uuid.UUID("12345678-1234-5678-9012-123456789abc")
         config = SerializationConfig(include_type_hints=True)
 
         result = datason.serialize(test_uuid, config=config)
@@ -227,7 +227,7 @@ class TestRoundTripSerialization:
 
     def test_round_trip_uuid(self):
         """Test perfect round-trip for UUID objects."""
-        original = uuid.uuid4()
+        original = uuid.UUID("12345678-1234-5678-9012-123456789abc")
         config = SerializationConfig(include_type_hints=True)
 
         serialized = datason.serialize(original, config=config)
@@ -301,7 +301,7 @@ class TestRoundTripSerialization:
         """Test round-trip for complex nested data with multiple types."""
         original = {
             "timestamp": datetime(2023, 1, 1, 12, 0, 0),
-            "user_id": uuid.uuid4(),
+            "user_id": uuid.UUID("12345678-1234-5678-9012-123456789abc"),
             "data": pd.DataFrame({"a": [1, 2], "b": [3, 4]}),
             "tags": {"python", "datason", "serialization"},
             "coordinates": (1.23, 4.56),
