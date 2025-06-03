@@ -297,7 +297,7 @@ class TestRoundTripSerialization:
         assert isinstance(restored, np.ndarray)
         np.testing.assert_array_equal(restored, original)
 
-    def test_round_trip_complex_nested_structure(self):
+    def test_round_trip_complex_nested_structure(self) -> None:
         """Test round-trip for complex nested data with multiple types."""
         original = {
             "timestamp": datetime(2023, 1, 1, 12, 0, 0),
@@ -361,12 +361,16 @@ class TestIntegrationScenarios:
         assert isinstance(assets[0]["price"], float)
         assert abs(assets[0]["price"] - 150.25) < 0.001
 
-    def test_round_trip_production_workflow(self):
+    def test_round_trip_production_workflow(self) -> None:
         """Test a complete round-trip workflow for production scenarios."""
+        # Use fixed values to avoid flakiness between test runs
+        fixed_datetime = datetime(2023, 12, 1, 15, 30, 45, 123456)
+        fixed_uuid = uuid.UUID("12345678-1234-5678-9012-123456789abc")
+
         # Original data with various types (similar to user's use case)
         original_data = {
-            "analysis_date": datetime.now(),
-            "request_id": uuid.uuid4(),
+            "analysis_date": fixed_datetime,
+            "request_id": fixed_uuid,
             "results": pd.DataFrame({"metric": ["roi", "volatility", "sharpe"], "value": [0.15, 0.25, 1.2]}),
             "parameters": {
                 "lookback_days": 252,

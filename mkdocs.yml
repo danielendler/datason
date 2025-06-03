@@ -141,6 +141,7 @@ nav:
     - Benchmarking: BENCHMARKING.md
   - Development:
     - Contributing: CONTRIBUTING.md
+    - Performance Improvements: performance-improvements.md
     - Testing & Integration: TESTING_INTEGRATION_IMPROVEMENTS.md
     - Security: SECURITY.md
     - Tooling Guide: TOOLING_GUIDE.md
