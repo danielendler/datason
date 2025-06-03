@@ -43,12 +43,15 @@ jobs:
         test-config:
           - name: "minimal"
             deps: ""
+            pytorch: false
             description: "Core datason performance"
           - name: "with-ml"
-            deps: "numpy pandas scikit-learn torch --index-url https://download.pytorch.org/whl/cpu"
+            deps: "numpy pandas scikit-learn"
+            pytorch: true
             description: "ML library integration performance"
           - name: "competitive"
             deps: "numpy pandas orjson ujson msgpack"
+            pytorch: false
             description: "Competitive analysis vs other libraries"
 
     name: "🔬 ${{ matrix.test-config.name }} (Python ${{ matrix.python-version }})"
@@ -76,10 +79,15 @@ jobs:
         python -m pip install --upgrade pip
         pip install -e .
 
-    - name: 📦 Install test dependencies
+    - name: 📦 Install standard dependencies
       if: matrix.test-config.deps != ''
       run: |
         pip install ${{ matrix.test-config.deps }}
+
+    - name: 📦 Install PyTorch (CPU)
+      if: matrix.test-config.pytorch
+      run: |
+        pip install torch --index-url https://download.pytorch.org/whl/cpu
 
     - name: 📦 Install benchmarking dependencies
       run: |
