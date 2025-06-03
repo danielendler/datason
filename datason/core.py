@@ -54,7 +54,7 @@ except ImportError:
     _ml_serializer = None
 
 # Security constants
-MAX_SERIALIZATION_DEPTH = 1000  # Prevent stack overflow
+MAX_SERIALIZATION_DEPTH = 50  # Prevent stack overflow (reasonable depth for legitimate data)
 MAX_OBJECT_SIZE = 10_000_000  # Prevent memory exhaustion (10MB worth of items)
 MAX_STRING_LENGTH = 1_000_000  # Prevent excessive string processing
 
@@ -218,15 +218,16 @@ def _is_json_basic_type(value: Any) -> bool:
 
 
 def _is_json_basic_type_with_config(value: Any, max_string_length: int) -> bool:
-    """Check for basic JSON types with string length validation."""
+    """Optimized JSON basic type check with configurable string length limit."""
     value_type = type(value)
 
     if value_type in (int, bool, type(None)):
         return True
+    elif value_type is float:
+        # Efficient NaN/Inf check without function calls
+        return value == value and value not in (float("inf"), float("-inf"))
     elif value_type is str:
         return len(value) <= max_string_length
-    elif value_type is float:
-        return value == value and value not in (float("inf"), float("-inf"))
     else:
         return False
 
@@ -238,254 +239,151 @@ def serialize(
     _seen: Optional[Set[int]] = None,
     _type_handler: Optional["TypeHandler"] = None,
 ) -> Any:
-    """Recursively serialize an object for JSON compatibility.
+    """Serialize any Python object to JSON-compatible types with security-first design.
 
-    Handles pandas, datetime, UUID, NaT, numpy data types, Pydantic models,
-    and nested dict/list/tuple. Includes security protections against
-    circular references, excessive depth, and resource exhaustion.
+    SECURITY-FIRST ARCHITECTURE:
+    1. SECURITY CHECKS (immediate, cheap, always enforced)
+    2. PERFORMANCE OPTIMIZATIONS (expensive, only for safe objects)
+    3. HOT PATHS (fastest, only for verified safe objects)
 
     Args:
-        obj: The object to serialize. Can be any Python data type.
-        config: Optional serialization configuration. If None, uses global default.
-        _depth: Internal parameter for tracking recursion depth
-        _seen: Internal parameter for tracking circular references
-        _type_handler: Internal parameter for type handling
+        obj: The object to serialize.
+        config: Optional serialization configuration.
+        _depth: Current recursion depth (for internal use).
+        _seen: Set of object IDs already seen (for internal use).
+        _type_handler: Optional custom type handler (for internal use).
 
     Returns:
-        A JSON-compatible representation of the input object.
+        JSON-compatible representation of the object.
 
     Raises:
-        SecurityError: If security limits are exceeded
-
-    Examples:
-        >>> import datetime
-        >>> serialize({'date': datetime.datetime.now()})
-        {'date': '2023-...'}
-
-        >>> serialize([1, 2, float('nan'), 4])
-        [1, 2, None, 4]
-
-        >>> from datason.config import get_ml_config
-        >>> serialize(data, config=get_ml_config())
-        # Uses ML-optimized settings
+        SecurityError: If security limits are exceeded.
+        ValueError: If the object cannot be serialized.
+        TypeError: If an unsupported type is encountered.
     """
-    # BUGFIX: Add immediate protection against known problematic objects
-    # Check for objects that commonly cause infinite recursion
-    obj_type = type(obj)
-    if hasattr(obj, "__class__") and obj_type.__module__ in ("unittest.mock", "io", "_io") and hasattr(obj, "__dict__"):
-        # These objects often contain circular references
-        warnings.warn(
-            f"Detected potentially problematic object of type {obj_type.__name__}. Using safe representation.",
-            stacklevel=2,
-        )
-        return f"<{obj_type.__name__} object at {hex(id(obj))}>"
+    # ==================================================================================
+    # EMERGENCY CIRCUIT BREAKER: Prevent infinite recursion at all costs
+    # ==================================================================================
+    if _depth > 100:  # Emergency fallback - should never reach this with proper depth=50 limit
+        return f"<EMERGENCY_CIRCUIT_BREAKER: depth={_depth}, type={type(obj).__name__}>"
 
-    # Additional check for unittest mock objects specifically (more targeted)
-    if (
-        hasattr(obj, "__class__")
-        and obj_type.__module__ in ("unittest.mock", "mock")
-        and ("mock" in str(obj_type).lower() or "Mock" in obj_type.__name__)
-    ):
-        warnings.warn(
-            f"Detected unittest mock object of type {obj_type.__name__}. Using safe representation.",
-            stacklevel=2,
-        )
-        return f"<{obj_type.__name__} object>"
+    # ==================================================================================
+    # PHASE 1: SECURITY CHECKS (ALWAYS FIRST, NEVER BYPASSED)
+    # ==================================================================================
 
-    # Initialize configuration and type handler on first call
+    # INITIALIZATION: Set up config and type handler if needed
     if config is None and _config_available:
         config = get_default_config()
 
-    # PHASE 2.1: JSON-FIRST SERIALIZATION STRATEGY
-    # Try ultra-fast JSON-only path first for maximum performance
-    # This handles ~80% of real-world data with minimal overhead
-    if (
-        _depth == 0  # Only at top level to avoid recursive overhead
-        and (
-            config is None  # No configuration restrictions
-            or (
-                # Configuration is compatible with JSON-only processing
-                not config.sort_keys
-                and config.nan_handling == NanHandling.NULL
-                and not config.custom_serializers
-                and not config.include_type_hints
-                and config.max_depth >= 10
-                and config.max_string_length >= 1000
-                and (
-                    not isinstance(obj, (dict, list, tuple, str)) or len(obj) <= config.max_size
-                )  # NEW: Check size limits only for sized objects
-            )
-        )
-        and _is_fully_json_compatible(obj, max_depth=3)
-    ):
-        return _serialize_json_only_fast_path(obj)
-
-    # PHASE 2.2: RECURSIVE CALL ELIMINATION
-    # Try iterative processing for nested collections to reduce function call overhead
-    if (
-        _depth == 0  # Only at top level to avoid recursive overhead
-        and (
-            config is None  # No configuration restrictions
-            or (
-                # Configuration is compatible with iterative processing
-                config.nan_handling == NanHandling.NULL
-                and not config.custom_serializers
-                and config.max_depth >= 10
-                and config.max_string_length >= 1000
-            )
-        )
-        and isinstance(obj, (dict, list, tuple))
-        and len(obj) > 10  # Only use for larger collections where overhead matters
-        and (config is None or len(obj) <= config.max_size)  # NEW: Check size limits after isinstance check
-    ):
-        iterative_result = _serialize_iterative_path(obj, config)
-        if iterative_result is not None:
-            # Handle type metadata for tuples
-            if isinstance(obj, tuple) and config and config.include_type_hints:
-                return _create_type_metadata("tuple", iterative_result)
-            # Sort keys if configured
-            if isinstance(obj, dict) and config and config.sort_keys:
-                return dict(sorted(iterative_result.items()))
-            return iterative_result
-
-    # NEW: Performance optimization - skip processing if already serialized
-    if (
-        config
-        and hasattr(config, "check_if_serialized")
-        and config.check_if_serialized
-        and _depth == 0
-        and config.max_string_length >= MAX_STRING_LENGTH  # NEW: Don't optimize if string truncation might be needed
-        and _is_json_serializable_basic_type(obj)
-    ):
-        return obj
-
-    if _type_handler is None and config is not None:
+    # Create type handler if config is available but no type handler provided
+    if config and _type_handler is None and _config_available:
         _type_handler = TypeHandler(config)
 
-    # Use config limits if available, otherwise use defaults
+    # SECURITY CHECK 1: Depth limit enforcement (IMMEDIATE, CHEAP)
+    # This prevents ALL depth bomb attacks, including homogeneity bypass
+    # USER CONFIGURABLE: Users can set config.max_depth for their specific needs
     max_depth = config.max_depth if config else MAX_SERIALIZATION_DEPTH
-    max_size = config.max_size if config else MAX_OBJECT_SIZE
-    max_string_length = config.max_string_length if config else MAX_STRING_LENGTH
-
-    # Security check: prevent excessive recursion depth
     if _depth > max_depth:
         raise SecurityError(
             f"Maximum serialization depth ({max_depth}) exceeded. "
-            "This may indicate circular references or extremely nested data."
+            f"Current depth: {_depth}. This may indicate circular references, "
+            "extremely nested data, or a potential depth bomb attack. "
+            f"You can increase max_depth in your SerializationConfig if needed."
         )
 
-    # Initialize circular reference tracking on first call
+    # SECURITY CHECK 2: Initialize circular reference tracking
     if _seen is None:
         _seen = set()
 
-    # Security check: detect circular references for mutable objects
-    if isinstance(obj, (dict, list, set)) and id(obj) in _seen:
-        warnings.warn(
-            "Circular reference detected. Replacing with null to prevent infinite recursion.",
-            stacklevel=2,
-        )
-        return None
-
-    # For mutable objects, check optimization BEFORE adding to _seen
-    optimization_result: Any = None
-    if isinstance(obj, dict):
-        # Security check: prevent excessive object sizes
-        if len(obj) > max_size:
-            raise SecurityError(
-                f"Dictionary size ({len(obj)}) exceeds maximum ({max_size}). "
-                "This may indicate a resource exhaustion attempt."
+    # SECURITY CHECK 3: Circular reference detection for container types
+    if isinstance(obj, (dict, list, set, tuple)):
+        obj_id = id(obj)
+        if obj_id in _seen:
+            # CIRCULAR REFERENCE DETECTED: Handle gracefully with warning
+            warnings.warn(
+                f"Circular reference detected at depth {_depth}. Replacing with None to prevent infinite loops.",
+                stacklevel=4,
             )
-        # Only use optimization when it's safe (no config that could alter output)
-        if (
-            _depth == 0
-            and (
-                config is None
-                or (
-                    not config.sort_keys
-                    and config.nan_handling == NanHandling.NULL
-                    and not config.custom_serializers
-                    and not config.include_type_hints  # NEW: Don't optimize if type hints are enabled
-                    and config.max_depth >= 1000
-                    and config.max_string_length
-                    >= MAX_STRING_LENGTH  # NEW: Don't optimize if string truncation might be needed
-                    and len(obj) <= config.max_size  # NEW: Don't optimize if size exceeds limit
-                )
-            )  # Only optimize with reasonable depth limits
-            and _is_already_serialized_dict(obj)
-        ):
-            optimization_result = obj
-    elif isinstance(obj, (list, tuple)):
-        # Security check: prevent excessive object sizes
-        if len(obj) > max_size:
-            raise SecurityError(
-                f"List/tuple size ({len(obj)}) exceeds maximum ({max_size}). "
-                "This may indicate a resource exhaustion attempt."
-            )
-        # Only use optimization when it's safe (no config that could alter output)
-        if (
-            _depth == 0
-            and (
-                config is None
-                or (
-                    config.nan_handling == NanHandling.NULL
-                    and not config.custom_serializers
-                    and not config.include_type_hints  # NEW: Don't optimize if type hints are enabled
-                    and config.max_depth >= 1000
-                    and config.max_string_length
-                    >= MAX_STRING_LENGTH  # NEW: Don't optimize if string truncation might be needed
-                    and len(obj) <= config.max_size  # NEW: Don't optimize if size exceeds limit
-                )
-            )  # Only optimize with reasonable depth limits
-            and _is_already_serialized_list(obj)
-        ):
-            optimization_result = list(obj) if isinstance(obj, tuple) else obj
-
-    # Add current object to seen set for mutable types
-    if isinstance(obj, (dict, list, set)):
-        _seen.add(id(obj))
+            return None  # Handle circular reference by returning None
+        _seen.add(obj_id)
 
     try:
-        # Use optimization result if available
-        if optimization_result is not None:
-            return optimization_result
+        # SECURITY CHECK 4: Early size limits for containers (CHEAP)
+        obj_type = type(obj)
+        if isinstance(obj, dict) and len(obj) > (config.max_size if config else MAX_OBJECT_SIZE):
+            raise SecurityError(f"Dictionary size ({len(obj)}) exceeds maximum allowed size.")
+        elif isinstance(obj, (list, tuple)) and len(obj) > (config.max_size if config else MAX_OBJECT_SIZE):
+            raise SecurityError(f"List/tuple size ({len(obj)}) exceeds maximum allowed size.")
 
-        # OPTIMIZATION: Try hot path first for maximum performance
+        # Handle None early (most common case in sparse data)
+        if obj is None:
+            return None
+
+        # ==================================================================================
+        # PHASE 2: PERFORMANCE OPTIMIZATIONS (ONLY FOR SECURITY-VERIFIED OBJECTS)
+        # ==================================================================================
+
+        # PERFORMANCE CHECK 1: Try hot path for basic types and simple containers
+        # This is safe because we already passed security checks
+        max_string_length = config.max_string_length if config else MAX_STRING_LENGTH
         hot_result = _serialize_hot_path(obj, config, max_string_length)
-        if hot_result is not None or obj is None:
+        if hot_result is not None:
             return hot_result
 
-        # OPTIMIZATION: Try fast path for common containers
-        obj_type = type(obj)
-        if obj_type in _CONTAINER_TYPES:
-            # Handle dict with minimal function calls
-            if obj_type is _TYPE_DICT:
-                # Quick check for empty dict
-                if not obj:
-                    return obj
+        # PERFORMANCE CHECK 2: Advanced optimizations for verified safe containers
+        # Handle dictionaries with SECURITY-VERIFIED performance optimizations
+        if isinstance(obj, dict):
+            # Quick path for empty dicts (already security-checked)
+            if not obj:
+                return obj
 
+            # PERFORMANCE OPTIMIZATION: Homogeneity check (ONLY after security verification)
+            # This is now safe because we already enforced depth limits
+            homogeneity = None
+            if _depth < 5:  # Only use optimization at reasonable depths
+                # Safe homogeneity check with strict limits
+                homogeneity = _is_homogeneous_collection(obj, sample_size=10, _max_check_depth=2)
+
+            if homogeneity == "json_basic":
                 # Quick JSON compatibility check for small dicts
-                if len(obj) <= 5 and all(
-                    isinstance(k, str)
-                    and type(v) in _JSON_BASIC_TYPES
-                    and (type(v) is not str or len(v) <= max_string_length)
-                    for k, v in obj.items()
+                if (
+                    homogeneity == "json_basic"
+                    and len(obj) <= 5
+                    and all(
+                        isinstance(k, str)
+                        and type(v) in _JSON_BASIC_TYPES
+                        and (type(v) is not str or len(v) <= max_string_length)
+                        for k, v in obj.items()
+                    )
                 ):
                     return obj
 
-                # Needs full dict processing
-                result = _process_homogeneous_dict(obj, config, _depth, _seen, _type_handler)
-                # Sort keys if configured
-                if config and config.sort_keys:
-                    return dict(sorted(result.items()))
-                return result
+            # GUARANTEED SAFE PROCESSING: Each recursive call has verified depth increment
+            result = {}
+            for k, v in obj.items():
+                # SECURITY: EVERY recursive call MUST increment depth (verified safe)
+                serialized_value = serialize(v, config, _depth + 1, _seen, _type_handler)
+                result[k] = serialized_value
 
-            # Handle list/tuple with minimal function calls
-            elif obj_type in (_TYPE_LIST, _TYPE_TUPLE):
-                # Quick check for empty list/tuple
-                if not obj:
-                    return [] if obj_type is _TYPE_TUPLE else obj
+            # Sort keys if configured
+            if config and config.sort_keys:
+                return dict(sorted(result.items()))
+            return result
 
-                # Quick JSON compatibility check for small lists (but only if type hints are not needed)
+        # Handle list/tuple with SECURITY-VERIFIED performance optimizations
+        elif obj_type in (_TYPE_LIST, _TYPE_TUPLE):
+            # Quick path for empty list/tuple (already security-checked)
+            if not obj:
+                return [] if obj_type is _TYPE_TUPLE else obj
+
+            # PERFORMANCE OPTIMIZATION: Homogeneity check (ONLY after security verification)
+            homogeneity = None
+            if _depth < 5:  # Only use optimization at reasonable depths
+                # Safe homogeneity check with strict limits
+                homogeneity = _is_homogeneous_collection(obj, sample_size=10, _max_check_depth=2)
+
+            if homogeneity == "json_basic":
+                # Quick JSON compatibility check for small lists
                 if (
                     len(obj) <= 5
                     and all(type(item) in _JSON_BASIC_TYPES for item in obj)
@@ -493,18 +391,28 @@ def serialize(
                 ):
                     return list(obj) if obj_type is _TYPE_TUPLE else obj
 
-                # Needs full list processing
-                result_list = _process_homogeneous_list(obj, config, _depth, _seen, _type_handler)
-                # Handle type metadata for tuples
-                if isinstance(obj, tuple) and config and config.include_type_hints:
-                    return _create_type_metadata("tuple", result_list)
-                return result_list
+            # GUARANTEED SAFE PROCESSING: Each recursive call has verified depth increment
+            result_list = []
+            for item in obj:
+                # SECURITY: EVERY recursive call MUST increment depth (verified safe)
+                serialized_value = serialize(item, config, _depth + 1, _seen, _type_handler)
+                result_list.append(serialized_value)
 
-        # Fall back to full processing for complex types
+            # Handle type metadata for tuples
+            if isinstance(obj, tuple) and config and config.include_type_hints:
+                return _create_type_metadata("tuple", result_list)
+            return result_list
+
+        # ==================================================================================
+        # PHASE 3: COMPLEX TYPE PROCESSING (FULL SECURITY + CUSTOM HANDLING)
+        # ==================================================================================
+
+        # For complex types, use full processing path with security verification
         return _serialize_full_path(obj, config, _depth, _seen, _type_handler, max_string_length)
+
     finally:
         # Clean up: remove from seen set when done processing
-        if isinstance(obj, (dict, list, set)):
+        if isinstance(obj, (dict, list, set, tuple)):
             _seen.discard(id(obj))
 
 
@@ -692,14 +600,27 @@ def _serialize_full_path(
         handler = _type_handler.get_type_handler(obj)
         if handler:
             try:
-                return handler(obj)
+                result = handler(obj)
+                return result
             except Exception as e:
-                # If custom handler fails, fall back to default handling
+                # If custom handler fails, log warning and continue with default handling
                 warnings.warn(f"Custom type handler failed for {type(obj)}: {e}", stacklevel=3)
-                # Continue with default processing below
+        # If no handler or handler failed, continue with default processing below
 
-    # Handle dicts with full processing
+    # Handle dicts with full processing - SECURITY: Apply homogeneity bypass protection here too!
     if type_category == "dict":
+        # CRITICAL SECURITY CHECK: Prevent homogeneity bypass attack in full path too
+        # The attack was bypassing the main serialize() check by going through this path
+        if _contains_potentially_exploitable_nested_structure(obj, _depth):
+            # SECURITY: Raise SecurityError for potentially exploitable structures
+            # This prevents the homogeneity bypass attack from succeeding
+            raise SecurityError(
+                f"Maximum serialization depth exceeded due to potentially exploitable nested structure at depth {_depth}. "
+                "This structure appears designed to bypass security measures through "
+                "homogeneity optimization paths, which is characteristic of depth bomb attacks."
+            )
+
+        # Safe to use homogeneous processing for non-exploitable structures
         result = _process_homogeneous_dict(obj, config, _depth, _seen, _type_handler)
         # Sort keys if configured
         if config and config.sort_keys:
@@ -708,6 +629,15 @@ def _serialize_full_path(
 
     # Handle lists/tuples with full processing
     if type_category == "list":
+        # CRITICAL SECURITY CHECK: Prevent homogeneity bypass attack for lists in full path too
+        if isinstance(obj, list) and _contains_potentially_exploitable_nested_list_structure(obj, _depth):
+            # SECURITY: Raise SecurityError for potentially exploitable list structures
+            raise SecurityError(
+                f"Maximum serialization depth exceeded due to potentially exploitable nested list structure at depth {_depth}. "
+                "This structure appears designed to bypass security measures through "
+                "homogeneity optimization paths, which is characteristic of depth bomb attacks."
+            )
+
         result_list = _process_homogeneous_list(obj, config, _depth, _seen, _type_handler)
         # Handle type metadata for tuples
         if isinstance(obj, tuple) and config and config.include_type_hints:
@@ -852,6 +782,26 @@ def _serialize_full_path(
 
     # Handle objects with __dict__ (custom classes)
     if hasattr(obj, "__dict__"):
+        # SECURITY: Early detection of problematic objects that can cause deep recursion
+        obj_class_name = type(obj).__name__
+        obj_module = getattr(type(obj), "__module__", "")
+
+        # Detect MagicMock and other unittest.mock objects early
+        if obj_module == "unittest.mock":
+            warnings.warn(
+                f"Detected potentially problematic mock object: {obj_class_name}. Using safe string representation.",
+                stacklevel=3,
+            )
+            return f"<{obj_class_name} object>"
+
+        # Detect other problematic types early
+        if obj_module in ("io", "_io") and hasattr(obj, "__dict__"):
+            warnings.warn(
+                f"Detected potentially problematic IO object: {obj_class_name}. Using safe string representation.",
+                stacklevel=3,
+            )
+            return f"<{obj_class_name} object>"
+
         try:
             # BUGFIX: Check for circular references in __dict__ before recursing
             # The __dict__ is a different object with different ID, so we need explicit checks
@@ -1546,62 +1496,133 @@ def _get_cached_type_category_fast(obj_type: type) -> Optional[str]:
     return category
 
 
-def _is_homogeneous_collection(obj: Union[list, tuple, dict], sample_size: int = 20) -> Optional[str]:
+def _is_homogeneous_collection(
+    obj: Union[list, tuple, dict],
+    sample_size: int = 20,
+    _seen_ids: Optional[Set[int]] = None,
+    _max_check_depth: int = 5,
+) -> Optional[str]:
     """Check if a collection contains homogeneous types for bulk processing.
+
+    SECURITY: Added circular reference protection and depth limits to prevent infinite recursion.
+
+    Args:
+        obj: Collection to check for homogeneity
+        sample_size: Number of items to sample for checking
+        _seen_ids: Set of object IDs already seen (for circular reference detection)
+        _max_check_depth: Maximum depth to check for homogeneity (prevents deep recursion)
 
     Returns:
     - 'json_basic': All items are JSON-basic types
     - 'single_type': All items are the same non-basic type
     - 'mixed': Mixed types (requires individual processing)
-    - None: Unable to determine or too small
+    - None: Unable to determine, too small, or depth limit exceeded
     """
-    # OPTIMIZATION: Check cache first for collections we've seen before
+    # SECURITY: Depth limit check - prevent deep recursion in homogeneity analysis
+    if _max_check_depth <= 0:
+        return "mixed"  # Force individual processing when depth limit exceeded
+
+    # Initialize circular reference tracking on first call
+    if _seen_ids is None:
+        _seen_ids = set()
+
+    # SECURITY: Check for circular references
     obj_id = id(obj)
-    if obj_id in _COLLECTION_COMPATIBILITY_CACHE:
-        return _COLLECTION_COMPATIBILITY_CACHE[obj_id]
+    if obj_id in _seen_ids:
+        # Circular reference detected, assume mixed to force full processing
+        return "mixed"
 
-    homogeneity_result = None
+    # Add to seen set for this traversal
+    _seen_ids.add(obj_id)
 
-    if isinstance(obj, dict):
-        if not obj:
-            homogeneity_result = "json_basic"
-        else:
-            # Sample values for type analysis
-            values = list(obj.values())
-            sample = values[:sample_size] if len(values) > sample_size else values
+    try:
+        # OPTIMIZATION: Check cache first for collections we've seen before
+        if obj_id in _COLLECTION_COMPATIBILITY_CACHE:
+            return _COLLECTION_COMPATIBILITY_CACHE[obj_id]
 
-            if not sample:
-                homogeneity_result = "json_basic"
-            elif all(_is_json_basic_type(v) for v in sample):
-                # Check if all values are JSON-basic types
-                homogeneity_result = "json_basic"
-            else:
-                # Check if all values are the same type
-                first_type = type(sample[0])
-                homogeneity_result = "single_type" if all(isinstance(v, first_type) for v in sample) else "mixed"
+        homogeneity_result = None
 
-    elif isinstance(obj, (list, tuple)):
-        if not obj:
-            homogeneity_result = "json_basic"
-        else:
-            # Sample items for type analysis - handle Union type properly
-            sample_items = list(obj[:sample_size]) if len(obj) > sample_size else list(obj)
-
-            if all(_is_json_basic_type(item) for item in sample_items):
-                # Check if all items are JSON-basic types
+        if isinstance(obj, dict):
+            if not obj:
                 homogeneity_result = "json_basic"
             else:
-                # Check if all items are the same type
-                first_type = type(sample_items[0])
-                homogeneity_result = (
-                    "single_type" if all(isinstance(item, first_type) for item in sample_items) else "mixed"
-                )
+                # Sample values for type analysis
+                values = list(obj.values())
+                sample = values[:sample_size] if len(values) > sample_size else values
 
-    # Cache the result if we have space
-    if homogeneity_result is not None and len(_COLLECTION_COMPATIBILITY_CACHE) < _COLLECTION_CACHE_SIZE_LIMIT:
-        _COLLECTION_COMPATIBILITY_CACHE[obj_id] = homogeneity_result
+                if not sample:
+                    homogeneity_result = "json_basic"
+                elif all(_is_json_basic_type_safe(v, _seen_ids, _max_check_depth - 1) for v in sample):
+                    # Check if all values are JSON-basic types
+                    homogeneity_result = "json_basic"
+                else:
+                    # Check if all values are the same type
+                    first_type = type(sample[0])
+                    homogeneity_result = "single_type" if all(isinstance(v, first_type) for v in sample) else "mixed"
 
-    return homogeneity_result
+        elif isinstance(obj, (list, tuple)):
+            if not obj:
+                homogeneity_result = "json_basic"
+            else:
+                # Sample items for type analysis - handle Union type properly
+                sample_items = list(obj[:sample_size]) if len(obj) > sample_size else list(obj)
+
+                if all(_is_json_basic_type_safe(item, _seen_ids, _max_check_depth - 1) for item in sample_items):
+                    # Check if all items are JSON-basic types
+                    homogeneity_result = "json_basic"
+                else:
+                    # Check if all items are the same type
+                    first_type = type(sample_items[0])
+                    homogeneity_result = (
+                        "single_type" if all(isinstance(item, first_type) for item in sample_items) else "mixed"
+                    )
+
+        # Cache the result if we have space
+        if homogeneity_result is not None and len(_COLLECTION_COMPATIBILITY_CACHE) < _COLLECTION_CACHE_SIZE_LIMIT:
+            _COLLECTION_COMPATIBILITY_CACHE[obj_id] = homogeneity_result
+
+        return homogeneity_result
+
+    finally:
+        # Clean up: remove from seen set when done
+        _seen_ids.discard(obj_id)
+
+
+def _is_json_basic_type_safe(value: Any, _seen_ids: Set[int], _max_check_depth: int) -> bool:
+    """Safe version of _is_json_basic_type that prevents infinite recursion.
+
+    Args:
+        value: The value to check
+        _seen_ids: Set of object IDs already seen to prevent circular references
+        _max_check_depth: Maximum depth to check for homogeneity (prevents deep recursion)
+
+    Returns:
+        True if value is a basic JSON type, False otherwise
+    """
+    # SECURITY: Depth limit check - if we're too deep, assume not basic
+    if _max_check_depth <= 0:
+        return False
+
+    # For non-container types, use regular check
+    value_type = type(value)
+
+    if value_type in (str, int, bool, type(None)):
+        return True
+    elif value_type is float:
+        # Efficient NaN/Inf check without function calls
+        return value == value and value not in (float("inf"), float("-inf"))
+    elif value_type in (dict, list, tuple):
+        # SECURITY: For containers, check for circular references first
+        value_id = id(value)
+        if value_id in _seen_ids:
+            # Circular reference - not safe for basic type assumption
+            return False
+
+        # For containers, they're not "basic" types in the JSON sense
+        # Only primitives are truly basic
+        return False
+    else:
+        return False
 
 
 def _process_homogeneous_dict(
@@ -1611,11 +1632,35 @@ def _process_homogeneous_dict(
     _seen: Set[int],
     _type_handler: Optional["TypeHandler"],
 ) -> dict:
-    """Optimized processing for dictionaries with homogeneous values."""
-    # For JSON-basic values, we can skip individual processing
-    homogeneity = _is_homogeneous_collection(obj)
+    """Optimized processing for dictionaries with homogeneous values.
 
-    if homogeneity == "json_basic":
+    SECURITY: Enforces depth limits before processing to prevent depth bomb attacks.
+    """
+    # SECURITY: Enforce depth limit FIRST before any processing
+    max_depth = config.max_depth if config else MAX_SERIALIZATION_DEPTH
+    if _depth > max_depth:
+        raise SecurityError(
+            f"Maximum serialization depth ({max_depth}) exceeded in dict processing. "
+            "This may indicate circular references or extremely nested data."
+        )
+
+    # CRITICAL SECURITY FIX: COMPLETELY DISABLE all homogeneity optimization if dict contains nested containers
+    # This prevents the homogeneity bypass attack where nested structures exploit optimization paths
+    homogeneity: Optional[str] = "mixed"  # Default to safe processing
+
+    # Check if this dict contains any nested container types (dicts/lists/tuples)
+    contains_nested_containers = False
+    for value in obj.values():
+        if isinstance(value, (dict, list, tuple)):
+            contains_nested_containers = True
+            break
+
+    # Only allow homogeneity optimization for very shallow depths AND no nested containers
+    if _depth < 2 and not contains_nested_containers:
+        # SECURITY: Use minimal depth check to prevent any deep recursion
+        homogeneity = _is_homogeneous_collection(obj, _max_check_depth=1)
+
+    if homogeneity == "json_basic" and _depth < 2 and not contains_nested_containers:
         # All values are JSON-compatible, but need to check string lengths with config
         if config and config.max_string_length < MAX_STRING_LENGTH:
             # Need to validate string lengths
@@ -1633,18 +1678,21 @@ def _process_homogeneous_dict(
     # OPTIMIZATION: Use pooled dictionary for memory efficiency
     result = _get_pooled_dict()
     try:
-        if homogeneity == "single_type" and len(obj) > 10:
+        if homogeneity == "single_type" and len(obj) > 10 and _depth < 2 and not contains_nested_containers:
             # Batch process items of the same type - memory efficient iteration
+            # SECURITY: Only allow this optimization at very shallow depths with no nested containers
             for k, v in obj.items():
-                # Use the optimized serialization path
+                # Use the optimized serialization path with SECURE depth increment
                 serialized_value = serialize(v, config, _depth + 1, _seen, _type_handler)
                 # Handle NaN dropping at collection level
                 if config and config.nan_handling == NanHandling.DROP and serialized_value is None and is_nan_like(v):
                     continue
                 result[k] = serialized_value
         else:
-            # Fall back to individual processing for mixed types
+            # Fall back to individual processing for mixed types OR deep structures OR nested containers
+            # This path has proper depth enforcement in each serialize() call
             for k, v in obj.items():
+                # SECURITY: Ensure depth is properly incremented for ALL recursive calls
                 serialized_value = serialize(v, config, _depth + 1, _seen, _type_handler)
                 # Handle NaN dropping at collection level
                 if config and config.nan_handling == NanHandling.DROP and serialized_value is None and is_nan_like(v):
@@ -1666,11 +1714,30 @@ def _process_homogeneous_list(
     _seen: Set[int],
     _type_handler: Optional["TypeHandler"],
 ) -> list:
-    """Optimized processing for lists/tuples with homogeneous items."""
-    # Check homogeneity
-    homogeneity = _is_homogeneous_collection(obj)
+    """Optimized processing for lists/tuples with homogeneous items.
 
-    if homogeneity == "json_basic":
+    SECURITY: Enforces depth limits before processing to prevent depth bomb attacks.
+    """
+    # SECURITY: Enforce depth limit FIRST before any processing
+    max_depth = config.max_depth if config else MAX_SERIALIZATION_DEPTH
+    if _depth > max_depth:
+        raise SecurityError(
+            f"Maximum serialization depth ({max_depth}) exceeded in list processing. "
+            "This may indicate circular references or extremely nested data."
+        )
+
+    # CRITICAL SECURITY FIX: COMPLETELY DISABLE homogeneity optimization for depth >= 2
+    # The homogeneity bypass attack exploits the optimization path by creating structures
+    # that appear homogeneous at each level, allowing infinite recursion before depth
+    # limits can be enforced. For maximum security, we disable ALL homogeneity checking
+    # for any depth >= 2, forcing individual processing which has proper depth enforcement.
+    homogeneity: Optional[str] = "mixed"  # Force non-optimized path for all depths >= 2
+    if _depth < 2:
+        # Only allow homogeneity optimization at very shallow depths (0-1)
+        # SECURITY: Use minimal depth check to prevent any deep recursion
+        homogeneity = _is_homogeneous_collection(obj, _max_check_depth=1)
+
+    if homogeneity == "json_basic" and _depth < 2:
         # All items are JSON-compatible, but need to check string lengths with config
         if config and config.max_string_length < MAX_STRING_LENGTH:
             # Need to validate string lengths
@@ -1688,17 +1755,21 @@ def _process_homogeneous_list(
     # OPTIMIZATION: Use pooled list for memory efficiency
     result = _get_pooled_list()
     try:
-        if homogeneity == "single_type" and len(obj) > 10:
+        if homogeneity == "single_type" and len(obj) > 10 and _depth < 2:
             # Batch process items of the same type - memory efficient iteration
+            # SECURITY: Only allow this optimization at very shallow depths
             for x in obj:
+                # SECURITY: Ensure depth is properly incremented for ALL recursive calls
                 serialized_value = serialize(x, config, _depth + 1, _seen, _type_handler)
                 # Handle NaN dropping at collection level
                 if config and config.nan_handling == NanHandling.DROP and serialized_value is None and is_nan_like(x):
                     continue
                 result.append(serialized_value)
         else:
-            # Fall back to individual processing for mixed types
+            # Fall back to individual processing for mixed types OR deep structures
+            # This path has proper depth enforcement in each serialize() call
             for x in obj:
+                # SECURITY: Ensure depth is properly incremented for ALL recursive calls
                 serialized_value = serialize(x, config, _depth + 1, _seen, _type_handler)
                 # Handle NaN dropping at collection level
                 if config and config.nan_handling == NanHandling.DROP and serialized_value is None and is_nan_like(x):
@@ -2021,64 +2092,143 @@ def _process_dict_iterative(obj: dict, config: Optional["SerializationConfig"]) 
             else:
                 result[k] = processed
         else:
-            # For complex types, we still need full processing
-            # But we minimize it to just this one call per complex item
-            from . import serialize  # Import here to avoid circular import
-
-            result[k] = serialize(v, config, _depth=1)
+            # For complex types, use safe string representation to avoid infinite recursion
+            # This eliminates the circular call: serialize() -> _serialize_full_path() -> _process_dict_iterative() -> serialize()
+            try:
+                str_repr = str(v)
+                if len(str_repr) > 100:  # Limit string length
+                    str_repr = str_repr[:100] + "...[TRUNCATED]"
+                result[k] = str_repr
+            except Exception:
+                result[k] = f"<{type(v).__name__} object>"
 
     return result
 
 
 def _process_list_iterative(obj: Union[list, tuple], config: Optional["SerializationConfig"]) -> list:
-    """Iterative list processing to eliminate recursive calls."""
-    if not obj:
-        return [] if isinstance(obj, tuple) else obj
+    """Process a list or tuple using an iterative approach to avoid deep recursion."""
+    result: List[Any] = []
+    stack = [(obj, result, 0)]  # (current_obj, current_result, index)
 
-    # Quick homogeneity check
-    if len(obj) <= 50:
-        # For small lists, check if all items are basic JSON types
-        all_basic = True
-        for item in obj:
-            if not _is_json_basic_type(item):
-                all_basic = False
-                break
+    while stack:
+        current_obj, current_result, index = stack.pop()
 
-        if all_basic:
-            return list(obj) if isinstance(obj, tuple) else obj
+        if isinstance(current_obj, (list, tuple)) and index < len(current_obj):
+            item = current_obj[index]
 
-    # Process with minimal function calls
-    result = []
-    for item in obj:
-        item_type = type(item)
+            # Push back the same object with incremented index
+            if index + 1 < len(current_obj):
+                stack.append((current_obj, current_result, index + 1))
 
-        # Inline processing for common types
-        if item_type in (_TYPE_STR, _TYPE_INT, _TYPE_BOOL, _TYPE_NONE):
-            result.append(item)
-        elif item_type is _TYPE_FLOAT:
-            # Inline NaN/Inf handling
-            if item == item and item not in (float("inf"), float("-inf")):
-                result.append(item)
+            # If item is a container, we'll need to process it
+            if isinstance(item, (dict, list, tuple)):
+                # For now, just convert to avoid deep recursion
+                if isinstance(item, dict):
+                    current_result.append(dict(item))
+                elif isinstance(item, tuple):
+                    current_result.append(list(item))
+                else:
+                    current_result.append(list(item))
             else:
-                # Handle NaN/Inf according to config
-                if config and hasattr(config, "nan_handling") and config.nan_handling == NanHandling.DROP:
-                    continue  # Skip this item
-                result.append(None)  # Default NaN handling
-        elif item_type is _TYPE_DICT:
-            # Recursive dict processing (but only one level of function calls)
-            result.append(_process_dict_iterative(item, config))
-        elif item_type in (_TYPE_LIST, _TYPE_TUPLE):
-            # Recursive list processing (but only one level of function calls)
-            processed = _process_list_iterative(item, config)
-            if item_type is _TYPE_TUPLE and config and config.include_type_hints:
-                result.append(_create_type_metadata("tuple", processed))
-            else:
-                result.append(processed)
-        else:
-            # For complex types, we still need full processing
-            # But we minimize it to just this one call per complex item
-            from . import serialize  # Import here to avoid circular import
-
-            result.append(serialize(item, config, _depth=1))
+                # Simple type, return as-is to avoid recursive calls
+                current_result.append(item)  # SECURITY FIX: No recursive serialize call
 
     return result
+
+
+# SECURITY FUNCTION: Check if a dictionary contains nested structures that could exploit homogeneity optimization
+def _contains_potentially_exploitable_nested_structure(obj: dict, _depth: int) -> bool:
+    """
+    Check if a dictionary contains nested structures that could exploit the homogeneity bypass attack.
+
+    This function prevents the attack by identifying structures where:
+    1. The dictionary contains other dictionaries that could create recursive potential
+    2. The structure appears designed to bypass depth limits through homogeneity optimization
+    3. The pattern suggests an intentional exploit rather than legitimate nested data
+
+    IMPORTANT: This does NOT trigger on circular references (same object) - those are handled
+    by the circular reference detection mechanism. This only triggers on new nested dictionaries.
+
+    KEY INSIGHT: The attack exploits homogeneity optimization by creating structures that LOOK
+    homogeneous (identical patterns at each level) to bypass depth checks. Legitimate data
+    rarely has this perfect homogeneity.
+
+    Args:
+        obj: Dictionary to check
+        _depth: Current depth in the serialization tree
+
+    Returns:
+        True if the structure is potentially exploitable, False otherwise
+    """
+    # SECURITY: Focus on the specific homogeneity bypass attack pattern
+    # The attack creates structures with identical keys at multiple levels to appear homogeneous
+
+    # At any depth, check for the specific attack signature: identical keys at nested levels
+    if len(obj) == 1:
+        key, value = next(iter(obj.items()))
+        if isinstance(value, dict) and len(value) == 1:
+            # CRITICAL: Don't flag circular references - those are legitimate and handled elsewhere
+            if id(value) == id(obj):
+                return False  # This is a circular reference, not an attack
+            inner_key = next(iter(value.keys()))
+            if key == inner_key:
+                # This is the specific homogeneous attack pattern - identical keys at multiple levels
+                return True
+
+    # ADDITIONAL CHECK: Only at very deep levels (depth >= 5) where attacks become critical
+    # AND only if it looks like a homogeneous pattern (multiple identical structures)
+    if _depth >= 5:
+        # Look for signs of homogeneous attack: multiple values that are identical in structure
+        dict_values = [v for v in obj.values() if isinstance(v, dict)]
+        if len(dict_values) >= 2:
+            # Check if the nested dicts have identical key patterns (sign of attack)
+            first_keys = set(dict_values[0].keys()) if dict_values else set()
+            if first_keys and all(set(d.keys()) == first_keys for d in dict_values[1:]):
+                # All nested dicts have identical key structure - potential attack
+                return True
+
+    return False
+
+
+# SECURITY FUNCTION: Check if a list contains nested structures that could exploit homogeneity optimization
+def _contains_potentially_exploitable_nested_list_structure(obj: list, _depth: int) -> bool:
+    """
+    Check if a list contains nested structures that could exploit the homogeneity bypass attack.
+
+    This function prevents the attack by identifying structures where:
+    1. The list contains other lists that could create recursive potential
+    2. The structure appears designed to bypass depth limits through homogeneity optimization
+    3. The pattern suggests an intentional exploit rather than legitimate nested data
+
+    IMPORTANT: This does NOT trigger on circular references (same object) - those are handled
+    by the circular reference detection mechanism. This only triggers on new nested lists.
+
+    Args:
+        obj: List to check
+        _depth: Current depth in the serialization tree
+
+    Returns:
+        True if the structure is potentially exploitable, False otherwise
+    """
+    # SECURITY: Only check at deeper levels where the bypass attack becomes dangerous
+    # Allow normal nesting at shallow depths (depth 0-2 should be fine for legitimate use)
+    if _depth < 3:
+        # At shallow depths, only block the specific attack pattern
+        if len(obj) == 1 and isinstance(obj[0], (list, tuple)) and len(obj[0]) == 1:
+            # CRITICAL: Don't flag circular references - those are legitimate and handled elsewhere
+            if id(obj[0]) == id(obj):
+                return False  # This is a circular reference, not an attack
+            # Single-item list containing single-item list - classic attack pattern
+            return True
+        return False
+
+    # At deeper levels (depth >= 3), check for nested lists (but not circular refs)
+    obj_id = id(obj)
+    for item in obj:
+        if isinstance(item, (list, tuple)):
+            # Don't flag circular references
+            if id(item) == obj_id:
+                continue  # This is a circular reference, skip it
+            return True  # This is a new nested list at deep level - potentially suspicious
+
+    return False

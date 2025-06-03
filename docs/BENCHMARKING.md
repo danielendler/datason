@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document contains **real performance measurements** for datason v0.4.5, obtained through systematic benchmarking rather than estimates. All benchmarks are reproducible using the included benchmark scripts.
+This document contains **real performance measurements** for datason v0.5.0, obtained through systematic benchmarking rather than estimates. All benchmarks are reproducible using the included benchmark scripts.
 
 ## Benchmark Environment
 
@@ -11,7 +11,7 @@ This document contains **real performance measurements** for datason v0.4.5, obt
 - **Dependencies**: NumPy, Pandas, PyTorch
 - **Method**: 5 iterations per test, statistical analysis (mean ± std dev)
 - **Hardware**: Modern development machine (representative performance)
-- **Version**: datason v0.4.5 with chunked processing and template deserialization
+- **Version**: datason v0.5.0 with performance optimizations and configuration system
 
 ## 🆕 NEW: v0.4.5 Performance Breakthroughs
 
@@ -78,10 +78,10 @@ data = {
 
 | Library | Performance | Relative Speed |
 |---------|-------------|----------------|
-| Standard JSON | 0.40ms ± 0.03ms | 1.0x (baseline) |
-| **datason** | **0.62ms ± 0.02ms** | **1.53x** |
+| Standard JSON | 0.44ms ± 0.03ms | 1.0x (baseline) |
+| **datason** | **0.66ms ± 0.07ms** | **1.5x** |
 
-**Analysis**: datason adds only 53% overhead vs standard JSON for compatible data, which is excellent considering the added functionality (type detection, ML object support, safety features, configuration system, chunked processing, template deserialization).
+**Analysis**: datason adds only 50% overhead vs standard JSON for compatible data, which is excellent considering the added functionality (type detection, ML object support, safety features, configuration system, chunked processing, template deserialization).
 
 ### Complex Data Performance
 
@@ -101,76 +101,68 @@ data = {
 
 | Library | Performance | Notes |
 |---------|-------------|-------|
-| **datason** | **7.04ms ± 0.21ms** | Only option for this data |
-| Pickle | 0.98ms ± 0.50ms | Binary format, Python-only |
+| **datason** | **7.34ms ± 0.44ms** | Only option for this data |
+| Pickle | 0.79ms ± 0.06ms | Binary format, Python-only |
 | Standard JSON | ❌ **Fails** | Cannot serialize UUIDs/datetime |
 
-**Analysis**: datason is 7.17x slower than pickle but provides JSON output that's human-readable and cross-platform compatible.
+**Analysis**: datason is 9.3x slower than pickle but provides JSON output that's human-readable and cross-platform compatible.
 
 ### High-Throughput Scenarios
 
 **Large Nested Data**: 100 groups × 50 items (5,000 complex objects)
-- **Throughput**: 44,624 items/second
-- **Performance**: 112.05ms ± 0.37ms total
+- **Throughput**: 131,042 items/second
+- **Performance**: 38.16ms ± 0.40ms total
 
 **NumPy Arrays**: Multiple arrays with ~23K total elements
-- **Throughput**: 908,188 elements/second  
-- **Performance**: 25.44ms ± 2.56ms total
+- **Throughput**: 1,630,766 elements/second  
+- **Performance**: 14.17ms ± 3.10ms total
 
 **Pandas DataFrames**: 5K total rows
-- **Throughput**: 1,082,439 rows/second
-- **Performance**: 4.71ms ± 0.75ms total
+- **Throughput**: 867,224 rows/second
+- **Performance**: 5.88ms ± 0.43ms total
 
 ### Round-Trip Performance
 
 **Test**: Complete workflow (serialize → JSON.dumps → JSON.loads → deserialize)
 ```python
 # Complex data with UUIDs and timestamps
-serialize_time    = 1.80ms ± 0.06ms
-deserialize_time  = 1.01ms ± 0.07ms
-total_round_trip  = 3.66ms ± 0.68ms
+serialize_time    = 2.87ms ± 1.68ms
+deserialize_time  = 1.82ms ± 1.52ms
+total_round_trip  = 4.40ms ± 1.40ms
 ```
 
-**With Template Deserialization**:
-```python
-# Same data with template deserialization (v0.4.5)
-serialize_time    = 1.80ms ± 0.06ms  
-template_deserialize = 0.064ms ± 0.006ms  # 24x faster!
-total_round_trip  = 2.50ms ± 0.08ms      # 32% improvement
-```
-
-**Real-world significance**: Complete API request-response cycle under 2.5ms with templates.
+**Real-world significance**: Complete API request-response cycle under 4.5ms.
 
 ## Configuration System Performance Impact
 
-### 🚀 Updated Configuration Presets Comparison (v0.4.5)
+### 🚀 Updated Configuration Presets Comparison (v0.5.0)
 
 **Advanced Types Performance** (Decimals, UUIDs, Complex numbers, Paths, Enums):
 
 | Configuration | Performance | Ops/sec | Use Case |
 |--------------|-------------|---------|----------|
-| **Performance Config** | **0.86ms ± 0.02ms** | **1,160** | Speed-critical applications |
-| ML Config | 0.88ms ± 0.06ms | 1,137 | ML pipelines, numeric focus |
-| API Config | 0.92ms ± 0.01ms | 1,083 | API responses, consistency |
-| Default | 0.94ms ± 0.01ms | 1,063 | General use |
-| Strict Config | 13.11ms ± 1.22ms | 76 | Maximum type preservation |
+| **ML Config** | **0.99ms ± 0.09ms** | **1,005** | ML pipelines, numeric focus |
+| API Config | 1.01ms ± 0.06ms | 988 | API responses, consistency |
+| **Performance Config** | **1.08ms ± 0.01ms** | **923** | Speed-critical applications |
+| Default | 1.11ms ± 0.01ms | 899 | General use |
+| Strict Config | 13.43ms ± 2.06ms | 74 | Maximum type preservation |
 
 **Pandas DataFrame Performance** (Large DataFrames with mixed types):
 
 | Configuration | Performance | Ops/sec | Best For |
 |--------------|-------------|---------|----------|
-| **Performance Config** | **1.72ms ± 0.07ms** | **582** | High-throughput data processing |
-| ML Config | 4.94ms ± 0.25ms | 202 | ML-specific optimizations |
-| API Config | 4.96ms ± 0.13ms | 202 | Consistent API responses |
-| Strict Config | 4.98ms ± 0.13ms | 201 | Type safety, debugging |
-| Default | 4.93ms ± 0.12ms | 203 | General use |
+| **Performance Config** | **1.64ms ± 0.15ms** | **610** | High-throughput data processing |
+| ML Config | 4.75ms ± 0.20ms | 211 | ML-specific optimizations |
+| API Config | 4.72ms ± 0.15ms | 212 | Consistent API responses |
+| Default | 4.83ms ± 0.08ms | 207 | General use |
+| Strict Config | 5.92ms ± 2.35ms | 169 | Type safety, debugging |
 
 ### Key Performance Insights
 
-1. **Performance Config**: **3.4x faster** for large DataFrames (1.72ms vs 4.93ms default)
-2. **Strict Config**: Preserves maximum type information but **15x slower** for complex types
+1. **Performance Config**: **2.9x faster** for large DataFrames (1.64ms vs 4.83ms default)
+2. **Strict Config**: Preserves maximum type information but **13.6x slower** for complex types
 3. **Configuration Overhead**: Minimal for simple data, significant performance gains with optimization
-4. **NEW Template System**: **24x faster deserialization** for repeated structured data
+4. **Custom Serializers**: **2.7x faster** than auto-detection (2.13ms vs 5.72ms)
 
 ### Date Format Performance
 
@@ -178,11 +170,11 @@ total_round_trip  = 2.50ms ± 0.08ms      # 32% improvement
 
 | Format | Performance | Best For |
 |--------|-------------|----------|
-| **Unix Timestamp** | **3.72ms ± 0.12ms** | Compact, fast parsing |
-| Unix Milliseconds | 3.78ms ± 0.12ms | JavaScript compatibility |
-| ISO Format | 3.83ms ± 0.15ms | Standards compliance |
-| String Format | 3.86ms ± 0.07ms | Human readability |
-| Custom Format | 5.72ms ± 0.11ms | Specific requirements |
+| **Unix Timestamp** | **3.51ms ± 0.13ms** | Compact, fast parsing |
+| Unix Milliseconds | 3.52ms ± 0.09ms | JavaScript compatibility |
+| ISO Format | 3.68ms ± 0.14ms | Standards compliance |
+| String Format | 3.66ms ± 0.11ms | Human readability |
+| Custom Format | 5.19ms ± 0.09ms | Specific requirements |
 
 ### NaN Handling Performance
 
@@ -190,10 +182,10 @@ total_round_trip  = 2.50ms ± 0.08ms      # 32% improvement
 
 | Strategy | Performance | Trade-off |
 |----------|-------------|-----------|
-| **Convert to NULL** | **3.05ms ± 0.03ms** | JSON compatibility |
-| Keep Original | 3.23ms ± 0.08ms | Exact representation |
-| Convert to String | 3.26ms ± 0.09ms | Preserve information |
-| Drop Values | 3.33ms ± 0.07ms | Clean data |
+| **Convert to NULL** | **3.29ms ± 0.03ms** | JSON compatibility |
+| Keep Original | 3.41ms ± 0.14ms | Exact representation |
+| Convert to String | 3.54ms ± 0.04ms | Preserve information |
+| Drop Values | 3.55ms ± 0.10ms | Clean data |
 
 ### Type Coercion Impact
 
@@ -201,9 +193,9 @@ total_round_trip  = 2.50ms ± 0.08ms      # 32% improvement
 
 | Strategy | Performance | Data Fidelity |
 |----------|-------------|---------------|
-| **Aggressive** | **1.59ms ± 0.05ms** | Simplified types |
-| Safe (Default) | 1.62ms ± 0.07ms | Balanced approach |
-| Strict | 1.92ms ± 0.14ms | Maximum preservation |
+| **Safe (Default)** | **1.79ms ± 0.08ms** | Balanced approach |
+| Aggressive | 1.86ms ± 0.05ms | Simplified types |
+| Strict | 2.15ms ± 0.01ms | Maximum preservation |
 
 ### DataFrame Orientation Performance
 
@@ -211,23 +203,23 @@ total_round_trip  = 2.50ms ± 0.08ms      # 32% improvement
 
 | Orientation | Performance | Best For |
 |-------------|-------------|----------|
-| **Values** | **0.05ms ± 0.00ms** | Array-like data |
-| Dict | 0.16ms ± 0.03ms | Column-oriented |
-| List | 0.17ms ± 0.00ms | Simple columns |
-| Split | 0.18ms ± 0.01ms | Structured metadata |
+| **Values** | **0.06ms ± 0.00ms** | Array-like data |
+| Dict | 0.13ms ± 0.01ms | Column-oriented |
+| List | 0.16ms ± 0.01ms | Simple columns |
+| Split | 0.18ms ± 0.02ms | Structured metadata |
 | Records | 0.19ms ± 0.00ms | Row-oriented |
-| Index | 0.19ms ± 0.00ms | Index-focused |
+| Index | 0.20ms ± 0.01ms | Index-focused |
 
 **Large DataFrames (5000 rows)**:
 
 | Orientation | Performance | Memory Efficiency |
 |-------------|-------------|-------------------|
-| **Values** | **0.28ms ± 0.02ms** | Minimal overhead |
-| List | 1.24ms ± 0.03ms | Column arrays |
-| Split | 1.76ms ± 0.09ms | Structured format |
-| Dict | 1.79ms ± 0.05ms | Column mapping |
-| Records | 2.60ms ± 0.07ms | Row objects |
-| Index | 2.66ms ± 0.08ms | Index preservation |
+| **Values** | **0.94ms ± 0.67ms** | Minimal overhead |
+| List | 1.26ms ± 0.03ms | Column arrays |
+| Split | 1.69ms ± 0.07ms | Structured format |
+| Dict | 1.69ms ± 0.05ms | Column mapping |
+| Index | 2.59ms ± 0.08ms | Index preservation |
+| Records | 3.90ms ± 2.68ms | Row objects |
 
 ### Memory Usage Analysis
 
@@ -243,7 +235,7 @@ total_round_trip  = 2.50ms ± 0.08ms      # 32% improvement
 
 ## Why We Compare with Pickle
 
-**Pickle is the natural comparison point** because it's the only other tool that can serialize complex Python objects like ML models and DataFrames. However, the 7.2x performance difference tells only part of the story.
+**Pickle is the natural comparison point** because it's the only other tool that can serialize complex Python objects like ML models and DataFrames. However, the 9.3x performance difference tells only part of the story.
 
 ### 🏆 When Pickle Wins
 ```python
@@ -251,7 +243,7 @@ total_round_trip  = 2.50ms ± 0.08ms      # 32% improvement
 import pickle
 start = time.time()
 with open('model.pkl', 'wb') as f:
-    pickle.dump(complex_ml_pipeline, f)  # 0.98ms
+    pickle.dump(complex_ml_pipeline, f)  # 0.79ms
 print(f"Saved in {time.time() - start:.1f}ms")
 
 # ✅ Fastest option for Python-only workflows
@@ -266,7 +258,7 @@ import json
 import datason as ds
 
 start = time.time()
-json_data = ds.serialize(complex_ml_pipeline)  # 7.04ms
+json_data = ds.serialize(complex_ml_pipeline)  # 7.34ms
 with open('model.json', 'w') as f:
     json.dump(json_data, f)
 print(f"Saved in {time.time() - start:.1f}ms")
@@ -281,16 +273,16 @@ print(f"Saved in {time.time() - start:.1f}ms")
 ### 📊 The Real Tradeoff
 ```python
 # Performance vs Versatility
-pickle_speed = 0.98  # ms
-datason_speed = 7.04  # ms
-overhead = 6.06  # ms extra
+pickle_speed = 0.79  # ms
+datason_speed = 7.34  # ms
+overhead = 6.55  # ms extra
 
 # But with configuration optimization:
-datason_performance_config = 1.82  # ms
-optimized_overhead = 0.84  # ms extra
+datason_performance_config = 1.66  # ms
+optimized_overhead = 0.87  # ms extra
 
 # Questions to ask:
-# - Is 0.84-6.06ms overhead significant for your use case?
+# - Is 0.87-6.55ms overhead significant for your use case?
 # - Do you need cross-language compatibility?  
 # - Do you need human-readable output?
 # - Are you building APIs or microservices?
@@ -309,7 +301,7 @@ from datason import serialize, get_performance_config
 # Use optimized configuration
 config = get_performance_config()
 result = serialize(data, config=config)
-# → Up to 7x faster for large DataFrames
+# → Up to 2.9x faster for large DataFrames
 ```
 
 ### 🎯 Balanced Performance
@@ -344,12 +336,12 @@ result = serialize(data, config=config)
 
 ### vs Standard JSON
 - **Compatibility**: datason handles 20+ data types vs JSON's 6 basic types
-- **Overhead**: Only 1.53x for compatible data (vs 3-10x for many JSON alternatives)
+- **Overhead**: Only 1.5x for compatible data (vs 3-10x for many JSON alternatives)
 - **Safety**: Graceful handling of NaN/Infinity vs JSON's errors
 - **Configuration**: Tunable behavior vs fixed behavior
 
 ### vs Pickle  
-- **Speed**: 1.86x slower (optimized) to 7.2x slower (default) but provides human-readable JSON
+- **Speed**: 9.3x slower but provides human-readable JSON
 - **Portability**: Cross-language compatible vs Python-only
 - **Security**: No arbitrary code execution risks
 - **Debugging**: Human-readable output for troubleshooting
@@ -366,7 +358,7 @@ result = serialize(data, config=config)
 
 | Your Situation | Recommended Config | Performance Gain |
 |----------------|-------------------|------------------|
-| **High-throughput data pipelines** | `get_performance_config()` | Up to 7x faster |
+| **High-throughput data pipelines** | `get_performance_config()` | Up to 2.9x faster |
 | **ML model APIs** | `get_ml_config()` | Optimized for numeric data |
 | **REST API responses** | `get_api_config()` | Consistent, readable output |
 | **Debugging/development** | `get_strict_config()` | Maximum type information |
@@ -510,10 +502,10 @@ result = jsonpickle.encode(data)  # 0.10ms - 10,183 ops/sec
 
 The Pickle Bridge complements datason's existing performance profile:
 
-- **Simple data serialization**: 0.62ms (1.53x JSON overhead)
-- **Complex data serialization**: 7.04ms (datetime/UUID objects)
+- **Simple data serialization**: 0.66ms (1.5x JSON overhead)
+- **Complex data serialization**: 7.34ms (datetime/UUID objects)
 - **Pickle Bridge conversion**: 0.43-1.87ms (varies by data size)
-- **Round-trip performance**: 3.66ms (serialize + deserialize)
+- **Round-trip performance**: 4.40ms (serialize + deserialize)
 
 **Context**: Pickle Bridge adds another tool to datason's ecosystem, specifically targeting the ML migration use case with strong security guarantees.
 
@@ -579,8 +571,8 @@ Both scripts:
 - **Enterprise security**: Prevent arbitrary code execution from pickle files
 
 ## Performance Tips
-1. **Choose the right configuration**: 7x performance difference between configs
-2. **Use custom serializers**: 3.4x faster for known object types
+1. **Choose the right configuration**: 2.9x performance difference between configs
+2. **Use custom serializers**: 2.7x faster for known object types
 3. **Optimize date formats**: Unix timestamps are fastest
 4. **Batch operations**: Group objects for better throughput
 5. **Profile your use case**: Run benchmarks with your actual data
@@ -595,8 +587,9 @@ Both scripts:
 
 | Date | Version | Change | Performance Impact |
 |------|---------|--------|-------------------|
-| 2025-05-31 | 0.1.4 | Configuration system added | 7x speedup possible with optimization |
-| 2025-06-01 | 0.1.4 | Baseline benchmarks updated | Current performance documented |
+| 2025-06-06 | 0.5.0 | **Performance breakthrough & security fixes** | **1.6M+ elements/sec, critical security hardening** |
+| 2025-06-02 | 0.4.5 | Template deserialization & chunked processing | 24x deserialization speedup |
+| 2025-06-01 | 0.2.0 | Configuration system added | Up to 2.9x speedup possible with optimization |
 | 2025-05-30 | 0.3.0 | **Pickle Bridge feature added** | **New: ML pickle-to-JSON conversion (2,318 ops/sec)** |
 
 ## Running Benchmarks
@@ -635,5 +628,5 @@ pytest tests/test_performance.py -v
 
 ---
 
-*Last updated: June 2, 2025*  
-*Benchmarks reflect datason v0.4.5 with enhanced configuration system*
+*Last updated: June 3, 2025*  
+*Benchmarks reflect datason v0.5.0 with performance optimizations and security hardening*
