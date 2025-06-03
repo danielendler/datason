@@ -12,6 +12,7 @@ on:
 permissions:
   contents: write
   id-token: write
+  actions: write
 
 jobs:
   bump-and-release:
@@ -38,6 +39,14 @@ jobs:
     - name: 🔍 Get Current Version
       id: current_version
       run: |
+        # Get version from pyproject.toml
+        PROJECT_VERSION=$(python -c "
+        import toml
+        with open('pyproject.toml', 'r') as f:
+            data = toml.load(f)
+        print(data['project']['version'])
+        ")
+
         # Try to get version from PyPI first
         PYPI_VERSION=$(python -c "
         import requests
@@ -52,19 +61,74 @@ jobs:
             print('NOT_FOUND')
         " 2>/dev/null)
 
-        if [ "$PYPI_VERSION" = "NOT_FOUND" ]; then
-          # Fallback to latest git tag
-          CURRENT_VERSION=$(git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//' || echo "0.3.0")
-          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.3.0")
-        else
+        # Get latest git tag
+        LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "none")
+        GIT_VERSION=$(echo "$LATEST_TAG" | sed 's/^v//')
+
+        echo "project=$PROJECT_VERSION" >> $GITHUB_OUTPUT
+        echo "pypi=$PYPI_VERSION" >> $GITHUB_OUTPUT
+        echo "git=$GIT_VERSION" >> $GITHUB_OUTPUT
+        echo "latest_tag=$LATEST_TAG" >> $GITHUB_OUTPUT
+
+        echo "📋 Project file version: $PROJECT_VERSION"
+        echo "📋 PyPI version: $PYPI_VERSION"
+        echo "📋 Git tag version: $GIT_VERSION"
+        echo "📋 Latest tag: $LATEST_TAG"
+
+        # Determine current version with priority: PyPI > Git > Project
+        if [ "$PYPI_VERSION" != "NOT_FOUND" ]; then
           CURRENT_VERSION="$PYPI_VERSION"
-          LATEST_TAG="v$PYPI_VERSION"
+          SOURCE="PyPI"
+        elif [ "$LATEST_TAG" != "none" ]; then
+          CURRENT_VERSION="$GIT_VERSION"
+          SOURCE="Git tag"
+        else
+          CURRENT_VERSION="$PROJECT_VERSION"
+          SOURCE="Project file"
         fi
 
         echo "current=$CURRENT_VERSION" >> $GITHUB_OUTPUT
-        echo "latest_tag=$LATEST_TAG" >> $GITHUB_OUTPUT
-        echo "📋 Current version: $CURRENT_VERSION"
-        echo "📋 Latest tag: $LATEST_TAG"
+        echo "source=$SOURCE" >> $GITHUB_OUTPUT
+        echo "🎯 Using version: $CURRENT_VERSION (from $SOURCE)"
+
+    - name: 🔎 Check Version Alignment
+      id: alignment_check
+      run: |
+        PROJECT="${{ steps.current_version.outputs.project }}"
+        PYPI="${{ steps.current_version.outputs.pypi }}"
+        GIT="${{ steps.current_version.outputs.git }}"
+
+        # Check if all versions are aligned
+        MISALIGNED=false
+        WARNINGS=""
+
+        if [ "$PYPI" != "NOT_FOUND" ] && [ "$PROJECT" != "$PYPI" ]; then
+          MISALIGNED=true
+          WARNINGS="$WARNINGS\n⚠️ Project file ($PROJECT) differs from PyPI ($PYPI)"
+        fi
+
+        if [ "$GIT" != "none" ] && [ "$GIT" != "" ] && [ "$PROJECT" != "$GIT" ]; then
+          MISALIGNED=true
+          WARNINGS="$WARNINGS\n⚠️ Project file ($PROJECT) differs from Git tag ($GIT)"
+        fi
+
+        if [ "$PYPI" != "NOT_FOUND" ] && [ "$GIT" != "none" ] && [ "$GIT" != "" ] && [ "$PYPI" != "$GIT" ]; then
+          MISALIGNED=true
+          WARNINGS="$WARNINGS\n⚠️ PyPI ($PYPI) differs from Git tag ($GIT)"
+        fi
+
+        echo "misaligned=$MISALIGNED" >> $GITHUB_OUTPUT
+        echo "warnings<<EOF" >> $GITHUB_OUTPUT
+        echo -e "$WARNINGS" >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
+
+        if [ "$MISALIGNED" = "true" ]; then
+          echo "🚨 Version misalignment detected!"
+          echo -e "$WARNINGS"
+          echo "Consider aligning versions before proceeding with release."
+        else
+          echo "✅ All versions are aligned"
+        fi
 
     - name: 🔎 Check for Code Changes
       id: changes_check
@@ -72,7 +136,7 @@ jobs:
         LATEST_TAG="${{ steps.current_version.outputs.latest_tag }}"
 
         # Get the commit hash that the latest tag points to
-        if git rev-parse --verify "$LATEST_TAG" >/dev/null 2>&1; then
+        if [ "$LATEST_TAG" != "none" ] && git rev-parse --verify "$LATEST_TAG" >/dev/null 2>&1; then
           TAG_COMMIT=$(git rev-parse "$LATEST_TAG")
           CURRENT_COMMIT=$(git rev-parse HEAD)
 
@@ -106,6 +170,15 @@ jobs:
 
         **Current version**: `${{ steps.current_version.outputs.current }}`
         **Latest tag**: `${{ steps.current_version.outputs.latest_tag }}`
+
+        ### 🔍 Version Status
+        - **Project file**: `${{ steps.current_version.outputs.project }}`
+        - **PyPI**: `${{ steps.current_version.outputs.pypi }}`
+        - **Git tag**: `${{ steps.current_version.outputs.git }}`
+        - **Using**: `${{ steps.current_version.outputs.current }}` (from ${{ steps.current_version.outputs.source }})
+
+        ${{ steps.alignment_check.outputs.misaligned == 'true' && '### ⚠️ Version Alignment Warnings' || '' }}
+        ${{ steps.alignment_check.outputs.warnings }}
 
         ### 💡 Why was this skipped?
         The current code is identical to what was already released.
@@ -221,6 +294,15 @@ jobs:
         **New version**: `${{ steps.next_version.outputs.next }}`
         **Tag created**: `${{ steps.next_version.outputs.tag }}`
         **Commits included**: ${{ steps.changes_check.outputs.commits_ahead }}
+
+        ### 🔍 Version Sources (Pre-Bump)
+        - **Project file**: `${{ steps.current_version.outputs.project }}`
+        - **PyPI**: `${{ steps.current_version.outputs.pypi }}`
+        - **Git tag**: `${{ steps.current_version.outputs.git }}`
+        - **Used**: `${{ steps.current_version.outputs.current }}` (from ${{ steps.current_version.outputs.source }})
+
+        ${{ steps.alignment_check.outputs.misaligned == 'true' && '### ⚠️ Version Alignment Warnings (Pre-Bump)' || '' }}
+        ${{ steps.alignment_check.outputs.warnings }}
 
         ### 🔄 Next Steps
         The release workflow has been triggered and will handle:
