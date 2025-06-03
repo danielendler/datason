@@ -17,7 +17,7 @@ Usage:
 import argparse
 import importlib.util
 import json
-import subprocess
+import subprocess  # nosec B404 - Safe subprocess usage for git commands
 import sys
 import time
 from datetime import datetime, timezone
@@ -59,13 +59,13 @@ class OnDemandPerformanceAnalyzer:
         """Get current git commit and branch information."""
         try:
             # Get current commit hash
-            commit = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd="..", text=True).strip()
+            commit = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd="..", text=True).strip()  # nosec B603, B607 - Safe git command
 
             # Get current branch
-            branch = subprocess.check_output(["git", "rev-parse", "--abbrev-ref", "HEAD"], cwd="..", text=True).strip()
+            branch = subprocess.check_output(["git", "rev-parse", "--abbrev-ref", "HEAD"], cwd="..", text=True).strip()  # nosec B603, B607 - Safe git command
 
             # Check if there are uncommitted changes
-            status = subprocess.check_output(["git", "status", "--porcelain"], cwd="..", text=True).strip()
+            status = subprocess.check_output(["git", "status", "--porcelain"], cwd="..", text=True).strip()  # nosec B603, B607 - Safe git command
 
             return {
                 "commit": commit,
