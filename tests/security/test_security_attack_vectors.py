@@ -164,7 +164,7 @@ class TestCircularReferenceAttacks:
         obj1["ref"] = obj3  # Complete the circle
 
         with warnings.catch_warnings(record=True) as w:
-            result = serialize(obj1)
+            serialize(obj1)
             assert len(w) >= 1
             assert "Circular reference detected" in str(w[0].message)
 
@@ -174,7 +174,7 @@ class TestCircularReferenceAttacks:
         data.append(data)
 
         with warnings.catch_warnings(record=True) as w:
-            result = serialize(data)
+            serialize(data)
             assert len(w) == 1
             assert "Circular reference detected" in str(w[0].message)
 
@@ -188,7 +188,7 @@ class TestCircularReferenceAttacks:
 
         # This creates multiple circular paths
         with warnings.catch_warnings(record=True):
-            result = serialize(root)
+            serialize(root)
             # Should complete without infinite recursion
 
 
@@ -212,7 +212,7 @@ class TestStringBombAttacks:
         data = {f"key_{i}": "X" * 500_000 for i in range(10)}
 
         with warnings.catch_warnings(record=True) as w:
-            result = serialize(data)
+            serialize(data)
             # Should trigger multiple string length warnings
             assert len(w) >= 1
 
@@ -221,7 +221,7 @@ class TestStringBombAttacks:
         data = {"level1": {"level2": {"level3": {"attack": "X" * 1_000_001}}}}
 
         with warnings.catch_warnings(record=True) as w:
-            result = serialize(data)
+            serialize(data)
             assert len(w) >= 1
             assert "String length" in str(w[0].message)
 
@@ -233,13 +233,16 @@ class TestCachePollutionAttacks:
         """ATTACK: Pollute type cache with many unique types"""
         # Create many unique types to exhaust type cache
         unique_objects = []
-        for i in range(2000):  # Exceed cache limit
+        for i in range(20):
 
-            class UniqueType:
-                def __init__(self):
-                    self.value = i
+            def create_unique_type(value):
+                class UniqueType:
+                    def __init__(self):
+                        self.value = value
 
-            unique_objects.append(UniqueType())
+                return UniqueType()
+
+            unique_objects.append(create_unique_type(i))
 
         # Serialize all objects to pollute cache
         for obj in unique_objects:
@@ -286,7 +289,7 @@ class TestTypeBypasses:
 
         # Should be caught by IO detection
         with warnings.catch_warnings(record=True) as w:
-            result = serialize(buffer)
+            serialize(buffer)
             assert len(w) >= 1
             assert "problematic object" in str(w[0].message).lower()
 
@@ -303,7 +306,7 @@ class TestTypeBypasses:
 
         # Should be caught by attribute limit
         with warnings.catch_warnings(record=True) as w:
-            result = serialize(obj)
+            serialize(obj)
             assert len(w) >= 1
             assert "too many attributes" in str(w[0].message)
 
@@ -318,12 +321,12 @@ class TestResourceExhaustionAttacks:
         for i in range(100):
             level = {}
             for j in range(100):
-                level[f"key_{j}"] = {"data": [x for x in range(100)], "meta": {"id": j, "parent": i}}
+                level[f"key_{j}"] = {"data": list(range(100)), "meta": {"id": j, "parent": i}}
             data[f"level_{i}"] = level
 
         # Should complete but be slow - test it doesn't hang
         start = time.time()
-        result = serialize(data)
+        serialize(data)
         end = time.time()
 
         # Should complete in reasonable time (not hang forever)

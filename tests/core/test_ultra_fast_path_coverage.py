@@ -223,7 +223,7 @@ class TestComplexExceptionHandling:
 
         obj = RecursiveObject()
 
-        with warnings.catch_warnings(record=True) as w:
+        with warnings.catch_warnings(record=True):
             warnings.simplefilter("always")
             result = serialize(obj)
 
@@ -240,7 +240,7 @@ class TestComplexExceptionHandling:
 
         obj = VeryLongRepr()
 
-        with warnings.catch_warnings(record=True) as w:
+        with warnings.catch_warnings(record=True):
             warnings.simplefilter("always")
             result = serialize(obj)
 
@@ -346,7 +346,7 @@ class TestConfigurationEdgeCases:
         with patch.object(config, "custom_serializers", {"datetime": lambda x: 1 / 0}):
             data = {"date": datetime.now()}
 
-            with warnings.catch_warnings(record=True) as w:
+            with warnings.catch_warnings(record=True):
                 warnings.simplefilter("always")
                 result = serialize(data, config=config)
 
@@ -370,7 +370,7 @@ class TestMemoryPoolingEdgeCases:
 
         try:
             result = serialize(data)
-        except:
+        except Exception:
             pass  # Exception is expected
 
         # Pool should still be in good state for next operation
@@ -390,7 +390,7 @@ class TestMemoryPoolingEdgeCases:
 
         try:
             result = serialize(data)
-        except:
+        except Exception:
             pass  # Exception is expected
 
         # Pool should still work for next operation
