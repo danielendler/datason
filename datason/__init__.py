@@ -97,7 +97,32 @@ except ImportError:
 # Always import datetime_utils module for tests
 from . import datetime_utils  # noqa: F401
 
-__version__ = "0.4.5"
+
+def _get_version() -> str:
+    """Get version from pyproject.toml or fallback to a default."""
+    import os
+    import re
+
+    # Get the project root directory (parent of datason package)
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    project_root = os.path.dirname(current_dir)
+    pyproject_path = os.path.join(project_root, "pyproject.toml")
+
+    try:
+        with open(pyproject_path, encoding="utf-8") as f:
+            content = f.read()
+            # Use regex to find version = "x.y.z" in the project section
+            match = re.search(r'^\s*version\s*=\s*["\']([^"\']+)["\']', content, re.MULTILINE)
+            if match:
+                return match.group(1)
+    except (FileNotFoundError, OSError):
+        pass
+
+    # Fallback version if pyproject.toml is not found or version not found
+    return "0.4.5"
+
+
+__version__ = _get_version()
 __author__ = "datason Contributors"
 __license__ = "MIT"
 
