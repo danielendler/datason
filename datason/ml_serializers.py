@@ -27,6 +27,15 @@ _LAZY_IMPORTS = {
 
 def _lazy_import_torch():
     """Lazily import torch."""
+    # Check if torch has been patched to None for testing
+    import sys
+
+    current_module = sys.modules.get(__name__)
+    if current_module and hasattr(current_module, "__dict__") and "torch" in current_module.__dict__:
+        patched_value = current_module.__dict__["torch"]
+        if patched_value is None:
+            return None
+
     if _LAZY_IMPORTS["torch"] is None:
         try:
             import torch
@@ -39,6 +48,15 @@ def _lazy_import_torch():
 
 def _lazy_import_tensorflow():
     """Lazily import tensorflow."""
+    # Check if tf has been patched to None for testing
+    import sys
+
+    current_module = sys.modules.get(__name__)
+    if current_module and hasattr(current_module, "__dict__") and "tf" in current_module.__dict__:
+        patched_value = current_module.__dict__["tf"]
+        if patched_value is None:
+            return None
+
     if _LAZY_IMPORTS["tensorflow"] is None:
         try:
             import tensorflow as tf
@@ -51,6 +69,15 @@ def _lazy_import_tensorflow():
 
 def _lazy_import_jax():
     """Lazily import jax."""
+    # Check if jax has been patched to None for testing
+    import sys
+
+    current_module = sys.modules.get(__name__)
+    if current_module and hasattr(current_module, "__dict__") and "jax" in current_module.__dict__:
+        patched_value = current_module.__dict__["jax"]
+        if patched_value is None:
+            return None, None
+
     if _LAZY_IMPORTS["jax"] is None or _LAZY_IMPORTS["jnp"] is None:
         try:
             import jax
@@ -69,6 +96,16 @@ def _lazy_import_jax():
 
 def _lazy_import_sklearn():
     """Lazily import sklearn."""
+    # Check if sklearn or BaseEstimator has been patched to None for testing
+    import sys
+
+    current_module = sys.modules.get(__name__)
+    if current_module and hasattr(current_module, "__dict__"):
+        if "sklearn" in current_module.__dict__ and current_module.__dict__["sklearn"] is None:
+            return None, None
+        if "BaseEstimator" in current_module.__dict__ and current_module.__dict__["BaseEstimator"] is None:
+            return None, None
+
     if _LAZY_IMPORTS["sklearn"] is None or _LAZY_IMPORTS["BaseEstimator"] is None:
         try:
             import sklearn
@@ -87,6 +124,15 @@ def _lazy_import_sklearn():
 
 def _lazy_import_scipy():
     """Lazily import scipy."""
+    # Check if scipy has been patched to None for testing
+    import sys
+
+    current_module = sys.modules.get(__name__)
+    if current_module and hasattr(current_module, "__dict__") and "scipy" in current_module.__dict__:
+        patched_value = current_module.__dict__["scipy"]
+        if patched_value is None:
+            return None
+
     if _LAZY_IMPORTS["scipy"] is None:
         try:
             import scipy.sparse
@@ -99,6 +145,15 @@ def _lazy_import_scipy():
 
 def _lazy_import_pil():
     """Lazily import PIL."""
+    # Check if Image has been patched to None for testing
+    import sys
+
+    current_module = sys.modules.get(__name__)
+    if current_module and hasattr(current_module, "__dict__") and "Image" in current_module.__dict__:
+        patched_value = current_module.__dict__["Image"]
+        if patched_value is None:
+            return None
+
     if _LAZY_IMPORTS["PIL_Image"] is None:
         try:
             from PIL import Image
@@ -111,6 +166,15 @@ def _lazy_import_pil():
 
 def _lazy_import_transformers():
     """Lazily import transformers."""
+    # Check if transformers has been patched to None for testing
+    import sys
+
+    current_module = sys.modules.get(__name__)
+    if current_module and hasattr(current_module, "__dict__") and "transformers" in current_module.__dict__:
+        patched_value = current_module.__dict__["transformers"]
+        if patched_value is None:
+            return None
+
     if _LAZY_IMPORTS["transformers"] is None:
         try:
             import transformers
@@ -397,3 +461,29 @@ def get_ml_library_info() -> Dict[str, bool]:
         "PIL": _lazy_import_pil() is not None,
         "transformers": _lazy_import_transformers() is not None,
     }
+
+
+# Module-level attribute access for testing patches
+def __getattr__(name: str):
+    """Support dynamic attribute access for test patches."""
+    if name == "torch":
+        return _lazy_import_torch()
+    elif name == "tf":
+        return _lazy_import_tensorflow()
+    elif name == "jax":
+        jax, _ = _lazy_import_jax()
+        return jax
+    elif name == "sklearn":
+        sklearn, _ = _lazy_import_sklearn()
+        return sklearn
+    elif name == "BaseEstimator":
+        _, base_estimator = _lazy_import_sklearn()
+        return base_estimator
+    elif name == "scipy":
+        return _lazy_import_scipy()
+    elif name == "Image":
+        return _lazy_import_pil()
+    elif name == "transformers":
+        return _lazy_import_transformers()
+    else:
+        raise AttributeError(f"module '{__name__}' has no attribute '{name}'")

@@ -365,10 +365,7 @@ class OnDemandPerformanceAnalyzer:
             quick = True
 
         # Run analysis
-        if quick:
-            results = self.run_quick_analysis()
-        else:
-            results = self.run_comprehensive_analysis()
+        results = self.run_quick_analysis() if quick else self.run_comprehensive_analysis()
 
         # Save results
         label = "quick" if quick else "comprehensive"
@@ -404,7 +401,7 @@ class OnDemandPerformanceAnalyzer:
             times = []
             for _ in range(5):
                 start_time = time.time()
-                result = datason.serialize(test_data)
+                _ = datason.serialize(test_data)  # Use underscore for unused result
                 end_time = time.time()
                 times.append((end_time - start_time) * 1000)
 

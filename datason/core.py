@@ -280,10 +280,14 @@ def serialize(
         )
         return f"<{obj_type.__name__} object at {hex(id(obj))}>"
 
-    # Additional check for any mock objects
-    if "mock" in str(obj_type).lower() or "Mock" in obj_type.__name__:
+    # Additional check for unittest mock objects specifically (more targeted)
+    if (
+        hasattr(obj, "__class__")
+        and obj_type.__module__ in ("unittest.mock", "mock")
+        and ("mock" in str(obj_type).lower() or "Mock" in obj_type.__name__)
+    ):
         warnings.warn(
-            f"Detected mock object of type {obj_type.__name__}. Using safe representation.",
+            f"Detected unittest mock object of type {obj_type.__name__}. Using safe representation.",
             stacklevel=2,
         )
         return f"<{obj_type.__name__} object>"
@@ -307,6 +311,9 @@ def serialize(
                 and not config.include_type_hints
                 and config.max_depth >= 10
                 and config.max_string_length >= 1000
+                and (
+                    not isinstance(obj, (dict, list, tuple, str)) or len(obj) <= config.max_size
+                )  # NEW: Check size limits only for sized objects
             )
         )
         and _is_fully_json_compatible(obj, max_depth=3)
@@ -329,6 +336,7 @@ def serialize(
         )
         and isinstance(obj, (dict, list, tuple))
         and len(obj) > 10  # Only use for larger collections where overhead matters
+        and (config is None or len(obj) <= config.max_size)  # NEW: Check size limits after isinstance check
     ):
         iterative_result = _serialize_iterative_path(obj, config)
         if iterative_result is not None:
@@ -400,6 +408,7 @@ def serialize(
                     and config.max_depth >= 1000
                     and config.max_string_length
                     >= MAX_STRING_LENGTH  # NEW: Don't optimize if string truncation might be needed
+                    and len(obj) <= config.max_size  # NEW: Don't optimize if size exceeds limit
                 )
             )  # Only optimize with reasonable depth limits
             and _is_already_serialized_dict(obj)
@@ -424,6 +433,7 @@ def serialize(
                     and config.max_depth >= 1000
                     and config.max_string_length
                     >= MAX_STRING_LENGTH  # NEW: Don't optimize if string truncation might be needed
+                    and len(obj) <= config.max_size  # NEW: Don't optimize if size exceeds limit
                 )
             )  # Only optimize with reasonable depth limits
             and _is_already_serialized_list(obj)
@@ -973,8 +983,11 @@ def _is_json_serializable_basic_type(value: Any) -> bool:
     """Check if a value is a JSON-serializable basic type."""
     if value is None:
         return True
-    if isinstance(value, (str, int, bool)):
+    if isinstance(value, (int, bool)):
         return True
+    if isinstance(value, str):
+        # Check string length against the default limit
+        return len(value) <= MAX_STRING_LENGTH
     if isinstance(value, float):
         # NaN and Inf are not JSON serializable, but we handle them specially
         return not (value != value or value in (float("inf"), float("-inf")))  # value != value checks for NaN
@@ -1758,8 +1771,13 @@ def _is_fully_json_compatible(obj: Any, max_depth: int = 3, _current_depth: int 
     obj_type = type(obj)
 
     # Handle primitives with zero function calls
-    if obj_type in (_TYPE_STR, _TYPE_INT, _TYPE_BOOL, _TYPE_NONE):
+    if obj_type in (_TYPE_INT, _TYPE_BOOL, _TYPE_NONE):
         return True
+
+    # Handle strings with length check
+    if obj_type is _TYPE_STR:
+        # Strings longer than MAX_STRING_LENGTH need processing
+        return len(obj) <= MAX_STRING_LENGTH
 
     # Handle float with inline NaN/Inf check
     if obj_type is _TYPE_FLOAT:
