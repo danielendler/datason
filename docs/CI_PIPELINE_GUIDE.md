@@ -170,7 +170,7 @@ paths: ['docs/**', 'mkdocs.yml', 'README.md']
 | **Main CI** | Core functionality validation | ~2-3 min | Code changes |
 | **Quality** | Code quality & security | ~30-60s | All changes |
 | **Docs** | Documentation generation | ~1-2 min | Docs changes |
-| **Performance** | Performance regression tracking | ~3-5 min | Performance changes, weekly |
+| **Performance** | Performance regression tracking (informational) | ~3-5 min | Performance changes, weekly |
 | **Publish** | Package distribution | ~2-3 min | Releases |
 
 ## 🏗️ **Test Structure & CI Matrix Alignment**
@@ -440,6 +440,56 @@ strategy:
 - **Quality Pipeline**: 95%+ pass rate (fast feedback catches most issues)
 - **Main CI**: 90%+ pass rate (comprehensive testing)
 - **Docs**: 99%+ pass rate (simple build process)
+
+### **📊 Performance Pipeline Strategy**
+
+**Why Performance Tests Don't Block CI:**
+
+The performance pipeline is **informational only** and doesn't block CI for these important reasons:
+
+1. **Environment Variability**: GitHub Actions runners have inconsistent performance
+2. **Micro-benchmark Noise**: Tests measuring <1ms are highly sensitive to environment
+3. **Hardware Differences**: Local vs CI environments produce different baseline measurements
+4. **False Positive Prevention**: Avoid blocking legitimate code changes due to infrastructure noise
+
+**Environment-Aware Thresholds:**
+
+| Environment | Threshold | Reasoning |
+|-------------|-----------|-----------|
+| **Local Development** | 5% | Stable environment, consistent hardware |
+| **CI (Same Environment)** | 25% | Account for runner variability |
+| **CI (Cross Environment)** | 25%+ | Local baseline vs CI execution |
+
+**How to Interpret Performance Results:**
+
+✅ **Safe to Ignore:**
+- Changes <50% (likely environment noise)
+- First run after environment change
+- Micro-benchmarks showing high variance
+
+⚠️ **Worth Investigating:**
+- Consistent patterns across multiple tests
+- Changes >100% without code explanation
+- Memory usage regressions
+
+🔥 **Action Required:**
+- Changes >200% with clear code correlation
+- New algorithmic complexity introduced
+- Memory leaks or resource issues
+
+**Performance Baseline Management:**
+
+```bash
+# Create new CI baseline (if needed)
+gh workflow run performance.yml -f save_baseline=true
+
+# Local performance testing
+cd benchmarks
+python ci_performance_tracker.py
+
+# Test with different threshold
+PERFORMANCE_REGRESSION_THRESHOLD=15 python ci_performance_tracker.py
+```
 
 ## 🔍 **Troubleshooting**
 

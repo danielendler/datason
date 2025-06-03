@@ -1,4 +1,4 @@
-name: 📊 Performance Tracking
+name: 📊 Performance Tracking (Informational)
 
 on:
   push:
@@ -23,6 +23,11 @@ on:
         required: false
         default: false
         type: boolean
+      regression_threshold:
+        description: 'Regression threshold percentage (default: 25)'
+        required: false
+        default: '25'
+        type: string
 
 permissions:
   contents: read
@@ -31,6 +36,8 @@ permissions:
 
 env:
   PYTHONUNBUFFERED: 1
+  # Environment-aware threshold - CI environments are more variable
+  PERFORMANCE_REGRESSION_THRESHOLD: ${{ github.event.inputs.regression_threshold || '25' }}
 
 jobs:
   performance-test:
@@ -65,31 +72,33 @@ jobs:
     - name: 📂 Create results directory
       run: mkdir -p benchmarks/results
 
-    - name: 📥 Download previous results (if available)
+    - name: 📥 Download previous CI baseline (if available)
       uses: actions/cache@v4
       with:
         path: benchmarks/results
-        key: performance-results-${{ github.repository }}-${{ github.ref_name }}
+        key: performance-baseline-ci-${{ runner.os }}-${{ github.repository }}
         restore-keys: |
-          performance-results-${{ github.repository }}-main
-          performance-results-${{ github.repository }}-
+          performance-baseline-ci-${{ runner.os }}-
 
     - name: 🚀 Run performance benchmarks
       run: |
         cd benchmarks
+        # Set environment-aware threshold
+        export PERFORMANCE_REGRESSION_THRESHOLD="${{ env.PERFORMANCE_REGRESSION_THRESHOLD }}"
         python ci_performance_tracker.py
       env:
         GITHUB_SHA: ${{ github.sha }}
         GITHUB_REF: ${{ github.ref }}
         GITHUB_RUN_ID: ${{ github.run_id }}
         RUNNER_OS: ${{ runner.os }}
+        CI_ENVIRONMENT: true
 
-    - name: 📋 Save baseline (if requested)
-      if: ${{ github.event.inputs.save_baseline == 'true' || github.ref == 'refs/heads/main' && github.event_name == 'schedule' }}
+    - name: 📋 Save baseline (if requested or weekly)
+      if: ${{ github.event.inputs.save_baseline == 'true' || (github.ref == 'refs/heads/main' && github.event_name == 'schedule') }}
       run: |
         cd benchmarks
-        cp results/latest.json results/baseline.json
-        echo "✅ Saved new baseline"
+        cp results/latest.json results/baseline_ci.json
+        echo "✅ Saved new CI baseline"
 
     - name: 📊 Generate performance report
       run: |
@@ -105,20 +114,26 @@ jobs:
 
             # Create GitHub Actions summary
             with open(os.environ['GITHUB_STEP_SUMMARY'], 'w') as f:
-                f.write('# 📊 Performance Test Results\n\n')
+                f.write('# 📊 Performance Test Results (Informational)\n\n')
+                f.write('> **Note**: Performance tests are informational and do not block CI due to environment variability.\n\n')
 
                 if comparison['status'] == 'baseline_created':
                     f.write('✅ **Baseline created successfully**\n\n')
-                    f.write('This is the first run, so results have been saved as the new baseline.\n')
+                    f.write('This is the first CI run, so results have been saved as the new CI baseline.\n')
                 else:
                     f.write(f'📋 **Compared with baseline from:** {comparison[\"baseline_metadata\"].get(\"timestamp\", \"unknown\")}\n\n')
 
+                    # Note about environment differences
+                    if comparison.get('environment_mismatch'):
+                        f.write('⚠️ **Environment Difference Detected**: Baseline from different environment, results may not be directly comparable.\n\n')
+
                     if comparison['regressions']:
-                        f.write(f'## 🔴 Performance Regressions ({len(comparison[\"regressions\"])})\n\n')
-                        f.write('| Test | Change | Current | Baseline |\n')
-                        f.write('|------|--------|---------|----------|\n')
+                        f.write(f'## 🔴 Performance Regressions ({len(comparison[\"regressions\"])}) - Threshold: {os.environ.get(\"PERFORMANCE_REGRESSION_THRESHOLD\", \"25\")}%\n\n')
+                        f.write('| Test | Change | Current | Baseline | Severity |\n')
+                        f.write('|------|--------|---------|----------|----------|\n')
                         for reg in comparison['regressions']:
-                            f.write(f'| {reg[\"test\"]} | {reg[\"change_pct\"]:+.1f}% | {reg[\"current_ms\"]:.2f}ms | {reg[\"baseline_ms\"]:.2f}ms |\n')
+                            severity = '🔥 Major' if reg[\"change_pct\"] > 50 else '⚠️ Minor'
+                            f.write(f'| {reg[\"test\"]} | {reg[\"change_pct\"]:+.1f}% | {reg[\"current_ms\"]:.2f}ms | {reg[\"baseline_ms\"]:.2f}ms | {severity} |\n')
                         f.write('\n')
 
                     if comparison['improvements']:
@@ -131,7 +146,14 @@ jobs:
 
                     if not comparison['regressions'] and not comparison['improvements']:
                         f.write('🟡 **No significant performance changes detected**\n\n')
-                        f.write('All performance metrics are within 5% of baseline values.\n')
+                        f.write(f'All performance metrics are within {os.environ.get(\"PERFORMANCE_REGRESSION_THRESHOLD\", \"25\")}% of baseline values.\n')
+
+                    # Add guidance for interpreting results
+                    f.write('## 📝 Interpreting Results\n\n')
+                    f.write('- **Environment Impact**: CI runners have variable performance; differences <50% may be environment noise\n')
+                    f.write('- **Focus on Patterns**: Look for consistent regressions across multiple tests\n')
+                    f.write('- **Major Regressions**: Changes >100% warrant investigation\n')
+                    f.write('- **Micro-benchmarks**: Tests <1ms are especially susceptible to environment variation\n')
         "
 
     - name: 💾 Upload performance artifacts
@@ -143,31 +165,42 @@ jobs:
           benchmarks/results/*.json
         retention-days: 90
 
-    - name: 💾 Save results cache
+    - name: 💾 Save CI baseline cache
       uses: actions/cache/save@v4
-      if: always()
+      if: github.ref == 'refs/heads/main'
       with:
         path: benchmarks/results
-        key: performance-results-${{ github.repository }}-${{ github.ref_name }}-${{ github.run_id }}
+        key: performance-baseline-ci-${{ runner.os }}-${{ github.repository }}-${{ github.run_id }}
 
-    - name: ❌ Fail if regressions detected
-      if: ${{ hashFiles('benchmarks/results/latest_comparison.json') != '' }}
+    - name: ℹ️ Performance Status (Informational Only)
+      if: always()
       run: |
         cd benchmarks
-        python -c "
-        import json
-        import sys
+        echo "📊 Performance tests completed successfully"
+        echo "✅ Results are informational and do not block CI"
 
-        with open('results/latest_comparison.json', 'r') as f:
-            comparison = json.load(f)
+        if [ -f "results/latest_comparison.json" ]; then
+          python -c "
+          import json
 
-        if comparison.get('regressions'):
-            print(f'❌ Performance regressions detected: {len(comparison[\"regressions\"])} tests')
-            sys.exit(1)
-        else:
-            print('✅ No performance regressions detected')
-            sys.exit(0)
-        "
+          with open('results/latest_comparison.json', 'r') as f:
+              comparison = json.load(f)
+
+          if comparison.get('regressions'):
+              major_regressions = [r for r in comparison['regressions'] if r['change_pct'] > 100]
+              if major_regressions:
+                  print(f'⚠️ Notice: {len(major_regressions)} major performance regressions detected (>100%)')
+                  print('   Consider investigating if this was expected')
+              else:
+                  print(f'ℹ️ Info: {len(comparison[\"regressions\"])} minor performance regressions detected')
+                  print('   Likely due to environment differences')
+          else:
+              print('✅ No significant performance regressions detected')
+          "
+        fi
+
+        # Always exit 0 - performance tests are informational
+        exit 0
 
   # Optional: Generate historical performance charts
   generate-charts:
@@ -248,7 +281,7 @@ jobs:
             test_data = df[df['test'] == test]
             plt.plot(test_data['timestamp'], test_data['time_ms'], marker='o', label=test)
 
-        plt.title('Datason Performance Over Time')
+        plt.title('Datason Performance Over Time (CI Environment)')
         plt.xlabel('Date')
         plt.ylabel('Time (ms)')
         plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')

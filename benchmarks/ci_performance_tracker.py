@@ -256,16 +256,60 @@ class PerformanceRegression:
 
     def compare_with_baseline(self, current_results: Dict[str, Any]) -> Dict[str, Any]:
         """Compare current results with baseline and detect regressions."""
-        baseline = self.load_baseline()
+        # Try CI-specific baseline first, fallback to general baseline
+        ci_baseline_path = os.path.join(self.results_dir, "baseline_ci.json")
+        general_baseline_path = os.path.join(self.results_dir, "baseline.json")
+
+        baseline = None
+        baseline_source = "none"
+
+        # Prefer CI baseline when running in CI
+        if os.environ.get("CI_ENVIRONMENT"):
+            if os.path.exists(ci_baseline_path):
+                with open(ci_baseline_path) as f:
+                    baseline = json.load(f)
+                baseline_source = "ci"
+            elif os.path.exists(general_baseline_path):
+                with open(general_baseline_path) as f:
+                    baseline = json.load(f)
+                baseline_source = "local"
+        else:
+            # Local development - use general baseline
+            if os.path.exists(general_baseline_path):
+                with open(general_baseline_path) as f:
+                    baseline = json.load(f)
+                baseline_source = "local"
+
         if not baseline:
             print("⚠️  No baseline found. Saving current results as baseline.")
-            self.save_baseline(current_results)
+            baseline_path = ci_baseline_path if os.environ.get("CI_ENVIRONMENT") else general_baseline_path
+
+            with open(baseline_path, "w") as f:
+                json.dump(current_results, f, indent=2, default=str)
+            print(f"📋 Saved new baseline: {baseline_path}")
             return {"status": "baseline_created"}
+
+        # Environment-aware threshold
+        threshold = float(os.environ.get("PERFORMANCE_REGRESSION_THRESHOLD", "5"))
+
+        # Adjust threshold based on environment mismatch
+        environment_mismatch = False
+        if baseline_source == "local" and os.environ.get("CI_ENVIRONMENT"):
+            environment_mismatch = True
+            threshold = max(threshold, 25)  # Minimum 25% threshold for environment mismatch
+            print(f"⚠️  Environment mismatch: Using local baseline in CI (threshold: {threshold}%)")
+        elif baseline_source == "ci" and not os.environ.get("CI_ENVIRONMENT"):
+            environment_mismatch = True
+            threshold = max(threshold, 25)
+            print(f"⚠️  Environment mismatch: Using CI baseline locally (threshold: {threshold}%)")
 
         comparison = {
             "status": "compared",
             "baseline_metadata": baseline.get("metadata", {}),
             "current_metadata": current_results.get("metadata", {}),
+            "baseline_source": baseline_source,
+            "environment_mismatch": environment_mismatch,
+            "threshold_used": threshold,
             "performance_changes": {},
             "regressions": [],
             "improvements": [],
@@ -299,8 +343,8 @@ class PerformanceRegression:
                                 "change_pct": change_pct,
                             }
 
-                            # Detect significant changes (>5% threshold)
-                            if change_pct > 5:
+                            # Detect significant changes with environment-aware threshold
+                            if change_pct > threshold:
                                 comparison["regressions"].append(
                                     {
                                         "test": key,
@@ -309,7 +353,7 @@ class PerformanceRegression:
                                         "current_ms": current_time * 1000,
                                     }
                                 )
-                            elif change_pct < -5:
+                            elif change_pct < -threshold:
                                 comparison["improvements"].append(
                                     {
                                         "test": key,
@@ -331,7 +375,7 @@ class PerformanceRegression:
                         "change_pct": change_pct,
                     }
 
-                    if change_pct > 5:
+                    if change_pct > threshold:
                         comparison["regressions"].append(
                             {
                                 "test": key,
@@ -340,7 +384,7 @@ class PerformanceRegression:
                                 "current_ms": current_time * 1000,
                             }
                         )
-                    elif change_pct < -5:
+                    elif change_pct < -threshold:
                         comparison["improvements"].append(
                             {
                                 "test": key,
@@ -357,6 +401,15 @@ def main():
     """Main function for CI execution."""
     print("🎯 Datason CI Performance Tracker")
     print("=" * 50)
+
+    # Environment and threshold info
+    threshold = float(os.environ.get("PERFORMANCE_REGRESSION_THRESHOLD", "5"))
+    ci_env = bool(os.environ.get("CI_ENVIRONMENT"))
+
+    if ci_env:
+        print(f"🌐 Running in CI environment (threshold: {threshold}%)")
+    else:
+        print(f"💻 Running locally (threshold: {threshold}%)")
 
     # Run benchmarks
     suite = StableBenchmarkSuite()
@@ -376,11 +429,17 @@ def main():
 
     print(f"✅ Compared with baseline from {comparison['baseline_metadata'].get('timestamp', 'unknown')}")
 
+    if comparison.get("environment_mismatch"):
+        print(f"⚠️  Environment mismatch detected (using {comparison['threshold_used']}% threshold)")
+    else:
+        print(f"📏 Using {comparison['threshold_used']}% threshold for regression detection")
+
     if comparison["regressions"]:
         print(f"\n🔴 Performance Regressions ({len(comparison['regressions'])}):")
         for reg in comparison["regressions"]:
+            severity = "🔥 MAJOR" if reg["change_pct"] > 100 else "⚠️  minor"
             print(
-                f"  {reg['test']}: {reg['change_pct']:+.1f}% ({reg['current_ms']:.2f}ms vs {reg['baseline_ms']:.2f}ms)"
+                f"  {reg['test']}: {reg['change_pct']:+.1f}% ({reg['current_ms']:.2f}ms vs {reg['baseline_ms']:.2f}ms) {severity}"
             )
 
     if comparison["improvements"]:
@@ -393,15 +452,32 @@ def main():
     if not comparison["regressions"] and not comparison["improvements"]:
         print("🟡 No significant performance changes detected")
 
+    # Provide context about environment impact
+    if comparison.get("environment_mismatch"):
+        print("\nℹ️  Note: Results compared across different environments")
+        print("   Large differences may be due to hardware/OS differences rather than code changes")
+
     # Save comparison results
     comparison_path = os.path.join("benchmarks/results", "latest_comparison.json")
     with open(comparison_path, "w") as f:
         json.dump(comparison, f, indent=2, default=str)
 
-    # Return appropriate exit code
+    # Return appropriate exit code - but only fail for major regressions in CI
     if comparison["regressions"]:
-        print(f"\n❌ Found {len(comparison['regressions'])} performance regressions")
-        return 1
+        major_regressions = [r for r in comparison["regressions"] if r["change_pct"] > 100]
+
+        if ci_env and major_regressions and not comparison.get("environment_mismatch"):
+            # Only fail in CI for major regressions when environments match
+            print(f"\n❌ Found {len(major_regressions)} major performance regressions in CI")
+            return 1
+        else:
+            if comparison.get("environment_mismatch"):
+                print(
+                    f"\n⚠️  Found {len(comparison['regressions'])} regressions, but likely due to environment differences"
+                )
+            else:
+                print(f"\n⚠️  Found {len(comparison['regressions'])} minor performance regressions")
+            return 0
     else:
         print("\n✅ No performance regressions detected")
         return 0
