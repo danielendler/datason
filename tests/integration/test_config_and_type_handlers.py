@@ -63,7 +63,7 @@ class TestSerializationConfig:
         assert config.type_coercion == TypeCoercion.SAFE
         assert config.preserve_decimals is True
         assert config.preserve_complex is True
-        assert config.max_depth == 1000
+        assert config.max_depth == 50
         assert config.sort_keys is False
 
     def test_ml_config(self):
