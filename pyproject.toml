@@ -79,8 +79,22 @@ testpaths = [ "tests/core", "tests/features", "tests/integration", "tests/covera
 python_files = [ "test_*.py",]
 python_classes = [ "Test*",]
 python_functions = [ "test_*",]
-markers = [ "slow: marks tests as slow (deselect with '-m \"not slow\"')", "integration: marks tests as integration tests", "benchmark: marks tests as benchmarks (in tests/benchmarks/)", "core: marks core functionality tests (no optional dependencies)", "coverage: marks coverage boost tests (in tests/coverage/)", "features: marks feature-specific tests", "numpy: marks tests requiring numpy", "pandas: marks tests requiring pandas", "sklearn: marks tests requiring scikit-learn", "ml: marks tests requiring ML libraries (torch, tensorflow, etc.)", "optional: marks tests for optional dependency functionality", "fallback: marks tests for fallback behavior when dependencies are missing",]
-filterwarnings = [ "error", "ignore::UserWarning", "ignore::DeprecationWarning", "ignore::PendingDeprecationWarning",]
+
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+    "benchmark: marks tests as benchmarks (in tests/benchmarks/)",
+    "core: marks core functionality tests (no optional dependencies)",
+    "coverage: marks coverage boost tests (in tests/coverage/)",
+    "features: marks feature-specific tests",
+    "numpy: marks tests requiring numpy",
+    "pandas: marks tests requiring pandas",
+    "sklearn: marks tests requiring scikit-learn",
+    "ml: marks tests requiring ML libraries (torch, tensorflow, etc.)",
+    "optional: marks tests for optional dependency functionality",
+    "fallback: marks tests for fallback behavior when dependencies are missing",
+]
+filterwarnings = [ "error", "default::UserWarning", "ignore::DeprecationWarning", "ignore::PendingDeprecationWarning",]
 
 [tool.coverage.run]
 source = [ "datason",]

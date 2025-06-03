@@ -125,20 +125,17 @@ class TestSecurityMeasuresEdgeCases:
                 assert any("circular" in str(warning.message).lower() for warning in w)
 
     def test_excessive_depth_security_error(self):
-        """Test that excessive depth is handled by circuit breaker."""
-        # Create deeply nested structure
+        """Test that excessive depth raises SecurityError."""
+        # Create deeply nested structure that exceeds MAX_SERIALIZATION_DEPTH (50)
         nested = "value"
-        for _ in range(1005):  # Exceed MAX_SERIALIZATION_DEPTH
+        for _ in range(60):  # Exceed the 50-level limit
             nested = {"level": nested}
 
-        # Should be handled by circuit breaker, not raise SecurityError
-        result = serialize(nested)
+        # Should raise SecurityError due to depth limit
+        with pytest.raises(SecurityError) as exc_info:
+            serialize(nested)
 
-        # Circuit breaker should return a result with emergency information
-        assert isinstance(result, (dict, str))
-        # Should contain circuit breaker indication
-        result_str = str(result)
-        assert "CIRCUIT_BREAKER" in result_str or "EMERGENCY" in result_str
+        assert "Maximum serialization depth" in str(exc_info.value)
 
     def test_excessive_dict_size_security_error(self):
         """Test that large dict raises SecurityError."""

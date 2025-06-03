@@ -226,10 +226,10 @@ class TestDepthLimits:
 
     def test_deep_nesting_within_limits(self):
         """Test that reasonable nesting depth works."""
-        # Create nested dict within reasonable limits (100 levels)
+        # Create nested dict within our security limits (40 levels, under the 50 limit)
         nested = {}
         current = nested
-        for _i in range(100):
+        for _i in range(40):  # Changed from 100 to 40 to be under the new 50-level limit
             current["next"] = {}
             current = current["next"]
         current["value"] = "deep"

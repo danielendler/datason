@@ -209,7 +209,7 @@ class TestStringBombAttacks:
 
     def test_string_bomb_many_long_strings(self):
         """ATTACK: Many long strings to exhaust string processing"""
-        data = {f"key_{i}": "X" * 500_000 for i in range(10)}
+        data = {f"key_{i}": "X" * 1_000_001 for i in range(10)}  # Each string exceeds limit
 
         with warnings.catch_warnings(record=True) as w:
             serialize(data)
@@ -291,7 +291,7 @@ class TestTypeBypasses:
         with warnings.catch_warnings(record=True) as w:
             serialize(buffer)
             assert len(w) >= 1
-            assert "problematic object" in str(w[0].message).lower()
+            assert "problematic io object" in str(w[0].message).lower()
 
     def test_complex_object_dict_attack(self):
         """ATTACK: Complex object with large __dict__ to exhaust processing"""
@@ -397,7 +397,6 @@ class TestParallelAttacks:
 
     def test_concurrent_cache_pollution(self):
         """ATTACK: Concurrent cache pollution from multiple threads"""
-        import threading
 
         def pollute_cache(thread_id):
             for i in range(100):
@@ -434,7 +433,9 @@ class TestParallelAttacks:
             return serialize(data)
 
         # Serialize concurrently from multiple threads
-        with threading.ThreadPoolExecutor(max_workers=10) as executor:
+        from concurrent.futures import ThreadPoolExecutor
+
+        with ThreadPoolExecutor(max_workers=10) as executor:
             futures = [executor.submit(serialize_data, i) for i in range(50)]
             results = [f.result() for f in futures]
 
