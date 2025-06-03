@@ -9,19 +9,20 @@ datason prioritizes security alongside performance when handling Python object s
 ✅ **Low Risk** - datason has been hardened with real security protections against common JSON serialization vulnerabilities.
 
 **Last Security Audit**: 2025-05-30  
-**Security Scanner Results**: ✅ 1 minor issue (documented), ✅ 0 critical vulnerabilities  
-**Dependencies**: ✅ All patched to latest secure versions
+**Security Scanner Results**: ✅ 0 critical vulnerabilities, ✅ All hanging/DoS issues resolved  
+**Dependencies**: ✅ All patched to latest secure versions  
+**Recent Critical Fix**: ✅ Circular reference hanging vulnerability patched (v0.1.x)
 
 ## Supported Versions
 
 | Version | Supported          | Security Features |
 | ------- | ------------------ | ----------------- |
-| 0.1.x   | ✅ **Current**     | Full protection   |
+| 0.1.x   | ✅ **Current**     | Full protection + Enhanced circular reference safety |
 
 ## 🛡️ Built-in Security Protections
 
-### **1. Circular Reference Detection**
-**Real Protection**: Prevents infinite recursion and memory exhaustion.
+### **1. Enhanced Circular Reference Detection**
+**Real Protection**: Prevents infinite recursion, memory exhaustion, and application hanging.
 
 ```python
 import datason
@@ -37,7 +38,30 @@ result = datason.serialize(a)
 # Returns: {"b": {"a": None}}  # Safe, controlled output
 ```
 
-**How it works**: Tracks object IDs during serialization to detect cycles.
+**Recent Enhancement (Critical Security Fix)**:
+- ✅ **Problematic Object Detection**: Early detection of objects from `unittest.mock`, `io`, `_io` modules
+- ✅ **Multi-Layer Protection**: Enhanced `__dict__` processing with multiple safety checks  
+- ✅ **Hanging Prevention**: Specific protection against `BytesIO`, `MagicMock`, and similar objects
+- ✅ **Comprehensive Testing**: Timeout-protected test suite prevents regression
+
+```python
+from unittest.mock import MagicMock
+from io import BytesIO
+
+# These objects previously caused infinite hanging - now handled safely
+mock_obj = MagicMock()
+bio_obj = BytesIO(b"data")
+
+# Both serialize safely with warnings, no hanging
+result1 = datason.serialize(mock_obj)  # Returns safe string representation
+result2 = datason.serialize(bio_obj)   # Returns safe string representation
+```
+
+**How it works**:
+- Tracks object IDs during serialization to detect cycles
+- Early detection of known problematic object types
+- Multiple safety layers in `__dict__` processing  
+- Recursion depth limits with complexity checks
 
 ### **2. Resource Exhaustion Prevention**
 **Real Protection**: Enforces limits to prevent DoS attacks.
@@ -60,6 +84,7 @@ except datason.SecurityError as e:
 - **Max Object Size**: 10,000,000 items (dictionaries, lists, arrays)
 - **Max Recursion Depth**: 1,000 levels (prevents stack overflow)
 - **Max String Length**: 1,000,000 characters (truncated with warning)
+- **Max Object Attributes**: 100 per object (prevents complex object attacks)
 
 ### **3. Safe Error Handling**
 **Real Protection**: No information leakage through error messages.
@@ -76,19 +101,28 @@ result = datason.serialize(obj)
 # Returns: Safe fallback, no sensitive data exposed
 ```
 
-### **4. Input Validation**
+### **4. Input Validation & Type Safety**
 **Real Protection**: Type checking and safe handling of all input types.
 
 - ✅ **No arbitrary code execution** (unlike `pickle`)
 - ✅ **Controlled type handling** for all supported data types
 - ✅ **Safe fallbacks** for unknown objects
 - ✅ **Memory-safe operations** for large datasets
+- ✅ **Mock object protection** (MagicMock, Mock, etc.)
+- ✅ **IO object protection** (BytesIO, StringIO, file handles)
 
 ## 🔍 Security Validation Results
 
+### **Critical Vulnerability Resolution** - ✅ FIXED
+**Issue**: Circular reference handling could cause infinite loops and application hanging
+**Impact**: High - Could block CI/CD pipelines and cause DoS
+**Resolution**: Multi-layered protection system implemented
+**Testing**: Comprehensive timeout-protected test suite added
+**Status**: ✅ **RESOLVED** in current version
+
 ### **Bandit Security Scan** - ✅ PASSED
 ```
-loc: 1,082 lines of code scanned
+loc: 2,026 lines of code scanned
 SEVERITY.HIGH: 0
 SEVERITY.MEDIUM: 0  
 SEVERITY.LOW: 1 (intentional, documented)
@@ -103,7 +137,7 @@ SEVERITY.LOW: 1 (intentional, documented)
 
 **Dependency Strategy**:
 - Core datason has **zero dependencies** for security
-- Optional dependencies (pandas, numpy, ML libraries) are user-controlled
+- Optional dependencies (pandas, numpy, ML libraries) use lazy loading
 - All dev dependencies regularly updated and scanned
 
 ### **Real-World Attack Prevention**
@@ -114,7 +148,10 @@ SEVERITY.LOW: 1 (intentional, documented)
 | **Memory exhaustion** | Resource limits on all data types | ✅ Protected |
 | **Stack overflow** | Recursion depth tracking | ✅ Protected |
 | **Information leakage** | Safe error handling + logging | ✅ Protected |
-| **Circular reference DoS** | Object ID tracking | ✅ Protected |
+| **Circular reference DoS** | Multi-layer object ID tracking + type detection | ✅ **Enhanced** |
+| **Mock object hanging** | Early problematic object detection | ✅ **New** |
+| **IO object hanging** | Specific protection for file-like objects | ✅ **New** |
+| **Complex object attacks** | Attribute count limits + safe fallbacks | ✅ **Enhanced** |
 
 ## 🚨 Reporting Security Issues
 
@@ -171,6 +208,11 @@ with warnings.catch_warnings(record=True) as w:
     if w:
         logger.info(f"Security warnings: {[str(warning.message) for warning in w]}")
 
+# ✅ GOOD: Handle problematic objects safely
+from unittest.mock import MagicMock
+mock_data = {"user": "test", "mock_obj": MagicMock()}
+result = datason.serialize(mock_data)  # Automatically handles mock safely
+
 # ❌ AVOID: Don't serialize sensitive data
 sensitive_data = {"password": "secret", "api_key": "12345"}
 # Filter before serializing
@@ -213,15 +255,22 @@ print(f"Max string length: {MAX_STRING_LENGTH}")    # 1,000,000
 
 - name: Dependency Audit  
   run: pip-audit
+
+- name: Circular Reference Regression Test
+  run: |
+    python -m pytest tests/test_circular_references.py -v
+    # Ensures hanging vulnerabilities don't regress
 ```
 
 ## 🏆 Security Achievements
 
 - ✅ **Zero critical vulnerabilities** in current release
 - ✅ **Proactive security design** with built-in protections
-- ✅ **Comprehensive test coverage** for security features
+- ✅ **Comprehensive test coverage** for security features including timeout protection
 - ✅ **Regular security updates** of dependencies
 - ✅ **Transparent security practices** and open auditing
+- ✅ **Critical hanging vulnerability resolved** with multi-layer protection
+- ✅ **Regression testing** with timeout-protected test suite
 
 ## 📚 Security Resources
 
@@ -233,4 +282,5 @@ print(f"Max string length: {MAX_STRING_LENGTH}")    # 1,000,000
 ---
 
 **🛡️ Security is a continuous process.** Help us keep datason secure by reporting issues responsibly and following security best practices in your own code.
-# Test
+
+**Recent Critical Security Enhancement**: The circular reference hanging vulnerability has been comprehensively addressed with enhanced detection, multi-layer protection, and timeout-protected regression testing to prevent future occurrences.
