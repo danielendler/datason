@@ -27,7 +27,7 @@ class TestInitModuleCoverage:
         # Test version string is accessible
         assert hasattr(datason, "__version__")
         assert isinstance(datason.__version__, str)
-        assert datason.__version__ == "0.4.5"  # Updated to current version
+        assert datason.__version__ == "0.5.0"  # Updated to current version
 
         # Test other metadata
         assert hasattr(datason, "__author__")
