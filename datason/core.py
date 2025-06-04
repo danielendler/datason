@@ -785,19 +785,15 @@ def _serialize_full_path(
     # Handle complex numbers (before __dict__ handling)
     if isinstance(obj, complex):
         complex_repr = {"real": obj.real, "imag": obj.imag}
-        # Handle type metadata for complex numbers
-        if config and config.include_type_hints:
-            return _create_type_metadata("complex", complex_repr)
-        return complex_repr
+        # Complex numbers ALWAYS get metadata for round-trip reliability (legacy behavior)
+        return {"_type": "complex", **complex_repr}
 
     # Handle Decimal (before __dict__ handling)
     if isinstance(obj, Decimal):
         # Preserve exact precision for financial/precision calculations
         decimal_str = str(obj)
-        # Handle type metadata for decimals
-        if config and config.include_type_hints:
-            return _create_type_metadata("decimal.Decimal", decimal_str)
-        return decimal_str
+        # Decimals ALWAYS get metadata for round-trip reliability (legacy behavior)
+        return {"_type": "decimal", "value": decimal_str}
 
     # Handle range objects (before __dict__ handling)
     if isinstance(obj, range):

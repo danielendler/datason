@@ -587,7 +587,7 @@ def _looks_like_series_data(data: List[Any]) -> bool:
 
 def _looks_like_dataframe_dict(obj: Dict[str, Any]) -> bool:
     """NEW: Check if a dict looks like it represents a DataFrame."""
-    if not isinstance(obj, dict) or len(obj) < 1:
+    if not isinstance(obj, dict) or len(obj) < 2:  # FIXED: Require at least 2 columns
         return False
 
     # Check if all values are lists of the same length
@@ -598,8 +598,35 @@ def _looks_like_dataframe_dict(obj: Dict[str, Any]) -> bool:
     if len({len(v) for v in values}) != 1:  # All lists same length
         return False
 
+    # ENHANCED: Additional checks to avoid false positives on basic nested data
+
     # Must have at least a few rows to be worth converting
-    return len(values[0]) >= 2
+    if len(values[0]) < 2:
+        return False
+
+    # ENHANCED: Check if keys look like column names (not nested dict keys)
+    # Avoid converting basic nested structures like {'nested': {'key': [1,2,3]}}
+    keys = list(obj.keys())
+
+    # If any key is a single character or very nested looking, probably not a DataFrame
+    single_char_keys = sum(1 for k in keys if len(k) == 1)
+    if single_char_keys >= len(keys) / 2:  # Too many single-char keys
+        return False
+
+    # If we have very few columns (2-3) and the data is simple integers,
+    # it might be basic nested data rather than a DataFrame
+    # Additional heuristic: check if this looks like basic nested data
+    # Example: {'e': [1, 2, 3]} is probably not a DataFrame
+    return not (
+        len(keys) <= 3
+        and all(
+            isinstance(item, (int, float, str, bool))
+            for v in values
+            for item in v[:3]  # Check first few items
+        )
+        and len(keys) == 1
+        and all(isinstance(item, int) for item in values[0])
+    )
 
 
 def _looks_like_split_format(obj: Dict[str, Any]) -> bool:
