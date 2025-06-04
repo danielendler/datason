@@ -608,25 +608,21 @@ def _looks_like_dataframe_dict(obj: Dict[str, Any]) -> bool:
     # Avoid converting basic nested structures like {'nested': {'key': [1,2,3]}}
     keys = list(obj.keys())
 
-    # If any key is a single character or very nested looking, probably not a DataFrame
-    single_char_keys = sum(1 for k in keys if len(k) == 1)
-    if single_char_keys >= len(keys) / 2:  # Too many single-char keys
-        return False
+    # FIXED: Be more lenient with single-character column names
+    # Single character column names are common in DataFrames (a, b, c, x, y, z, etc.)
+    # Only reject if ALL keys are single character AND we have very few columns
+    # AND the data is very simple (all integers in a single column)
+    if len(keys) == 1:
+        # Special case: single column with simple integer data - probably not a DataFrame
+        single_key = keys[0]
+        single_value = values[0]
+        if len(single_key) == 1 and all(isinstance(item, int) for item in single_value) and len(single_value) <= 5:
+            # This looks like {'e': [1, 2, 3]} - probably basic nested data
+            return False
 
-    # If we have very few columns (2-3) and the data is simple integers,
-    # it might be basic nested data rather than a DataFrame
-    # Additional heuristic: check if this looks like basic nested data
-    # Example: {'e': [1, 2, 3]} is probably not a DataFrame
-    return not (
-        len(keys) <= 3
-        and all(
-            isinstance(item, (int, float, str, bool))
-            for v in values
-            for item in v[:3]  # Check first few items
-        )
-        and len(keys) == 1
-        and all(isinstance(item, int) for item in values[0])
-    )
+    # If we have multiple columns, it's probably a legitimate DataFrame
+    # Even with single-character names like {'a': [1,2,3], 'b': [4,5,6]}
+    return True
 
 
 def _looks_like_split_format(obj: Dict[str, Any]) -> bool:

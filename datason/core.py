@@ -784,19 +784,29 @@ def _serialize_full_path(
 
     # Handle complex numbers (before __dict__ handling)
     if isinstance(obj, complex):
+        # FIXED: Use TypeHandler if available for proper preserve_complex handling
+        if _type_handler:
+            return _type_handler.handle_complex(obj)
+        # Fallback: Complex numbers get metadata for round-trip reliability (legacy behavior when no config)
         complex_repr = {"real": obj.real, "imag": obj.imag}
-        # Complex numbers ALWAYS get metadata for round-trip reliability (legacy behavior)
         return {"_type": "complex", **complex_repr}
 
     # Handle Decimal (before __dict__ handling)
     if isinstance(obj, Decimal):
-        # Preserve exact precision for financial/precision calculations
+        # FIXED: Use TypeHandler if available for proper preserve_decimals handling
+        if _type_handler:
+            return _type_handler.handle_decimal(obj)
+        # Fallback: Preserve exact precision for financial/precision calculations
         decimal_str = str(obj)
-        # Decimals ALWAYS get metadata for round-trip reliability (legacy behavior)
+        # Decimals get metadata for round-trip reliability (legacy behavior when no config)
         return {"_type": "decimal", "value": decimal_str}
 
     # Handle range objects (before __dict__ handling)
     if isinstance(obj, range):
+        # FIXED: Use TypeHandler if available for proper range handling
+        if _type_handler:
+            return _type_handler.handle_range(obj)
+        # Fallback: Basic range dict representation (legacy behavior when no config)
         range_dict = {"start": obj.start, "stop": obj.stop, "step": obj.step}
         # Handle type metadata for ranges
         if config and config.include_type_hints:
@@ -805,7 +815,13 @@ def _serialize_full_path(
 
     # Handle bytes/bytearray (before __dict__ handling)
     if isinstance(obj, (bytes, bytearray)):
-        # Encode as base64 for JSON compatibility
+        # FIXED: Use TypeHandler if available for proper bytes handling
+        if _type_handler:
+            if isinstance(obj, bytes):
+                return _type_handler.handle_bytes(obj)
+            else:
+                return _type_handler.handle_bytearray(obj)
+        # Fallback: Encode as base64 for JSON compatibility (legacy behavior when no config)
         import base64
 
         encoded_bytes = base64.b64encode(obj).decode("ascii")
@@ -823,6 +839,32 @@ def _serialize_full_path(
         if config and config.include_type_hints:
             return _create_type_metadata("pathlib.Path", path_str)
         return path_str
+
+    # Handle namedtuple objects (before enum and __dict__ handling)
+    if isinstance(obj, tuple) and hasattr(obj, "_fields") and hasattr(obj, "_asdict"):
+        # This is a namedtuple
+        # FIXED: Use TypeHandler if available for proper namedtuple handling
+        if _type_handler:
+            return _type_handler.handle_namedtuple(obj)
+        # Fallback: Convert to dict (legacy behavior when no config)
+        return obj._asdict()
+
+    # Handle enum objects (before __dict__ handling)
+    if (
+        hasattr(obj, "_value_")
+        and hasattr(obj, "_name_")
+        and hasattr(obj, "__class__")
+        and hasattr(obj.__class__, "__bases__")
+    ):
+        # Check if this is an enum by looking for enum.Enum in the class hierarchy
+        import enum
+
+        if any(issubclass(base, enum.Enum) for base in obj.__class__.__mro__ if base != obj.__class__):
+            # FIXED: Use TypeHandler if available for proper enum handling
+            if _type_handler:
+                return _type_handler.handle_enum(obj)
+            # Fallback: Return enum value (legacy behavior when no config)
+            return obj.value
 
     # Handle objects with __dict__ (custom classes)
     if hasattr(obj, "__dict__"):
