@@ -55,7 +55,7 @@ except ImportError:
 
 # Security constants
 MAX_SERIALIZATION_DEPTH = 50  # Prevent stack overflow (reasonable depth for legitimate data)
-MAX_OBJECT_SIZE = 10_000_000  # Prevent memory exhaustion (10MB worth of items)
+MAX_OBJECT_SIZE = 100_000  # SECURITY FIX: Reduced from 10_000_000 to 100_000 to prevent size bomb attacks
 MAX_STRING_LENGTH = 1_000_000  # Prevent excessive string processing
 
 
