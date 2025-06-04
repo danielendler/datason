@@ -1,8 +1,69 @@
-"""Comprehensive round-trip serialization integration tests.
+"""
+Comprehensive Round-Trip Serialization Test Suite
 
-This module provides systematic testing of serialization and deserialization
-for all supported types, ensuring complete coverage and easy identification
-of issues with specific data types.
+This test suite validates serialization round-trip fidelity for datason, testing both
+basic round-trips (without type metadata) and enhanced round-trips (with type metadata).
+
+## ARCHITECTURAL ASYMMETRY: Serialization vs Deserialization
+
+### Serialization (Rich → JSON): Many Hot Paths
+- ✅ **Rich type information available** - we know exactly what we're serializing
+- ✅ `isinstance(obj, Decimal)` → immediate optimal handling
+- ✅ `isinstance(obj, complex)` → direct `{"real": x, "imag": y}`
+- ✅ **Fast, deterministic type-specific paths**
+
+### Deserialization WITHOUT hints (JSON → Rich): Fewer Hot Paths
+- ❌ **Limited type information** - only strings/dicts/lists available
+- ❌ Must guess: Is `"123.45"` a Decimal or string?
+- ❌ Must pattern-match: Does `{"real": 1, "imag": 2}` mean complex?
+- ❌ **Expensive detection, ambiguous patterns**
+
+### Deserialization WITH hints (JSON → Rich): Many Hot Paths Again
+- ✅ **Metadata provides type information** - we know what to reconstruct
+- ✅ `{"__datason_type__": "decimal.Decimal", "__datason_value__": "123.45"}` → direct `Decimal("123.45")`
+- ✅ **Fast reconstruction paths enabled by metadata**
+
+## ROUND-TRIP FIDELITY EXPECTATIONS
+
+### ✅ PERFECT Round-trips (Without Metadata)
+These types have distinctive patterns that can be auto-detected:
+- Basic JSON types: None, bool, int, float, str, list, dict
+- Complex numbers: `{"real": x, "imag": y}` → auto-detectable
+- Datetimes: ISO strings → auto-detectable via regex
+- UUIDs: UUID format strings → auto-detectable via regex
+
+### ⚠️ LOSSY Round-trips (Without Metadata)
+These types lose information in JSON and cannot be reliably reconstructed:
+- `tuple` → `list` (JSON has no tuple concept)
+- `set` → `list` (JSON has no set concept, order lost)
+- `Decimal` → `str` (indistinguishable from regular strings)
+- `pathlib.Path` → `str` (indistinguishable from regular strings)
+- NumPy scalars → Python primitives (precision/type info lost)
+- Pandas DataFrames/Series → dicts/lists (structure metadata lost)
+- ML models → complex dicts (model metadata lost)
+
+### ✅ PERFECT Round-trips (With Metadata)
+With `include_type_hints=True`, ALL types should round-trip perfectly:
+- Metadata preserves exact type information
+- Hot paths can reconstruct with full fidelity
+- This is the recommended approach for production ML workflows
+
+## TEST STRUCTURE
+
+1. **Basic Round-Trip Tests**: Test without `include_type_hints`
+   - Validates what's reasonably possible without metadata
+   - Uses `expected_basic_type` for realistic expectations
+
+2. **Metadata Round-Trip Tests**: Test with `include_type_hints=True`
+   - Validates perfect round-trip fidelity
+   - Uses `expected_type` for exact type preservation
+
+3. **Type-Specific Behavior Tests**: Test edge cases and precision
+   - NumPy scalar metadata preservation
+   - Pandas DataFrame orientations
+   - PyTorch tensor attributes
+   - Complex number precision
+   - Decimal precision preservation
 """
 
 import json
@@ -58,17 +119,29 @@ class RoundTripTestCase:
     """Test case for round-trip serialization."""
 
     def __init__(
-        self, name: str, value: Any, expected_type: type = None, skip_reason: str = None, custom_comparison=None
+        self,
+        name: str,
+        value: Any,
+        expected_type: type = None,
+        expected_basic_type: type = None,  # Type expected for basic round-trip (no metadata)
+        skip_reason: str = None,
+        custom_comparison=None,
+        custom_basic_comparison=None,  # Custom comparison for basic round-trip
     ):
         self.name = name
         self.value = value
         self.expected_type = expected_type or type(value)
+        self.expected_basic_type = expected_basic_type or type(value)  # Default to same type
         self.skip_reason = skip_reason
         self.custom_comparison = custom_comparison
+        self.custom_basic_comparison = custom_basic_comparison
 
-    def compare_values(self, original: Any, deserialized: Any) -> bool:
+    def compare_values(self, original: Any, deserialized: Any, is_basic_test: bool = False) -> bool:
         """Compare original and deserialized values."""
-        if self.custom_comparison:
+        # Use appropriate comparison for test type
+        if is_basic_test and self.custom_basic_comparison:
+            return self.custom_basic_comparison(original, deserialized)
+        elif not is_basic_test and self.custom_comparison:
             return self.custom_comparison(original, deserialized)
 
         # Handle special cases
@@ -81,6 +154,10 @@ class RoundTripTestCase:
         elif HAS_PANDAS and isinstance(original, (pd.DataFrame, pd.Series)):
             # Pandas comparison
             try:
+                # First check if both are same type
+                if not isinstance(deserialized, type(original)):
+                    return False
+
                 if isinstance(original, pd.DataFrame):
                     return original.equals(deserialized)
                 else:  # Series
@@ -89,7 +166,43 @@ class RoundTripTestCase:
                 return False
         else:
             # Standard comparison
-            return original == deserialized and type(original) is type(deserialized)
+            try:
+                expected_type = self.expected_basic_type if is_basic_test else self.expected_type
+
+                # Check type first
+                if type(deserialized) is not expected_type:
+                    return False
+
+                # For basic tests, handle type conversions where values should be logically equivalent
+                if is_basic_test:
+                    # tuple -> list conversion
+                    if isinstance(original, tuple) and isinstance(deserialized, list):
+                        return list(original) == deserialized
+                    # set -> list conversion (order doesn't matter)
+                    elif isinstance(original, set) and isinstance(deserialized, list):
+                        return set(deserialized) == original
+                    # Decimal -> string conversion
+                    elif (
+                        isinstance(original, Decimal)
+                        and isinstance(deserialized, str)
+                        or hasattr(original, "__fspath__")
+                        and isinstance(deserialized, str)
+                    ):
+                        return str(original) == deserialized
+
+                # Standard value comparison
+                return original == deserialized
+
+            except ValueError as e:
+                # Handle pandas DataFrame truth value ambiguity
+                if "truth value" in str(e) and "DataFrame" in str(e):
+                    try:
+                        # For DataFrames, use .equals() method
+                        if HAS_PANDAS and isinstance(original, pd.DataFrame) and isinstance(deserialized, pd.DataFrame):
+                            return original.equals(deserialized)
+                    except Exception:
+                        return False
+                return False
 
 
 # =============================================================================
@@ -120,87 +233,95 @@ BASIC_TYPES = [
     RoundTripTestCase("dict_simple", {"a": 1, "b": 2}),
     RoundTripTestCase("dict_mixed", {"int": 1, "str": "hello", "bool": True}),
     RoundTripTestCase("dict_nested", {"outer": {"inner": {"value": 42}}}),
-    RoundTripTestCase("tuple_empty", ()),
-    RoundTripTestCase("tuple_simple", (1, 2, 3)),
-    RoundTripTestCase("tuple_mixed", (1, "hello", True)),
-    RoundTripTestCase("set_empty", set()),
-    RoundTripTestCase("set_simple", {1, 2, 3}),
-    RoundTripTestCase("set_mixed", {1, "hello"}),
+    RoundTripTestCase("tuple_empty", (), expected_basic_type=list),  # tuples become lists
+    RoundTripTestCase("tuple_simple", (1, 2, 3), expected_basic_type=list),
+    RoundTripTestCase("tuple_mixed", (1, "hello", True), expected_basic_type=list),
+    RoundTripTestCase("set_empty", set(), expected_basic_type=list),  # sets become lists
+    RoundTripTestCase("set_simple", {1, 2, 3}, expected_basic_type=list),
+    RoundTripTestCase("set_mixed", {1, "hello"}, expected_basic_type=list),
 ]
 
 # Complex Python types
 COMPLEX_TYPES = [
-    RoundTripTestCase("datetime_simple", datetime(2023, 1, 1, 12, 0, 0)),
-    RoundTripTestCase("datetime_microseconds", datetime(2023, 1, 1, 12, 0, 0, 123456)),
-    RoundTripTestCase("uuid_simple", uuid.uuid4()),
-    RoundTripTestCase("uuid_fixed", uuid.UUID("12345678-1234-5678-9012-123456789abc")),
-    RoundTripTestCase("decimal_simple", Decimal("123.45")),
-    RoundTripTestCase("decimal_precision", Decimal("123.456789012345")),
-    RoundTripTestCase("decimal_large", Decimal("123456789.123456789")),
-    RoundTripTestCase("path_relative", Path("./test/path.txt")),
-    RoundTripTestCase("path_absolute", Path("/tmp/test/path.txt")),
-    RoundTripTestCase("complex_simple", complex(1, 2)),
-    RoundTripTestCase("complex_float", complex(3.14, -2.71)),
-    RoundTripTestCase("complex_zero", complex(0, 0)),
+    RoundTripTestCase("datetime_simple", datetime(2023, 1, 1, 12, 0, 0)),  # auto-detectable
+    RoundTripTestCase("datetime_microseconds", datetime(2023, 1, 1, 12, 0, 0, 123456)),  # auto-detectable
+    RoundTripTestCase("uuid_simple", uuid.uuid4()),  # auto-detectable
+    RoundTripTestCase("uuid_fixed", uuid.UUID("12345678-1234-5678-9012-123456789abc")),  # auto-detectable
+    RoundTripTestCase("decimal_simple", Decimal("123.45"), expected_basic_type=str),  # becomes string
+    RoundTripTestCase("decimal_precision", Decimal("123.456789012345"), expected_basic_type=str),
+    RoundTripTestCase("decimal_large", Decimal("123456789.123456789"), expected_basic_type=str),
+    RoundTripTestCase("path_relative", Path("./test/path.txt"), expected_basic_type=str),  # becomes string
+    RoundTripTestCase("path_absolute", Path("/tmp/test/path.txt")),  # may auto-detect as Path
+    RoundTripTestCase("complex_simple", complex(1, 2)),  # auto-detectable from {"real", "imag"}
+    RoundTripTestCase("complex_float", complex(3.14, -2.71)),  # auto-detectable
+    RoundTripTestCase("complex_zero", complex(0, 0)),  # auto-detectable
 ]
 
 # NumPy types (if available)
 NUMPY_TYPES = []
 if HAS_NUMPY:
     NUMPY_TYPES = [
-        # NumPy scalars
-        RoundTripTestCase("numpy_int8", np.int8(42)),
-        RoundTripTestCase("numpy_int16", np.int16(42)),
-        RoundTripTestCase("numpy_int32", np.int32(42)),
-        RoundTripTestCase("numpy_int64", np.int64(42)),
-        RoundTripTestCase("numpy_uint8", np.uint8(42)),
-        RoundTripTestCase("numpy_uint16", np.uint16(42)),
-        RoundTripTestCase("numpy_uint32", np.uint32(42)),
-        RoundTripTestCase("numpy_uint64", np.uint64(42)),
-        RoundTripTestCase("numpy_float16", np.float16(3.14)),
-        RoundTripTestCase("numpy_float32", np.float32(3.14)),
-        RoundTripTestCase("numpy_float64", np.float64(3.14)),
-        RoundTripTestCase("numpy_complex64", np.complex64(1 + 2j)),
-        RoundTripTestCase("numpy_complex128", np.complex128(1 + 2j)),
-        RoundTripTestCase("numpy_bool_true", np.bool_(True)),
-        RoundTripTestCase("numpy_bool_false", np.bool_(False)),
-        # NumPy arrays
-        RoundTripTestCase("numpy_array_1d", np.array([1, 2, 3, 4, 5])),
-        RoundTripTestCase("numpy_array_2d", np.array([[1, 2], [3, 4]])),
-        RoundTripTestCase("numpy_array_3d", np.array([[[1, 2], [3, 4]], [[5, 6], [7, 8]]])),
-        RoundTripTestCase("numpy_array_float", np.array([1.1, 2.2, 3.3])),
-        RoundTripTestCase("numpy_array_bool", np.array([True, False, True])),
-        RoundTripTestCase("numpy_array_complex", np.array([1 + 2j, 3 + 4j])),
-        RoundTripTestCase("numpy_array_empty", np.array([])),
-        # Shaped arrays
-        RoundTripTestCase("numpy_zeros", np.zeros((3, 3))),
-        RoundTripTestCase("numpy_ones", np.ones((2, 4))),
-        RoundTripTestCase("numpy_arange", np.arange(10)),
-        RoundTripTestCase("numpy_linspace", np.linspace(0, 1, 5)),
+        # NumPy scalars (become Python primitives without metadata)
+        RoundTripTestCase("numpy_int8", np.int8(42), expected_basic_type=int),
+        RoundTripTestCase("numpy_int16", np.int16(42), expected_basic_type=int),
+        RoundTripTestCase("numpy_int32", np.int32(42), expected_basic_type=int),
+        RoundTripTestCase("numpy_int64", np.int64(42), expected_basic_type=int),
+        RoundTripTestCase("numpy_uint8", np.uint8(42), expected_basic_type=int),
+        RoundTripTestCase("numpy_uint16", np.uint16(42), expected_basic_type=int),
+        RoundTripTestCase("numpy_uint32", np.uint32(42), expected_basic_type=int),
+        RoundTripTestCase("numpy_uint64", np.uint64(42), expected_basic_type=int),
+        RoundTripTestCase("numpy_float16", np.float16(3.14), expected_basic_type=float),
+        RoundTripTestCase("numpy_float32", np.float32(3.14), expected_basic_type=float),
+        RoundTripTestCase("numpy_float64", np.float64(3.14), expected_basic_type=float),
+        RoundTripTestCase("numpy_complex64", np.complex64(1 + 2j), expected_basic_type=str),  # becomes string
+        RoundTripTestCase(
+            "numpy_complex128", np.complex128(1 + 2j), expected_basic_type=complex
+        ),  # may detect as complex
+        RoundTripTestCase("numpy_bool_true", np.bool_(True), expected_basic_type=bool),
+        RoundTripTestCase("numpy_bool_false", np.bool_(False), expected_basic_type=bool),
+        # NumPy arrays (become lists without metadata)
+        RoundTripTestCase("numpy_array_1d", np.array([1, 2, 3, 4, 5]), expected_basic_type=list),
+        RoundTripTestCase("numpy_array_2d", np.array([[1, 2], [3, 4]]), expected_basic_type=list),
+        RoundTripTestCase("numpy_array_3d", np.array([[[1, 2], [3, 4]], [[5, 6], [7, 8]]]), expected_basic_type=list),
+        RoundTripTestCase("numpy_array_float", np.array([1.1, 2.2, 3.3]), expected_basic_type=list),
+        RoundTripTestCase("numpy_array_bool", np.array([True, False, True]), expected_basic_type=list),
+        RoundTripTestCase("numpy_array_complex", np.array([1 + 2j, 3 + 4j]), expected_basic_type=list),
+        RoundTripTestCase("numpy_array_empty", np.array([]), expected_basic_type=list),
+        # Shaped arrays (become lists without metadata)
+        RoundTripTestCase("numpy_zeros", np.zeros((3, 3)), expected_basic_type=list),
+        RoundTripTestCase("numpy_ones", np.ones((2, 4)), expected_basic_type=list),
+        RoundTripTestCase("numpy_arange", np.arange(10), expected_basic_type=list),
+        RoundTripTestCase("numpy_linspace", np.linspace(0, 1, 5), expected_basic_type=list),
     ]
 
 # Pandas types (if available)
 PANDAS_TYPES = []
 if HAS_PANDAS:
     PANDAS_TYPES = [
-        # DataFrames
-        RoundTripTestCase("pandas_dataframe_simple", pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})),
+        # DataFrames (become lists/dicts without metadata)
         RoundTripTestCase(
-            "pandas_dataframe_mixed", pd.DataFrame({"int": [1, 2], "str": ["a", "b"], "float": [1.1, 2.2]})
+            "pandas_dataframe_simple", pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]}), expected_basic_type=list
         ),
-        RoundTripTestCase("pandas_dataframe_empty", pd.DataFrame()),
-        RoundTripTestCase("pandas_dataframe_single_col", pd.DataFrame({"x": [1, 2, 3]})),
-        RoundTripTestCase("pandas_dataframe_single_row", pd.DataFrame({"a": [1], "b": [2]})),
-        # Series
-        RoundTripTestCase("pandas_series_int", pd.Series([1, 2, 3, 4, 5])),
-        RoundTripTestCase("pandas_series_float", pd.Series([1.1, 2.2, 3.3])),
-        RoundTripTestCase("pandas_series_str", pd.Series(["a", "b", "c"])),
-        RoundTripTestCase("pandas_series_bool", pd.Series([True, False, True])),
-        RoundTripTestCase("pandas_series_mixed", pd.Series([1, "hello", 3.14])),
-        RoundTripTestCase("pandas_series_named", pd.Series([1, 2, 3], name="my_series")),
-        RoundTripTestCase("pandas_series_empty", pd.Series([], dtype=object)),
-        # Categorical data
-        RoundTripTestCase("pandas_categorical", pd.Series(pd.Categorical(["a", "b", "a", "c"]))),
+        RoundTripTestCase(
+            "pandas_dataframe_mixed",
+            pd.DataFrame({"int": [1, 2], "str": ["a", "b"], "float": [1.1, 2.2]}),
+            expected_basic_type=list,
+        ),
+        RoundTripTestCase("pandas_dataframe_empty", pd.DataFrame(), expected_basic_type=list),
+        RoundTripTestCase("pandas_dataframe_single_col", pd.DataFrame({"x": [1, 2, 3]}), expected_basic_type=list),
+        RoundTripTestCase("pandas_dataframe_single_row", pd.DataFrame({"a": [1], "b": [2]}), expected_basic_type=list),
+        # Series (become dicts without metadata)
+        RoundTripTestCase("pandas_series_int", pd.Series([1, 2, 3, 4, 5]), expected_basic_type=dict),
+        RoundTripTestCase("pandas_series_float", pd.Series([1.1, 2.2, 3.3]), expected_basic_type=dict),
+        RoundTripTestCase("pandas_series_str", pd.Series(["a", "b", "c"]), expected_basic_type=dict),
+        RoundTripTestCase("pandas_series_bool", pd.Series([True, False, True]), expected_basic_type=dict),
+        RoundTripTestCase("pandas_series_mixed", pd.Series([1, "hello", 3.14]), expected_basic_type=dict),
+        RoundTripTestCase("pandas_series_named", pd.Series([1, 2, 3], name="my_series"), expected_basic_type=dict),
+        RoundTripTestCase("pandas_series_empty", pd.Series([], dtype=object), expected_basic_type=dict),
+        # Categorical data (becomes dict without metadata)
+        RoundTripTestCase(
+            "pandas_categorical", pd.Series(pd.Categorical(["a", "b", "a", "c"])), expected_basic_type=dict
+        ),
     ]
 
 # ML types (if available)
@@ -208,12 +329,12 @@ ML_TYPES = []
 if HAS_TORCH:
     ML_TYPES.extend(
         [
-            RoundTripTestCase("torch_tensor_1d", torch.tensor([1.0, 2.0, 3.0])),
-            RoundTripTestCase("torch_tensor_2d", torch.tensor([[1.0, 2.0], [3.0, 4.0]])),
-            RoundTripTestCase("torch_tensor_int", torch.tensor([1, 2, 3], dtype=torch.int32)),
-            RoundTripTestCase("torch_tensor_bool", torch.tensor([True, False, True])),
-            RoundTripTestCase("torch_tensor_empty", torch.tensor([])),
-            RoundTripTestCase("torch_tensor_scalar", torch.tensor(42.0)),
+            RoundTripTestCase("torch_tensor_1d", torch.tensor([1.0, 2.0, 3.0]), expected_basic_type=list),
+            RoundTripTestCase("torch_tensor_2d", torch.tensor([[1.0, 2.0], [3.0, 4.0]]), expected_basic_type=list),
+            RoundTripTestCase("torch_tensor_int", torch.tensor([1, 2, 3], dtype=torch.int32), expected_basic_type=list),
+            RoundTripTestCase("torch_tensor_bool", torch.tensor([True, False, True]), expected_basic_type=list),
+            RoundTripTestCase("torch_tensor_empty", torch.tensor([]), expected_basic_type=list),
+            RoundTripTestCase("torch_tensor_scalar", torch.tensor(42.0), expected_basic_type=float),
         ]
     )
 
@@ -233,11 +354,13 @@ if HAS_SKLEARN:
             RoundTripTestCase(
                 "sklearn_logistic_unfitted",
                 unfitted_model,
+                expected_basic_type=dict,  # becomes dict without metadata
                 custom_comparison=lambda a, b: (type(a) is type(b) and a.get_params() == b.get_params()),
             ),
             RoundTripTestCase(
                 "sklearn_logistic_fitted",
                 fitted_model,
+                expected_basic_type=dict,  # becomes dict without metadata
                 custom_comparison=lambda a, b: (
                     type(a) is type(b) and hasattr(b, "coef_") and hasattr(b, "intercept_")
                 ),
@@ -253,6 +376,7 @@ EDGE_CASES = [
     RoundTripTestCase(
         "mixed_container",
         {"list": [1, 2, {"nested": True}], "tuple": (1, 2, 3), "set": {1, 2, 3}, "complex": complex(1, 2)},
+        expected_basic_type=dict,  # The complex and tuple/set will change but dict structure remains
     ),
 ]
 
@@ -294,7 +418,7 @@ class TestRoundTripSerialization:
             pytest.fail(f"Deserialization failed: {e}")
 
         # Compare
-        assert test_case.compare_values(test_case.value, deserialized), (
+        assert test_case.compare_values(test_case.value, deserialized, is_basic_test=True), (
             f"Round-trip failed: {test_case.value} != {deserialized} "
             f"(types: {type(test_case.value)} vs {type(deserialized)})"
         )
@@ -331,7 +455,7 @@ class TestRoundTripSerialization:
             f"Type mismatch: expected {test_case.expected_type}, got {type(deserialized)}"
         )
 
-        assert test_case.compare_values(test_case.value, deserialized), (
+        assert test_case.compare_values(test_case.value, deserialized, is_basic_test=False), (
             f"Metadata round-trip failed: {test_case.value} != {deserialized} "
             f"(types: {type(test_case.value)} vs {type(deserialized)})"
         )

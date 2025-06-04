@@ -8,6 +8,7 @@ import json
 import uuid
 import warnings
 from datetime import datetime
+from decimal import Decimal
 from pathlib import Path
 from typing import Any, Callable, Dict, Generator, Iterator, List, Optional, Set, Union
 
@@ -685,7 +686,11 @@ def _serialize_full_path(
         # CRITICAL FIX: Generate type metadata BEFORE normalization for round-trip fidelity
         if config and config.include_type_hints and hasattr(obj, "dtype") and not isinstance(obj, np.ndarray):
             # This is likely a numpy scalar - generate metadata for the original type
-            original_type_name = f"numpy.{obj.dtype.name}"
+            dtype_name = obj.dtype.name
+            # BUGFIX: Handle numpy.bool_ dtype name change in recent NumPy versions
+            if dtype_name == "bool" and isinstance(obj, np.bool_):
+                dtype_name = "bool_"
+            original_type_name = f"numpy.{dtype_name}"
             normalized_value = normalize_numpy_types(obj)
             # Return with metadata to preserve exact type information
             return _create_type_metadata(original_type_name, normalized_value)
@@ -776,6 +781,51 @@ def _serialize_full_path(
         except Exception:
             # If ML serializer fails, continue with fallback
             pass  # nosec B110
+
+    # Handle complex numbers (before __dict__ handling)
+    if isinstance(obj, complex):
+        complex_repr = {"real": obj.real, "imag": obj.imag}
+        # Handle type metadata for complex numbers
+        if config and config.include_type_hints:
+            return _create_type_metadata("complex", complex_repr)
+        return complex_repr
+
+    # Handle Decimal (before __dict__ handling)
+    if isinstance(obj, Decimal):
+        # Preserve exact precision for financial/precision calculations
+        decimal_str = str(obj)
+        # Handle type metadata for decimals
+        if config and config.include_type_hints:
+            return _create_type_metadata("decimal.Decimal", decimal_str)
+        return decimal_str
+
+    # Handle range objects (before __dict__ handling)
+    if isinstance(obj, range):
+        range_dict = {"start": obj.start, "stop": obj.stop, "step": obj.step}
+        # Handle type metadata for ranges
+        if config and config.include_type_hints:
+            return _create_type_metadata("range", range_dict)
+        return range_dict
+
+    # Handle bytes/bytearray (before __dict__ handling)
+    if isinstance(obj, (bytes, bytearray)):
+        # Encode as base64 for JSON compatibility
+        import base64
+
+        encoded_bytes = base64.b64encode(obj).decode("ascii")
+        # Handle type metadata for bytes
+        if config and config.include_type_hints:
+            type_name = "bytes" if isinstance(obj, bytes) else "bytearray"
+            return _create_type_metadata(type_name, encoded_bytes)
+        return encoded_bytes
+
+    # Handle Path objects explicitly (before __dict__ handling)
+    if hasattr(obj, "__fspath__"):
+        path_str = str(obj)
+        # Handle type metadata for Path objects
+        if config and config.include_type_hints:
+            return _create_type_metadata("pathlib.Path", path_str)
+        return path_str
 
     # Handle objects with __dict__ (custom classes)
     if hasattr(obj, "__dict__"):

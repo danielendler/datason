@@ -1362,6 +1362,22 @@ def _process_dict_optimized(obj: dict, config: Optional["SerializationConfig"], 
         if TYPE_METADATA_KEY in obj or "_type" in obj:
             return _deserialize_with_type_metadata(obj)
 
+        # Auto-detect complex numbers (even without metadata)
+        if len(obj) == 2 and "real" in obj and "imag" in obj:
+            try:
+                return complex(obj["real"], obj["imag"])
+            except (TypeError, ValueError):
+                pass  # Fall through to normal processing
+
+        # Auto-detect Decimal from string representation (common pattern)
+        if len(obj) == 1 and "value" in obj and isinstance(obj["value"], str):
+            try:
+                from decimal import Decimal
+
+                return Decimal(obj["value"])
+            except (TypeError, ValueError, ImportError):
+                pass  # Fall through to normal processing
+
         # Check for special formats
         if _looks_like_split_format(obj):
             return _reconstruct_from_split(obj)
@@ -1482,8 +1498,11 @@ def _looks_like_path_optimized(s: str) -> bool:
         or s.startswith("./")  # Relative path
         or s.startswith("../")  # Parent directory
         or "/tmp/" in s  # Common temp directory  # nosec B108
-        or (s.endswith((".txt", ".py", ".json", ".csv", ".log")) and "/" in s)
-    )  # File with path
+        or (
+            s.endswith((".txt", ".py", ".json", ".csv", ".log")) and ("/" in s or s.count(".") >= 1)
+        )  # File with extension
+        or (s.count("/") >= 1 and not s.startswith("http"))  # Has path separator but not URL
+    )
 
 
 def _looks_like_path(s: str) -> bool:
