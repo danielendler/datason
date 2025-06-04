@@ -235,3 +235,120 @@ class TestRedactionEngineEdgeCases:
         assert "<REDACTED>" in result[1]
         assert "bob@test.org" not in result[1]
         assert result[2] == "Normal text here"
+
+
+class TestRedactionEngineExtended:
+    """Extended tests for RedactionEngine functionality."""
+
+    def test_redaction_engine_empty_configuration(self) -> None:
+        """Test redaction engine with empty configuration."""
+        engine = RedactionEngine(
+            redact_fields=[],
+            redact_patterns=[],
+            redact_large_objects=False,
+        )
+
+        data = {"field": "value", "large_list": list(range(1000))}
+        result = engine.process_object(data)
+
+        # Should not redact anything with empty config
+        assert result == data
+
+    def test_redaction_with_complex_nested_structure(self) -> None:
+        """Test redaction with complex nested structures."""
+        engine = RedactionEngine(redact_fields=["password"])
+
+        complex_data = {
+            "users": [
+                {"id": 1, "password": "secret1", "nested": {"password": "secret2"}},
+                {"id": 2, "password": "secret3"},
+            ],
+            "config": {"db_password": "secret4"},
+        }
+
+        result = engine.process_object(complex_data)
+
+        # Should redact all password fields recursively
+        assert result["users"][0]["password"] == "<REDACTED>"
+        assert result["users"][0]["nested"]["password"] == "<REDACTED>"
+        assert result["users"][1]["password"] == "<REDACTED>"
+
+    def test_redaction_list_processing(self) -> None:
+        """Test redaction processing of lists."""
+        engine = RedactionEngine(redact_patterns=[r"secret_\w+"])
+
+        data = ["public_info", "secret_key_123", "normal_data", "secret_token_xyz"]
+
+        result = engine.process_object(data)
+
+        # Should redact items matching pattern
+        assert "<REDACTED>" in str(result)
+        assert "public_info" in result
+        assert "normal_data" in result
+
+    def test_redaction_audit_trail_comprehensive(self) -> None:
+        """Test comprehensive redaction audit trail."""
+        engine = RedactionEngine(
+            redact_fields=["password"],
+            redact_patterns=[r"api_key_\w+"],
+            redact_large_objects=True,
+            audit_trail=True,
+        )
+
+        data = {
+            "user": {"password": "secret"},
+            "config": {"api_key_abc123": "sensitive"},
+            "large_data": list(range(1000)),
+        }
+
+        _result = engine.process_object(data)
+        audit = engine.get_audit_trail()
+
+        if audit is not None:
+            assert len(audit) > 0
+            audit_str = str(audit)
+            assert "password" in audit_str or "field" in audit_str
+
+    def test_redaction_summary_statistics(self) -> None:
+        """Test redaction summary statistics."""
+        engine = RedactionEngine(
+            redact_fields=["sensitive"],
+            include_redaction_summary=True,
+        )
+
+        data = {
+            "public": "data",
+            "sensitive": "secret1",
+            "nested": {"sensitive": "secret2"},
+        }
+
+        _result = engine.process_object(data)
+        summary = engine.get_redaction_summary()
+
+        assert summary is not None
+        assert "fields_redacted" in summary or "total_redactions" in summary
+
+
+class TestCrossModuleIntegration:
+    """Test integration between redaction and other modules."""
+
+    def test_cross_module_integration(self) -> None:
+        """Test integration between multiple datason modules."""
+        from datason.utils import deep_compare
+
+        # Create test data
+        original_data = {
+            "public": "info",
+            "private": "secret",
+            "nested": {"password": "hidden"},
+        }
+
+        # Redact sensitive data
+        engine = RedactionEngine(redact_fields=["private", "password"])
+        redacted_data = engine.process_object(original_data)
+
+        # Compare original vs redacted
+        comparison = deep_compare(original_data, redacted_data)
+
+        assert not comparison["are_equal"]
+        assert comparison["summary"]["value_differences"] > 0

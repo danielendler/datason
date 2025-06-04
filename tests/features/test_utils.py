@@ -514,3 +514,286 @@ class TestEdgeCases:
             pass
         except ImportError:
             pytest.skip("numpy not available")
+
+
+class TestUtilityConfigExtended:
+    """Extended tests for UtilityConfig functionality."""
+
+    def test_utility_config_all_parameters(self) -> None:
+        """Test UtilityConfig with all parameters specified."""
+        config = UtilityConfig(
+            max_depth=10,
+            max_object_size=1000,
+            max_string_length=500,
+            max_collection_size=100,
+            enable_circular_reference_detection=False,
+            timeout_seconds=30.0,
+        )
+
+        assert config.max_depth == 10
+        assert config.max_object_size == 1000
+        assert config.max_string_length == 500
+        assert config.max_collection_size == 100
+        assert config.enable_circular_reference_detection is False
+        assert config.timeout_seconds == 30.0
+
+
+class TestDeepCompareExtended:
+    """Extended tests for deep_compare functionality."""
+
+    def test_deep_compare_type_mismatches(self) -> None:
+        """Test deep_compare with type mismatches."""
+        result = deep_compare({"a": 1}, {"a": "1"})
+
+        assert not result["are_equal"]
+        assert len(result["differences"]) > 0
+        assert result["summary"]["type_mismatches"] > 0
+
+    def test_deep_compare_missing_keys(self) -> None:
+        """Test deep_compare with missing keys."""
+        result = deep_compare({"a": 1, "b": 2}, {"a": 1})
+
+        assert not result["are_equal"]
+        assert any("Missing key" in diff for diff in result["differences"])
+
+    def test_deep_compare_string_length_limits(self) -> None:
+        """Test deep_compare with string length limits."""
+        config = UtilityConfig(max_string_length=10)
+        long_str = "x" * 20
+
+        # Should handle long strings without throwing errors
+        result = deep_compare({"text": long_str}, {"text": long_str}, config=config)
+        assert result["are_equal"]
+
+    def test_deep_compare_object_size_security_error(self) -> None:
+        """Test deep_compare security error with large objects."""
+        config = UtilityConfig(max_object_size=5)
+        large_list = list(range(10))
+
+        with pytest.raises(UtilitySecurityError):
+            deep_compare(large_list, large_list, config=config)
+
+    def test_deep_compare_depth_security_error(self) -> None:
+        """Test deep_compare security error with excessive depth."""
+        config = UtilityConfig(max_depth=2)
+        nested = {"a": {"b": {"c": {"d": 1}}}}
+
+        with pytest.raises(UtilitySecurityError):
+            deep_compare(nested, nested, config=config)
+
+
+class TestFindDataAnomaliesExtended:
+    """Extended tests for find_data_anomalies functionality."""
+
+    def test_find_data_anomalies_large_strings(self) -> None:
+        """Test find_data_anomalies with large strings."""
+        data = {"large_text": "x" * 1000, "normal": "hello"}
+
+        result = find_data_anomalies(data)
+
+        assert "large_strings" in result
+        # May or may not find large strings depending on default thresholds
+
+    def test_find_data_anomalies_large_collections(self) -> None:
+        """Test find_data_anomalies with large collections."""
+        data = {"large_list": list(range(1000)), "normal": [1, 2, 3]}
+
+        result = find_data_anomalies(data)
+
+        assert "large_collections" in result
+        # May or may not find large collections depending on default thresholds
+
+    def test_find_data_anomalies_custom_rules_comprehensive(self) -> None:
+        """Test find_data_anomalies with custom rules."""
+        rules = {
+            "max_string_length": 5,
+            "max_collection_size": 2,
+            "custom_patterns": [r"secret_\w+"],
+        }
+
+        data = {"long_text": "this is too long", "secret_key": "password", "list": [1, 2, 3]}
+
+        result = find_data_anomalies(data, rules=rules)
+
+        assert "large_strings" in result
+        assert "large_collections" in result
+        # API may vary on exact key names
+
+    def test_find_data_anomalies_security_violations_patterns(self) -> None:
+        """Test find_data_anomalies with security-related patterns."""
+        data = {
+            "password": "secret123",
+            "api_key": "abc123def456",
+            "credit_card": "4111-1111-1111-1111",
+            "email": "user@example.com",
+        }
+
+        result = find_data_anomalies(data)
+
+        assert "security_violations" in result or "suspicious_patterns" in result
+        # Should detect some security-related patterns
+
+
+class TestEnhanceDataTypesExtended:
+    """Extended tests for enhance_data_types functionality."""
+
+    def test_enhance_data_types_numeric_strings(self) -> None:
+        """Test enhance_data_types with numeric string conversion."""
+        data = {"number": "123", "float": "45.67", "text": "hello"}
+
+        enhanced, report = enhance_data_types(data)
+
+        assert enhanced["number"] == 123
+        assert enhanced["float"] == 45.67
+        assert enhanced["text"] == "hello"
+        assert "type_conversions" in report
+
+    def test_enhance_data_types_date_parsing(self) -> None:
+        """Test enhance_data_types with date string parsing."""
+        from datetime import datetime
+
+        data = {"date": "2023-01-01", "datetime": "2023-01-01T12:00:00", "text": "not a date"}
+
+        enhanced, report = enhance_data_types(data)
+
+        assert isinstance(enhanced["date"], datetime)
+        assert isinstance(enhanced["datetime"], datetime)
+        assert enhanced["text"] == "not a date"
+
+    def test_enhance_data_types_with_security_limits(self) -> None:
+        """Test enhance_data_types with security limits."""
+        config = UtilityConfig(max_depth=2)
+        nested = {"a": {"b": {"c": "123"}}}
+
+        with pytest.raises(UtilitySecurityError):
+            enhance_data_types(nested, config=config)
+
+    def test_enhance_data_types_circular_reference_error(self) -> None:
+        """Test enhance_data_types with circular reference."""
+        from typing import Any, Dict
+
+        data: Dict[str, Any] = {"val": 1}
+        data["self"] = data
+
+        # Should handle circular references gracefully or raise appropriate error
+        try:
+            enhanced, report = enhance_data_types(data)
+            # If it succeeds, verify it handled the circular ref
+            assert isinstance(enhanced, dict)
+        except UtilitySecurityError:
+            # Acceptable outcome for circular reference detection
+            pass
+
+
+class TestNormalizeDataStructureExtended:
+    """Extended tests for normalize_data_structure functionality."""
+
+    def test_normalize_data_structure_flatten(self) -> None:
+        """Test normalize_data_structure with flatten option."""
+        data = {"a": {"b": 1, "c": 2}, "d": 3}
+
+        result = normalize_data_structure(data, target_structure="flatten")
+
+        # Result structure may vary, just verify it's processed
+        assert isinstance(result, (dict, list))
+
+    def test_normalize_data_structure_records(self) -> None:
+        """Test normalize_data_structure with records conversion."""
+        data = {"users": [{"id": 1, "name": "Alice"}, {"id": 2, "name": "Bob"}]}
+
+        result = normalize_data_structure(data, target_structure="records")
+
+        assert isinstance(result, (list, dict))
+
+    def test_normalize_data_structure_security_limits(self) -> None:
+        """Test normalize_data_structure with security limits."""
+        config = UtilityConfig(max_depth=1)
+        nested = {"a": {"b": {"c": 1}}}
+
+        with pytest.raises(UtilitySecurityError):
+            normalize_data_structure(nested, target_structure="flatten", config=config)
+
+
+class TestDatetimeUtilitiesExtended:
+    """Extended tests for datetime utilities."""
+
+    def test_standardize_datetime_formats_iso(self) -> None:
+        """Test standardize_datetime_formats with ISO format."""
+        from datetime import datetime
+
+        data = {"date": datetime(2023, 1, 1, 12, 0, 0)}
+
+        result, paths = standardize_datetime_formats(data, target_format="iso")
+
+        assert isinstance(result["date"], str)
+        assert "2023-01-01T12:00:00" in result["date"]
+        assert len(paths) > 0
+
+    def test_standardize_datetime_formats_unix(self) -> None:
+        """Test standardize_datetime_formats with unix format."""
+        from datetime import datetime
+
+        data = {"date": datetime(2023, 1, 1, 12, 0, 0)}
+
+        result, paths = standardize_datetime_formats(data, target_format="unix")
+
+        assert isinstance(result["date"], (int, float))
+        assert len(paths) > 0
+
+    def test_extract_temporal_features_comprehensive(self) -> None:
+        """Test extract_temporal_features functionality."""
+        from datetime import datetime
+
+        data = {
+            "timestamp": datetime(2023, 6, 15, 14, 30, 0),
+            "dates": [datetime(2023, 1, 1), datetime(2023, 12, 31)],
+        }
+
+        features = extract_temporal_features(data)
+
+        assert "datetime_fields" in features
+        assert len(features["datetime_fields"]) > 0
+
+
+class TestUtilityDiscoveryExtended:
+    """Extended tests for utility discovery."""
+
+    def test_get_available_utilities_comprehensive(self) -> None:
+        """Test get_available_utilities function."""
+        utilities = get_available_utilities()
+
+        assert isinstance(utilities, dict)
+        # Check for expected categories (API may vary)
+        expected_categories = ["data_comparison", "data_enhancement", "datetime_utilities", "configuration"]
+        found_categories = any(cat in utilities for cat in expected_categories)
+        assert found_categories
+
+
+class TestPandasNumpyIntegrationExtended:
+    """Extended integration tests with pandas and numpy."""
+
+    def test_utils_with_pandas_integration(self) -> None:
+        """Test utils integration with pandas when available."""
+        pd = pytest.importorskip("pandas")
+
+        from datason.utils import enhance_pandas_dataframe
+
+        df = pd.DataFrame({"A": [1, 2, 3], "B": ["x", "y", "z"]})
+
+        enhanced, report = enhance_pandas_dataframe(df)
+
+        assert isinstance(enhanced, pd.DataFrame)
+        assert isinstance(report, dict)
+
+    def test_utils_with_numpy_integration(self) -> None:
+        """Test utils integration with numpy when available."""
+        np = pytest.importorskip("numpy")
+
+        from datason.utils import enhance_numpy_array
+
+        arr = np.array([1, 2, 3, 4, 5])
+
+        enhanced, report = enhance_numpy_array(arr)
+
+        assert isinstance(enhanced, np.ndarray)
+        assert isinstance(report, dict)

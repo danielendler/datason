@@ -7,7 +7,8 @@ from typing import Any, Dict
 
 import pytest
 
-from datason.core import serialize
+import datason
+from datason import serialize
 
 
 class TestSerialize:
@@ -222,3 +223,141 @@ class TestSerializeWithOptionalDeps:
         assert "2023-01-01" in result["timestamp"]
         # pd.NaT now becomes None by default with NanHandling.NULL
         assert result["nat"] is None
+
+
+class TestSerializationOptimizations:
+    """Test core serialization optimization paths."""
+
+    def test_string_length_cache_behavior(self) -> None:
+        """Test string length cache optimization."""
+        # Test that the string cache works correctly
+        test_string = "test_string_for_cache"
+
+        # First call should populate cache
+        result1 = serialize(test_string)
+
+        # Second call should use cache
+        result2 = serialize(test_string)
+
+        assert result1 == result2 == test_string
+
+    def test_uuid_string_cache_behavior(self) -> None:
+        """Test UUID string cache optimization."""
+        import uuid
+
+        test_uuid = uuid.uuid4()
+
+        # First serialization should populate cache
+        result1 = serialize(test_uuid)
+
+        # Second should use cache
+        result2 = serialize(test_uuid)
+
+        assert result1 == result2
+        assert isinstance(result1, str)
+
+    def test_homogeneous_collection_detection(self) -> None:
+        """Test homogeneous collection optimization paths."""
+        # Test with homogeneous list
+        homogeneous_list = [1, 2, 3, 4, 5] * 10  # 50 integers
+        result = serialize(homogeneous_list)
+        assert isinstance(result, list)
+        assert len(result) == 50
+
+        # Test with heterogeneous list
+        heterogeneous_list = [1, "string", 3.14, True, None]
+        result = serialize(heterogeneous_list)
+        assert isinstance(result, list)
+
+    def test_json_only_fast_path(self) -> None:
+        """Test JSON-only fast path optimization."""
+        # Test data that should trigger fast path
+        json_data = {
+            "string": "hello",
+            "number": 42,
+            "boolean": True,
+            "null": None,
+            "float": 3.14,
+        }
+
+        result = serialize(json_data)
+        assert result == json_data
+
+    def test_iterative_serialization_path(self) -> None:
+        """Test iterative serialization for deeply nested structures."""
+        from typing import Any, Dict
+
+        # Create a structure that might use iterative path
+        deep_dict: Dict[str, Any] = {}
+        current = deep_dict
+        for i in range(20):
+            current[f"level_{i}"] = {}
+            current = current[f"level_{i}"]
+        current["value"] = "deep"
+
+        result = serialize(deep_dict)
+        assert isinstance(result, dict)
+
+    def test_tuple_conversion_fast_path(self) -> None:
+        """Test fast tuple conversion paths."""
+        # Test nested tuples
+        nested_tuples = ((1, 2), (3, 4), (5, 6))
+        result = serialize(nested_tuples)
+        assert result == [[1, 2], [3, 4], [5, 6]]
+
+        # Test mixed tuple content
+        mixed_tuple = (1, "hello", True, None)
+        result = serialize(mixed_tuple)
+        assert result == [1, "hello", True, None]
+
+    def test_serialize_with_all_optimizations(self) -> None:
+        """Test serialization with all optimization paths enabled."""
+        # Create data that exercises multiple optimization paths
+        data = {
+            "json_basic": {"str": "hello", "int": 42, "bool": True, "null": None},
+            "homogeneous_list": [1, 2, 3, 4, 5] * 20,
+            "heterogeneous": [1, "string", 3.14, True, None],
+            "nested_tuples": ((1, 2), (3, 4)),
+            "uuid_test": "550e8400-e29b-41d4-a716-446655440000",  # UUID-like string
+        }
+
+        result = serialize(data)
+
+        # Verify structure is preserved
+        assert isinstance(result, dict)
+        assert isinstance(result["homogeneous_list"], list)
+        assert len(result["homogeneous_list"]) == 100
+
+
+class TestErrorRecoveryPatterns:
+    """Test error recovery patterns in core serialization."""
+
+    def test_error_recovery_patterns(self) -> None:
+        """Test error recovery patterns across modules."""
+        from typing import Any, Dict
+
+        # Test that modules handle errors gracefully
+
+        # Test utils with problematic data
+        problematic_data: Dict[str, Any] = {
+            "circular": None,
+            "huge_string": "x" * 10000,
+            "deep_nest": {},
+        }
+
+        # Create circular reference
+        problematic_data["circular"] = problematic_data
+
+        # Create deep nesting
+        current: Dict[str, Any] = problematic_data["deep_nest"]
+        for i in range(100):
+            current[f"level_{i}"] = {}
+            current = current[f"level_{i}"]
+
+        # These should either work or fail gracefully
+        try:
+            result = serialize(problematic_data)
+            assert isinstance(result, dict)
+        except Exception as e:
+            # Should be a controlled exception, not a crash
+            assert isinstance(e, (RecursionError, datason.core.SecurityError))
