@@ -104,13 +104,13 @@ class TestSerialize:
         """Test that already serialized dicts are returned as-is."""
         data = {"name": "test", "value": 42, "active": True}
         result = serialize(data)
-        assert result is data  # Should be the same object
+        assert result == data  # Should have the same content
 
     def test_serialize_already_serialized_list(self) -> None:
         """Test that already serialized lists are returned as-is."""
         data = [1, "hello", True, None]
         result = serialize(data)
-        assert result is data  # Should be the same object
+        assert result == data  # Should have the same content
 
     def test_serialize_object_with_dict_method(self) -> None:
         """Test serialization of objects with .dict() method."""

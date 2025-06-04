@@ -225,13 +225,13 @@ class TestCircularReferenceProtection:
 class TestDepthLimits:
     """Test protection against excessive recursion depth."""
 
-
-    def test_deep_nesting_within_limits(self):
-        """Test that reasonable nesting depth works."""
-        # Create nested dict within our security limits (40 levels, under the 50 limit)
-        nested = {}
+    def test_deep_nesting_within_limits(self) -> None:
+        """Test that deep nesting within limits works correctly."""
+        # Create nested structure within limits (max_depth=50)
+        nested: Dict[str, Any] = {}
         current = nested
-        for _i in range(40):  # Changed from 100 to 40 to be under the new 50-level limit
+        for i in range(45):  # Well within the 50 limit
+            current["level"] = i
             current["next"] = {}
             current = current["next"]
         current["end"] = True
@@ -633,7 +633,7 @@ class TestNumpySecurityLimits:
 
             @property
             def size(self) -> int:
-                return self._fake_size
+                return int(self._fake_size)  # Convert to int to satisfy type checker
 
         # Create small actual array with fake large size
         actual_data = np.array([1, 2, 3])  # Only 3 elements in memory
@@ -702,7 +702,7 @@ class TestNumpySecurityLimits:
 
             @property
             def size(self) -> int:
-                return self._fake_size
+                return int(self._fake_size)  # Convert to int to satisfy type checker
 
         # Create small actual array with fake large size
         actual_data = np.array([1, 2, 3])  # Only 3 elements in memory
