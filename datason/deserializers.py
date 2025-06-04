@@ -302,26 +302,69 @@ def _deserialize_with_type_metadata(obj: Dict[str, Any]) -> Any:
                 if pd is not None:
                     # Enhanced DataFrame reconstruction - handle different orientations
                     if isinstance(value, list):
-                        # Records format (most common)
-                        return pd.DataFrame(value)
+                        # Records format (most common) or VALUES format (list of lists)
+                        if value and isinstance(value[0], list):
+                            # VALUES format: list of lists without column/index info
+                            # This loses column names, but that's expected for VALUES orientation
+                            return pd.DataFrame(value)
+                        else:
+                            # Records format: list of dicts
+                            return pd.DataFrame(value)
                     elif isinstance(value, dict):
-                        # Dict format or split format
+                        # Dict format, split format, or index format
                         if "index" in value and "columns" in value and "data" in value:
                             # Split format
                             return pd.DataFrame(data=value["data"], index=value["index"], columns=value["columns"])
                         else:
-                            # Dict format
-                            return pd.DataFrame.from_dict(value)
+                            # Index format: {0: {'a': 1, 'b': 3}, 1: {'a': 2, 'b': 4}}
+                            # Need to use orient='index' to properly reconstruct
+                            return pd.DataFrame.from_dict(value, orient="index")
                     return pd.DataFrame(value)  # Fallback
 
             elif type_name == "pandas.Series":
                 if pd is not None:
-                    # Enhanced Series reconstruction with name preservation
+                    # Enhanced Series reconstruction with name preservation and categorical support
                     if isinstance(value, dict) and "_series_name" in value:
                         series_name = value["_series_name"]
-                        series_data = {k: v for k, v in value.items() if k != "_series_name"}
-                        return pd.Series(series_data, name=series_name)
-                    elif isinstance(value, (dict, list)):
+                        series_data = {
+                            k: v
+                            for k, v in value.items()
+                            if k not in ("_series_name", "_dtype", "_categories", "_ordered")
+                        }
+                        # CRITICAL FIX: Handle JSON string keys that should be integers
+                        series_data = _convert_string_keys_to_int_if_possible(series_data)
+
+                        # Handle categorical dtype reconstruction
+                        if value.get("_dtype") == "category":
+                            categories = value.get("_categories", [])
+                            ordered = value.get("_ordered", False)
+                            # Create Series with categorical dtype
+                            series = pd.Series(
+                                list(series_data.values()), index=list(series_data.keys()), name=series_name
+                            )
+                            series = series.astype(pd.CategoricalDtype(categories=categories, ordered=ordered))
+                            return series
+                        else:
+                            return pd.Series(series_data, name=series_name)
+                    elif isinstance(value, dict):
+                        # Handle categorical dtype reconstruction for unnamed series
+                        if value.get("_dtype") == "category":
+                            categories = value.get("_categories", [])
+                            ordered = value.get("_ordered", False)
+                            series_data = {
+                                k: v for k, v in value.items() if k not in ("_dtype", "_categories", "_ordered")
+                            }
+                            # CRITICAL FIX: Handle JSON string keys that should be integers
+                            series_data = _convert_string_keys_to_int_if_possible(series_data)
+                            # Create Series with categorical dtype
+                            series = pd.Series(list(series_data.values()), index=list(series_data.keys()))
+                            series = series.astype(pd.CategoricalDtype(categories=categories, ordered=ordered))
+                            return series
+                        else:
+                            # CRITICAL FIX: Handle JSON string keys that should be integers
+                            series_data = _convert_string_keys_to_int_if_possible(value)
+                            return pd.Series(series_data)
+                    elif isinstance(value, list):
                         return pd.Series(value)
                     return pd.Series(value)  # Fallback
 
@@ -331,6 +374,18 @@ def _deserialize_with_type_metadata(obj: Dict[str, Any]) -> Any:
                     array_data = value.get("data", value) if isinstance(value, dict) else value
                     dtype = value.get("dtype") if isinstance(value, dict) else None
                     shape = value.get("shape") if isinstance(value, dict) else None
+
+                    # CRITICAL FIX: Recursively deserialize array elements to handle complex numbers and other types
+                    if isinstance(array_data, list):
+                        deserialized_data = []
+                        for item in array_data:
+                            # Recursively deserialize each element to handle complex numbers, etc.
+                            if isinstance(item, dict) and "_type" in item:
+                                deserialized_item = _deserialize_with_type_metadata(item)
+                            else:
+                                deserialized_item = item
+                            deserialized_data.append(deserialized_item)
+                        array_data = deserialized_data
 
                     result = np.array(array_data)
                     if dtype:
@@ -375,16 +430,31 @@ def _deserialize_with_type_metadata(obj: Dict[str, Any]) -> Any:
                     import torch
 
                     if type_name == "torch.Tensor":
-                        tensor_data = value.get("data", value) if isinstance(value, dict) else value
-                        dtype = value.get("dtype") if isinstance(value, dict) else None
-                        device = value.get("device", "cpu") if isinstance(value, dict) else "cpu"
-                        requires_grad = value.get("requires_grad", False) if isinstance(value, dict) else False
+                        # CRITICAL FIX: Handle both new format (data, dtype) and legacy format (_data, _dtype)
+                        tensor_data = value.get("_data", value.get("data", value)) if isinstance(value, dict) else value
+                        dtype = value.get("_dtype", value.get("dtype")) if isinstance(value, dict) else None
+                        device = value.get("_device", value.get("device", "cpu")) if isinstance(value, dict) else "cpu"
+                        requires_grad = (
+                            value.get("_requires_grad", value.get("requires_grad", False))
+                            if isinstance(value, dict)
+                            else False
+                        )
+                        shape = value.get("_shape", value.get("shape")) if isinstance(value, dict) else None
 
                         # Create tensor with proper attributes
                         result = torch.tensor(tensor_data, device=device, requires_grad=requires_grad)
                         if dtype and hasattr(torch, dtype.replace("torch.", "")):
                             torch_dtype = getattr(torch, dtype.replace("torch.", ""))
                             result = result.to(torch_dtype)
+
+                        # Reshape if needed (for tensors that were reshaped during serialization)
+                        if shape and result.numel() > 0:
+                            try:
+                                result = result.reshape(shape)
+                            except RuntimeError:
+                                # If reshape fails, keep original shape
+                                pass
+
                         return result
                 except ImportError:
                     warnings.warn("PyTorch not available for tensor reconstruction", stacklevel=2)
@@ -392,16 +462,44 @@ def _deserialize_with_type_metadata(obj: Dict[str, Any]) -> Any:
             # ML Types - Scikit-learn
             elif type_name.startswith("sklearn.") or type_name.startswith("scikit_learn."):
                 try:
-                    # For sklearn models, we need to use pickle or joblib
-                    import base64
-                    import pickle  # nosec B403
+                    # Handle new type metadata format for sklearn models
+                    if isinstance(value, dict) and "_class" in value and "_params" in value:
+                        # This is the new format: reconstruct the sklearn model from class and params
+                        class_name = value["_class"]
+                        params = value["_params"]
 
-                    if isinstance(value, str):
+                        # Import the sklearn class dynamically
+                        module_path, class_name_only = class_name.rsplit(".", 1)
+                        try:
+                            import importlib
+
+                            module = importlib.import_module(module_path)
+                            model_class = getattr(module, class_name_only)
+
+                            # Create the model with the saved parameters
+                            model = model_class(**params)
+
+                            # Note: We can't restore fitted state without the actual fitted data
+                            # This is a limitation of the current serialization format
+                            return model
+                        except (ImportError, AttributeError) as e:
+                            warnings.warn(f"Could not import sklearn class {class_name}: {e}", stacklevel=2)
+                            # Fall back to returning the dict
+                            return value
+
+                    # Handle legacy pickle format
+                    elif isinstance(value, str):
                         # Assume base64 encoded pickle
+                        import base64
+                        import pickle  # nosec B403
+
                         pickle_data = base64.b64decode(value)
                         return pickle.loads(pickle_data)  # nosec B301
                     elif isinstance(value, dict) and "_pickle_data" in value:
                         # Alternative pickle storage format
+                        import base64
+                        import pickle  # nosec B403
+
                         pickle_data = base64.b64decode(value["_pickle_data"])
                         return pickle.loads(pickle_data)  # nosec B301
                 except (ImportError, Exception) as e:
@@ -1299,15 +1397,15 @@ def deserialize_fast(
     # PHASE 1: SECURITY CHECKS (ONLY FOR CONTAINERS AND COMPLEX TYPES)
     # ==================================================================================
 
-    # Only apply security checks to containers that need them
-    if isinstance(obj, (dict, list)):
-        # SECURITY CHECK 1: Depth limit enforcement
-        max_depth = config.max_depth if config else MAX_SERIALIZATION_DEPTH
-        if _depth > max_depth:
-            raise DeserializationSecurityError(
-                f"Maximum deserialization depth ({max_depth}) exceeded. Current depth: {_depth}."
-            )
+    # SECURITY CHECK 1: Depth limit enforcement (apply to ALL objects at depth)
+    max_depth = config.max_depth if config else MAX_SERIALIZATION_DEPTH
+    if _depth > max_depth:
+        raise DeserializationSecurityError(
+            f"Maximum deserialization depth ({max_depth}) exceeded. Current depth: {_depth}."
+        )
 
+    # Additional container-specific security checks
+    if isinstance(obj, (dict, list)):
         # SECURITY CHECK 2: Initialize circular reference tracking
         if _seen is None:
             _seen = set()
@@ -1664,3 +1762,34 @@ def _return_list_to_pool(lst: List) -> None:
     if len(_RESULT_LIST_POOL) < _POOL_SIZE_LIMIT:
         lst.clear()
         _RESULT_LIST_POOL.append(lst)
+
+
+def _convert_string_keys_to_int_if_possible(data: Dict[str, Any]) -> Dict[Any, Any]:
+    """Convert string keys to integers if they represent valid integers.
+
+    This handles the case where JSON serialization converts integer keys to strings.
+    For pandas Series with integer indices, we need to convert them back.
+    """
+    converted_data = {}
+    for key, value in data.items():
+        # Try to convert string keys that look like integers back to integers
+        if isinstance(key, str) and key.isdigit():
+            try:
+                int_key = int(key)
+                converted_data[int_key] = value
+            except ValueError:
+                # If conversion fails, keep as string
+                converted_data[key] = value
+        elif isinstance(key, str) and key.lstrip("-").isdigit():
+            # Handle negative integers
+            try:
+                int_key = int(key)
+                converted_data[int_key] = value
+            except ValueError:
+                # If conversion fails, keep as string
+                converted_data[key] = value
+        else:
+            # Keep non-string keys or non-numeric string keys as-is
+            converted_data[key] = value
+
+    return converted_data

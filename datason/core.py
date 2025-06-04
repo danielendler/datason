@@ -435,6 +435,9 @@ def _serialize_core(
         elif obj_type in (_TYPE_LIST, _TYPE_TUPLE):
             # Quick path for empty list/tuple (already security-checked)
             if not obj:
+                # Handle type metadata for empty tuples
+                if obj_type is _TYPE_TUPLE and config and config.include_type_hints:
+                    return _create_type_metadata("tuple", [])
                 return [] if obj_type is _TYPE_TUPLE else obj
 
             # PERFORMANCE OPTIMIZATION: Homogeneity check (ONLY after security verification)
@@ -760,6 +763,17 @@ def _serialize_full_path(
                 # Include series name if it exists
                 if obj.name is not None:
                     serialized_series = {"_series_name": obj.name, **serialized_series}
+
+                # Handle categorical dtype preservation
+                if hasattr(obj, "dtype") and str(obj.dtype) == "category":
+                    # Preserve categorical information for round-trip fidelity
+                    categorical_info = {
+                        "_dtype": "category",
+                        "_categories": list(obj.cat.categories),
+                        "_ordered": obj.cat.ordered,
+                    }
+                    serialized_series.update(categorical_info)
+
                 return _create_type_metadata("pandas.Series", serialized_series)
 
             return serialized_series
@@ -777,6 +791,23 @@ def _serialize_full_path(
         try:
             ml_result = _ml_serializer(obj)
             if ml_result is not None:
+                # CRITICAL FIX: Handle type metadata for ML objects when include_type_hints is enabled
+                if config and config.include_type_hints and isinstance(ml_result, dict) and "_type" in ml_result:
+                    # Convert legacy ML format to new type metadata format
+                    legacy_type = ml_result["_type"]
+
+                    # Map legacy types to new type names
+                    if legacy_type == "sklearn.model":
+                        # Use the class name directly as the type name (it already includes sklearn.)
+                        type_name = ml_result.get("_class", "sklearn.model")
+                        # Create a clean value dict without the legacy _type field
+                        value_dict = {k: v for k, v in ml_result.items() if k != "_type"}
+                        return _create_type_metadata(type_name, value_dict)
+                    elif legacy_type.startswith(("torch.", "tensorflow.", "jax.", "scipy.")):
+                        # For other ML types, use the legacy type as the new type name
+                        value_dict = {k: v for k, v in ml_result.items() if k != "_type"}
+                        return _create_type_metadata(legacy_type, value_dict)
+
                 return ml_result
         except Exception:
             # If ML serializer fails, continue with fallback
