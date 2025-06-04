@@ -399,8 +399,10 @@ def _serialize_core(
                 homogeneity = _is_homogeneous_collection(obj, sample_size=10, _max_check_depth=2)
 
             # Quick JSON compatibility check for small dicts
+            # SECURITY: Disable optimization paths when depth is significant to prevent bypass
             if (
-                homogeneity == "json_basic"
+                _depth < 10  # Additional security: no optimizations at significant depth
+                and homogeneity == "json_basic"
                 and len(obj) <= 5
                 and all(
                     isinstance(k, str)
@@ -409,7 +411,12 @@ def _serialize_core(
                     for k, v in obj.items()
                 )
             ):
-                return obj
+                # SECURITY FIX: Even for "json_basic" small dicts, we must check if any values
+                # are nested containers that could lead to depth bomb attacks
+                has_nested_containers = any(isinstance(v, (dict, list, tuple)) for v in obj.values())
+                if not has_nested_containers:
+                    return obj
+                # If there are nested containers, fall through to recursive processing
 
             # GUARANTEED SAFE PROCESSING: Each recursive call has verified depth increment
             result = {}
@@ -436,13 +443,20 @@ def _serialize_core(
                 homogeneity = _is_homogeneous_collection(obj, sample_size=10, _max_check_depth=2)
 
                 # Quick JSON compatibility check for small lists
+            # SECURITY: Disable optimization paths when depth is significant to prevent bypass
             if (
-                homogeneity == "json_basic"
+                _depth < 10  # Additional security: no optimizations at significant depth
+                and homogeneity == "json_basic"
                 and len(obj) <= 5
                 and all(type(item) in _JSON_BASIC_TYPES for item in obj)
                 and not (config and config.include_type_hints and obj_type is _TYPE_TUPLE)
             ):
-                return list(obj) if obj_type is _TYPE_TUPLE else obj
+                # SECURITY FIX: Even for "json_basic" small lists, we must check if any items
+                # are nested containers that could lead to depth bomb attacks
+                has_nested_containers = any(isinstance(item, (dict, list, tuple)) for item in obj)
+                if not has_nested_containers:
+                    return list(obj) if obj_type is _TYPE_TUPLE else obj
+                # If there are nested containers, fall through to recursive processing
 
             # GUARANTEED SAFE PROCESSING: Each recursive call has verified depth increment
             result_list = []
@@ -556,12 +570,13 @@ def _serialize_full_path(
     if type_category == "json_basic" and obj_type is _TYPE_STR:
         return _process_string_optimized(obj, max_string_length)
 
-    # Check for NaN-like values if type handler is available (for non-float types)
-    if _type_handler and type_category != "float" and is_nan_like(obj):
-        return _type_handler.handle_nan_value(obj)
-
     # Try advanced type handler first if available
     if _type_handler:
+        # Check for NaN-like values first for non-float types
+        if type_category != "float" and is_nan_like(obj):
+            return _type_handler.handle_nan_value(obj)
+
+        # Try custom type handler
         handler = _type_handler.get_type_handler(obj)
         if handler:
             try:
@@ -569,6 +584,7 @@ def _serialize_full_path(
             except Exception as e:
                 # If custom handler fails, log warning and continue with default handling
                 warnings.warn(f"Custom type handler failed for {type(obj)}: {e}", stacklevel=3)
+                # Continue to default handling below
 
     # Handle dicts with full processing - SECURITY: Apply homogeneity bypass protection here too!
     if type_category == "dict":

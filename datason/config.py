@@ -119,7 +119,7 @@ class SerializationConfig:
     preserve_complex: bool = True
 
     # Security limits
-    max_depth: int = 1000
+    max_depth: int = 50  # Changed from 1000 to match MAX_SERIALIZATION_DEPTH in core.py
     max_size: int = 10_000_000
     max_string_length: int = 1_000_000
 

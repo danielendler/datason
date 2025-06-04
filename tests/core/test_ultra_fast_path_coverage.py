@@ -8,6 +8,7 @@ to ensure robust coverage of our performance improvements and security measures.
 import uuid
 import warnings
 from datetime import datetime
+from typing import Any, Dict
 from unittest.mock import Mock, patch
 
 import pytest
@@ -19,7 +20,7 @@ from datason.core import SecurityError
 class TestUltraFastPathCoverage:
     """Test coverage for the ultra-fast path optimizations."""
 
-    def test_ultra_fast_path_int_bool_none(self):
+    def test_ultra_fast_path_int_bool_none(self) -> None:
         """Test ultra-fast path for int, bool, None."""
         # These should bypass all processing
         assert serialize(42) == 42
@@ -27,14 +28,14 @@ class TestUltraFastPathCoverage:
         assert serialize(False) is False
         assert serialize(None) is None
 
-    def test_ultra_fast_path_regular_float(self):
+    def test_ultra_fast_path_regular_float(self) -> None:
         """Test ultra-fast path for regular floats."""
         # Regular floats should use fast path
         assert serialize(3.14) == 3.14
         assert serialize(-2.5) == -2.5
         assert serialize(0.0) == 0.0
 
-    def test_ultra_fast_path_nan_inf_fallback(self):
+    def test_ultra_fast_path_nan_inf_fallback(self) -> None:
         """Test that NaN/Inf floats fall through to normal processing."""
         # These should NOT use ultra-fast path
         result_nan = serialize(float("nan"))
@@ -46,14 +47,14 @@ class TestUltraFastPathCoverage:
         result_ninf = serialize(float("-inf"))
         assert result_ninf is None  # Default -Inf handling
 
-    def test_ultra_fast_path_short_strings_top_level(self):
+    def test_ultra_fast_path_short_strings_top_level(self) -> None:
         """Test ultra-fast path for short strings at top level."""
         # Short strings at depth 0 should use fast path
         assert serialize("hello") == "hello"
         assert serialize("") == ""
         assert serialize("x" * 100) == "x" * 100  # Still under 1000 char limit
 
-    def test_ultra_fast_path_string_length_limit(self):
+    def test_ultra_fast_path_string_length_limit(self) -> None:
         """Test that long strings don't use ultra-fast path."""
         # Strings over 1000 chars should fall through to normal processing
         long_string = "x" * 1001
@@ -61,7 +62,7 @@ class TestUltraFastPathCoverage:
         # Should still work but go through normal processing
         assert result == long_string
 
-    def test_ultra_fast_path_nested_strings_fallback(self):
+    def test_ultra_fast_path_nested_strings_fallback(self) -> None:
         """Test that nested strings don't use ultra-fast path."""
         # Strings not at top level should fall through
         nested_data = {"key": "value"}
@@ -72,7 +73,7 @@ class TestUltraFastPathCoverage:
 class TestSecurityMeasuresEdgeCases:
     """Test edge cases in our security measures."""
 
-    def test_mock_object_detection_warnings(self):
+    def test_mock_object_detection_warnings(self) -> None:
         """Test detection and safe handling of mock objects."""
         # Create mock-like object that should trigger warning
         mock_obj = Mock()
@@ -91,7 +92,7 @@ class TestSecurityMeasuresEdgeCases:
             assert isinstance(result, str)
             assert "Mock" in result
 
-    def test_io_object_detection_warnings(self):
+    def test_io_object_detection_warnings(self) -> None:
         """Test detection of io objects that can cause circular refs."""
         from io import BytesIO
 
@@ -107,11 +108,11 @@ class TestSecurityMeasuresEdgeCases:
             # Should return safe representation
             assert isinstance(result, str)
 
-    def test_circular_reference_in_dict_values(self):
+    def test_circular_reference_in_dict_values(self) -> None:
         """Test circular reference detection in dict values."""
         # Create circular reference scenario
-        d1 = {"name": "dict1"}
-        d2 = {"name": "dict2", "ref": d1}
+        d1: Dict[str, Any] = {"name": "dict1"}
+        d2: Dict[str, Any] = {"name": "dict2", "ref": d1}
         d1["ref"] = d2
 
         with warnings.catch_warnings(record=True) as w:
@@ -124,23 +125,20 @@ class TestSecurityMeasuresEdgeCases:
             if w:
                 assert any("circular" in str(warning.message).lower() for warning in w)
 
-    def test_excessive_depth_security_error(self):
-        """Test that excessive depth is handled by circuit breaker."""
-        # Create deeply nested structure
-        nested = "value"
-        for _ in range(1005):  # Exceed MAX_SERIALIZATION_DEPTH
+    def test_excessive_depth_security_error(self) -> None:
+        """Test that excessive depth raises SecurityError."""
+        # Create deeply nested structure that exceeds MAX_SERIALIZATION_DEPTH (50)
+        nested: Any = "value"
+        for _ in range(55):  # Exceed MAX_SERIALIZATION_DEPTH
             nested = {"level": nested}
 
-        # Should be handled by circuit breaker, not raise SecurityError
-        result = serialize(nested)
+        # Should raise SecurityError due to depth limit
+        with pytest.raises(SecurityError) as exc_info:
+            serialize(nested)
 
-        # Circuit breaker should return a result with emergency information
-        assert isinstance(result, (dict, str))
-        # Should contain circuit breaker indication
-        result_str = str(result)
-        assert "CIRCUIT_BREAKER" in result_str or "EMERGENCY" in result_str
+        assert "Maximum serialization depth" in str(exc_info.value)
 
-    def test_excessive_dict_size_security_error(self):
+    def test_excessive_dict_size_security_error(self) -> None:
         """Test that large dict raises SecurityError."""
         # Create dict larger than MAX_OBJECT_SIZE
         large_dict = {f"key_{i}": f"value_{i}" for i in range(10_000_001)}
@@ -150,7 +148,7 @@ class TestSecurityMeasuresEdgeCases:
 
         assert "exceeds maximum" in str(exc_info.value)
 
-    def test_excessive_list_size_security_error(self):
+    def test_excessive_list_size_security_error(self) -> None:
         """Test that large list raises SecurityError."""
         # Create list larger than MAX_OBJECT_SIZE
         large_list = list(range(10_000_001))
@@ -164,14 +162,14 @@ class TestSecurityMeasuresEdgeCases:
 class TestComplexExceptionHandling:
     """Test complex exception handling paths."""
 
-    def test_object_dict_method_exception_fallback(self):
+    def test_object_dict_method_exception_fallback(self) -> None:
         """Test fallback when object.dict() method fails."""
 
         class ObjectWithBrokenDict:
-            def dict(self):
+            def dict(self) -> None:
                 raise RuntimeError("Dict method broken")
 
-            def __init__(self):
+            def __init__(self) -> None:
                 self.fallback_data = "success"
 
         obj = ObjectWithBrokenDict()
@@ -180,7 +178,7 @@ class TestComplexExceptionHandling:
         # Should fall back to __dict__ serialization
         assert result == {"fallback_data": "success"}
 
-    def test_object_without_dict_attribute(self):
+    def test_object_without_dict_attribute(self) -> None:
         """Test objects without __dict__ attribute."""
         # Basic object() has no __dict__
         obj = object()
@@ -190,11 +188,11 @@ class TestComplexExceptionHandling:
         assert isinstance(result, str)
         assert "object" in result
 
-    def test_object_dict_access_exception(self):
+    def test_object_dict_access_exception(self) -> None:
         """Test exception during __dict__ access."""
 
         class ProblematicDictAccess:
-            def __getattribute__(self, name):
+            def __getattribute__(self, name: str) -> Any:
                 if name == "__dict__":
                     raise AttributeError("No __dict__ access")
                 return super().__getattribute__(name)
@@ -205,14 +203,14 @@ class TestComplexExceptionHandling:
         # Should handle gracefully
         assert isinstance(result, str)
 
-    def test_recursion_error_handling(self):
+    def test_recursion_error_handling(self) -> None:
         """Test RecursionError handling in object serialization."""
 
         class RecursiveObject:
-            def __init__(self):
+            def __init__(self) -> None:
                 self.data = "test"
 
-            def __getattribute__(self, name):
+            def __getattribute__(self, name: str) -> Any:
                 if name == "__dict__":
                     # Simulate deep recursion scenario
                     if getattr(self.__class__, "_recursion_count", 0) > 5:
@@ -231,11 +229,11 @@ class TestComplexExceptionHandling:
             # Should return safe string representation or dict
             assert isinstance(result, (str, dict))
 
-    def test_string_representation_truncation(self):
+    def test_string_representation_truncation(self) -> None:
         """Test string representation truncation for very long objects."""
 
         class VeryLongRepr:
-            def __str__(self):
+            def __str__(self) -> str:
                 return "x" * 1_000_001  # Exceed MAX_STRING_LENGTH
 
         obj = VeryLongRepr()
@@ -248,11 +246,11 @@ class TestComplexExceptionHandling:
             # So no truncation warning is emitted
             assert isinstance(result, dict)  # Should be serialized as __dict__
 
-    def test_ml_serializer_exception_handling(self):
+    def test_ml_serializer_exception_handling(self) -> None:
         """Test exception handling in ML serializer."""
 
         class CustomMLObject:
-            def __init__(self):
+            def __init__(self) -> None:
                 self.data = "test"
 
         obj = CustomMLObject()
@@ -270,7 +268,7 @@ class TestComplexExceptionHandling:
 class TestOptimizationCacheEdgeCases:
     """Test edge cases in optimization caching."""
 
-    def test_type_cache_limit_behavior(self):
+    def test_type_cache_limit_behavior(self) -> None:
         """Test behavior when type cache hits size limit."""
         from datason.core import _TYPE_CACHE, _TYPE_CACHE_SIZE_LIMIT
 
@@ -298,7 +296,7 @@ class TestOptimizationCacheEdgeCases:
             _TYPE_CACHE.clear()
             _TYPE_CACHE.update(original_cache)
 
-    def test_string_length_cache_behavior(self):
+    def test_string_length_cache_behavior(self) -> None:
         """Test string length caching edge cases."""
         # Test very long string that should trigger caching
         long_string = "x" * 500_000
@@ -311,7 +309,7 @@ class TestOptimizationCacheEdgeCases:
         assert result1 == result2
         assert isinstance(result1, str)
 
-    def test_uuid_string_cache_behavior(self):
+    def test_uuid_string_cache_behavior(self) -> None:
         """Test UUID string caching."""
         # Create UUID and serialize multiple times
         test_uuid = uuid.UUID("12345678-1234-5678-9012-123456789abc")
@@ -327,7 +325,7 @@ class TestOptimizationCacheEdgeCases:
 class TestConfigurationEdgeCases:
     """Test edge cases with different configurations."""
 
-    def test_serialize_with_none_config(self):
+    def test_serialize_with_none_config(self) -> None:
         """Test serialization with explicit None config."""
         data = {"test": float("nan")}
 
@@ -336,7 +334,7 @@ class TestConfigurationEdgeCases:
         # Should use default behavior
         assert result["test"] is None
 
-    def test_serialize_with_custom_type_handler_failure(self):
+    def test_serialize_with_custom_type_handler_failure(self) -> None:
         """Test custom type handler that fails."""
         from datason.config import get_default_config
 
@@ -358,12 +356,12 @@ class TestConfigurationEdgeCases:
 class TestMemoryPoolingEdgeCases:
     """Test edge cases in memory pooling for optimization."""
 
-    def test_dict_pooling_exception_safety(self):
+    def test_dict_pooling_exception_safety(self) -> None:
         """Test that dict pooling is exception-safe."""
 
         # Create scenario that might raise exception during processing
         class ProblematicValue:
-            def __str__(self):
+            def __str__(self) -> str:
                 raise ValueError("Cannot convert to string")
 
         data = {"key": ProblematicValue()}
@@ -378,12 +376,12 @@ class TestMemoryPoolingEdgeCases:
         result = serialize(normal_data)
         assert result == {"normal": "value"}
 
-    def test_list_pooling_exception_safety(self):
+    def test_list_pooling_exception_safety(self) -> None:
         """Test that list pooling is exception-safe."""
 
         # Similar test for list pooling
         class ProblematicItem:
-            def __str__(self):
+            def __str__(self) -> str:
                 raise ValueError("Cannot convert to string")
 
         data = [1, 2, ProblematicItem()]
