@@ -1,13 +1,23 @@
-name: 🩹 Bump Patch Version & Release
+name: 🔨 Bump Patch Version & Release
 
 on:
   workflow_dispatch:
     inputs:
+      target_version:
+        description: 'Target version (e.g., 0.5.1) - leave empty for auto-increment'
+        required: false
+        type: string
+        default: ''
       release_notes:
         description: 'Release notes (optional)'
         required: false
         type: string
         default: 'Patch release with bug fixes'
+      force_release:
+        description: 'Force release even if no code changes detected'
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -34,7 +44,7 @@ jobs:
     - name: 📦 Install Dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install requests toml
+        pip install requests toml packaging
 
     - name: 🔍 Get Current Version
       id: current_version
@@ -91,6 +101,63 @@ jobs:
         echo "source=$SOURCE" >> $GITHUB_OUTPUT
         echo "🎯 Using version: $CURRENT_VERSION (from $SOURCE)"
 
+    - name: 🎯 Validate Target Version
+      if: inputs.target_version != ''
+      id: validate_target
+      run: |
+        TARGET="${{ inputs.target_version }}"
+        CURRENT="${{ steps.current_version.outputs.current }}"
+
+        echo "🎯 Target version: $TARGET"
+        echo "📋 Current version: $CURRENT"
+
+        # Validate version format and compare versions
+        python -c "
+        import sys
+        from packaging import version
+
+        target = '$TARGET'
+        current = '$CURRENT'
+
+        # Validate format
+        try:
+            target_parsed = version.parse(target)
+            current_parsed = version.parse(current)
+        except Exception as e:
+            print(f'❌ Invalid version format: {e}')
+            sys.exit(1)
+
+        # Check if target is higher than current
+        if target_parsed <= current_parsed:
+            print(f'❌ Target version ({target}) must be higher than current version ({current})')
+            sys.exit(1)
+
+        # Check if it's a proper patch bump (major.minor.patch format)
+        target_parts = str(target_parsed).split('.')
+        current_parts = str(current_parsed).split('.')
+
+        if len(target_parts) < 3 or len(current_parts) < 3:
+            print(f'❌ Version must be in major.minor.patch format')
+            sys.exit(1)
+
+        target_major, target_minor, target_patch = map(int, target_parts[:3])
+        current_major, current_minor, current_patch = map(int, current_parts[:3])
+
+        # For patch bump: major and minor should be same, patch should be higher
+        if target_major != current_major or target_minor != current_minor:
+            print(f'❌ For patch bump, major and minor versions should remain the same (current: {current_major}.{current_minor}, target: {target_major}.{target_minor})')
+            sys.exit(1)
+
+        if target_patch <= current_patch:
+            print(f'❌ For patch bump, patch version should be higher (current: {current_patch}, target: {target_patch})')
+            sys.exit(1)
+
+        print(f'✅ Target version {target} is valid for patch bump')
+        "
+
+        echo "valid=true" >> $GITHUB_OUTPUT
+        echo "✅ Target version validation passed"
+
     - name: 🔎 Check Version Alignment
       id: alignment_check
       run: |
@@ -134,6 +201,7 @@ jobs:
       id: changes_check
       run: |
         LATEST_TAG="${{ steps.current_version.outputs.latest_tag }}"
+        FORCE_RELEASE="${{ inputs.force_release }}"
 
         # Get the commit hash that the latest tag points to
         if [ "$LATEST_TAG" != "none" ] && git rev-parse --verify "$LATEST_TAG" >/dev/null 2>&1; then
@@ -143,13 +211,17 @@ jobs:
           echo "🏷️ Tag $LATEST_TAG points to: $TAG_COMMIT"
           echo "📍 Current HEAD commit: $CURRENT_COMMIT"
 
-          if [ "$TAG_COMMIT" = "$CURRENT_COMMIT" ]; then
+          if [ "$TAG_COMMIT" = "$CURRENT_COMMIT" ] && [ "$FORCE_RELEASE" = "false" ]; then
             echo "⚠️ No code changes since last release ($LATEST_TAG)"
             echo "has_changes=false" >> $GITHUB_OUTPUT
             echo "skip_reason=No code changes since $LATEST_TAG" >> $GITHUB_OUTPUT
           else
             # Check how many commits ahead we are
             COMMITS_AHEAD=$(git rev-list --count "$TAG_COMMIT..HEAD" 2>/dev/null || echo "unknown")
+            if [ "$FORCE_RELEASE" = "true" ] && [ "$COMMITS_AHEAD" = "0" ]; then
+              echo "🔄 Forcing release despite no code changes"
+              COMMITS_AHEAD="0 (forced)"
+            fi
             echo "✅ Found $COMMITS_AHEAD commits since $LATEST_TAG"
             echo "has_changes=true" >> $GITHUB_OUTPUT
             echo "commits_ahead=$COMMITS_AHEAD" >> $GITHUB_OUTPUT
@@ -182,37 +254,102 @@ jobs:
 
         ### 💡 Why was this skipped?
         The current code is identical to what was already released.
-        Make some code changes first, then run the bump workflow again.
+        You can either:
+        - Make some code changes first, then run the bump workflow again
+        - Use the "Force release" option to release anyway
 
         ### 🔗 Quick Links
-        - Current release: https://github.com/danielendler/datason/releases/tag/${{ steps.current_version.outputs.latest_tag }}
+        - Current release: https://github.com/${{ github.repository }}/releases/tag/${{ steps.current_version.outputs.latest_tag }}
         - PyPI: https://pypi.org/project/datason/
         EOF
 
         echo "⏭️ Skipping release - no code changes detected"
         exit 0
 
-    - name: 🔧 Calculate Next Version
+    - name: ➕ Calculate Next Version
       if: steps.changes_check.outputs.has_changes == 'true'
       id: next_version
       run: |
+        TARGET_VERSION="${{ inputs.target_version }}"
         CURRENT="${{ steps.current_version.outputs.current }}"
 
-        # Parse version (e.g., "0.3.1" -> major=0, minor=3, patch=1)
-        IFS='.' read -r major minor patch <<< "$CURRENT"
-
-        # Bump patch version only
-        next_patch=$((patch + 1))
-        NEXT_VERSION="${major}.${minor}.${next_patch}"
+        if [ -n "$TARGET_VERSION" ]; then
+          # Use target version
+          NEXT_VERSION="$TARGET_VERSION"
+          echo "🎯 Using target version: $NEXT_VERSION"
+        else
+          # Auto-increment patch version
+          IFS='.' read -r major minor patch <<< "$CURRENT"
+          next_patch=$((patch + 1))
+          NEXT_VERSION="${major}.${minor}.${next_patch}"
+          echo "🔢 Auto-incremented to: $NEXT_VERSION"
+        fi
 
         echo "next=$NEXT_VERSION" >> $GITHUB_OUTPUT
         echo "tag=v$NEXT_VERSION" >> $GITHUB_OUTPUT
         echo "🎯 Next version: $NEXT_VERSION"
         echo "📈 Changes: ${{ steps.changes_check.outputs.commits_ahead }} commits since last release"
 
-    - name: ✏️ Update pyproject.toml
-      if: steps.changes_check.outputs.has_changes == 'true'
+    - name: 🔎 Check for Existing Tag
+      id: tag_check
       run: |
+        TAG_NAME="v${{ steps.next_version.outputs.next }}"
+
+        # Check if tag exists locally
+        if git tag -l | grep -q "^${TAG_NAME}$"; then
+          echo "exists_local=true" >> $GITHUB_OUTPUT
+          echo "⚠️ Tag $TAG_NAME exists locally"
+        else
+          echo "exists_local=false" >> $GITHUB_OUTPUT
+          echo "✅ Tag $TAG_NAME does not exist locally"
+        fi
+
+        # Check if tag exists on remote
+        if git ls-remote --tags origin | grep -q "refs/tags/${TAG_NAME}$"; then
+          echo "exists_remote=true" >> $GITHUB_OUTPUT
+          echo "⚠️ Tag $TAG_NAME exists on remote"
+        else
+          echo "exists_remote=false" >> $GITHUB_OUTPUT
+          echo "✅ Tag $TAG_NAME does not exist on remote"
+        fi
+
+        # Determine if we should skip
+        if [ "${{ steps.tag_check.outputs.exists_remote }}" = "true" ]; then
+          echo "should_skip=true" >> $GITHUB_OUTPUT
+          echo "skip_reason=Tag $TAG_NAME already exists on remote" >> $GITHUB_OUTPUT
+        else
+          echo "should_skip=false" >> $GITHUB_OUTPUT
+        fi
+
+    - name: ❌ Skip Release (Tag Exists)
+      if: steps.tag_check.outputs.should_skip == 'true'
+      run: |
+        cat >> $GITHUB_STEP_SUMMARY << 'EOF'
+        ## ❌ Patch Release Failed
+
+        **Reason**: ${{ steps.tag_check.outputs.skip_reason }}
+
+        **Attempted version**: `${{ steps.next_version.outputs.next }}`
+        **Tag**: `${{ steps.next_version.outputs.tag }}`
+
+        ### 💡 What to do?
+        - Choose a different target version using the `target_version` input
+        - Or check if this version was already released
+
+        ### 🔗 Quick Links
+        - Existing release: https://github.com/${{ github.repository }}/releases/tag/${{ steps.next_version.outputs.tag }}
+        - All releases: https://github.com/${{ github.repository }}/releases
+        EOF
+
+        echo "❌ Aborting release - tag already exists"
+        exit 1
+
+    - name: ✏️ Update Project Files
+      if: steps.changes_check.outputs.has_changes == 'true' && steps.tag_check.outputs.should_skip == 'false'
+      run: |
+        NEW_VERSION="${{ steps.next_version.outputs.next }}"
+
+        # Update pyproject.toml
         python -c "
         import toml
 
@@ -221,79 +358,130 @@ jobs:
             data = toml.load(f)
 
         # Update version
-        data['project']['version'] = '${{ steps.next_version.outputs.next }}'
+        data['project']['version'] = '$NEW_VERSION'
 
         # Write back
         with open('pyproject.toml', 'w') as f:
             toml.dump(data, f)
 
-        print('✅ Updated pyproject.toml version to ${{ steps.next_version.outputs.next }}')
+        print('✅ Updated pyproject.toml version to $NEW_VERSION')
         "
 
+        # Check if __init__.py has version string and update it
+        if grep -q "__version__" datason/__init__.py; then
+          sed -i "s/__version__ = .*/__version__ = \"$NEW_VERSION\"/" datason/__init__.py
+          echo "✅ Updated datason/__init__.py version to $NEW_VERSION"
+        fi
+
+        # Show what files were changed
+        echo "📋 Files updated:"
+        git diff --name-only
+
     - name: 📝 Commit Version Bump
-      if: steps.changes_check.outputs.has_changes == 'true'
+      if: steps.changes_check.outputs.has_changes == 'true' && steps.tag_check.outputs.should_skip == 'false'
       run: |
+        NEW_VERSION="${{ steps.next_version.outputs.next }}"
+        TAG_NAME="${{ steps.next_version.outputs.tag }}"
+
+        # Configure git
         git config --global user.email "actions@github.com"
         git config --global user.name "GitHub Actions"
-        git add pyproject.toml
-        git commit -m "🩹 Bump patch version to ${{ steps.next_version.outputs.next }} [skip ci]"
 
-        # Check if tag already exists before creating it
-        if git rev-parse --verify "${{ steps.next_version.outputs.tag }}" >/dev/null 2>&1; then
-          echo "⚠️ Tag ${{ steps.next_version.outputs.tag }} already exists, skipping tag creation"
-        else
-          echo "✅ Creating new tag ${{ steps.next_version.outputs.tag }}"
-          git tag ${{ steps.next_version.outputs.tag }}
-        fi
+        # Add and commit changes
+        git add pyproject.toml datason/__init__.py
+        git commit -m "🔨 Bump version to $NEW_VERSION [skip ci]" || echo "No changes to commit"
 
-        # Use the GITHUB_TOKEN for pushing
+        # Create and push tag
+        echo "✅ Creating tag $TAG_NAME"
+        git tag -a "$TAG_NAME" -m "Release $NEW_VERSION"
+
+        # Push commit and tag
         git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}
-        git push origin main
+        git push origin ${{ github.ref_name }}
+        git push origin "$TAG_NAME"
 
-        # Only push tag if it was newly created locally
-        if git show-ref --tags "${{ steps.next_version.outputs.tag }}" >/dev/null 2>&1; then
-          echo "✅ Pushing new tag ${{ steps.next_version.outputs.tag }}"
-          git push origin ${{ steps.next_version.outputs.tag }}
-        else
-          echo "ℹ️ Tag ${{ steps.next_version.outputs.tag }} was not created locally, skipping tag push"
-        fi
+        echo "✅ Pushed commit and tag $TAG_NAME to GitHub"
 
     - name: 🏗️ Build Package
-      if: steps.changes_check.outputs.has_changes == 'true'
+      if: steps.changes_check.outputs.has_changes == 'true' && steps.tag_check.outputs.should_skip == 'false'
       run: |
         python -m pip install build
         python -m build
         ls -la dist/
 
-    - name: 🚀 Trigger Release Workflow
-      if: steps.changes_check.outputs.has_changes == 'true'
+    - name: 🎉 Create GitHub Release
+      if: steps.changes_check.outputs.has_changes == 'true' && steps.tag_check.outputs.should_skip == 'false'
       uses: actions/github-script@v7
       with:
         script: |
-          // Trigger the existing release workflow that's already configured for PyPI
-          await github.rest.actions.createWorkflowDispatch({
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            workflow_id: 'release.yml',
-            ref: 'main',
-            inputs: {
-              version: '${{ steps.next_version.outputs.tag }}',
-              prerelease: 'false'
-            }
-          });
+          const { repo, owner } = context.repo;
+          const tagName = '${{ steps.next_version.outputs.tag }}';
+          const version = '${{ steps.next_version.outputs.next }}';
+          const releaseNotes = `${{ inputs.release_notes }}`;
+          const commitsAhead = '${{ steps.changes_check.outputs.commits_ahead }}';
 
-          console.log('✅ Triggered release workflow for ${{ steps.next_version.outputs.tag }}');
+          // Generate release body
+          let body = releaseNotes;
+          if (commitsAhead && commitsAhead !== 'unknown' && commitsAhead !== '0 (forced)') {
+            body += `\n\n---\n\n**Changes**: ${commitsAhead} commits since last release`;
+          }
+
+          body += `\n\n### 📦 Installation\n\`\`\`bash\npip install datason==${version}\n\`\`\``;
+          body += `\n\n### 🔗 Links\n- [PyPI](https://pypi.org/project/datason/${version}/)\n- [Documentation](https://datason.readthedocs.io)\n- [Changelog](https://github.com/${owner}/${repo}/blob/main/CHANGELOG.md)`;
+
+          try {
+            const release = await github.rest.repos.createRelease({
+              owner,
+              repo,
+              tag_name: tagName,
+              name: `Release ${version}`,
+              body: body,
+              draft: false,
+              prerelease: false
+            });
+
+            console.log(`✅ Created GitHub release: ${release.data.html_url}`);
+          } catch (error) {
+            console.error('❌ Failed to create GitHub release:', error.message);
+            throw error;
+          }
+
+    - name: 🚀 Trigger PyPI Release Workflow
+      if: steps.changes_check.outputs.has_changes == 'true' && steps.tag_check.outputs.should_skip == 'false'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          try {
+            // Trigger the existing release workflow that's already configured for PyPI
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'release.yml',
+              ref: 'main',
+              inputs: {
+                version: '${{ steps.next_version.outputs.tag }}',
+                prerelease: 'false'
+              }
+            });
+
+            console.log('✅ Triggered PyPI release workflow for ${{ steps.next_version.outputs.tag }}');
+          } catch (error) {
+            console.error('⚠️ Failed to trigger PyPI release workflow:', error.message);
+            console.log('You may need to manually trigger the release workflow');
+          }
 
     - name: ✅ Release Summary
-      if: steps.changes_check.outputs.has_changes == 'true'
+      if: steps.changes_check.outputs.has_changes == 'true' && steps.tag_check.outputs.should_skip == 'false'
       run: |
         cat >> $GITHUB_STEP_SUMMARY << 'EOF'
-        ## 🔼 Patch Release Initiated!
+        ## 🔨 Patch Release Complete!
 
         **Previous version**: `${{ steps.current_version.outputs.current }}`
         **New version**: `${{ steps.next_version.outputs.next }}`
         **Tag created**: `${{ steps.next_version.outputs.tag }}`
         **Commits included**: ${{ steps.changes_check.outputs.commits_ahead }}
+
+        ${{ inputs.target_version != '' && format('**Target version**: Used custom target `{0}` ✨', inputs.target_version) || '**Version increment**: Auto-incremented patch version 🔢' }}
 
         ### 🔍 Version Sources (Pre-Bump)
         - **Project file**: `${{ steps.current_version.outputs.project }}`
@@ -304,14 +492,22 @@ jobs:
         ${{ steps.alignment_check.outputs.misaligned == 'true' && '### ⚠️ Version Alignment Warnings (Pre-Bump)' || '' }}
         ${{ steps.alignment_check.outputs.warnings }}
 
-        ### 🔄 Next Steps
-        The release workflow has been triggered and will handle:
-        - Building and publishing to PyPI
-        - Creating the GitHub release
+        ### 🎯 What was done
+        - ✅ Updated `pyproject.toml` version
+        - ✅ Updated `datason/__init__.py` version (if present)
+        - ✅ Created and pushed Git tag `${{ steps.next_version.outputs.tag }}`
+        - ✅ Created GitHub release
+        - ✅ Triggered PyPI release workflow
 
-        **Monitor**: Check the Actions tab for the release workflow progress
+        ### 🔄 Next Steps
+        The PyPI release workflow should handle:
+        - Building and publishing to PyPI
+        - Final release notifications
+
+        **Monitor**: Check the Actions tab for the PyPI release workflow progress
 
         ### 🔗 Quick Links
-        - PyPI: https://pypi.org/project/datason/ (will update shortly)
-        - Documentation: https://datason.readthedocs.io
+        - [GitHub Release](https://github.com/${{ github.repository }}/releases/tag/${{ steps.next_version.outputs.tag }})
+        - [PyPI](https://pypi.org/project/datason/) (will update shortly)
+        - [Documentation](https://datason.readthedocs.io)
         EOF
