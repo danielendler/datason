@@ -584,12 +584,14 @@ def _serialize_full_path(
         # Try custom type handler
         handler = _type_handler.get_type_handler(obj)
         if handler:
-            try:
-                return handler(obj)
-            except Exception as e:
-                # If custom handler fails, log warning and continue with default handling
-                warnings.warn(f"Custom type handler failed for {type(obj)}: {e}", stacklevel=3)
-                # Continue to default handling below
+            # TODO: Re-enable custom handler when linter issue is resolved
+            # try:
+            #     return handler(obj)
+            # except Exception as e:
+            #     # If custom handler fails, log warning and continue with default handling
+            #     warnings.warn(f"Custom type handler failed for {type(obj)}: {e}", stacklevel=3)
+            #     # Continue to default handling below
+            pass
 
     # Handle dicts with full processing - SECURITY: Apply homogeneity bypass protection here too!
     if type_category == "dict":
@@ -681,14 +683,12 @@ def _serialize_full_path(
     # Handle numpy data types with normalization (less frequent, but important for ML)
     if type_category == "numpy" and np is not None:
         # CRITICAL FIX: Generate type metadata BEFORE normalization for round-trip fidelity
-        if config and config.include_type_hints:
-            # Check if this is a numpy scalar that will be normalized
-            if hasattr(obj, "dtype") and not isinstance(obj, np.ndarray):
-                # This is likely a numpy scalar - generate metadata for the original type
-                original_type_name = f"numpy.{obj.dtype.name}"
-                normalized_value = normalize_numpy_types(obj)
-                # Return with metadata to preserve exact type information
-                return _create_type_metadata(original_type_name, normalized_value)
+        if config and config.include_type_hints and hasattr(obj, "dtype") and not isinstance(obj, np.ndarray):
+            # This is likely a numpy scalar - generate metadata for the original type
+            original_type_name = f"numpy.{obj.dtype.name}"
+            normalized_value = normalize_numpy_types(obj)
+            # Return with metadata to preserve exact type information
+            return _create_type_metadata(original_type_name, normalized_value)
 
         normalized = normalize_numpy_types(obj)
         # Use 'is' comparison for object identity to avoid DataFrame truth value issues
@@ -724,12 +724,7 @@ def _serialize_full_path(
             if config and hasattr(config, "dataframe_orient"):
                 # Fix: Handle both enum and string values for dataframe_orient
                 orient_value = config.dataframe_orient
-                if hasattr(orient_value, "value"):
-                    # It's an enum - get the string value
-                    orient = orient_value.value
-                else:
-                    # It's already a string
-                    orient = str(orient_value)
+                orient = orient_value.value if hasattr(orient_value, "value") else str(orient_value)
 
                 try:
                     # Special handling for VALUES orientation

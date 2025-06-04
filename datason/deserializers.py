@@ -321,7 +321,7 @@ def _deserialize_with_type_metadata(obj: Dict[str, Any]) -> Any:
                         series_name = value["_series_name"]
                         series_data = {k: v for k, v in value.items() if k != "_series_name"}
                         return pd.Series(series_data, name=series_name)
-                    elif isinstance(value, dict) or isinstance(value, list):
+                    elif isinstance(value, (dict, list)):
                         return pd.Series(value)
                     return pd.Series(value)  # Fallback
 
@@ -987,8 +987,10 @@ class TemplateDeserializer:
                 name = obj["_series_name"]
                 data_dict = {k: v for k, v in obj.items() if k != "_series_name"}
                 series = pd.Series(data_dict, name=name)
-            else:
+            elif isinstance(obj, (dict, list)):
                 series = pd.Series(obj)
+            else:
+                series = pd.Series([obj])
         elif isinstance(obj, list):
             series = pd.Series(obj)
         else:

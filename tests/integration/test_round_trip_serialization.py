@@ -89,7 +89,7 @@ class RoundTripTestCase:
                 return False
         else:
             # Standard comparison
-            return original == deserialized and type(original) == type(deserialized)
+            return original == deserialized and type(original) is type(deserialized)
 
 
 # =============================================================================
@@ -233,13 +233,13 @@ if HAS_SKLEARN:
             RoundTripTestCase(
                 "sklearn_logistic_unfitted",
                 unfitted_model,
-                custom_comparison=lambda a, b: (type(a) == type(b) and a.get_params() == b.get_params()),
+                custom_comparison=lambda a, b: (type(a) is type(b) and a.get_params() == b.get_params()),
             ),
             RoundTripTestCase(
                 "sklearn_logistic_fitted",
                 fitted_model,
                 custom_comparison=lambda a, b: (
-                    type(a) == type(b) and hasattr(b, "coef_") and hasattr(b, "intercept_")
+                    type(a) is type(b) and hasattr(b, "coef_") and hasattr(b, "intercept_")
                 ),
             ),
         ]
@@ -327,7 +327,7 @@ class TestRoundTripSerialization:
             pytest.fail(f"Metadata deserialization failed: {e}")
 
         # Compare types and values
-        assert type(deserialized) == test_case.expected_type, (
+        assert type(deserialized) is test_case.expected_type, (
             f"Type mismatch: expected {test_case.expected_type}, got {type(deserialized)}"
         )
 
@@ -364,7 +364,7 @@ class TestTypeSpecificBehavior:
 
             # Test round-trip
             deserialized = deserialize_fast(serialized, config=config)
-            assert type(deserialized) == type(scalar)
+            assert type(deserialized) is type(scalar)
             assert deserialized == scalar
 
     @pytest.mark.skipif(not HAS_PANDAS, reason="Pandas not available")

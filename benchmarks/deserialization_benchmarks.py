@@ -18,7 +18,6 @@ from datetime import datetime
 from decimal import Decimal
 from pathlib import Path
 from typing import Any, Dict
-from functools import partial
 
 # Test imports - graceful fallbacks
 try:
@@ -172,7 +171,7 @@ class DeserializationBenchmark:
                         config = SerializationConfig(include_type_hints=True)
                         current_func = func  # Capture function reference
                         current_config = config  # Capture config reference
-                        
+
                         def test_func(x, f=current_func, c=current_config):
                             return f(x, c)
                     else:
