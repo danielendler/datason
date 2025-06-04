@@ -54,7 +54,7 @@ class Color(enum.Enum):
 class TestSerializationConfig:
     """Test configuration classes and presets."""
 
-    def test_default_config(self):
+    def test_default_config(self) -> None:
         """Test default configuration values."""
         config = SerializationConfig()
         assert config.date_format == DateFormat.ISO
@@ -63,10 +63,10 @@ class TestSerializationConfig:
         assert config.type_coercion == TypeCoercion.SAFE
         assert config.preserve_decimals is True
         assert config.preserve_complex is True
-        assert config.max_depth == 1000
+        assert config.max_depth == 50
         assert config.sort_keys is False
 
-    def test_ml_config(self):
+    def test_ml_config(self) -> None:
         """Test ML-optimized configuration."""
         config = get_ml_config()
         assert config.date_format == DateFormat.UNIX_MS
@@ -75,26 +75,26 @@ class TestSerializationConfig:
         assert config.preserve_complex is False
         assert config.sort_keys is True
 
-    def test_api_config(self):
+    def test_api_config(self) -> None:
         """Test API-optimized configuration."""
         config = get_api_config()
         assert config.date_format == DateFormat.ISO
         assert config.sort_keys is True
         assert config.ensure_ascii is True
 
-    def test_strict_config(self):
+    def test_strict_config(self) -> None:
         """Test strict configuration."""
         config = get_strict_config()
         assert config.type_coercion == TypeCoercion.STRICT
 
-    def test_performance_config(self):
+    def test_performance_config(self) -> None:
         """Test performance-optimized configuration."""
         config = get_performance_config()
         assert config.date_format == DateFormat.UNIX
         assert config.dataframe_orient == DataFrameOrient.VALUES
         assert config.sort_keys is False
 
-    def test_performance_config_behavior(self):
+    def test_performance_config_behavior(self) -> None:
         """Test performance config optimizations work as expected."""
         config = get_performance_config()
 
@@ -105,7 +105,7 @@ class TestSerializationConfig:
         assert not config.preserve_complex  # Skip for speed
         assert not config.sort_keys  # Skip for speed
 
-    def test_financial_config_precision(self):
+    def test_financial_config_precision(self) -> None:
         """Test financial config preserves monetary precision."""
         config = get_financial_config()
 
@@ -126,7 +126,7 @@ class TestSerializationConfig:
         assert isinstance(result["timestamp"], int)  # Unix milliseconds
         assert result["volume"] == 1000000
 
-    def test_time_series_config_temporal_handling(self):
+    def test_time_series_config_temporal_handling(self) -> None:
         """Test time series config handles temporal data appropriately."""
         config = get_time_series_config()
 
@@ -148,7 +148,7 @@ class TestSerializationConfig:
             assert "columns" in result
             assert "data" in result
 
-    def test_inference_config_performance(self):
+    def test_inference_config_performance(self) -> None:
         """Test inference config optimizes for model serving speed."""
         config = get_inference_config()
 
@@ -168,7 +168,7 @@ class TestSerializationConfig:
         # Should be fast and minimal
         assert result == inference_data  # Simple passthrough for simple data
 
-    def test_research_config_reproducibility(self):
+    def test_research_config_reproducibility(self) -> None:
         """Test research config preserves maximum information."""
         config = get_research_config()
 
@@ -191,7 +191,7 @@ class TestSerializationConfig:
         assert "experiment_id" in result
         assert len(result["results"]) == 2
 
-    def test_logging_config_safety(self):
+    def test_logging_config_safety(self) -> None:
         """Test logging config provides safe, readable output."""
         config = get_logging_config()
 
@@ -215,7 +215,7 @@ class TestSerializationConfig:
         # Should handle long strings safely
         assert len(result["long_string"]) <= 1000 + 20  # Account for truncation marker
 
-    def test_all_domain_configs_work(self):
+    def test_all_domain_configs_work(self) -> None:
         """Test that all domain-specific configs can be instantiated and used."""
         configs = [
             ("financial", get_financial_config()),

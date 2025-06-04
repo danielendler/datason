@@ -17,9 +17,9 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 try:
     from .core import MAX_OBJECT_SIZE, MAX_SERIALIZATION_DEPTH, MAX_STRING_LENGTH
 except ImportError:
-    # Fallback constants if core import fails
+    # Fallback constants if core import fails - SECURITY FIX: Use secure values
     MAX_SERIALIZATION_DEPTH = 50
-    MAX_OBJECT_SIZE = 10_000_000
+    MAX_OBJECT_SIZE = 100_000  # SECURITY FIX: Reduced from 10_000_000 to 100_000 to prevent size bomb attacks
     MAX_STRING_LENGTH = 1_000_000
 
 
