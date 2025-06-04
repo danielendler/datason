@@ -77,6 +77,8 @@ plugins:
             show_symbol_type_heading: true
             show_symbol_type_toc: true
             signature_crossrefs: true
+            merge_init_into_class: true
+            show_submodules: true
 
 # Extensions
 markdown_extensions:
@@ -94,9 +96,10 @@ markdown_extensions:
       smart_enable: all
   - pymdownx.caret
   - pymdownx.details
+  # Emoji support - disabled due to dependency issues
   # - pymdownx.emoji:
-  #     emoji_index: material.extensions.emoji.twemoji
-  #     emoji_generator: material.extensions.emoji.to_svg
+  #     emoji_index: !!python/name:material.extensions.emoji.twemoji
+  #     emoji_generator: !!python/name:material.extensions.emoji.to_svg
   - pymdownx.highlight:
       anchor_linenums: true
       line_spans: __span
@@ -113,7 +116,8 @@ markdown_extensions:
       custom_fences:
         - name: mermaid
           class: mermaid
-          format: pymdownx.superfences.fence_code_format
+          # format disabled due to YAML issues
+          # format: !!python/name:pymdownx.superfences.fence_code_format
   - pymdownx.tabbed:
       alternate_style: true
   - pymdownx.tasklist:
@@ -123,41 +127,57 @@ markdown_extensions:
 # Enhanced navigation with organized structure
 nav:
   - Home: index.md
-  - Features:
-    - Overview: features/index.md
-    - Core Serialization: features/core/index.md
-    - Configuration: features/configuration/index.md
-    - Advanced Types: features/advanced-types/index.md
-    - Date/Time Handling: features/datetime/index.md
-    - Chunked Processing: features/chunked-processing/index.md
-    - Template Deserialization: features/template-deserialization/index.md
-    - ML/AI Integration: features/ml-ai/index.md
-    - Pandas Integration: features/pandas/index.md
-    - Pickle Bridge: features/pickle-bridge/index.md
-    - Performance: features/performance/index.md
-    - Migration Guide: features/migration/index.md
+  
+  # User Guide Section
   - User Guide:
-    - Feature Matrix: FEATURE_MATRIX.md
-    - Benchmarking: BENCHMARKING.md
-  - Development:
-    - Contributing: CONTRIBUTING.md
-    - Core Serialization Strategy: core-serialization-strategy.md
-    - Performance Improvements: performance-improvements.md
-    - Testing & Integration: TESTING_INTEGRATION_IMPROVEMENTS.md
-    - Security: SECURITY.md
-    - Tooling Guide: TOOLING_GUIDE.md
-    - CI/CD Pipeline: CI_PIPELINE_GUIDE.md
-    - CI Performance: CI_PERFORMANCE.md
-    - Pipeline Audit: PIPELINE_AUDIT.md
-    - Plugin Testing: PLUGIN_TESTING.md
-    - Dependabot Setup: DEPENDABOT_GUIDE.md
-    - GitHub Pages: GITHUB_PAGES_SETUP.md
-    - Release Management: RELEASE_MANAGEMENT.md
-    - Build & Deploy: BUILD_PUBLISH.md
-  - Reference:
-    - AI Usage Guide: AI_USAGE_GUIDE.md
-    - Changelog: CHANGELOG.md
-    - Roadmap: ROADMAP.md
+    - Quick Start: user-guide/quick-start.md
+    - Examples Gallery: user-guide/examples/index.md
+    - Configuration Guide: user-guide/configuration.md
+    - Migration Guide: user-guide/migration.md
+  
+  # Features Section
+  - Features:
+    - Data Types & Conversion: features/data-types.md
+    - ML/AI Integration: features/ml-ai.md
+    - Data Privacy & Redaction: features/redaction.md
+    - Performance & Chunking: features/performance.md
+    - Template Deserialization: features/template-deserialization.md
+    - Pickle Bridge: features/pickle-bridge.md
+    - Type Detection: features/type-detection.md
+  
+  # AI Developer Guide Section
+  - AI Developer Guide:
+    - Overview: ai-guide/overview.md
+    - Configuration Presets: ai-guide/presets.md
+    - Auto-Detection: ai-guide/auto-detection.md
+    - Custom Serializers: ai-guide/custom-serializers.md
+    - Production Deployment: ai-guide/deployment.md
+    - Monitoring & Logging: ai-guide/monitoring.md
+    - Security Considerations: ai-guide/security.md
+  
+  # API Reference Section
+  - API Reference:
+    - Overview: api/index.md
+    - Core Functions: api/core.md
+    - Configuration: api/config.md
+    - ML Serializers: api/ml.md
+    - Redaction Engine: api/redaction.md
+    - Utilities: api/utils.md
+  
+  # Advanced Topics Section
+  - Advanced Topics:
+    - Performance Benchmarks: advanced/benchmarks.md
+    - Security Model: advanced/security.md
+    - Extensibility: advanced/extensibility.md
+    - Architecture: advanced/architecture.md
+  
+  # Community & Development Section
+  - Community & Development:
+    - Contributing Guide: community/contributing.md
+    - Development Setup: community/development.md
+    - Release Notes: community/changelog.md
+    - Roadmap: community/roadmap.md
+    - Security Policy: community/security.md
 
 # Extra
 extra:
