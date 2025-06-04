@@ -44,6 +44,17 @@ Type-guided reconstruction with ML-optimized round-trip fidelity.
 - **ML Templates**: Specialized templates for machine learning workflows
 - **Type Validation**: Consistent data structure validation
 
+### [Data Utilities with Security Patterns](data-utilities/index.md) 🆕 v0.5.5
+Comprehensive data analysis and transformation tools with consistent security protection.
+
+- **Deep Comparison**: Advanced object comparison with tolerance and security limits
+- **Anomaly Detection**: Identify large strings, collections, and suspicious patterns
+- **Type Enhancement**: Smart type inference and conversion with safety checks
+- **Structure Normalization**: Flatten or transform data structures securely
+- **Datetime Processing**: Standardize formats and extract temporal features
+- **Pandas/NumPy Integration**: Enhanced DataFrame and array processing with limits
+- **Configurable Security**: Environment-specific configurations for different trust levels
+
 ### [ML/AI Integration](ml-ai/index.md)
 Native support for machine learning and scientific computing objects.
 
@@ -102,6 +113,7 @@ Optimizations for speed and memory efficiency in production environments.
 | **Pickle Bridge** | ❌ | ✅ Safe conversion | ✅ + Bulk migration |
 | **Performance** | ✅ Basic | ✅ Optimized | ✅ + Monitoring |
 | **Data Science** | ❌ | ✅ Pandas/NumPy | ✅ + Advanced |
+| **Data Utilities** | ❌ | ✅ Basic tools | ✅ + Security patterns |
 
 ## 📖 Usage Patterns
 
@@ -112,6 +124,30 @@ import datason
 # Works out of the box
 data = {"users": [1, 2, 3], "timestamp": datetime.now()}
 result = datason.serialize(data)
+```
+
+### Data Analysis & Transformation (v0.5.5)
+```python
+import datason
+
+# Compare complex data structures with tolerance
+obj1 = {"users": [{"score": 85.5}], "metadata": {"version": "1.0"}}
+obj2 = {"users": [{"score": 85.6}], "metadata": {"version": "1.0"}}
+comparison = datason.deep_compare(obj1, obj2, tolerance=1e-1)
+
+# Detect anomalies and security issues
+messy_data = {"large_text": "x" * 50000, "items": list(range(5000))}
+anomalies = datason.find_data_anomalies(messy_data)
+
+# Smart type enhancement with security
+raw_data = {"id": "123", "score": "85.5", "active": "true"}
+enhanced, report = datason.enhance_data_types(raw_data)
+# enhanced["id"] is now int(123), not string
+
+# Configurable security for different environments
+from datason.utils import UtilityConfig
+api_config = UtilityConfig(max_depth=10, max_object_size=10_000)
+result = datason.find_data_anomalies(untrusted_data, config=api_config)
 ```
 
 ### Large Data Processing (v0.4.0)
@@ -196,6 +232,7 @@ stats = datason.convert_pickle_directory(
 - Pickle Bridge for legacy ML migration
 - **🆕 Chunked processing & streaming (v0.4.0)**
 - **🆕 Template-based deserialization (v0.4.5)**
+- **🆕 Data utilities with security patterns (v0.5.5)**
 
 ### 🔄 In Development
 - Schema validation
@@ -217,6 +254,7 @@ Each feature category has detailed documentation with examples, best practices, 
 - **[Core Serialization →](core/index.md)** - Start here for basic usage
 - **[Chunked Processing →](chunked-processing/index.md)** - 🆕 Handle large datasets efficiently
 - **[Template Deserialization →](template-deserialization/index.md)** - 🆕 Type-safe reconstruction
+- **[Data Utilities →](data-utilities/index.md)** - 🆕 Analysis & transformation with security
 - **[Configuration System →](configuration/index.md)** - Control serialization behavior  
 - **[ML/AI Integration →](ml-ai/index.md)** - Work with ML frameworks
 - **[Performance Guide →](performance/index.md)** - Optimize for production

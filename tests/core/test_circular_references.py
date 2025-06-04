@@ -210,7 +210,7 @@ class TestPerformanceRequirements:
         # Create deeply nested dict
         nested: Dict[str, Any] = {}
         current = nested
-        for i in range(50):  # Deep but not infinite
+        for i in range(40):  # Deep but within security limits (max_depth=50)
             current["level"] = i
             current["next"] = {}
             current = current["next"]

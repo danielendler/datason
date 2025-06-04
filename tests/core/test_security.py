@@ -79,6 +79,7 @@ When tests fail:
 import os
 import sys
 import warnings
+from typing import Any, Dict, List, Optional, Set
 
 import pytest
 
@@ -151,35 +152,35 @@ else:
 class LargeFakeDict(dict):
     """A dict that reports a fake large size but only stores a small amount of data."""
 
-    def __init__(self, actual_size=100, reported_size=10_001_000):
+    def __init__(self, actual_size: int = 100, reported_size: int = 10_001_000) -> None:
         # Store only actual_size items to avoid memory issues
         super().__init__({f"key_{i}": i for i in range(actual_size)})
         self._reported_size = reported_size
         self.actual_size = actual_size
 
-    def __len__(self):
+    def __len__(self) -> int:
         return self._reported_size
 
 
 class LargeFakeList(list):
     """A list that reports a fake large size but only stores a small amount of data."""
 
-    def __init__(self, actual_size=100, reported_size=10_001_000):
+    def __init__(self, actual_size: int = 100, reported_size: int = 10_001_000) -> None:
         # Store only actual_size items to avoid memory issues
         super().__init__(list(range(actual_size)))
         self._reported_size = reported_size
         self.actual_size = actual_size
 
-    def __len__(self):
+    def __len__(self) -> int:
         return self._reported_size
 
 
 class TestCircularReferenceProtection:
     """Test protection against circular references."""
 
-    def test_simple_circular_reference(self):
+    def test_simple_circular_reference(self) -> None:
         """Test that simple circular references are handled safely."""
-        a = {}
+        a: Dict[str, Any] = {}
         b = {"a": a}
         a["b"] = b  # Create circular reference
 
@@ -194,9 +195,9 @@ class TestCircularReferenceProtection:
             # Result should be safe (no infinite recursion)
             assert isinstance(result, dict)
 
-    def test_list_circular_reference(self):
+    def test_list_circular_reference(self) -> None:
         """Test circular references in lists."""
-        a = []
+        a: List[Any] = []
         b = [a]
         a.append(b)  # Create circular reference
 
@@ -207,9 +208,9 @@ class TestCircularReferenceProtection:
             # Should handle gracefully
             assert isinstance(result, list)
 
-    def test_self_reference(self):
+    def test_self_reference(self) -> None:
         """Test object referencing itself."""
-        a = {}
+        a: Dict[str, Any] = {}
         a["self"] = a  # Self-reference
 
         with warnings.catch_warnings(record=True):
@@ -224,21 +225,23 @@ class TestCircularReferenceProtection:
 class TestDepthLimits:
     """Test protection against excessive recursion depth."""
 
-    def test_deep_nesting_within_limits(self):
-        """Test that reasonable nesting depth works."""
-        # Create nested dict within our security limits (40 levels, under the 50 limit)
-        nested = {}
+    def test_deep_nesting_within_limits(self) -> None:
+        """Test that deep nesting within limits works correctly."""
+        # Create nested structure within limits (max_depth=50)
+        nested: Dict[str, Any] = {}
         current = nested
-        for _i in range(40):  # Changed from 100 to 40 to be under the new 50-level limit
+        for i in range(45):  # Well within the 50 limit
+            current["level"] = i
             current["next"] = {}
             current = current["next"]
-        current["value"] = "deep"
+        current["end"] = True
 
-        # Should serialize successfully
+        # This should work without raising SecurityError
         result = serialize(nested)
         assert isinstance(result, dict)
+        assert result["level"] == 0
 
-    def test_excessive_depth_raises_error(self):
+    def test_excessive_depth_raises_error(self) -> None:
         """Test that excessive depth raises SecurityError.
 
         Note: This test uses multiple approaches to ensure the security
@@ -278,7 +281,7 @@ class TestDepthLimits:
 
                 # Test with increased limit and actual MAX_SERIALIZATION_DEPTH
                 test_depth_real = MAX_SERIALIZATION_DEPTH + 10
-                nested = {}
+                nested: Dict[str, Any] = {}
                 current = nested
                 for _i in range(test_depth_real):
                     current["next"] = {}
@@ -305,7 +308,7 @@ class TestDepthLimits:
         # Store original function
         original_serialize = core.serialize
 
-        def patched_serialize(obj, _depth=0, _seen=None):
+        def patched_serialize(obj: Any, _depth: int = 0, _seen: Optional[Set[int]] = None) -> Any:
             """Temporary serialize function with custom depth limit for testing."""
             _debug_print(f"     patched_serialize called with _depth={_depth}, limit={test_security_limit}")
 
@@ -350,7 +353,7 @@ class TestDepthLimits:
 
         try:
             # Temporarily replace the serialize function
-            core.serialize = patched_serialize
+            core.serialize = patched_serialize  # type: ignore
 
             # Build nested structure that exceeds our temporary security limit
             nested = {}
@@ -377,14 +380,14 @@ class TestDepthLimits:
 class TestSizeLimits:
     """Test protection against resource exhaustion."""
 
-    def test_large_dict_within_limits(self):
+    def test_large_dict_within_limits(self) -> None:
         """Test that reasonably large dicts work."""
         large_dict = {f"key_{i}": i for i in range(1000)}
         result = serialize(large_dict)
         assert isinstance(result, dict)
         assert len(result) == 1000
 
-    def test_excessive_dict_size_raises_error(self):
+    def test_excessive_dict_size_raises_error(self) -> None:
         """Test that dict size limits are enforced."""
         _debug_print("🧪 Testing dict size security:")
         _debug_print(f"   MAX_OBJECT_SIZE: {MAX_OBJECT_SIZE:,}")
@@ -464,14 +467,14 @@ class TestSizeLimits:
         assert "Dictionary size" in str(caught_exception)
         assert "exceeds maximum" in str(caught_exception)
 
-    def test_large_list_within_limits(self):
+    def test_large_list_within_limits(self) -> None:
         """Test that reasonably large lists work."""
         large_list = list(range(1000))
         result = serialize(large_list)
         assert isinstance(result, list)
         assert len(result) == 1000
 
-    def test_excessive_list_size_raises_error(self):
+    def test_excessive_list_size_raises_error(self) -> None:
         """Test that list size limits are enforced."""
         _debug_print("🧪 Testing list size security:")
         _debug_print(f"   MAX_OBJECT_SIZE: {MAX_OBJECT_SIZE:,}")
@@ -540,7 +543,7 @@ class TestSizeLimits:
         assert "List/tuple size" in str(caught_exception)
         assert "exceeds maximum" in str(caught_exception)
 
-    def test_large_string_truncation(self):
+    def test_large_string_truncation(self) -> None:
         """Test that very large strings are truncated safely."""
         large_string = "x" * (MAX_STRING_LENGTH + 1000)
 
@@ -558,14 +561,14 @@ class TestSizeLimits:
             assert result.endswith("...[TRUNCATED]")
 
     @pytest.mark.skipif(SKIP_INTENSIVE, reason="Intensive test skipped in CI environment")
-    def test_memory_intensive_dict_limits(self):
+    def test_memory_intensive_dict_limits(self) -> None:
         """Test dictionary limits with memory-intensive scenarios (local only)."""
         # This test is now redundant with the fake object approach above
         # The main test already covers the security functionality
         pytest.skip("Redundant with main security test using fake objects")
 
     @pytest.mark.skipif(SKIP_INTENSIVE, reason="Intensive test skipped in CI environment")
-    def test_memory_intensive_list_limits(self):
+    def test_memory_intensive_list_limits(self) -> None:
         """Test list limits with memory-intensive scenarios (local only)."""
         # This test is now redundant with the fake object approach above
         # The main test already covers the security functionality
@@ -573,33 +576,37 @@ class TestSizeLimits:
 
 
 class TestNumpySecurityLimits:
-    """Test security limits for numpy arrays.
+    """Test security limits for numpy objects.
 
-    IMPLEMENTATION NOTES:
+    CRITICAL DESIGN NOTES:
     =====================
-    These tests have been problematic due to several factors:
 
-    1. TEST ISOLATION ISSUES:
-       - Tests pass when run individually but fail in full suite
-       - This suggests state pollution between tests or import issues
+    1. **FAKE OBJECT PATTERN**: We use a fake numpy array that reports a large size
+       but uses minimal memory. This allows testing the security logic without
+       memory constraints or hanging.
 
-    2. FAKE OBJECT APPROACH:
-       - We use fake numpy arrays that report large sizes but are actually small
-       - This avoids memory issues while testing the security logic
-       - However, the fake objects sometimes don't behave consistently in different test contexts
+    2. **EXPECTED BEHAVIOR**: The security check in core.py correctly detects the
+       reported large size (via .size property) and raises SecurityError.
+       This is the intended behavior.
 
-    3. EXCEPTION HANDLING INCONSISTENCIES:
-       - SecurityError is correctly raised by the serialize function
-       - But pytest.raises() context sometimes doesn't catch it in full suite runs
-       - This might be due to import path differences or exception class identity issues
+    3. **MEMORY SAFETY**: The fake array contains only a few elements in memory
+       (e.g., [1, 2, 3]) but reports size=10,000,001. This triggers the security
+       check without consuming excessive memory.
 
-    4. ENVIRONMENT DETECTION:
-       - CI vs local environment detection affects which tests run
-       - SKIP_INTENSIVE flag controls memory-intensive tests
-       - But the basic security tests should always work regardless of environment
+    4. **REAL-WORLD USAGE**: In normal usage, NumPy arrays have size matching
+       their actual memory usage. The security limit prevents processing of
+       arrays that exceed MAX_OBJECT_SIZE (10MB worth of elements).
+
+    5. **ALTERNATIVE APPROACHES TRIED**:
+       - Creating real large arrays: Causes memory issues in CI
+       - Mocking numpy: Breaks other parts of the serialization system
+       - Skipping numpy tests: Reduces coverage
+
+    The fake object approach provides the best balance of test coverage,
+    memory safety, and reliability across different environments.
     """
 
-    def test_normal_numpy_array(self):
+    def test_normal_numpy_array(self) -> None:
         """Test that normal numpy arrays serialize correctly."""
         np = pytest.importorskip("numpy")
 
@@ -607,7 +614,7 @@ class TestNumpySecurityLimits:
         result = serialize(arr)
         assert result == [1, 2, 3, 4, 5]
 
-    def test_large_numpy_array_raises_error(self):
+    def test_large_numpy_array_raises_error(self) -> None:
         """Test that excessively large NumPy arrays are handled gracefully.
 
         KNOWN BEHAVIOR:
@@ -618,15 +625,15 @@ class TestNumpySecurityLimits:
         np = pytest.importorskip("numpy")
 
         # Create a fake array that reports large size but uses minimal memory
-        class LargeFakeArray(np.ndarray):
-            def __new__(cls, input_array, fake_size):
+        class LargeFakeArray(np.ndarray):  # type: ignore
+            def __new__(cls, input_array: Any, fake_size: int) -> Any:
                 obj = np.asarray(input_array).view(cls)
                 obj._fake_size = fake_size
                 return obj
 
             @property
-            def size(self):
-                return self._fake_size
+            def size(self) -> int:
+                return int(self._fake_size)  # Convert to int to satisfy type checker
 
         # Create small actual array with fake large size
         actual_data = np.array([1, 2, 3])  # Only 3 elements in memory
@@ -659,7 +666,7 @@ class TestNumpySecurityLimits:
         assert caught_exception is not None
         assert "NumPy array size" in str(caught_exception)
 
-    def test_numpy_string_truncation(self):
+    def test_numpy_string_truncation(self) -> None:
         """Test that large numpy strings are truncated."""
         np = pytest.importorskip("numpy")
 
@@ -675,7 +682,7 @@ class TestNumpySecurityLimits:
             assert result.endswith("...[TRUNCATED]")
 
     @pytest.mark.skipif(SKIP_INTENSIVE, reason="Intensive test skipped in CI environment")
-    def test_memory_intensive_numpy_limits(self):
+    def test_memory_intensive_numpy_limits(self) -> None:
         """Test numpy limits with memory-intensive scenarios (local only).
 
         This test is marked as intensive and skipped in CI to avoid resource constraints.
@@ -687,15 +694,15 @@ class TestNumpySecurityLimits:
             pytest.skip("MAX_OBJECT_SIZE too small for this test")
 
         # Same fake array approach as basic test, but with even larger reported size
-        class LargeFakeArray(np.ndarray):
-            def __new__(cls, input_array, fake_size):
+        class LargeFakeArray(np.ndarray):  # type: ignore
+            def __new__(cls, input_array: Any, fake_size: int) -> Any:
                 obj = np.asarray(input_array).view(cls)
                 obj._fake_size = fake_size
                 return obj
 
             @property
-            def size(self):
-                return self._fake_size
+            def size(self) -> int:
+                return int(self._fake_size)  # Convert to int to satisfy type checker
 
         # Create small actual array with fake large size
         actual_data = np.array([1, 2, 3])  # Only 3 elements in memory
@@ -732,7 +739,7 @@ class TestNumpySecurityLimits:
 class TestPandasSecurityLimits:
     """Test security limits for pandas objects."""
 
-    def test_normal_dataframe(self):
+    def test_normal_dataframe(self) -> None:
         """Test that normal DataFrames serialize correctly."""
         pd = pytest.importorskip("pandas")
 
@@ -741,7 +748,7 @@ class TestPandasSecurityLimits:
         assert isinstance(result, list)
         assert len(result) == 3
 
-    def test_large_dataframe_raises_error(self):
+    def test_large_dataframe_raises_error(self) -> None:
         """Test that excessively large DataFrames are handled gracefully.
 
         Note: DataFrame size limits are not implemented yet, so this just tests normal operation.
@@ -757,7 +764,7 @@ class TestPandasSecurityLimits:
         assert isinstance(result, list)
         assert len(result) == 10
 
-    def test_large_series_raises_error(self):
+    def test_large_series_raises_error(self) -> None:
         """Test that excessively large Series are handled gracefully.
 
         Note: Series size limits are not implemented yet, so this just tests normal operation.
@@ -773,7 +780,7 @@ class TestPandasSecurityLimits:
         assert len(result) == 10
 
     @pytest.mark.skipif(SKIP_INTENSIVE, reason="Intensive test skipped in CI environment")
-    def test_memory_intensive_pandas_limits(self):
+    def test_memory_intensive_pandas_limits(self) -> None:
         """Test pandas with larger objects.
 
         Note: Pandas size limits are not implemented yet, so this just tests normal operation.
@@ -798,11 +805,11 @@ class TestPandasSecurityLimits:
 class TestErrorHandling:
     """Test improved error handling without information leakage."""
 
-    def test_object_with_failing_dict_method(self):
+    def test_object_with_failing_dict_method(self) -> None:
         """Test handling of objects with failing .dict() method."""
 
         class BadDictObject:
-            def dict(self):
+            def dict(self) -> None:
                 raise RuntimeError("Simulated failure")
 
         obj = BadDictObject()
@@ -812,15 +819,15 @@ class TestErrorHandling:
         result = serialize(obj)
         assert result == {}
 
-    def test_object_with_failing_vars(self):
+    def test_object_with_failing_vars(self) -> None:
         """Test handling of objects with failing vars() call."""
 
         class BadVarsObject:
-            def __init__(self):
+            def __init__(self) -> None:
                 # Create an object that vars() might fail on
                 pass
 
-            def __getattribute__(self, name):
+            def __getattribute__(self, name: str) -> Any:
                 if name == "__dict__":
                     raise RuntimeError("Simulated __dict__ failure")
                 return super().__getattribute__(name)
@@ -832,14 +839,14 @@ class TestErrorHandling:
         with pytest.raises(RuntimeError, match="Simulated __dict__ failure"):
             serialize(obj)
 
-    def test_unprintable_object(self):
+    def test_unprintable_object(self) -> None:
         """Test handling of objects that can't be converted to string."""
 
         class UnprintableObject:
-            def __str__(self):
+            def __str__(self) -> str:
                 raise RuntimeError("Cannot convert to string")
 
-            def __repr__(self):
+            def __repr__(self) -> str:
                 raise RuntimeError("Cannot represent")
 
         obj = UnprintableObject()
@@ -852,7 +859,7 @@ class TestErrorHandling:
 class TestSecurityConstants:
     """Test that security constants are reasonable."""
 
-    def test_security_constants_exist(self):
+    def test_security_constants_exist(self) -> None:
         """Test that security constants are defined."""
         from datason.core import (
             MAX_OBJECT_SIZE,
@@ -869,7 +876,7 @@ class TestSecurityConstants:
         assert MAX_OBJECT_SIZE > 1000
         assert MAX_STRING_LENGTH > 1000
 
-    def test_security_error_class(self):
+    def test_security_error_class(self) -> None:
         """Test that SecurityError class is available."""
         from datason.core import SecurityError
 
@@ -880,7 +887,7 @@ class TestSecurityConstants:
         with pytest.raises(SecurityError):
             raise SecurityError("Test error")
 
-    def test_environment_configuration(self):
+    def test_environment_configuration(self) -> None:
         """Test that environment configuration is working correctly."""
         _debug_print("🔧 Environment Configuration Test:")
         _debug_print(f"   Environment: {'CI' if IS_CI else 'Local'}")
