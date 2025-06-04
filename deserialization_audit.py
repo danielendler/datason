@@ -21,6 +21,7 @@ from typing import Any
 # Test imports - graceful fallbacks for optional dependencies
 try:
     import pandas as pd
+
     HAS_PANDAS = True
 except ImportError:
     pd = None
@@ -28,6 +29,7 @@ except ImportError:
 
 try:
     import numpy as np
+
     HAS_NUMPY = True
 except ImportError:
     np = None
@@ -35,6 +37,7 @@ except ImportError:
 
 try:
     import torch
+
     HAS_TORCH = True
 except ImportError:
     torch = None
@@ -42,6 +45,7 @@ except ImportError:
 
 try:
     import sklearn.linear_model
+
     HAS_SKLEARN = True
 except ImportError:
     sklearn = None
@@ -51,6 +55,7 @@ except ImportError:
 try:
     import datason
     from datason.config import SerializationConfig
+    from datason.deserializers import deserialize_fast
 except ImportError:
     print("❌ ERROR: datason not found. Please install datason first.")
     sys.exit(1)
@@ -102,7 +107,7 @@ class DeserializationAudit:
             parsed = json.loads(json_str)
 
             # Step 3: Deserialize with datason
-            reconstructed = datason.deserialize(parsed)
+            reconstructed = deserialize_fast(parsed, config)
 
             # Step 4: Verify reconstruction
             try:
@@ -141,7 +146,7 @@ class DeserializationAudit:
             parsed = json.loads(json_str)
 
             # Step 3: Deserialize (should auto-detect metadata)
-            reconstructed = datason.deserialize(parsed)
+            reconstructed = deserialize_fast(parsed, config)
 
             # Step 4: Verify perfect reconstruction
             try:
@@ -159,7 +164,9 @@ class DeserializationAudit:
 
                 return success
             except Exception as verify_error:
-                self.log_test(category, f"{test_name}_with_metadata", False, f"Metadata verification error: {verify_error}")
+                self.log_test(
+                    category, f"{test_name}_with_metadata", False, f"Metadata verification error: {verify_error}"
+                )
                 return False
 
         except Exception as e:
@@ -390,9 +397,7 @@ class DeserializationAudit:
 
         # Large nested structures
         large_nested = {
-            "level1": {
-                f"item_{i}": {"timestamp": datetime.now(), "data": list(range(10))} for i in range(10)
-            }
+            "level1": {f"item_{i}": {"timestamp": datetime.now(), "data": list(range(10))} for i in range(10)}
         }
         self.test_round_trip("complex_types", "large_nested", large_nested)
 
@@ -411,14 +416,14 @@ class DeserializationAudit:
 
     def generate_report(self):
         """Generate a comprehensive audit report."""
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print("📊 DESERIALIZATION AUDIT REPORT")
-        print(f"{'='*60}")
+        print(f"{'=' * 60}")
 
-        print(f"\n📈 Overall Statistics:")
+        print("\n📈 Overall Statistics:")
         print(f"   Total Tests: {self.total_tests}")
-        print(f"   Passed: {self.passed_tests} ({self.passed_tests/self.total_tests*100:.1f}%)")
-        print(f"   Failed: {self.failed_tests} ({self.failed_tests/self.total_tests*100:.1f}%)")
+        print(f"   Passed: {self.passed_tests} ({self.passed_tests / self.total_tests * 100:.1f}%)")
+        print(f"   Failed: {self.failed_tests} ({self.failed_tests / self.total_tests * 100:.1f}%)")
 
         # Category breakdown
         for category, tests in self.results.items():
@@ -430,16 +435,16 @@ class DeserializationAudit:
             category_failed = category_total - category_passed
 
             print(f"\n📂 {category.replace('_', ' ').title()}:")
-            print(f"   Passed: {category_passed}/{category_total} ({category_passed/category_total*100:.1f}%)")
+            print(f"   Passed: {category_passed}/{category_total} ({category_passed / category_total * 100:.1f}%)")
 
             if category_failed > 0:
-                print(f"   Failed tests:")
+                print("   Failed tests:")
                 for test_name, test_result in tests.items():
                     if not test_result["success"]:
                         print(f"     ❌ {test_name}: {test_result['error']}")
 
         # Identify critical gaps
-        print(f"\n🚨 Critical Gaps Identified:")
+        print("\n🚨 Critical Gaps Identified:")
 
         critical_failures = []
         for category, tests in self.results.items():
@@ -468,7 +473,7 @@ class DeserializationAudit:
                     metadata_failures.append(f"{category}/{test_name}")
 
         if metadata_failures:
-            print(f"\n⚠️  Type Metadata Gaps:")
+            print("\n⚠️  Type Metadata Gaps:")
             print(f"   Found {len(metadata_failures)} metadata round-trip failures:")
             for failure in metadata_failures[:10]:
                 print(f"     • {failure}")
@@ -476,7 +481,7 @@ class DeserializationAudit:
                 print(f"     ... and {len(metadata_failures) - 10} more")
 
         # Recommendations
-        print(f"\n💡 Recommendations:")
+        print("\n💡 Recommendations:")
 
         if self.failed_tests == 0:
             print("   🎉 All tests passed! datason has excellent round-trip support.")
@@ -490,7 +495,7 @@ class DeserializationAudit:
             print("      - Improve _deserialize_with_type_metadata() function")
             print("      - Add metadata serialization for missing types")
 
-        print(f"\n🎯 Next Steps:")
+        print("\n🎯 Next Steps:")
         print("   1. Fix critical round-trip failures (basic functionality)")
         print("   2. Enhance type metadata deserialization")
         print("   3. Add comprehensive round-trip tests to CI/CD")
@@ -525,7 +530,7 @@ def main():
         print(f"\n❌ Audit completed with {audit.failed_tests} failures")
         sys.exit(1)
     else:
-        print(f"\n✅ Audit completed successfully - all tests passed!")
+        print("\n✅ Audit completed successfully - all tests passed!")
         sys.exit(0)
 
 

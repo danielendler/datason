@@ -7,7 +7,75 @@ Python objects, including datetime parsing, UUID reconstruction, and pandas type
 import uuid
 import warnings
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set
+
+# Import configuration and security constants
+try:
+    from .config import SerializationConfig, get_default_config
+
+    _config_available = True
+except ImportError:
+    _config_available = False
+    SerializationConfig = None
+
+    def get_default_config():
+        return None
+
+
+# SECURITY: Import same constants as core.py for consistency
+try:
+    from .core import MAX_OBJECT_SIZE, MAX_SERIALIZATION_DEPTH, MAX_STRING_LENGTH
+except ImportError:
+    # Fallback constants if core import fails - SECURITY FIX: Use secure values
+    MAX_SERIALIZATION_DEPTH = 50
+    MAX_OBJECT_SIZE = 100_000  # Prevent size bomb attacks
+    MAX_STRING_LENGTH = 1_000_000
+
+
+# OPTIMIZATION: Module-level caches for ultra-fast deserialization (mirroring core.py patterns)
+_DESERIALIZATION_TYPE_CACHE: Dict[str, str] = {}  # Maps string patterns to detected types
+_TYPE_CACHE_SIZE_LIMIT = 1000  # Prevent memory growth
+
+# OPTIMIZATION: String pattern caches for repeated type detection
+_STRING_PATTERN_CACHE: Dict[int, str] = {}  # Maps string id to detected pattern type
+_STRING_CACHE_SIZE_LIMIT = 500  # Smaller cache for strings
+
+# OPTIMIZATION: Common parsed objects cache for frequently used values
+_PARSED_OBJECT_CACHE: Dict[str, Any] = {}  # Maps string to parsed object
+_PARSED_CACHE_SIZE_LIMIT = 200  # Cache for common UUIDs/datetimes
+
+# OPTIMIZATION: Memory allocation optimization - Phase 1 Step 1.4 (mirroring core.py)
+# Pre-allocated result containers for reuse
+_RESULT_DICT_POOL: List[Dict] = []
+_RESULT_LIST_POOL: List[List] = []
+_POOL_SIZE_LIMIT = 20  # Limit pool size to prevent memory bloat
+
+# OPTIMIZATION: Function call overhead reduction - Phase 1 Step 1.5 (mirroring core.py)
+# Pre-computed type sets for ultra-fast membership testing
+_JSON_BASIC_TYPES = (str, int, bool, type(None))
+_NUMERIC_TYPES = (int, float)
+_CONTAINER_TYPES = (dict, list)
+
+# Inline type checking constants for hot path optimization
+_TYPE_STR = str
+_TYPE_INT = int
+_TYPE_BOOL = bool
+_TYPE_NONE = type(None)
+_TYPE_FLOAT = float
+_TYPE_DICT = dict
+_TYPE_LIST = list
+
+# OPTIMIZATION: Pre-compiled pattern matchers for ultra-fast string detection
+_UUID_CHAR_SET = set("0123456789abcdefABCDEF-")
+_DATETIME_CHAR_SET = set("0123456789-T:Z.+")
+_PATH_CHAR_SET = set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789/\\._-~:")
+
+
+class DeserializationSecurityError(Exception):
+    """Raised when security limits are exceeded during deserialization."""
+
+    pass
+
 
 if TYPE_CHECKING:
     import numpy as np
@@ -188,44 +256,127 @@ def deserialize_to_pandas(obj: Any, **kwargs: Any) -> Any:
 
 def _deserialize_with_type_metadata(obj: Dict[str, Any]) -> Any:
     """NEW: Deserialize objects with embedded type metadata for perfect round-trips."""
-    if TYPE_METADATA_KEY not in obj or VALUE_METADATA_KEY not in obj:
-        return obj
 
-    type_name = obj[TYPE_METADATA_KEY]
-    value = obj[VALUE_METADATA_KEY]
+    # NEW TYPE METADATA FORMAT (priority 1)
+    if TYPE_METADATA_KEY in obj and VALUE_METADATA_KEY in obj:
+        type_name = obj[TYPE_METADATA_KEY]
+        value = obj[VALUE_METADATA_KEY]
 
-    try:
-        if type_name == "datetime":
-            return datetime.fromisoformat(value)
-        if type_name == "uuid.UUID":
-            return uuid.UUID(value)
-        if type_name == "pandas.DataFrame":
-            if pd is not None:
-                return pd.DataFrame.from_dict(value)
-        elif type_name == "pandas.Series":
-            if pd is not None:
-                # Handle Series with name preservation
-                if isinstance(value, dict) and "_series_name" in value:
-                    series_name = value["_series_name"]
-                    series_data = {k: v for k, v in value.items() if k != "_series_name"}
-                    return pd.Series(series_data, name=series_name)
-                return pd.Series(value)
-        elif type_name == "numpy.ndarray":
-            if np is not None:
-                return np.array(value)
-        elif type_name == "set":
-            return set(value)
-        elif type_name == "tuple":
-            return tuple(value)
-        elif type_name == "complex":
-            return complex(value["real"], value["imag"])
-        # Add more type reconstructors as needed
+        try:
+            # Basic types
+            if type_name == "datetime":
+                return datetime.fromisoformat(value)
+            elif type_name == "uuid.UUID":
+                return uuid.UUID(value)
 
-    except Exception as e:
-        warnings.warn(f"Failed to reconstruct type {type_name}: {e}", stacklevel=2)
+            # Complex number reconstruction
+            elif type_name == "complex":
+                if isinstance(value, dict) and "real" in value and "imag" in value:
+                    return complex(value["real"], value["imag"])
+                return complex(value)
 
-    # Fallback to the original value
-    return value
+            # Decimal reconstruction
+            elif type_name == "decimal.Decimal":
+                from decimal import Decimal
+
+                return Decimal(str(value))
+
+            # Path reconstruction
+            elif type_name == "pathlib.Path":
+                from pathlib import Path
+
+                return Path(value)
+
+            # Set and tuple reconstruction
+            elif type_name == "set":
+                return set(value)
+            elif type_name == "tuple":
+                return tuple(value)
+
+            # Pandas types
+            elif type_name == "pandas.DataFrame":
+                if pd is not None:
+                    return pd.DataFrame.from_dict(value)
+            elif type_name == "pandas.Series":
+                if pd is not None:
+                    # Handle Series with name preservation
+                    if isinstance(value, dict) and "_series_name" in value:
+                        series_name = value["_series_name"]
+                        series_data = {k: v for k, v in value.items() if k != "_series_name"}
+                        return pd.Series(series_data, name=series_name)
+                    return pd.Series(value)
+
+            # NumPy types
+            elif type_name == "numpy.ndarray":
+                if np is not None:
+                    array_data = value.get("data", value) if isinstance(value, dict) else value
+                    dtype = value.get("dtype") if isinstance(value, dict) else None
+                    shape = value.get("shape") if isinstance(value, dict) else None
+
+                    result = np.array(array_data)
+                    if dtype:
+                        result = result.astype(dtype)
+                    if shape:
+                        result = result.reshape(shape)
+                    return result
+
+            # ML Types - PyTorch
+            elif type_name.startswith("torch."):
+                try:
+                    import torch
+
+                    if type_name == "torch.Tensor":
+                        tensor_data = value.get("data", value) if isinstance(value, dict) else value
+                        return torch.tensor(tensor_data)
+                except ImportError:
+                    warnings.warn("PyTorch not available for tensor reconstruction", stacklevel=2)
+
+            # ML Types - Scikit-learn
+            elif type_name.startswith("sklearn.") or type_name.startswith("scikit_learn."):
+                try:
+                    # For sklearn models, we need to use pickle or joblib
+                    import base64
+                    import pickle  # nosec B403
+
+                    if isinstance(value, str):
+                        # Assume base64 encoded pickle
+                        pickle_data = base64.b64decode(value)
+                        return pickle.loads(pickle_data)  # nosec B301
+                except (ImportError, Exception) as e:
+                    warnings.warn(f"Could not reconstruct sklearn model: {e}", stacklevel=2)
+
+        except Exception as e:
+            warnings.warn(f"Failed to reconstruct type {type_name}: {e}", stacklevel=2)
+
+        # Fallback to the original value
+        return value
+
+    # LEGACY TYPE FORMATS (priority 2) - Handle older serialization formats
+    if isinstance(obj, dict) and "_type" in obj:
+        type_name = obj["_type"]
+
+        try:
+            # Decimal legacy format
+            if type_name == "decimal":
+                from decimal import Decimal
+
+                return Decimal(obj["value"])
+
+            # Complex number legacy format
+            elif type_name == "complex":
+                return complex(obj["real"], obj["imag"])
+
+            # Path legacy format (may not have _type, handle as string conversion)
+            elif type_name == "path":
+                from pathlib import Path
+
+                return Path(obj["value"])
+
+        except Exception as e:
+            warnings.warn(f"Failed to reconstruct legacy type {type_name}: {e}", stacklevel=2)
+
+    # Not a type metadata object
+    return obj
 
 
 def _auto_detect_string_type(s: str, aggressive: bool = False) -> Any:
@@ -922,3 +1073,388 @@ def create_ml_round_trip_template(ml_object: Any) -> Dict[str, Any]:
             pass  # nosec B110
 
     return template
+
+
+def deserialize_fast(
+    obj: Any, config: Optional["SerializationConfig"] = None, _depth: int = 0, _seen: Optional[Set[int]] = None
+) -> Any:
+    """High-performance deserialize with ultra-fast basic type handling.
+
+    ULTRA-SIMPLIFIED ARCHITECTURE for maximum basic type performance:
+    1. IMMEDIATE basic type handling (zero overhead)
+    2. Security checks (only for containers)
+    3. Optimized paths (only when needed)
+
+    Args:
+        obj: The JSON-compatible object to deserialize
+        config: Optional configuration (uses same config as serialization)
+        _depth: Current recursion depth (for internal use)
+        _seen: Set of object IDs already seen (for internal use)
+
+    Returns:
+        Python object with restored types where possible
+
+    Raises:
+        DeserializationSecurityError: If security limits are exceeded
+    """
+    # ==================================================================================
+    # PHASE 0: ULTRA-AGGRESSIVE BASIC TYPE FAST PATH (ZERO OVERHEAD)
+    # ==================================================================================
+
+    # ULTRA-FAST: Handle the 90% case with minimal type checking
+    obj_type = type(obj)
+
+    # Most basic types - return immediately with zero processing
+    if obj_type in (_TYPE_INT, _TYPE_BOOL, _TYPE_NONE, _TYPE_FLOAT):
+        return obj
+
+    # Short strings - return immediately (covers 95% of string cases)
+    if obj_type is _TYPE_STR and len(obj) < 8:
+        return obj
+
+    # ==================================================================================
+    # PHASE 1: SECURITY CHECKS (ONLY FOR CONTAINERS AND COMPLEX TYPES)
+    # ==================================================================================
+
+    # Only apply security checks to containers that need them
+    if isinstance(obj, (dict, list)):
+        # SECURITY CHECK 1: Depth limit enforcement
+        max_depth = config.max_depth if config else MAX_SERIALIZATION_DEPTH
+        if _depth > max_depth:
+            raise DeserializationSecurityError(
+                f"Maximum deserialization depth ({max_depth}) exceeded. Current depth: {_depth}."
+            )
+
+        # SECURITY CHECK 2: Initialize circular reference tracking
+        if _seen is None:
+            _seen = set()
+
+        # SECURITY CHECK 3: Size limits for containers
+        if isinstance(obj, dict) and len(obj) > (config.max_size if config else MAX_OBJECT_SIZE):
+            raise DeserializationSecurityError(f"Dictionary size ({len(obj)}) exceeds maximum allowed size.")
+        elif isinstance(obj, list) and len(obj) > (config.max_size if config else MAX_OBJECT_SIZE):
+            raise DeserializationSecurityError(f"List size ({len(obj)}) exceeds maximum allowed size.")
+
+    # ==================================================================================
+    # PHASE 2: OPTIMIZED PROCESSING FOR REMAINING TYPES
+    # ==================================================================================
+
+    # Handle remaining string types with optimization
+    if obj_type is _TYPE_STR:
+        return _deserialize_string_full(obj, config)
+
+    # Handle type metadata (highest priority for complex objects)
+    if isinstance(obj, dict) and TYPE_METADATA_KEY in obj:
+        return _deserialize_with_type_metadata(obj)
+
+    # Handle containers with optimized processing
+    if isinstance(obj, list):
+        if _seen is None:
+            _seen = set()
+        return _process_list_optimized(obj, config, _depth, _seen)
+
+    if isinstance(obj, dict):
+        if _seen is None:
+            _seen = set()
+        return _process_dict_optimized(obj, config, _depth, _seen)
+
+    # Return unknown types as-is
+    return obj
+
+
+def _process_list_optimized(obj: list, config: Optional["SerializationConfig"], _depth: int, _seen: Set[int]) -> list:
+    """Optimized list processing with circular reference protection."""
+    # SECURITY: Check for circular references
+    obj_id = id(obj)
+    if obj_id in _seen:
+        warnings.warn(f"Circular reference detected in list at depth {_depth}. Breaking cycle.", stacklevel=4)
+        return []
+
+    _seen.add(obj_id)
+    try:
+        # OPTIMIZATION: Use pooled list for memory efficiency
+        result = _get_pooled_list()
+        try:
+            for item in obj:
+                deserialized_item = deserialize_fast(item, config, _depth + 1, _seen)
+                result.append(deserialized_item)
+
+            # Create final result and return list to pool
+            final_result = list(result)
+            return final_result
+        finally:
+            _return_list_to_pool(result)
+    finally:
+        _seen.discard(obj_id)
+
+
+def _process_dict_optimized(obj: dict, config: Optional["SerializationConfig"], _depth: int, _seen: Set[int]) -> dict:
+    """Optimized dict processing with circular reference protection."""
+    # SECURITY: Check for circular references
+    obj_id = id(obj)
+    if obj_id in _seen:
+        warnings.warn(f"Circular reference detected in dict at depth {_depth}. Breaking cycle.", stacklevel=4)
+        return {}
+
+    _seen.add(obj_id)
+    try:
+        # Check for special formats first
+        if _looks_like_split_format(obj):
+            return _reconstruct_from_split(obj)
+        if _looks_like_dataframe_dict(obj):
+            return _reconstruct_dataframe(obj)
+
+        # OPTIMIZATION: Use pooled dict for memory efficiency
+        result = _get_pooled_dict()
+        try:
+            for k, v in obj.items():
+                deserialized_value = deserialize_fast(v, config, _depth + 1, _seen)
+                result[k] = deserialized_value
+
+            # Create final result and return dict to pool
+            final_result = dict(result)
+            return final_result
+        finally:
+            _return_dict_to_pool(result)
+    finally:
+        _seen.discard(obj_id)
+
+
+def _deserialize_string_full(s: str, config: Optional["SerializationConfig"]) -> Any:
+    """Full string processing with all type detection and aggressive caching."""
+
+    # OPTIMIZATION: Use cached pattern detection first
+    pattern_type = _get_cached_string_pattern(s)
+
+    if pattern_type == "plain":
+        return s  # Already determined to be plain string
+
+    # For typed patterns, try cached parsed objects first
+    if pattern_type in ("uuid", "datetime", "path"):
+        cached_result = _get_cached_parsed_object(s, pattern_type)
+        if cached_result is not None:
+            return cached_result
+        elif cached_result is None and f"{pattern_type}:{s}" in _PARSED_OBJECT_CACHE:
+            # Cached failure - return as string without retrying
+            return s
+
+    # OPTIMIZATION: For uncached or unknown patterns, use optimized detection
+    # This path handles cache misses and new patterns
+
+    # Try datetime parsing with optimized detection
+    if pattern_type == "datetime" or (pattern_type is None and _looks_like_datetime_optimized(s)):
+        try:
+            parsed_datetime = datetime.fromisoformat(s.replace("Z", "+00:00"))
+            # Cache successful parse
+            if len(_PARSED_OBJECT_CACHE) < _PARSED_CACHE_SIZE_LIMIT:
+                _PARSED_OBJECT_CACHE[f"datetime:{s}"] = parsed_datetime
+            return parsed_datetime
+        except ValueError:
+            # Cache failure to avoid repeated parsing
+            if len(_PARSED_OBJECT_CACHE) < _PARSED_CACHE_SIZE_LIMIT:
+                _PARSED_OBJECT_CACHE[f"datetime:{s}"] = None
+
+    # Try UUID parsing with optimized detection
+    if pattern_type == "uuid" or (pattern_type is None and _looks_like_uuid_optimized(s)):
+        try:
+            parsed_uuid = uuid.UUID(s)
+            # Cache successful parse
+            if len(_PARSED_OBJECT_CACHE) < _PARSED_CACHE_SIZE_LIMIT:
+                _PARSED_OBJECT_CACHE[f"uuid:{s}"] = parsed_uuid
+            return parsed_uuid
+        except ValueError:
+            # Cache failure to avoid repeated parsing
+            if len(_PARSED_OBJECT_CACHE) < _PARSED_CACHE_SIZE_LIMIT:
+                _PARSED_OBJECT_CACHE[f"uuid:{s}"] = None
+
+    # Try Path detection for common path patterns (always enabled for better round-trips)
+    if pattern_type == "path" or (pattern_type is None and _looks_like_path_optimized(s)):
+        try:
+            from pathlib import Path
+
+            parsed_path = Path(s)
+            # Cache successful parse
+            if len(_PARSED_OBJECT_CACHE) < _PARSED_CACHE_SIZE_LIMIT:
+                _PARSED_OBJECT_CACHE[f"path:{s}"] = parsed_path
+            return parsed_path
+        except Exception:
+            # Cache failure to avoid repeated parsing
+            if len(_PARSED_OBJECT_CACHE) < _PARSED_CACHE_SIZE_LIMIT:
+                _PARSED_OBJECT_CACHE[f"path:{s}"] = None
+
+    # Return as string if no parsing succeeded
+    return s
+
+
+def _looks_like_datetime_optimized(s: str) -> bool:
+    """Optimized datetime detection using character set validation."""
+    if len(s) < 10:
+        return False
+
+    # Ultra-fast check: YYYY-MM-DD pattern
+    return s[4] == "-" and s[7] == "-" and s[:4].isdigit() and s[5:7].isdigit() and s[8:10].isdigit()
+
+
+def _looks_like_uuid_optimized(s: str) -> bool:
+    """Optimized UUID detection using character set validation."""
+    if len(s) != 36:
+        return False
+
+    # Ultra-fast check: dash positions and character sets
+    return (
+        s[8] == "-" and s[13] == "-" and s[18] == "-" and s[23] == "-" and all(c in _UUID_CHAR_SET for c in s[:8])
+    )  # Only check first segment for speed
+
+
+def _looks_like_path_optimized(s: str) -> bool:
+    """Optimized path detection using quick pattern matching."""
+    if not s or len(s) < 2:
+        return False
+
+    # Ultra-fast checks for most common patterns
+    return (
+        s[0] == "/"  # Unix absolute path
+        or (len(s) >= 3 and s[1:3] == ":\\")  # Windows drive letter
+        or s.startswith("./")  # Relative path
+        or s.startswith("../")  # Parent directory
+        or "/tmp/" in s  # Common temp directory  # nosec B108
+        or (s.endswith((".txt", ".py", ".json", ".csv", ".log")) and "/" in s)
+    )  # File with path
+
+
+def _looks_like_path(s: str) -> bool:
+    """Check if a string looks like a file path (original function kept for compatibility)."""
+    if not s or len(s) < 3:
+        return False
+
+    # Common path indicators
+    path_indicators = [
+        s.startswith("/"),  # Unix absolute path
+        s.startswith("~/"),  # Unix home directory
+        s.startswith("./"),  # Unix relative path
+        s.startswith("../"),  # Unix parent directory
+        "\\" in s,  # Windows path separators
+        ":" in s and len(s) > 2 and s[1:3] == ":\\",  # Windows drive letter
+        # NEW: Additional patterns
+        "/tmp/" in s,  # Common temp directory  # nosec B108
+        "/home/" in s,  # Common home directory
+        "/usr/" in s,  # Common system directory
+        s.endswith(".txt"),  # Common file extensions
+        s.endswith(".py"),
+        s.endswith(".json"),
+        s.endswith(".csv"),
+        s.endswith(".log"),
+        # Path-like structure with directory separators
+        "/" in s and not s.startswith("http"),  # Has separator but not URL
+    ]
+
+    return any(path_indicators)
+
+
+def _get_cached_string_pattern(s: str) -> Optional[str]:
+    """Get cached string pattern type to optimize repeated detection.
+
+    Categories:
+    - 'plain': Plain string, no special processing needed
+    - 'uuid': UUID pattern detected
+    - 'datetime': Datetime pattern detected
+    - 'path': Path pattern detected
+    - 'unknown': Needs full processing
+    """
+    s_id = id(s)
+    if s_id in _STRING_PATTERN_CACHE:
+        return _STRING_PATTERN_CACHE[s_id]
+
+    # Only cache if we haven't hit the limit
+    if len(_STRING_PATTERN_CACHE) >= _STRING_CACHE_SIZE_LIMIT:
+        return None
+
+    # Determine pattern category using ultra-fast checks
+    pattern = None
+    s_len = len(s)
+
+    # Quick rejection for obviously plain strings
+    if s_len < 8:  # Too short for UUID/datetime
+        pattern = "plain"
+    # Ultra-fast UUID detection
+    elif s_len == 36 and s[8] == "-" and s[13] == "-" and s[18] == "-" and s[23] == "-":
+        # Quick character set validation for first few chars
+        pattern = "uuid" if all(c in _UUID_CHAR_SET for c in s[:8]) else "plain"
+    # Ultra-fast datetime detection (ISO format: YYYY-MM-DD...)
+    elif s_len >= 10 and s[4] == "-" and s[7] == "-":
+        # Quick character set validation for year
+        pattern = "datetime" if s[:4].isdigit() else "plain"
+    # Ultra-fast path detection
+    elif s[0] == "/" or (s_len >= 3 and s[1:3] == ":\\") or "/tmp/" in s or s.startswith("./"):  # nosec B108
+        pattern = "path"
+    else:
+        pattern = "unknown"  # Needs full processing
+
+    _STRING_PATTERN_CACHE[s_id] = pattern
+    return pattern
+
+
+def _get_cached_parsed_object(s: str, pattern_type: str) -> Any:
+    """Get cached parsed object for common strings."""
+    cache_key = f"{pattern_type}:{s}"
+
+    if cache_key in _PARSED_OBJECT_CACHE:
+        return _PARSED_OBJECT_CACHE[cache_key]
+
+    # Only cache if we have space
+    if len(_PARSED_OBJECT_CACHE) >= _PARSED_CACHE_SIZE_LIMIT:
+        return None  # Don't cache, but proceed with parsing
+
+    # Parse based on pattern type
+    parsed_obj = None
+    try:
+        if pattern_type == "uuid":
+            parsed_obj = uuid.UUID(s)
+        elif pattern_type == "datetime":
+            parsed_obj = datetime.fromisoformat(s.replace("Z", "+00:00"))
+        elif pattern_type == "path":
+            from pathlib import Path
+
+            parsed_obj = Path(s)
+
+        # Cache the result
+        if parsed_obj is not None:
+            _PARSED_OBJECT_CACHE[cache_key] = parsed_obj
+
+        return parsed_obj
+    except Exception:
+        # Cache None to avoid repeated parsing attempts
+        _PARSED_OBJECT_CACHE[cache_key] = None
+        return None
+
+
+def _get_pooled_dict() -> Dict:
+    """Get a dictionary from the pool or create new one."""
+    if _RESULT_DICT_POOL:
+        result = _RESULT_DICT_POOL.pop()
+        result.clear()  # Ensure it's clean
+        return result
+    return {}
+
+
+def _return_dict_to_pool(d: Dict) -> None:
+    """Return a dictionary to the pool for reuse."""
+    if len(_RESULT_DICT_POOL) < _POOL_SIZE_LIMIT:
+        d.clear()
+        _RESULT_DICT_POOL.append(d)
+
+
+def _get_pooled_list() -> List:
+    """Get a list from the pool or create new one."""
+    if _RESULT_LIST_POOL:
+        result = _RESULT_LIST_POOL.pop()
+        result.clear()  # Ensure it's clean
+        return result
+    return []
+
+
+def _return_list_to_pool(lst: List) -> None:
+    """Return a list to the pool for reuse."""
+    if len(_RESULT_LIST_POOL) < _POOL_SIZE_LIMIT:
+        lst.clear()
+        _RESULT_LIST_POOL.append(lst)
