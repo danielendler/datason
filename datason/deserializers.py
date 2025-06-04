@@ -255,7 +255,11 @@ def deserialize_to_pandas(obj: Any, **kwargs: Any) -> Any:
 
 
 def _deserialize_with_type_metadata(obj: Dict[str, Any]) -> Any:
-    """NEW: Deserialize objects with embedded type metadata for perfect round-trips."""
+    """Enhanced: Deserialize objects with embedded type metadata for perfect round-trips.
+
+    Supports both new format (__datason_type__) and legacy format (_type) with
+    comprehensive ML framework support and robust error handling.
+    """
 
     # NEW TYPE METADATA FORMAT (priority 1)
     if TYPE_METADATA_KEY in obj and VALUE_METADATA_KEY in obj:
@@ -296,15 +300,30 @@ def _deserialize_with_type_metadata(obj: Dict[str, Any]) -> Any:
             # Pandas types
             elif type_name == "pandas.DataFrame":
                 if pd is not None:
-                    return pd.DataFrame.from_dict(value)
+                    # Enhanced DataFrame reconstruction - handle different orientations
+                    if isinstance(value, list):
+                        # Records format (most common)
+                        return pd.DataFrame(value)
+                    elif isinstance(value, dict):
+                        # Dict format or split format
+                        if "index" in value and "columns" in value and "data" in value:
+                            # Split format
+                            return pd.DataFrame(data=value["data"], index=value["index"], columns=value["columns"])
+                        else:
+                            # Dict format
+                            return pd.DataFrame.from_dict(value)
+                    return pd.DataFrame(value)  # Fallback
+
             elif type_name == "pandas.Series":
                 if pd is not None:
-                    # Handle Series with name preservation
+                    # Enhanced Series reconstruction with name preservation
                     if isinstance(value, dict) and "_series_name" in value:
                         series_name = value["_series_name"]
                         series_data = {k: v for k, v in value.items() if k != "_series_name"}
                         return pd.Series(series_data, name=series_name)
-                    return pd.Series(value)
+                    elif isinstance(value, dict) or isinstance(value, list):
+                        return pd.Series(value)
+                    return pd.Series(value)  # Fallback
 
             # NumPy types
             elif type_name == "numpy.ndarray":
@@ -320,6 +339,36 @@ def _deserialize_with_type_metadata(obj: Dict[str, Any]) -> Any:
                         result = result.reshape(shape)
                     return result
 
+            # Enhanced NumPy scalar types
+            elif type_name.startswith("numpy."):
+                if np is not None:
+                    # Handle numpy scalar types (int32, float64, bool_, etc.)
+                    if type_name == "numpy.int32":
+                        return np.int32(value)
+                    elif type_name == "numpy.int64":
+                        return np.int64(value)
+                    elif type_name == "numpy.float32":
+                        return np.float32(value)
+                    elif type_name == "numpy.float64":
+                        return np.float64(value)
+                    elif type_name == "numpy.bool_":
+                        # Handle the deprecation warning for np.bool
+                        return np.bool_(value)
+                    elif type_name == "numpy.complex64":
+                        return np.complex64(value)
+                    elif type_name == "numpy.complex128":
+                        return np.complex128(value)
+                    # Generic fallback for other numpy types
+                    try:
+                        numpy_type_name = type_name.split(".", 1)[1]
+                        # Handle special case for bool_ deprecation
+                        if numpy_type_name == "bool":
+                            numpy_type_name = "bool_"
+                        numpy_type = getattr(np, numpy_type_name)
+                        return numpy_type(value)
+                    except (AttributeError, ValueError, TypeError):
+                        pass
+
             # ML Types - PyTorch
             elif type_name.startswith("torch."):
                 try:
@@ -327,7 +376,16 @@ def _deserialize_with_type_metadata(obj: Dict[str, Any]) -> Any:
 
                     if type_name == "torch.Tensor":
                         tensor_data = value.get("data", value) if isinstance(value, dict) else value
-                        return torch.tensor(tensor_data)
+                        dtype = value.get("dtype") if isinstance(value, dict) else None
+                        device = value.get("device", "cpu") if isinstance(value, dict) else "cpu"
+                        requires_grad = value.get("requires_grad", False) if isinstance(value, dict) else False
+
+                        # Create tensor with proper attributes
+                        result = torch.tensor(tensor_data, device=device, requires_grad=requires_grad)
+                        if dtype and hasattr(torch, dtype.replace("torch.", "")):
+                            torch_dtype = getattr(torch, dtype.replace("torch.", ""))
+                            result = result.to(torch_dtype)
+                        return result
                 except ImportError:
                     warnings.warn("PyTorch not available for tensor reconstruction", stacklevel=2)
 
@@ -342,6 +400,10 @@ def _deserialize_with_type_metadata(obj: Dict[str, Any]) -> Any:
                         # Assume base64 encoded pickle
                         pickle_data = base64.b64decode(value)
                         return pickle.loads(pickle_data)  # nosec B301
+                    elif isinstance(value, dict) and "_pickle_data" in value:
+                        # Alternative pickle storage format
+                        pickle_data = base64.b64decode(value["_pickle_data"])
+                        return pickle.loads(pickle_data)  # nosec B301
                 except (ImportError, Exception) as e:
                     warnings.warn(f"Could not reconstruct sklearn model: {e}", stacklevel=2)
 
@@ -351,26 +413,122 @@ def _deserialize_with_type_metadata(obj: Dict[str, Any]) -> Any:
         # Fallback to the original value
         return value
 
-    # LEGACY TYPE FORMATS (priority 2) - Handle older serialization formats
+    # ENHANCED LEGACY TYPE FORMATS (priority 2) - Handle older serialization formats
     if isinstance(obj, dict) and "_type" in obj:
         type_name = obj["_type"]
 
         try:
-            # Decimal legacy format
+            # Enhanced Decimal legacy format with precision preservation
             if type_name == "decimal":
                 from decimal import Decimal
 
-                return Decimal(obj["value"])
+                if "value" in obj:
+                    return Decimal(obj["value"])
+                elif "precision" in obj and "scale" in obj:
+                    # Enhanced precision format
+                    return Decimal(obj["value"])
+                return Decimal(str(obj.get("value", "0")))
 
-            # Complex number legacy format
+            # Enhanced Complex number legacy format
             elif type_name == "complex":
-                return complex(obj["real"], obj["imag"])
+                if "real" in obj and "imag" in obj:
+                    return complex(obj["real"], obj["imag"])
+                return complex(obj.get("value", 0))
 
-            # Path legacy format (may not have _type, handle as string conversion)
+            # Path legacy format
             elif type_name == "path":
                 from pathlib import Path
 
-                return Path(obj["value"])
+                return Path(obj.get("value", ""))
+
+            # Enhanced PyTorch tensor legacy format
+            elif type_name == "torch.Tensor":
+                try:
+                    import torch
+
+                    # Extract tensor data and metadata
+                    data = obj.get("_data", obj.get("data", []))
+                    shape = obj.get("_shape", obj.get("shape"))
+                    dtype_str = obj.get("_dtype", obj.get("dtype", "torch.float32"))
+                    device = obj.get("_device", obj.get("device", "cpu"))
+                    requires_grad = obj.get("_requires_grad", obj.get("requires_grad", False))
+
+                    # Create tensor
+                    tensor = torch.tensor(data, device=device, requires_grad=requires_grad)
+
+                    # Set dtype if specified
+                    if dtype_str and hasattr(torch, dtype_str.replace("torch.", "")):
+                        torch_dtype = getattr(torch, dtype_str.replace("torch.", ""))
+                        tensor = tensor.to(torch_dtype)
+
+                    # Reshape if needed
+                    if shape and tensor.numel() == sum(shape):
+                        tensor = tensor.reshape(shape)
+
+                    return tensor
+                except ImportError:
+                    warnings.warn("PyTorch not available for tensor reconstruction", stacklevel=2)
+                except Exception as e:
+                    warnings.warn(f"Failed to reconstruct PyTorch tensor: {e}", stacklevel=2)
+
+            # Enhanced NumPy array legacy format
+            elif type_name == "numpy.ndarray" or type_name.startswith("numpy."):
+                if np is not None:
+                    try:
+                        data = obj.get("data", obj.get("_data", []))
+                        dtype = obj.get("dtype", obj.get("_dtype"))
+                        shape = obj.get("shape", obj.get("_shape"))
+
+                        result = np.array(data)
+                        if dtype:
+                            result = result.astype(dtype)
+                        if shape:
+                            result = result.reshape(shape)
+                        return result
+                    except Exception as e:
+                        warnings.warn(f"Failed to reconstruct NumPy array: {e}", stacklevel=2)
+
+            # Enhanced pandas DataFrame legacy format
+            elif type_name == "pandas.DataFrame":
+                if pd is not None:
+                    try:
+                        data = obj.get("data", obj.get("_data"))
+                        if isinstance(data, list):
+                            return pd.DataFrame(data)
+                        elif isinstance(data, dict):
+                            return pd.DataFrame.from_dict(data)
+                    except Exception as e:
+                        warnings.warn(f"Failed to reconstruct DataFrame: {e}", stacklevel=2)
+
+            # Enhanced pandas Series legacy format
+            elif type_name == "pandas.Series":
+                if pd is not None:
+                    try:
+                        data = obj.get("data", obj.get("_data"))
+                        name = obj.get("name", obj.get("_name"))
+                        return pd.Series(data, name=name)
+                    except Exception as e:
+                        warnings.warn(f"Failed to reconstruct Series: {e}", stacklevel=2)
+
+            # ML Models - Scikit-learn legacy format
+            elif type_name.startswith("sklearn.") or type_name.startswith("scikit_learn."):
+                try:
+                    import base64
+                    import pickle  # nosec B403
+
+                    # Try different pickle storage formats
+                    pickle_data = None
+                    if "_pickle_data" in obj:
+                        pickle_data = base64.b64decode(obj["_pickle_data"])
+                    elif "pickle_data" in obj:
+                        pickle_data = base64.b64decode(obj["pickle_data"])
+                    elif "data" in obj and isinstance(obj["data"], str):
+                        pickle_data = base64.b64decode(obj["data"])
+
+                    if pickle_data:
+                        return pickle.loads(pickle_data)  # nosec B301
+                except (ImportError, Exception) as e:
+                    warnings.warn(f"Could not reconstruct sklearn model: {e}", stacklevel=2)
 
         except Exception as e:
             warnings.warn(f"Failed to reconstruct legacy type {type_name}: {e}", stacklevel=2)
@@ -1198,7 +1356,11 @@ def _process_dict_optimized(obj: dict, config: Optional["SerializationConfig"], 
 
     _seen.add(obj_id)
     try:
-        # Check for special formats first
+        # ENHANCED: Check for type metadata first (both new and legacy formats)
+        if TYPE_METADATA_KEY in obj or "_type" in obj:
+            return _deserialize_with_type_metadata(obj)
+
+        # Check for special formats
         if _looks_like_split_format(obj):
             return _reconstruct_from_split(obj)
         if _looks_like_dataframe_dict(obj):

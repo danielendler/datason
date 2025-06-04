@@ -537,6 +537,11 @@ def _serialize_hot_path(obj: Any, config: Optional["SerializationConfig"], max_s
 
     # Handle numpy scalars if available
     elif np is not None and isinstance(obj, (np.bool_, np.integer, np.floating)):
+        # CRITICAL FIX: Skip hot path normalization if type hints are enabled
+        # This allows numpy scalars to reach the full path for metadata generation
+        if config and config.include_type_hints:
+            return None  # Force full processing for metadata generation
+
         # Quick numpy scalar normalization
         if isinstance(obj, np.floating) and (np.isnan(obj) or np.isinf(obj)):
             return None  # NaN/Inf numpy float, needs full processing
@@ -675,6 +680,16 @@ def _serialize_full_path(
 
     # Handle numpy data types with normalization (less frequent, but important for ML)
     if type_category == "numpy" and np is not None:
+        # CRITICAL FIX: Generate type metadata BEFORE normalization for round-trip fidelity
+        if config and config.include_type_hints:
+            # Check if this is a numpy scalar that will be normalized
+            if hasattr(obj, "dtype") and not isinstance(obj, np.ndarray):
+                # This is likely a numpy scalar - generate metadata for the original type
+                original_type_name = f"numpy.{obj.dtype.name}"
+                normalized_value = normalize_numpy_types(obj)
+                # Return with metadata to preserve exact type information
+                return _create_type_metadata(original_type_name, normalized_value)
+
         normalized = normalize_numpy_types(obj)
         # Use 'is' comparison for object identity to avoid DataFrame truth value issues
         if normalized is not obj:  # Something was converted
@@ -707,7 +722,15 @@ def _serialize_full_path(
             # Handle orientation configuration for JSON-safe output
             serialized_df = None
             if config and hasattr(config, "dataframe_orient"):
-                orient = config.dataframe_orient.value
+                # Fix: Handle both enum and string values for dataframe_orient
+                orient_value = config.dataframe_orient
+                if hasattr(orient_value, "value"):
+                    # It's an enum - get the string value
+                    orient = orient_value.value
+                else:
+                    # It's already a string
+                    orient = str(orient_value)
+
                 try:
                     # Special handling for VALUES orientation
                     serialized_df = obj.values.tolist() if orient == "values" else obj.to_dict(orient=orient)
