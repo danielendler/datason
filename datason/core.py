@@ -816,7 +816,8 @@ def _serialize_full_path(
         return encoded_bytes
 
     # Handle Path objects explicitly (before __dict__ handling)
-    if hasattr(obj, "__fspath__"):
+    # BUGFIX: Be more specific about Path detection to avoid false positives with MagicMock
+    if hasattr(obj, "__fspath__") and not getattr(type(obj), "__module__", "").startswith("unittest.mock"):
         path_str = str(obj)
         # Handle type metadata for Path objects
         if config and config.include_type_hints:
