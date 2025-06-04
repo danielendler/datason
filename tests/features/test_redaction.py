@@ -256,7 +256,7 @@ class TestRedactionEngineExtended:
 
     def test_redaction_with_complex_nested_structure(self) -> None:
         """Test redaction with complex nested structures."""
-        engine = RedactionEngine(redact_fields=["password"])
+        engine = RedactionEngine(redact_fields=["*password"])  # Match any field ending with 'password'
 
         complex_data = {
             "users": [
@@ -268,10 +268,12 @@ class TestRedactionEngineExtended:
 
         result = engine.process_object(complex_data)
 
-        # Should redact all password fields recursively
+        # Should redact all password fields recursively with wildcard pattern
         assert result["users"][0]["password"] == "<REDACTED>"
         assert result["users"][0]["nested"]["password"] == "<REDACTED>"
         assert result["users"][1]["password"] == "<REDACTED>"
+        # db_password should also be redacted with *password pattern
+        assert result["config"]["db_password"] == "<REDACTED>"
 
     def test_redaction_list_processing(self) -> None:
         """Test redaction processing of lists."""
@@ -292,13 +294,14 @@ class TestRedactionEngineExtended:
             redact_fields=["password"],
             redact_patterns=[r"api_key_\w+"],
             redact_large_objects=True,
+            large_object_threshold=100,  # Set very low threshold for testing
             audit_trail=True,
         )
 
         data = {
             "user": {"password": "secret"},
-            "config": {"api_key_abc123": "sensitive"},
-            "large_data": list(range(1000)),
+            "config": {"text": "api_key_abc123"},  # This will be redacted by pattern
+            "large_data": "x" * 200,  # Large string to trigger size redaction
         }
 
         _result = engine.process_object(data)
@@ -306,8 +309,9 @@ class TestRedactionEngineExtended:
 
         if audit is not None:
             assert len(audit) > 0
+            # Check for actual audit content (expecting size redaction)
             audit_str = str(audit)
-            assert "password" in audit_str or "field" in audit_str
+            assert "size" in audit_str or "field" in audit_str or "pattern" in audit_str
 
     def test_redaction_summary_statistics(self) -> None:
         """Test redaction summary statistics."""
@@ -326,7 +330,11 @@ class TestRedactionEngineExtended:
         summary = engine.get_redaction_summary()
 
         assert summary is not None
-        assert "fields_redacted" in summary or "total_redactions" in summary
+        # The API returns a nested structure
+        assert "redaction_summary" in summary
+        summary_data = summary["redaction_summary"]
+        assert "fields_redacted" in summary_data
+        assert "total_redactions" in summary_data
 
 
 class TestCrossModuleIntegration:

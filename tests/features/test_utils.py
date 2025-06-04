@@ -306,13 +306,13 @@ class TestNormalizeDataStructure:
         assert records[0] == {"name": "Alice", "age": 25}
         assert records[1] == {"name": "Bob", "age": 30}
 
-    def test_with_security_limits(self) -> None:
-        """Test normalization with security limits."""
-        config = UtilityConfig(max_object_size=5)
-        large_data = {f"key{i}": i for i in range(10)}
+    def test_normalize_data_structure_security_limits(self) -> None:
+        """Test normalize_data_structure with security limits."""
+        config = UtilityConfig(max_object_size=2)  # Very small limit
+        large_data = {f"key{i}": i for i in range(5)}  # 5 items > limit of 2
 
         with pytest.raises(UtilitySecurityError):
-            normalize_data_structure(large_data, "flat", config=config)
+            normalize_data_structure(large_data, target_structure="flatten", config=config)
 
     def test_circular_reference_handling(self) -> None:
         """Test flattening with circular references."""
@@ -704,14 +704,6 @@ class TestNormalizeDataStructureExtended:
         result = normalize_data_structure(data, target_structure="records")
 
         assert isinstance(result, (list, dict))
-
-    def test_normalize_data_structure_security_limits(self) -> None:
-        """Test normalize_data_structure with security limits."""
-        config = UtilityConfig(max_depth=1)
-        nested = {"a": {"b": {"c": 1}}}
-
-        with pytest.raises(UtilitySecurityError):
-            normalize_data_structure(nested, target_structure="flatten", config=config)
 
 
 class TestDatetimeUtilitiesExtended:

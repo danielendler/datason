@@ -5,6 +5,57 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.5] - In Development - 2025-06-03
+
+### 🔐 NEW: Production Safety & Redaction Framework
+- **RedactionEngine**: Comprehensive redaction system for sensitive data protection
+  - Field-level redaction with wildcard patterns (`*.password`, `user.email`)
+  - Regex pattern-based redaction (credit cards, SSNs, emails, phone numbers)
+  - Size-based redaction for large objects (configurable thresholds)
+  - Circular reference detection and safe handling
+  - Audit trail logging for compliance requirements
+  - Redaction summary reporting for transparency
+
+### 🛠️ NEW: Data Transformation Utilities (User Requested)
+- **Direct access to data tools** without requiring serialization
+- **Data Comparison**:
+  - `deep_compare()`: Deep comparison with tolerance support and detailed diff reporting
+  - `find_data_anomalies()`: Detect suspicious patterns, oversized objects, injection attempts
+- **Data Enhancement**:
+  - `enhance_data_types()`: Smart type inference and conversion (strings→numbers→dates)
+  - `normalize_data_structure()`: Flatten/restructure data for consistent formats
+- **Date/Time Utilities**:
+  - `standardize_datetime_formats()`: Convert datetime formats across data structures
+  - `extract_temporal_features()`: Analyze temporal patterns and extract metadata
+- **Utility Discovery**: `get_available_utilities()` for exploring available tools
+
+### 🏭 Production-Ready Redaction Presets
+- `create_financial_redaction_engine()`: Financial data protection (accounts, SSNs, cards)
+- `create_healthcare_redaction_engine()`: Healthcare data protection (HIPAA compliance)
+- `create_minimal_redaction_engine()`: Basic privacy protection for general use
+
+### ⚙️ Configuration Enhancements
+- **Extended SerializationConfig** with redaction fields:
+  - `redact_fields`: Field patterns to redact
+  - `redact_patterns`: Regex patterns for content redaction
+  - `redact_large_objects`: Auto-redact oversized objects
+  - `redaction_replacement`: Customizable replacement text
+  - `include_redaction_summary`: Include summary of redactions performed
+  - `audit_trail`: Full compliance logging of all redaction operations
+
+### 🧪 Testing & Quality
+- **Comprehensive test suite** for redaction functionality
+- **Dynamic version testing** - tests now read version from pyproject.toml automatically
+- **Edge case coverage** for circular references, invalid patterns, large objects
+
+### 📈 Developer Experience
+- **Intelligent tool discovery** with categorized utility functions
+- **Non-intrusive design** - utilities work independently without serialization overhead
+- **Extensible architecture** for adding custom redaction rules and enhancement logic
+
+---
+
+## [0.5.0] - 2025-06-03
 =======
 ## [0.5.1] - 2025-01-08
 
@@ -134,7 +185,7 @@ result = datason.serialize(large_data, config=config)
 
 **Security Audit Summary**: **All known attack vectors blocked, detected, and safely handled.**
 
-## [0.5.0] - 2025-06-06
+## [0.5.0] - 2025-06-03
 
 ### 🚀 Major Performance Breakthrough: 2.1M+ elements/second
 
