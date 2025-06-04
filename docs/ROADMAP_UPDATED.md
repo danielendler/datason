@@ -39,18 +39,28 @@
 - Complex types: Only option for UUIDs/datetime/ML objects in pure JSON
 - Advanced configs: 15-40% performance improvement over default
 
-### ⚠️ **Known Issues from Real-World Usage**
-- DataFrame orientation configuration not working as documented
-- Limited output type flexibility (always returns JSON-safe primitives)
-- Missing round-trip capabilities for production workflows
+### ⚠️ **Critical Issues from Real-World Usage**
+- **DataFrame orientation configuration not working as documented** (URGENT)
+- **Limited output type flexibility** (always returns JSON-safe primitives) (HIGH)
+- **Incomplete round-trip capabilities** - Serialization works, but deserialization gaps exist (CRITICAL)
+- **Missing performance monitoring** for production optimization (MEDIUM)
+
+### 🔍 **Validated by Financial ML Team Integration**
+**Results from Production Use**:
+- ✅ **+20% serialization performance improvement**
+- ✅ **+15% API response time improvement**
+- ✅ **+25% memory efficiency for DataFrame operations**
+- ✅ **-40% manual type conversion code eliminated**
+- ✅ **100% type preservation accuracy for serialization**
+- ❌ **Round-trip deserialization gaps identified**
 
 ---
 
 ## 🚀 Updated Focused Roadmap
 
-> **Philosophy**: Deepen what datason uniquely does well, prioritizing real user pain points
+> **Philosophy**: Perfect bidirectional ML serialization before expanding scope
 
-### **v0.2.5 - Critical Configuration Fixes** (URGENT)
+### **v0.2.5 - Critical Configuration Fixes** (URGENT - 1-2 weeks)
 > *"Fix core functionality blocking production adoption"*
 
 #### 🎯 **Unique Value Proposition**
@@ -84,256 +94,236 @@ config = SerializationConfig(
 
 ---
 
-### **v0.3.0 - Enhanced Configuration & Pickle Bridge**
-> *"Convert legacy ML pickle files while providing flexible output options"*
+### **v0.3.0 - Complete Round-Trip Support & Pickle Bridge** (HIGH PRIORITY - 4-6 weeks)
+> *"Perfect bidirectional type preservation - the foundation of ML portability"*
 
 #### 🎯 **Unique Value Proposition**
-Bridge the pickle legacy gap while solving the configuration flexibility problem.
+**PRIORITY SHIFT**: Reliable deserialization is equally important as serialization for production ML workflows.
 
 ```python
-# Complete output type control
-config = SerializationConfig(
-    datetime_output: Literal["iso_string", "timestamp", "object"] = "iso_string",
-    series_output: Literal["dict", "list", "object"] = "dict",  
-    dataframe_output: Literal["records", "split", "values", "object"] = "records",
-    numpy_output: Literal["python_types", "arrays", "objects"] = "python_types"
-)
+# Complete bidirectional support with type metadata
+data = {
+    "model": sklearn_model,
+    "features": np.array([[1.0, 2.0, 3.0]], dtype=np.float32),
+    "timestamp": datetime.now(),
+    "config": {"learning_rate": Decimal("0.001")}
+}
 
-# Enhanced pickle conversion with flexible output
-json_data = datason.from_pickle("model.pkl",
-                                safe_classes=["sklearn", "numpy", "pandas"],
-                                config=config)
-
-# Type hints for round-trip support  
+# Serialize with type hints for perfect reconstruction
 serialized = datason.serialize(data, include_type_hints=True)
-# → {"timestamp": {"__value__": "2023-01-01T00:00:00", "__type__": "datetime"}}
+# → {"model": {...}, "__datason_types__": {"features": "numpy.float32[1,3]"}}
+
+# Perfect reconstruction - this MUST work reliably
+reconstructed = datason.deserialize_with_types(serialized)
+assert type(reconstructed["features"]) == np.ndarray
+assert reconstructed["features"].dtype == np.float32
+assert reconstructed["features"].shape == (1, 3)
+
+# Legacy pickle bridge with perfect round-trips
+json_data = datason.from_pickle("model.pkl", include_type_hints=True)
+original_model = datason.deserialize_with_types(json_data)
 ```
 
 #### 🔧 **Implementation Goals**
-- **Complete configuration flexibility** - all output type options
-- **Pickle bridge with security** - whitelist approach for safe class loading
-- **Type metadata support** - include_type_hints option
-- **Maintain performance** - <5% overhead for new features
+- **CRITICAL**: Audit all 20+ supported types for round-trip completeness
+- **Type metadata system** - include_type_hints for perfect reconstruction
+- **Pickle bridge with round-trips** - convert legacy files with full fidelity
+- **Complete output type control** - datetime, series, dataframe, numpy options
+- **Zero new dependencies** - extend existing type handler system
 
 #### 📈 **Success Metrics**
-- Support 95%+ of sklearn/torch/pandas pickle files
-- 100% configurable output types (datetime, series, dataframe, numpy)
-- Type hints enable 90%+ round-trip accuracy
+- **99.9% round-trip fidelity** for all supported types (dtype, shape, values)
+- **100% of ML objects** can be serialized AND reconstructed perfectly
+- Support 95%+ of sklearn/torch/pandas pickle files with full round-trips
 - Zero new dependencies added
+- Complete type reconstruction test suite
 
 ---
 
-### **v0.3.5 - Smart Deserialization & Advanced ML Types**
-> *"Auto-detect types while expanding ML framework support"*
+### **v0.3.5 - Smart Deserialization & Enhanced ML Types** (6-8 weeks)
+> *"Intelligent type reconstruction + domain-specific type handlers"*
 
 #### 🎯 **Unique Value Proposition**
-Intelligent type reconstruction combined with broader ML ecosystem support.
+Combine auto-detection with custom domain types (financial ML team request).
 
 ```python
 # Smart auto-detection deserialization
 reconstructed = datason.safe_deserialize(json_data)  
 # Uses heuristics: "2023-01-01T00:00:00" → datetime, [1,2,3] → list/array
 
-# Template-based reconstruction  
-template = datason.infer_template(example_data)
-typed_data = datason.cast_to_template(json_data, template)
+# Custom domain type handlers (financial ML team validated need)
+@datason.register_type_handler
+class MonetaryAmount:
+    def serialize(self, value):
+        return {"amount": str(value.amount), "currency": value.currency}
 
-# New ML frameworks
+    def deserialize(self, data):
+        return MonetaryAmount(data["amount"], data["currency"])
+
+# Extended ML framework support
 data = {
     "xarray_dataset": xr.Dataset({"temp": (["x", "y"], np.random.random((3, 4)))}),
     "dask_dataframe": dd.from_pandas(large_df, npartitions=4),
-    "huggingface_tokenizer": AutoTokenizer.from_pretrained("bert-base-uncased")
+    "financial_instrument": MonetaryAmount("100.50", "USD")
 }
 result = datason.serialize(data, config=get_ml_config())
+reconstructed = datason.deserialize_with_types(result)  # Perfect round-trip
 ```
 
 #### 🔧 **Implementation Goals**
-- **Heuristic type detection** - safe_deserialize with smart guessing
-- **Template inference** - automatic template generation from examples  
-- **Extended ML support** - xarray, dask, huggingface, more scientific libs
-- **Performance skip checks** - check_if_serialized optimization
+- **Custom type handler registration** - extensible type system for domain types
+- **Auto-detection deserialization** - safe_deserialize with smart guessing
+- **Extended ML support** - xarray, dask, huggingface, scientific libs
+- **Migration utilities** - help teams convert from other formats
 
 #### 📈 **Success Metrics**
 - 85%+ accuracy in auto-type detection for common patterns
 - Support 10+ additional ML/scientific libraries
-- Template inference for 95%+ of common object structures
-- <20% performance overhead for smart features
+- Custom type handler system for domain-specific types
+- Migration utilities for common serialization libraries
 
 ---
 
-### **v0.4.0 - Performance & Memory Optimization with Chunking**
-> *"Make datason the fastest option for large-scale ML serialization"*
+### **v0.4.0 - Performance Optimization & Monitoring** (8-10 weeks)
+> *"Make datason the fastest option with full visibility into performance"*
 
 #### 🎯 **Unique Value Proposition**
-Handle massive ML objects efficiently with streaming and chunked processing.
+**ACCELERATED FROM v0.6.5**: Financial ML team validated need for performance monitoring.
 
 ```python
-# Memory-efficient streaming (existing plan)
+# Performance monitoring (financial team high-priority request)
+with datason.profile() as prof:
+    result = datason.serialize(large_financial_dataset)
+
+print(prof.report())
+# Output:
+# Serialization Time: 1.2s, Memory Peak: 45MB
+# Type Conversions: 1,247 (UUID: 89, DateTime: 445, DataFrame: 1)  
+# Bottlenecks: DataFrame orientation conversion (0.8s)
+
+# Memory-efficient streaming for large objects  
 with datason.stream_serialize("large_experiment.json") as stream:
     stream.write({"model": huge_model})
     stream.write({"data": massive_dataset})
 
-# NEW: Chunked processing for very large DataFrames
+# Enhanced chunked processing (conditional based on user demand)
 chunks = datason.serialize_chunked(massive_df, chunk_size=10000)
 for chunk in chunks:
-    # Process each chunk separately, bounded memory usage
-    store_chunk(chunk)
-
-# Parallel processing with chunking
-results = datason.serialize_parallel_chunked([df1, df2, df3], chunk_size=5000)
+    store_chunk(chunk)  # Bounded memory usage
 ```
 
 #### 🔧 **Implementation Goals**
-- **Existing streaming optimization** - handle objects larger than RAM
-- **NEW: Chunked processing** - break large objects into manageable pieces
-- **Parallel processing** - utilize multiple cores efficiently
-- **Memory bounds** - strict limits on memory usage regardless of input size
+- **Performance profiling tools** - detailed bottleneck identification
+- **Memory streaming optimization** - handle objects larger than RAM
+- **Chunked processing** - conditional feature based on additional user validation
+- **Zero new dependencies** - use stdlib profiling tools
 
 #### 📈 **Success Metrics**
-- Handle 50GB+ DataFrames with <4GB RAM usage
+- Built-in performance monitoring with zero dependencies
 - 50%+ performance improvement for large ML objects
-- Chunked processing for objects 10x larger than available memory
+- Handle 10GB+ objects with <2GB RAM usage
 - Maintain <2x stdlib overhead for simple JSON
 
 ---
 
-### **v0.4.5 - Complete Round-Trip & Type Safety**
-> *"Perfect bidirectional type preservation for production workflows"*
+### **v0.4.5 - Advanced ML Types & Domain Configurations** (10-12 weeks)  
+> *"Domain expertise and comprehensive ML ecosystem support"*
 
 #### 🎯 **Unique Value Proposition**
-Industry-leading type fidelity for ML pipeline round-trips.
+**MOVED UP FROM v0.5.0**: Financial team explicitly requested domain-specific configurations.
 
 ```python
-# Enhanced template-based approach (from original plan)
-template = datason.infer_template({"features": np.array([[1,2,3]]), "timestamp": datetime.now()})
-reconstructed = datason.cast_to_template(json_data, template)
+# Domain-specific configurations (financial team validated)
+financial_config = get_financial_config()     # Optimized for financial ML
+time_series_config = get_time_series_config() # Temporal data analysis  
+inference_config = get_inference_config()     # Model serving optimized
+research_config = get_research_config()       # Maximum information preservation
 
-# NEW: Metadata-based round-trips (from user feedback)
-serialized = datason.serialize(data, preserve_types="metadata")
-# → {"data": [...], "__datason_types__": {"path.to.field": "numpy.float64"}}
-reconstructed = datason.deserialize_with_types(serialized)
-
-# Hybrid approach for maximum compatibility
-config = SerializationConfig(
-    round_trip_method="auto",  # Choose best method per object type
-    type_safety_level="strict"  # Fail fast on type mismatches
-)
-```
-
-#### 🔧 **Implementation Goals**
-- **Template AND metadata approaches** - give users choice
-- **Automatic method selection** - optimize for each object type
-- **Type safety guarantees** - prevent runtime type errors
-- **Production reliability** - extensive testing for edge cases
-
-#### 📈 **Success Metrics**
-- 99.9%+ fidelity for numpy array round-trips (dtype, shape, values)
-- Support for 20+ round-trip types (arrays, datetime, ML objects)
-- <15% overhead vs naive JSON parsing
-- Zero runtime type errors with proper configuration
-
----
-
-### **v0.5.0 - Enhanced Configuration & Domain Presets**
-> *"Perfect configuration system with real-world domain expertise"*
-
-#### 🎯 **Unique Value Proposition**
-Best-in-class configuration system tailored for specific ML/data domains.
-
-```python
-# Enhanced presets (existing + new from feedback)
-inference_config = get_inference_config()      # Optimized for model serving  
-research_config = get_research_config()        # Preserve maximum information
-financial_config = get_financial_config()      # Financial ML workflows
-time_series_config = get_time_series_config()  # Temporal data analysis
-api_config = get_api_config()                  # REST API responses
-logging_config = get_logging_config()          # Safe for production logs
-
-# Smart environment detection
+# Auto-environment detection
 datason.auto_configure()  # Detects context and optimizes automatically
 
 # Custom preset creation
-my_config = datason.create_preset(
+trading_config = datason.create_preset(
     base=financial_config,
     datetime_output="timestamp",
-    enable_chunking=True,
+    decimal_precision=8,
     name="trading_pipeline"
 )
+
+# Enhanced ML ecosystem support
+advanced_ml_data = {
+    "huggingface_model": AutoModel.from_pretrained("bert-base"),
+    "ray_dataset": ray.data.from_pandas(large_df),
+    "optuna_study": study.best_params
+}
 ```
 
 #### 🔧 **Implementation Goals**
-- **Domain expertise encoding** - capture best practices for each field
-- **User feedback integration** - address real pain points from production use
-- **Configuration composition** - build complex configs from simple parts
-- **Environment awareness** - auto-detect and optimize for context
+- **Domain-specific presets** - financial, time-series, inference, research configs
+- **Advanced ML framework support** - huggingface, ray, optuna, MLflow
+- **Auto-configuration** - environment detection and optimization
+- **Zero new dependencies** - extend existing configuration system
 
 #### 📈 **Success Metrics**
-- 95%+ user satisfaction with domain-specific presets
+- 95%+ user satisfaction with domain-specific presets  
 - 8+ specialized configurations covering major use cases
 - 30%+ performance improvement with optimized presets
-- Auto-configuration success rate >80% for common environments
+- Support for 15+ additional ML/AI frameworks
 
 ---
 
-### **v0.5.5 - Production Safety & Redaction**
-> *"Make datason safe for production ML logging and compliance"*
+### **v0.5.0 - Production Safety & Enterprise Readiness** (12-14 weeks)
+> *"Enterprise-grade safety without compromising simplicity"*
 
 #### 🎯 **Unique Value Proposition**
-Enterprise-ready safety features for sensitive ML data.
+Production-ready features for sensitive ML data without enterprise bloat.
 
 ```python
-# Enhanced safety features (existing plan + chunking integration)
+# Enhanced safety features for production ML
 config = SerializationConfig(
     redact_fields=["password", "api_key", "*.secret", "user.email"],
-    redact_large_objects=True,  # Auto-redact >10MB objects
+    redact_large_objects=True,  # Auto-redact >10MB objects  
     redact_patterns=[r"\b\d{4}-\d{4}-\d{4}-\d{4}\b"],  # Credit cards
     redaction_replacement="<REDACTED>",
     include_redaction_summary=True,
-
-    # NEW: Integration with chunking
-    redact_chunk_boundaries=True,  # Apply redaction per chunk
-    audit_trail=True              # Track all redaction operations
+    audit_trail=True  # Track all redaction operations
 )
 
-# Safe chunked processing
-safe_chunks = datason.serialize_chunked(sensitive_data,
-                                       config=config,
-                                       chunk_size=1000)
+# Safe processing with audit trails
+result = datason.serialize(sensitive_ml_data, config=config)
 ```
 
 #### 🔧 **Implementation Goals**
-- **Enhanced pattern matching** - more sophisticated redaction rules
-- **Chunk-aware redaction** - apply safety rules to chunked processing
-- **Comprehensive audit trails** - track all redaction operations
-- **Performance optimization** - minimal overhead when not redacting
+- **Enhanced redaction** - pattern matching and field-level safety
+- **Audit trails** - track all redaction operations  
+- **Production logging safety** - prevent sensitive data leaks
+- **Zero new dependencies** - extend existing configuration system
 
 #### 📈 **Success Metrics**
 - 99.95%+ sensitive data detection for financial patterns
 - <2% false positive rate for redaction
-- Audit trails for 100% of redaction operations
+- Comprehensive audit trails for compliance
 - <8% performance overhead for redaction processing
 
 ---
 
-### **v0.6.0 - Snapshot Testing & ML DevX**
-> *"Transform datason's readable JSON into ML testing infrastructure"*
+### **v0.5.5 - Snapshot Testing & ML DevX** (14-16 weeks)
+> *"Transform readable JSON into powerful ML testing infrastructure"*
 
 #### 🎯 **Unique Value Proposition**
 Best-in-class testing experience for ML workflows using human-readable diffs.
 
 ```python
-# Snapshot testing with chunking support (existing + enhanced)
+# Snapshot testing for ML workflows
 @datason.snapshot_test("test_model_prediction")
 def test_model_output():
     model = load_trained_model()
     prediction = model.predict(test_data)
 
-    # Handle large outputs with chunking
-    datason.assert_snapshot(prediction,
-                           normalize_floats=True,
-                           chunk_large_outputs=True)
+    # Auto-generates human-readable JSON snapshot
+    datason.assert_snapshot(prediction, normalize_floats=True)
 
-# NEW: Integration testing across serialization configurations
+# Cross-configuration compatibility testing
 @datason.config_test([financial_config, api_config, inference_config])
 def test_cross_config_compatibility(config):
     result = datason.serialize(test_data, config=config)
@@ -341,10 +331,10 @@ def test_cross_config_compatibility(config):
 ```
 
 #### 🔧 **Implementation Goals**
-- **Chunk-aware testing** - handle large test outputs efficiently
-- **Configuration testing** - verify compatibility across presets
-- **ML-specific normalization** - better handling of floating-point precision
+- **ML-specific snapshot testing** - handle large outputs efficiently
+- **Configuration compatibility testing** - verify cross-preset compatibility
 - **CI/CD integration** - seamless workflow integration
+- **Zero new dependencies** - build on existing serialization
 
 #### 📈 **Success Metrics**
 - 60%+ reduction in ML test maintenance overhead
@@ -356,88 +346,94 @@ def test_cross_config_compatibility(config):
 
 ## 🚨 Critical Changes from Original Roadmap
 
-### **Added Based on Real-World Feedback**
+### **PRIORITY SHIFTS Based on Real-World Feedback**
 
-1. **v0.2.5 - Critical Fixes** (NEW)
-   - Fix DataFrame orientation bug (production blocker)
-   - Add basic output type control (adoption blocker)
-   - Performance skip optimization
+1. **Round-Trip Support Moved to v0.3.0** (was v0.4.5)
+   - **Rationale**: Deserialization gaps are blocking production adoption
+   - **Impact**: Perfect bidirectional support is foundation for ML workflows
+   - **Risk**: Low - extends existing architecture
 
-2. **Enhanced Configuration Throughout**
-   - Complete output type flexibility (v0.3.0)
-   - Smart auto-detection (v0.3.5)
-   - Domain-specific presets expansion (v0.5.0)
+2. **Performance Monitoring Accelerated** (was v0.6.5 → v0.4.0)  
+   - **Rationale**: Financial team explicitly validated need
+   - **Impact**: Production teams need visibility into optimization
+   - **Risk**: Low - uses stdlib profiling tools
 
-3. **Chunked Processing Integration**
-   - Memory-bounded chunked serialization (v0.4.0)
-   - Chunk-aware redaction (v0.5.5)
-   - Chunked snapshot testing (v0.6.0)
+3. **Domain Configurations Prioritized** (accelerated timeline)
+   - **Rationale**: Financial team requested specific domain presets
+   - **Impact**: Reduces onboarding friction for domain experts
+   - **Risk**: Low - extends existing configuration system
 
-4. **Dual Round-Trip Approaches**
-   - Template-based (original plan)
-   - Metadata-based (user request)
-   - Hybrid auto-selection (best of both)
+### **FEATURES REJECTED (Avoiding Feature Creep)**
 
-### **Maintained from Original Roadmap**
+❌ **Schema Generation & Validation**
+- **Reason**: Covered by Pydantic/marshmallow, would require massive dependencies
+- **Decision**: Focus on serialization, not validation
 
-- **Core principles** - zero dependencies, performance first, comprehensive testing
-- **Pickle bridge** - critical for ML community adoption
-- **Advanced ML types** - unique competitive advantage
-- **Performance focus** - streaming, parallel processing
-- **Production safety** - redaction and audit trails
-- **Testing infrastructure** - snapshot testing and ML DevX
+❌ **Database ORM Integration**  
+- **Reason**: Violates minimal dependencies principle, not ML-specific
+- **Decision**: Provide examples, but no direct integration
 
-### **Timeline Adjustments**
+❌ **Multi-Format Support** (Parquet, Arrow, etc.)
+- **Reason**: Violates "human-friendly JSON" mission  
+- **Decision**: Stay focused on JSON excellence
 
-- **Accelerated v0.2.5** - Address critical bugs immediately
-- **Enhanced v0.3.0** - Add configuration flexibility alongside pickle bridge  
-- **Maintained v0.4.x-v0.6.x** - Keep planned timeline with enhancements
+❌ **Enterprise Platform Features** (Caching, monitoring, auth)
+- **Reason**: Conflicts with simplicity principle
+- **Decision**: Integrate with existing enterprise tools, don't build them
+
+### **SELECTIVE ADOPTION Strategy**
+
+**✅ Adopted (~30% of suggestions)**:
+- Performance monitoring and profiling
+- Custom domain type handlers  
+- Enhanced configuration profiles
+- Migration utilities
+- Streaming optimizations
+
+**❌ Rejected (~70% of suggestions)**:
+- Schema validation system
+- ORM integration
+- Multi-format conversion
+- Intelligent caching layer
+- Enterprise observability features
 
 ---
 
 ## 🎯 Success Metrics (Updated)
 
-### **Technical Excellence**
-- **Reliability**: All documented configuration options work correctly
-- **Flexibility**: 5+ output type options for all major data types
-- **Performance**: <3x stdlib JSON for simple types, bounded memory for large objects
-- **Quality**: 95%+ test coverage with zero critical production bugs
+### **Technical Excellence**  
+- **Round-Trip Fidelity**: 99.9%+ accuracy for all supported ML objects
+- **Performance**: <2x stdlib JSON for simple types, competitive for complex types
+- **Reliability**: All documented features work correctly in production
+- **Quality**: 95%+ test coverage with comprehensive round-trip testing
 
 ### **Real-World Adoption**
-- **Production Use**: Users can replace 70%+ of custom serialization utilities
-- **Configuration Satisfaction**: 90%+ user satisfaction with domain presets
-- **Round-Trip Fidelity**: 99%+ accuracy for ML object reconstruction
-- **Large Object Handling**: Support objects 20x larger than available memory
+- **Production Use**: Teams can replace 90%+ of custom serialization utilities
+- **Configuration Satisfaction**: 95%+ user satisfaction with domain presets  
+- **Performance Monitoring**: Built-in profiling adopted by 80%+ of teams
+- **Migration Success**: 95%+ successful conversions from pickle/other formats
 
 ### **Community Impact**
-- **v0.3.0**: 8,000+ monthly active users (increased from real-world validation)
-- **v0.5.0**: Standard tool in 5+ major ML frameworks' documentation
-- **v0.7.0**: 75,000+ downloads, referenced in production ML tutorials
+- **v0.3.0**: 10,000+ monthly active users (round-trip support drives adoption)
+- **v0.4.5**: Standard tool in 5+ major ML frameworks' documentation
+- **v0.5.5**: 100,000+ downloads, referenced in production ML tutorials
 
 ---
 
-## 🤝 Integration Feedback Validation
+## 🔍 **Validation from Financial ML Integration**
 
-This updated roadmap directly addresses:
+This updated roadmap directly addresses production-validated requirements:
 
-✅ **Critical Blocking Issues**
-- DataFrame orientation bug fix (v0.2.5)
-- Output type inflexibility (v0.3.0)
-- Round-trip deserialization (v0.4.5)
+✅ **CRITICAL**: Perfect round-trip support (moved to v0.3.0)
+✅ **HIGH VALUE**: Performance monitoring (accelerated to v0.4.0)  
+✅ **PROVEN NEED**: Domain-specific configurations (financial team request)
+✅ **PRACTICAL**: Migration utilities (help teams adopt datason)
 
-✅ **High-Value Enhancements**  
-- Auto-detection deserialization (v0.3.5)
-- Chunked processing (v0.4.0)
-- Domain-specific presets (v0.5.0)
-
-✅ **Production Requirements**
-- Type metadata support (v0.3.0)
-- Performance skip optimizations (v0.3.5)
-- Enhanced safety features (v0.5.5)
+**Key Insight**: The financial team achieved impressive results (+20% performance, -40% code reduction) but identified deserialization gaps as the primary blocker for complete adoption.
 
 ---
 
-*Roadmap Principles: Stay focused, stay fast, stay simple, solve real problems*
+*Roadmap Principles: Perfect bidirectional ML serialization, stay focused, stay fast, stay simple*
 
-*Updated: June 1, 2025 based on financial ML pipeline integration feedback*  
-*Next review: Q2 2025 after v0.3.0 release*
+*Updated: December 2024 based on financial ML pipeline integration feedback and deserialization audit*  
+*Next review: Q1 2025 after v0.3.0 round-trip completion*
