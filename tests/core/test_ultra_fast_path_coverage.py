@@ -125,11 +125,11 @@ class TestSecurityMeasuresEdgeCases:
             if w:
                 assert any("circular" in str(warning.message).lower() for warning in w)
 
-    def test_excessive_depth_security_error(self) -> None:
+    def test_excessive_depth_security_error(self):
         """Test that excessive depth raises SecurityError."""
         # Create deeply nested structure that exceeds MAX_SERIALIZATION_DEPTH (50)
-        nested: Any = "value"
-        for _ in range(55):  # Exceed MAX_SERIALIZATION_DEPTH
+        nested = "value"
+        for _ in range(60):  # Exceed the 50-level limit
             nested = {"level": nested}
 
         # Should raise SecurityError due to depth limit

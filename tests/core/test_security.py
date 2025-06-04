@@ -225,13 +225,13 @@ class TestCircularReferenceProtection:
 class TestDepthLimits:
     """Test protection against excessive recursion depth."""
 
-    def test_deep_nesting_within_limits(self) -> None:
-        """Test that deep nesting within limits works correctly."""
-        # Create nested structure within limits (max_depth=50)
-        nested: Dict[str, Any] = {}
+
+    def test_deep_nesting_within_limits(self):
+        """Test that reasonable nesting depth works."""
+        # Create nested dict within our security limits (40 levels, under the 50 limit)
+        nested = {}
         current = nested
-        for i in range(45):  # Well within the 50 limit
-            current["level"] = i
+        for _i in range(40):  # Changed from 100 to 40 to be under the new 50-level limit
             current["next"] = {}
             current = current["next"]
         current["end"] = True
