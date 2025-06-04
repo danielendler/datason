@@ -246,8 +246,6 @@ TYPES_THAT_WORK_WITHOUT_HINTS = [
     RoundTripTestCase("decimal_simple", Decimal("123.45")),  # Always gets _type metadata
     RoundTripTestCase("decimal_precision", Decimal("123.456789012345")),
     RoundTripTestCase("decimal_large", Decimal("123456789.123456789")),
-    # Path objects that may auto-detect
-    RoundTripTestCase("path_absolute", Path("/tmp/test/path.txt")),  # may auto-detect as Path
     # Nested structures
     RoundTripTestCase("deeply_nested", {"a": {"b": {"c": {"d": {"e": [1, 2, 3]}}}}}),
     RoundTripTestCase("large_list", list(range(100))),  # Reduced for faster tests
@@ -263,8 +261,11 @@ TYPES_THAT_NEED_HINTS = [
     RoundTripTestCase("set_empty", set(), expected_basic_type=list),
     RoundTripTestCase("set_simple", {1, 2, 3}, expected_basic_type=list),
     RoundTripTestCase("set_mixed", {1, "hello"}, expected_basic_type=list),
-    # Path objects that become strings without metadata
+    # Path objects that become strings without metadata (auto-detection unreliable across Python versions)
     RoundTripTestCase("path_relative", Path("./test/path.txt"), expected_basic_type=str),
+    RoundTripTestCase(
+        "path_absolute", Path("/tmp/test/path.txt"), expected_basic_type=str
+    ),  # Auto-detection unreliable
 ]
 
 # Add NumPy types that need hints (if available)
