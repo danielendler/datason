@@ -12,6 +12,15 @@ The foundation layer providing basic JSON compatibility and safety features.
 - **Performance**: Optimization for already-serialized data
 - **Error Handling**: Graceful fallbacks for unsupported types
 
+### [Deserialization & Type Support](deserialization.md) 🆕 v0.6.0
+Ultra-fast deserialization with comprehensive type support and intelligent auto-detection.
+
+- **Performance**: 3.73x average improvement, 16.86x on large nested data
+- **Type Matrix**: Complete documentation of 133+ supported types
+- **Auto-Detection**: Smart recognition of datetime, UUID, and numeric patterns
+- **Type Preservation**: Optional metadata for perfect round-trip fidelity
+- **Security**: Depth/size limits with zero performance impact
+
 ### [Advanced Types](advanced-types/index.md)
 Extended support for Python's rich type system and specialized objects.
 

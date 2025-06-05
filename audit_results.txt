@@ -1,0 +1,186 @@
+🔍 Starting Comprehensive Deserialization Audit...
+datason version: 0.5.1
+Optional dependencies: pandas=True, numpy=True, torch=True, sklearn=True
+
+🔍 Testing Basic Types...
+✅ basic_types/none
+✅ basic_types/none_with_metadata
+✅ basic_types/string
+✅ basic_types/string_with_metadata
+✅ basic_types/integer
+✅ basic_types/integer_with_metadata
+✅ basic_types/float
+✅ basic_types/float_with_metadata
+✅ basic_types/boolean_true
+✅ basic_types/boolean_true_with_metadata
+✅ basic_types/boolean_false
+✅ basic_types/boolean_false_with_metadata
+✅ basic_types/list
+✅ basic_types/list_with_metadata
+✅ basic_types/dict
+✅ basic_types/dict_with_metadata
+✅ basic_types/tuple
+✅ basic_types/tuple_with_metadata
+❌ basic_types/set: Reconstruction mismatch: set → list
+✅ basic_types/set_with_metadata
+
+🔍 Testing Complex Types...
+✅ complex_types/datetime
+✅ complex_types/datetime_with_metadata
+✅ complex_types/uuid
+✅ complex_types/uuid_with_metadata
+✅ complex_types/decimal
+✅ complex_types/decimal_with_metadata
+❌ complex_types/path: Reconstruction mismatch: PosixPath → str
+❌ complex_types/path_with_metadata: Metadata reconstruction failed: PosixPath → str
+✅ complex_types/complex_number
+✅ complex_types/complex_number_with_metadata
+❌ complex_types/nested_structure: Reconstruction mismatch: dict → dict
+✅ complex_types/nested_structure_with_metadata
+
+🔍 Testing Pandas Types...
+❌ pandas_types/dataframe_simple: Reconstruction mismatch: DataFrame → list
+✅ pandas_types/dataframe_simple_with_metadata
+❌ pandas_types/dataframe_typed: Reconstruction mismatch: DataFrame → list
+❌ pandas_types/dataframe_typed_with_metadata: Metadata reconstruction failed: DataFrame → DataFrame
+❌ pandas_types/series: Reconstruction mismatch: Series → dict
+❌ pandas_types/series_with_metadata: Metadata reconstruction failed: Series → Series
+❌ pandas_types/series_categorical: Reconstruction mismatch: Series → dict
+❌ pandas_types/series_categorical_with_metadata: Metadata reconstruction failed: Series → Series
+
+🔍 Testing NumPy Types...
+❌ numpy_types/array_1d: Reconstruction mismatch: ndarray → list
+✅ numpy_types/array_1d_with_metadata
+❌ numpy_types/array_2d: Reconstruction mismatch: ndarray → list
+✅ numpy_types/array_2d_with_metadata
+❌ numpy_types/array_float32: Reconstruction mismatch: ndarray → list
+✅ numpy_types/array_float32_with_metadata
+❌ numpy_types/array_int64: Reconstruction mismatch: ndarray → list
+✅ numpy_types/array_int64_with_metadata
+✅ numpy_types/scalar_int
+❌ numpy_types/scalar_int_with_metadata: Metadata reconstruction failed: int32 → int
+✅ numpy_types/scalar_float
+❌ numpy_types/scalar_float_with_metadata: Metadata reconstruction failed: float64 → float
+✅ numpy_types/scalar_bool
+❌ numpy_types/scalar_bool_with_metadata: Metadata reconstruction failed: bool_ → bool
+
+🔍 Testing ML Types...
+❌ ml_types/pytorch_tensor: Reconstruction mismatch: Tensor → dict
+❌ ml_types/pytorch_tensor_with_metadata: Metadata reconstruction failed: Tensor → dict
+❌ ml_types/sklearn_model_unfitted: Reconstruction mismatch: LogisticRegression → dict
+❌ ml_types/sklearn_model_unfitted_with_metadata: Metadata reconstruction failed: LogisticRegression → dict
+❌ ml_types/sklearn_model_fitted: Reconstruction mismatch: LogisticRegression → dict
+❌ ml_types/sklearn_model_fitted_with_metadata: Metadata reconstruction failed: LogisticRegression → dict
+
+🔍 Testing Configuration Edge Cases...
+❌ pandas_types/dataframe_orient_records: AttributeError: 'str' object has no attribute 'value'
+❌ pandas_types/dataframe_orient_split: AttributeError: 'str' object has no attribute 'value'
+❌ pandas_types/dataframe_orient_index: AttributeError: 'str' object has no attribute 'value'
+❌ pandas_types/dataframe_orient_values: AttributeError: 'str' object has no attribute 'value'
+❌ pandas_types/dataframe_orient_table: AttributeError: 'str' object has no attribute 'value'
+
+🔍 Testing Known Problematic Cases...
+✅ complex_types/large_nested
+✅ complex_types/mixed_list
+✅ complex_types/circular_reference
+
+============================================================
+📊 DESERIALIZATION AUDIT REPORT
+============================================================
+
+📈 Overall Statistics:
+   Total Tests: 68
+   Passed: 39 (57.4%)
+   Failed: 29 (42.6%)
+
+📂 Basic Types:
+   Passed: 19/20 (95.0%)
+   Failed tests:
+     ❌ set: Reconstruction mismatch: set → list
+
+📂 Complex Types:
+   Passed: 12/15 (80.0%)
+   Failed tests:
+     ❌ path: Reconstruction mismatch: PosixPath → str
+     ❌ path_with_metadata: Metadata reconstruction failed: PosixPath → str
+     ❌ nested_structure: Reconstruction mismatch: dict → dict
+
+📂 Ml Types:
+   Passed: 0/6 (0.0%)
+   Failed tests:
+     ❌ pytorch_tensor: Reconstruction mismatch: Tensor → dict
+     ❌ pytorch_tensor_with_metadata: Metadata reconstruction failed: Tensor → dict
+     ❌ sklearn_model_unfitted: Reconstruction mismatch: LogisticRegression → dict
+     ❌ sklearn_model_unfitted_with_metadata: Metadata reconstruction failed: LogisticRegression → dict
+     ❌ sklearn_model_fitted: Reconstruction mismatch: LogisticRegression → dict
+     ❌ sklearn_model_fitted_with_metadata: Metadata reconstruction failed: LogisticRegression → dict
+
+📂 Pandas Types:
+   Passed: 1/13 (7.7%)
+   Failed tests:
+     ❌ dataframe_simple: Reconstruction mismatch: DataFrame → list
+     ❌ dataframe_typed: Reconstruction mismatch: DataFrame → list
+     ❌ dataframe_typed_with_metadata: Metadata reconstruction failed: DataFrame → DataFrame
+     ❌ series: Reconstruction mismatch: Series → dict
+     ❌ series_with_metadata: Metadata reconstruction failed: Series → Series
+     ❌ series_categorical: Reconstruction mismatch: Series → dict
+     ❌ series_categorical_with_metadata: Metadata reconstruction failed: Series → Series
+     ❌ dataframe_orient_records: AttributeError: 'str' object has no attribute 'value'
+     ❌ dataframe_orient_split: AttributeError: 'str' object has no attribute 'value'
+     ❌ dataframe_orient_index: AttributeError: 'str' object has no attribute 'value'
+     ❌ dataframe_orient_values: AttributeError: 'str' object has no attribute 'value'
+     ❌ dataframe_orient_table: AttributeError: 'str' object has no attribute 'value'
+
+📂 Numpy Types:
+   Passed: 7/14 (50.0%)
+   Failed tests:
+     ❌ array_1d: Reconstruction mismatch: ndarray → list
+     ❌ array_2d: Reconstruction mismatch: ndarray → list
+     ❌ array_float32: Reconstruction mismatch: ndarray → list
+     ❌ array_int64: Reconstruction mismatch: ndarray → list
+     ❌ scalar_int_with_metadata: Metadata reconstruction failed: int32 → int
+     ❌ scalar_float_with_metadata: Metadata reconstruction failed: float64 → float
+     ❌ scalar_bool_with_metadata: Metadata reconstruction failed: bool_ → bool
+
+🚨 Critical Gaps Identified:
+   Found 19 critical round-trip failures:
+     • basic_types/set
+     • complex_types/path
+     • complex_types/nested_structure
+     • ml_types/pytorch_tensor
+     • ml_types/sklearn_model_unfitted
+     • ml_types/sklearn_model_fitted
+     • pandas_types/dataframe_simple
+     • pandas_types/dataframe_typed
+     • pandas_types/series
+     • pandas_types/series_categorical
+     ... and 9 more
+
+⚠️  Type Metadata Gaps:
+   Found 10 metadata round-trip failures:
+     • complex_types/path_with_metadata
+     • ml_types/pytorch_tensor_with_metadata
+     • ml_types/sklearn_model_unfitted_with_metadata
+     • ml_types/sklearn_model_fitted_with_metadata
+     • pandas_types/dataframe_typed_with_metadata
+     • pandas_types/series_with_metadata
+     • pandas_types/series_categorical_with_metadata
+     • numpy_types/scalar_int_with_metadata
+     • numpy_types/scalar_float_with_metadata
+     • numpy_types/scalar_bool_with_metadata
+
+💡 Recommendations:
+   🔥 HIGH PRIORITY: Fix basic round-trip failures first
+      - These block production ML workflows
+      - Focus on type reconstruction in deserializers.py
+   📋 MEDIUM PRIORITY: Enhance type metadata support
+      - Improve _deserialize_with_type_metadata() function
+      - Add metadata serialization for missing types
+
+🎯 Next Steps:
+   1. Fix critical round-trip failures (basic functionality)
+   2. Enhance type metadata deserialization
+   3. Add comprehensive round-trip tests to CI/CD
+   4. Update roadmap to prioritize deserialization completeness
+
+❌ Audit completed with 29 failures
