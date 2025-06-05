@@ -134,7 +134,7 @@ def _lazy_import_sklearn():
             _LAZY_IMPORTS["BaseEstimator"] = False
     return (
         _LAZY_IMPORTS["sklearn"] if _LAZY_IMPORTS["sklearn"] is not False else None,
-        _LAZY_IMPORTS["BaseEstimator"] if _LAZY_IMPORTS["BaseEstimator"] is not False else None,
+        (_LAZY_IMPORTS["BaseEstimator"] if _LAZY_IMPORTS["BaseEstimator"] is not False else None),
     )
 
 
@@ -229,7 +229,7 @@ def serialize_pytorch_tensor(tensor: Any) -> Dict[str, Any]:
         "_dtype": str(cpu_tensor.dtype),
         "_data": cpu_tensor.numpy().tolist(),
         "_device": str(tensor.device),
-        "_requires_grad": tensor.requires_grad if hasattr(tensor, "requires_grad") else False,
+        "_requires_grad": (tensor.requires_grad if hasattr(tensor, "requires_grad") else False),
     }
 
 
@@ -447,11 +447,7 @@ def detect_and_serialize_ml_object(obj: Any) -> Optional[Dict[str, Any]]:
 
     # Scikit-learn models
     sklearn, BaseEstimator = _lazy_import_sklearn()
-    if (
-        sklearn is not None
-        and isinstance(BaseEstimator, type)
-        and isinstance(obj, BaseEstimator)
-    ):
+    if sklearn is not None and isinstance(BaseEstimator, type) and isinstance(obj, BaseEstimator):
         return serialize_sklearn_model(obj)
 
     # Scipy sparse matrices
