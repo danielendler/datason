@@ -96,10 +96,7 @@ markdown_extensions:
       smart_enable: all
   - pymdownx.caret
   - pymdownx.details
-  # Emoji support - disabled due to dependency issues
-  # - pymdownx.emoji:
-  #     emoji_index: !!python/name:material.extensions.emoji.twemoji
-  #     emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.emoji
   - pymdownx.highlight:
       anchor_linenums: true
       line_spans: __span
@@ -149,6 +146,7 @@ nav:
     - Data Privacy & Redaction: features/redaction.md
     - Migration Guide: features/migration/index.md
     - Data Utilities: features/data-utilities/index.md
+    - Data Utilities Summary: features/data-utilities/SUMMARY.md
   
   # AI Developer Guide Section
   - AI Developer Guide:

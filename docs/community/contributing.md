@@ -269,7 +269,7 @@ pytest tests/test_your_new_feature.py --cov=datason --cov-report=term-missing
 - [ ] Documentation updated if needed
 
 ### CI/CD Pipeline
-datason uses a modern multi-pipeline CI/CD architecture. See our **[CI/CD Pipeline Guide](CI_PIPELINE_GUIDE.md)** for complete details on:
+datason uses a modern multi-pipeline CI/CD architecture. See our **[CI/CD Pipeline Guide](../CI_PIPELINE_GUIDE.md)** for complete details on:
 - 🔍 **Quality Pipeline** - Ruff linting, formatting, security scanning (~30s)
 - 🧪 **Main CI** - Testing, coverage, package building (~2-3min)
 - 📚 **Docs Pipeline** - Documentation generation and deployment
