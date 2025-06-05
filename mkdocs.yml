@@ -124,12 +124,12 @@ markdown_extensions:
 # Fixed navigation using files that actually exist
 nav:
   - Home: index.md
-  
-  # User Guide Section  
+
+  # User Guide Section
   - User Guide:
     - Quick Start: user-guide/quick-start.md
     - Examples Gallery: user-guide/examples/index.md
-  
+
   # Features Section (using existing feature docs)
   - Features:
     - Overview: features/index.md
@@ -147,33 +147,33 @@ nav:
     - Migration Guide: features/migration/index.md
     - Data Utilities: features/data-utilities/index.md
     - Data Utilities Summary: features/data-utilities/SUMMARY.md
-  
+
   # AI Developer Guide Section
   - AI Developer Guide:
     - Overview: ai-guide/overview.md
-  
+
   # API Reference Section
   - API Reference:
     - Overview: api/index.md
-  
+
   # Advanced Topics Section
   - Advanced Topics:
     - Performance Benchmarks: advanced/benchmarks.md
     - Core Serialization Strategy: core-serialization-strategy.md
     - Performance Improvements: performance-improvements.md
-  
+
   # Reference Documentation
   - Reference:
     - Feature Matrix: FEATURE_MATRIX.md
     - AI Usage Guide: AI_USAGE_GUIDE.md
-  
+
   # Community & Development Section
   - Community & Development:
     - Contributing Guide: community/contributing.md
     - Release Notes: community/changelog.md
     - Roadmap: community/roadmap.md
     - Security Policy: community/security.md
-  
+
   # Development Documentation
   - Development:
     - Tooling Guide: TOOLING_GUIDE.md

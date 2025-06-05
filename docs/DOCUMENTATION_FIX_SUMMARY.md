@@ -17,7 +17,7 @@ This document summarizes the fixes applied to resolve the MkDocs build errors an
 
 **Fixed Links**:
 - `CONTRIBUTING.md` → `community/contributing.md`
-- `SECURITY.md` → `community/security.md` 
+- `SECURITY.md` → `community/security.md`
 - `BENCHMARKING.md` → `advanced/benchmarks.md`
 - Non-existent feature files → Existing feature index files
 

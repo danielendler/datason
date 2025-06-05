@@ -136,6 +136,9 @@ class SerializationConfig:
     # NEW: Type metadata for round-trip serialization
     include_type_hints: bool = False
 
+    # NEW: Auto-detection of complex types (experimental)
+    auto_detect_types: bool = False
+
     # NEW: Production Safety & Redaction (v0.5.5)
     redact_fields: Optional[List[str]] = None  # Field patterns to redact (e.g., ["password", "api_key", "*.secret"])
     redact_patterns: Optional[List[str]] = None  # Regex patterns to redact (e.g., credit card numbers)

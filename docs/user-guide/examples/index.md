@@ -73,7 +73,7 @@ class SimpleModel(nn.Module):
     def __init__(self):
         super().__init__()
         self.linear = nn.Linear(10, 1)
-    
+
     def forward(self, x):
         return self.linear(x)
 
@@ -155,7 +155,7 @@ sensitive_data = {
             "account_balance": 10000.50
         },
         {
-            "name": "Jane Smith", 
+            "name": "Jane Smith",
             "email": "jane.smith@company.com",
             "ssn": "987-65-4321",
             "phone": "555-987-6543",
@@ -263,16 +263,16 @@ from datason import StreamingSerializer
 
 async def stream_processing_example():
     """Example of streaming data processing."""
-    
+
     config = ds.get_performance_config()
     streaming_serializer = StreamingSerializer(config=config)
-    
+
     # Simulate streaming data
     data_stream = [
         {"batch_id": i, "data": np.random.random((100, 10))}
         for i in range(10)
     ]
-    
+
     for batch in data_stream:
         # Stream serialize each batch
         async for chunk in streaming_serializer.serialize_async(batch):
@@ -340,17 +340,17 @@ ml_template = ds.create_ml_round_trip_template(
 def ml_pipeline_step(input_data):
     # Validate input structure
     validated_input = ds.deserialize_with_template(input_data, ml_template)
-    
+
     # Process data
     features = validated_input["features"]  # Guaranteed to be DataFrame
     processed = features.values  # Convert to numpy
-    
+
     # Create output with consistent structure
     output = {
         "processed_features": processed,
         "metadata": validated_input["metadata"]
     }
-    
+
     return ds.serialize(output, config=ds.get_ml_config())
 ```
 
@@ -372,7 +372,7 @@ financial_data = {
 }
 financial_result = ds.serialize(financial_data, config=financial_config)
 
-# Research configuration 
+# Research configuration
 research_config = ds.get_research_config()
 research_data = {
     "experiment_id": "EXP-2024-001",
@@ -442,13 +442,13 @@ Converting legacy pickle files to JSON format.
 try:
     # Load legacy pickle file
     json_data = ds.from_pickle("legacy_model.pkl")
-    
+
     # Save as JSON
     with open("converted_model.json", "w") as f:
         json.dump(json_data, f, indent=2)
-    
+
     print("Successfully converted pickle to JSON")
-    
+
 except ds.PickleSecurityError as e:
     print(f"Security error: {e}")
 except Exception as e:
@@ -476,17 +476,17 @@ Implementing comprehensive error handling.
 ```python
 def robust_serialization(data, description=""):
     """Robust serialization with comprehensive error handling."""
-    
+
     try:
         # Try optimal configuration first
         result = ds.serialize(data, config=ds.get_ml_config())
         return {"status": "success", "data": result, "method": "ml_config"}
-        
+
     except ds.SecurityError as e:
         # Handle security violations
         print(f"Security error in {description}: {e}")
         return {"status": "error", "type": "security", "message": str(e)}
-        
+
     except MemoryError as e:
         # Fall back to chunked processing
         print(f"Memory limit exceeded for {description}, using chunked processing")
@@ -495,7 +495,7 @@ def robust_serialization(data, description=""):
             return {"status": "success", "data": chunked_result, "method": "chunked"}
         except Exception as chunked_error:
             return {"status": "error", "type": "memory", "message": str(chunked_error)}
-        
+
     except Exception as e:
         # Generic fallback
         print(f"Unexpected error in {description}: {e}")
@@ -521,12 +521,12 @@ from typing import Dict, List
 class SerializationProfiler:
     def __init__(self):
         self.metrics: List[Dict] = []
-    
+
     def profile_serialization(self, data, config=None, description=""):
         """Profile serialization performance."""
         start_time = time.time()
         start_memory = self._get_memory_usage()
-        
+
         try:
             result = ds.serialize(data, config=config)
             success = True
@@ -535,10 +535,10 @@ class SerializationProfiler:
             result = None
             success = False
             error_message = str(e)
-        
+
         end_time = time.time()
         end_memory = self._get_memory_usage()
-        
+
         metrics = {
             "description": description,
             "duration": end_time - start_time,
@@ -548,22 +548,22 @@ class SerializationProfiler:
             "error": error_message,
             "timestamp": datetime.now()
         }
-        
+
         self.metrics.append(metrics)
         return result, metrics
-    
+
     def _get_memory_usage(self):
         """Get current memory usage (simplified)."""
         import psutil
         return psutil.Process().memory_info().rss
-    
+
     def get_performance_summary(self):
         """Get performance summary statistics."""
         if not self.metrics:
             return {}
-        
+
         successful_runs = [m for m in self.metrics if m["success"]]
-        
+
         return {
             "total_runs": len(self.metrics),
             "successful_runs": len(successful_runs),
@@ -609,17 +609,17 @@ API_CONFIG = ds.get_api_config()
 @app.route('/ml/predict', methods=['POST'])
 def ml_predict():
     """ML prediction endpoint with datason serialization."""
-    
+
     try:
         # Get input data
         input_data = request.json
-        
+
         # Deserialize and validate
         features = ds.deserialize(input_data["features"])
-        
+
         # Run ML model (placeholder)
         predictions = run_ml_model(features)
-        
+
         # Serialize results
         result = {
             "predictions": predictions,
@@ -628,14 +628,14 @@ def ml_predict():
                 "model_version": "v1.2.0"
             }
         }
-        
+
         serialized_result = ds.serialize(result, config=API_CONFIG)
-        
+
         return jsonify({
             "status": "success",
             "data": serialized_result
         })
-        
+
     except Exception as e:
         return jsonify({
             "status": "error",

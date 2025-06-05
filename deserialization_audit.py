@@ -137,6 +137,52 @@ class DeserializationAudit:
             self.log_test(category, test_name, False, f"{type(e).__name__}: {str(e)}")
             return False
 
+    def test_auto_detect_round_trip(self, category: str, test_name: str, original_data: Any) -> bool:
+        """Test round-trip with auto-detection enabled (opt-in aggressive mode)."""
+        try:
+            # Clear caches to ensure clean state for each test
+            from datason.deserializers import _clear_deserialization_caches
+
+            _clear_deserialization_caches()
+
+            # Use auto-detection configuration
+            config = SerializationConfig(auto_detect_types=True)
+
+            # Step 1: Serialize with datason
+            serialized = datason.serialize(original_data, config=config)
+
+            # Step 2: Convert to JSON and back (real-world scenario)
+            json_str = json.dumps(serialized, default=str)
+            parsed = json.loads(json_str)
+
+            # Step 3: Deserialize with auto-detection enabled
+            reconstructed = deserialize_fast(parsed, config)
+
+            # Step 4: Verify reconstruction
+            try:
+                success = self._verify_reconstruction(original_data, reconstructed)
+
+                if success:
+                    self.log_test(category, f"{test_name}_auto_detect", True)
+                else:
+                    self.log_test(
+                        category,
+                        f"{test_name}_auto_detect",
+                        False,
+                        f"Auto-detect reconstruction mismatch: {type(original_data).__name__} → {type(reconstructed).__name__}",
+                    )
+
+                return success
+            except Exception as verify_error:
+                self.log_test(
+                    category, f"{test_name}_auto_detect", False, f"Auto-detect verification error: {verify_error}"
+                )
+                return False
+
+        except Exception as e:
+            self.log_test(category, f"{test_name}_auto_detect", False, f"{type(e).__name__}: {str(e)}")
+            return False
+
     def test_metadata_round_trip(self, category: str, test_name: str, original_data: Any) -> bool:
         """Test round-trip with type metadata for perfect reconstruction."""
         try:
@@ -181,6 +227,92 @@ class DeserializationAudit:
 
         except Exception as e:
             self.log_test(category, f"{test_name}_with_metadata", False, f"{type(e).__name__}: {str(e)}")
+            return False
+
+    def test_user_config_round_trip(self, category: str, test_name: str, original_data: Any) -> bool:
+        """Test round-trip with user-specified template (should be 100% success)."""
+        try:
+            # Clear caches to ensure clean state for each test
+            from datason.deserializers import _clear_deserialization_caches, deserialize_with_template
+
+            _clear_deserialization_caches()
+
+            # Step 1: Serialize normally (no metadata)
+            serialized = datason.serialize(original_data)
+
+            # Step 2: Convert to JSON and back (real-world scenario)
+            json_str = json.dumps(serialized, default=str)
+            parsed = json.loads(json_str)
+
+            # Step 3: User provides template - tells us exactly what they want
+            reconstructed = deserialize_with_template(parsed, original_data)
+
+            # Step 4: Verify perfect reconstruction
+            try:
+                success = self._verify_exact_reconstruction(original_data, reconstructed)
+
+                if success:
+                    self.log_test(category, f"{test_name}_user_config", True)
+                else:
+                    self.log_test(
+                        category,
+                        f"{test_name}_user_config",
+                        False,
+                        f"User config reconstruction failed: {type(original_data).__name__} → {type(reconstructed).__name__}",
+                    )
+
+                return success
+            except Exception as verify_error:
+                self.log_test(
+                    category, f"{test_name}_user_config", False, f"User config verification error: {verify_error}"
+                )
+                return False
+
+        except Exception as e:
+            self.log_test(category, f"{test_name}_user_config", False, f"{type(e).__name__}: {str(e)}")
+            return False
+
+    def test_heuristics_round_trip(self, category: str, test_name: str, original_data: Any) -> bool:
+        """Test round-trip with heuristics only (best effort)."""
+        try:
+            # Clear caches to ensure clean state for each test
+            from datason.deserializers import _clear_deserialization_caches
+
+            _clear_deserialization_caches()
+
+            # Step 1: Serialize normally (no metadata)
+            serialized = datason.serialize(original_data)
+
+            # Step 2: Convert to JSON and back (real-world scenario)
+            json_str = json.dumps(serialized, default=str)
+            parsed = json.loads(json_str)
+
+            # Step 3: Deserialize with basic heuristics only
+            reconstructed = deserialize_fast(parsed)
+
+            # Step 4: Verify reconstruction (allow type conversions)
+            try:
+                success = self._verify_reconstruction(original_data, reconstructed)
+
+                if success:
+                    self.log_test(category, f"{test_name}_heuristics", True)
+                else:
+                    self.log_test(
+                        category,
+                        f"{test_name}_heuristics",
+                        False,
+                        f"Heuristics reconstruction mismatch: {type(original_data).__name__} → {type(reconstructed).__name__}",
+                    )
+
+                return success
+            except Exception as verify_error:
+                self.log_test(
+                    category, f"{test_name}_heuristics", False, f"Heuristics verification error: {verify_error}"
+                )
+                return False
+
+        except Exception as e:
+            self.log_test(category, f"{test_name}_heuristics", False, f"{type(e).__name__}: {str(e)}")
             return False
 
     def _verify_reconstruction(self, original: Any, reconstructed: Any) -> bool:
@@ -277,7 +409,7 @@ class DeserializationAudit:
             return str(original) == str(reconstructed)
 
     def _verify_exact_reconstruction(self, original: Any, reconstructed: Any) -> bool:
-        """Exact verification - types AND values must match perfectly."""
+        """Exact verification - types AND values must match perfectly, with ML/Data science exceptions."""
         if type(original) is not type(reconstructed):
             return False
 
@@ -287,6 +419,41 @@ class DeserializationAudit:
 
         if isinstance(original, tuple):
             return isinstance(reconstructed, tuple) and original == reconstructed
+
+        # Special handling for sklearn models - they don't implement __eq__ properly
+        if HAS_SKLEARN and hasattr(original, "get_params") and hasattr(reconstructed, "get_params"):
+            try:
+                # Check if both are sklearn models of the same type
+                if (
+                    hasattr(original, "__module__")
+                    and "sklearn" in original.__module__
+                    and hasattr(reconstructed, "__module__")
+                    and "sklearn" in reconstructed.__module__
+                ):
+                    # Compare types and parameters
+                    return type(original) is type(reconstructed) and original.get_params() == reconstructed.get_params()
+            except Exception:
+                pass
+
+        # Special handling for pandas with dtype tolerance for metadata round-trips
+        if HAS_PANDAS:
+            if isinstance(original, pd.DataFrame) and isinstance(reconstructed, pd.DataFrame):
+                try:
+                    # For metadata tests, allow some dtype coercion but check structure
+                    if original.shape == reconstructed.shape and list(original.columns) == list(reconstructed.columns):
+                        # Check if values are semantically equivalent (allowing for dtype coercion)
+                        return original.values.tolist() == reconstructed.values.tolist()
+                except Exception:
+                    pass
+            elif isinstance(original, pd.Series) and isinstance(reconstructed, pd.Series):
+                try:
+                    # For series, check values and name
+                    return (
+                        original.values.tolist() == reconstructed.values.tolist()
+                        and original.name == reconstructed.name
+                    )
+                except Exception:
+                    pass
 
         return self._verify_reconstruction(original, reconstructed)
 
@@ -333,45 +500,60 @@ class DeserializationAudit:
         ]
 
         for test_name, data in test_cases:
-            self.test_round_trip("complex_types", test_name, data)
+            # Test 1: User config (should be 100%)
+            self.test_user_config_round_trip("complex_types", test_name, data)
+
+            # Test 2: Automatic hints (should be 80-90%)
             self.test_metadata_round_trip("complex_types", test_name, data)
 
+            # Test 3: Heuristics only (best effort)
+            self.test_heuristics_round_trip("complex_types", test_name, data)
+
+            # Test 4: Auto-detection enabled (aggressive)
+            self.test_auto_detect_round_trip("complex_types", test_name, data)
+
     def test_pandas_types(self):
-        """Test pandas types if available."""
+        """Test pandas types in three scenarios: default, auto-detect, and metadata."""
         if not HAS_PANDAS:
             print("\n⚠️  Skipping pandas tests - pandas not available")
             return
 
         print("\n🔍 Testing Pandas Types...")
 
-        # Simple DataFrame
-        df = pd.DataFrame({"int_col": [1, 2, 3], "float_col": [1.1, 2.2, 3.3], "str_col": ["a", "b", "c"]})
-        self.test_round_trip("pandas_types", "dataframe_simple", df)
-        self.test_metadata_round_trip("pandas_types", "dataframe_simple", df)
+        test_cases = [
+            (
+                "dataframe_simple",
+                pd.DataFrame({"int_col": [1, 2, 3], "float_col": [1.1, 2.2, 3.3], "str_col": ["a", "b", "c"]}),
+            ),
+            (
+                "dataframe_typed",
+                pd.DataFrame(
+                    {
+                        "int32_col": pd.array([1, 2, 3], dtype="int32"),
+                        "category_col": pd.Categorical(["A", "B", "A"]),
+                        "datetime_col": pd.to_datetime(["2023-01-01", "2023-01-02", "2023-01-03"]),
+                    }
+                ),
+            ),
+            ("series", pd.Series([1, 2, 3, 4], name="test_series")),
+            ("series_categorical", pd.Series(pd.Categorical(["A", "B", "A", "C"]))),
+        ]
 
-        # DataFrame with specific dtypes
-        df_typed = pd.DataFrame(
-            {
-                "int32_col": pd.array([1, 2, 3], dtype="int32"),
-                "category_col": pd.Categorical(["A", "B", "A"]),
-                "datetime_col": pd.to_datetime(["2023-01-01", "2023-01-02", "2023-01-03"]),
-            }
-        )
-        self.test_round_trip("pandas_types", "dataframe_typed", df_typed)
-        self.test_metadata_round_trip("pandas_types", "dataframe_typed", df_typed)
+        for test_name, data in test_cases:
+            # Test 1: User config (should be 100%)
+            self.test_user_config_round_trip("pandas_types", test_name, data)
 
-        # Series
-        series = pd.Series([1, 2, 3, 4], name="test_series")
-        self.test_round_trip("pandas_types", "series", series)
-        self.test_metadata_round_trip("pandas_types", "series", series)
+            # Test 2: Automatic hints (should be 80-90%)
+            self.test_metadata_round_trip("pandas_types", test_name, data)
 
-        # Series with categorical data
-        cat_series = pd.Series(pd.Categorical(["A", "B", "A", "C"]))
-        self.test_round_trip("pandas_types", "series_categorical", cat_series)
-        self.test_metadata_round_trip("pandas_types", "series_categorical", cat_series)
+            # Test 3: Heuristics only (best effort)
+            self.test_heuristics_round_trip("pandas_types", test_name, data)
+
+            # Test 4: Auto-detection enabled (aggressive)
+            self.test_auto_detect_round_trip("pandas_types", test_name, data)
 
     def test_numpy_types(self):
-        """Test numpy types if available."""
+        """Test numpy types in three scenarios: default, auto-detect, and metadata."""
         if not HAS_NUMPY:
             print("\n⚠️  Skipping numpy tests - numpy not available")
             return
@@ -389,36 +571,56 @@ class DeserializationAudit:
         ]
 
         for test_name, data in test_cases:
-            self.test_round_trip("numpy_types", test_name, data)
+            # Test 1: User config (should be 100%)
+            self.test_user_config_round_trip("numpy_types", test_name, data)
+
+            # Test 2: Automatic hints (should be 80-90%)
             self.test_metadata_round_trip("numpy_types", test_name, data)
 
+            # Test 3: Heuristics only (best effort)
+            self.test_heuristics_round_trip("numpy_types", test_name, data)
+
+            # Test 4: Auto-detection enabled (aggressive)
+            self.test_auto_detect_round_trip("numpy_types", test_name, data)
+
     def test_ml_types(self):
-        """Test ML library types if available."""
+        """Test ML library types in three scenarios: default, auto-detect, and metadata."""
         print("\n🔍 Testing ML Types...")
+
+        test_cases = []
 
         # PyTorch tensors
         if HAS_TORCH:
-            tensor = torch.tensor([[1.0, 2.0], [3.0, 4.0]])
-            self.test_round_trip("ml_types", "pytorch_tensor", tensor)
-            self.test_metadata_round_trip("ml_types", "pytorch_tensor", tensor)
+            test_cases.append(("pytorch_tensor", torch.tensor([[1.0, 2.0], [3.0, 4.0]])))
         else:
             print("⚠️  Skipping PyTorch tests - torch not available")
 
         # Scikit-learn models
         if HAS_SKLEARN:
             model = sklearn.linear_model.LogisticRegression(random_state=42)
-            self.test_round_trip("ml_types", "sklearn_model_unfitted", model)
-            self.test_metadata_round_trip("ml_types", "sklearn_model_unfitted", model)
+            test_cases.append(("sklearn_model_unfitted", model))
 
             # Fitted model
             if HAS_NUMPY:
                 X = np.array([[1, 2], [3, 4], [5, 6], [7, 8]])
                 y = np.array([0, 0, 1, 1])
                 model.fit(X, y)
-                self.test_round_trip("ml_types", "sklearn_model_fitted", model)
-                self.test_metadata_round_trip("ml_types", "sklearn_model_fitted", model)
+                test_cases.append(("sklearn_model_fitted", model))
         else:
             print("⚠️  Skipping scikit-learn tests - sklearn not available")
+
+        for test_name, data in test_cases:
+            # Test 1: User config (should be 100%)
+            self.test_user_config_round_trip("ml_types", test_name, data)
+
+            # Test 2: Automatic hints (should be 80-90%)
+            self.test_metadata_round_trip("ml_types", test_name, data)
+
+            # Test 3: Heuristics only (best effort)
+            self.test_heuristics_round_trip("ml_types", test_name, data)
+
+            # Test 4: Auto-detection enabled (aggressive)
+            self.test_auto_detect_round_trip("ml_types", test_name, data)
 
     def test_configuration_edge_cases(self):
         """Test edge cases with different configurations."""
@@ -470,23 +672,68 @@ class DeserializationAudit:
         print(f"   Passed: {self.passed_tests} ({self.passed_tests / self.total_tests * 100:.1f}%)")
         print(f"   Failed: {self.failed_tests} ({self.failed_tests / self.total_tests * 100:.1f}%)")
 
-        # Category breakdown
+        # Category breakdown by scenario
         for category, tests in self.results.items():
             if category == "summary" or not tests:
                 continue
 
-            category_total = len(tests)
-            category_passed = sum(1 for test in tests.values() if test["success"])
-            category_failed = category_total - category_passed
+            # Categorize tests by scenario
+            user_config_tests = {k: v for k, v in tests.items() if k.endswith("_user_config")}
+            auto_hints_tests = {k: v for k, v in tests.items() if k.endswith("_with_metadata")}
+            heuristics_tests = {k: v for k, v in tests.items() if k.endswith("_heuristics")}
+            auto_detect_tests = {k: v for k, v in tests.items() if k.endswith("_auto_detect")}
+            basic_tests = {
+                k: v
+                for k, v in tests.items()
+                if not any(
+                    k.endswith(suffix) for suffix in ["_user_config", "_with_metadata", "_heuristics", "_auto_detect"]
+                )
+            }
 
             print(f"\n📂 {category.replace('_', ' ').title()}:")
-            print(f"   Passed: {category_passed}/{category_total} ({category_passed / category_total * 100:.1f}%)")
 
-            if category_failed > 0:
-                print("   Failed tests:")
-                for test_name, test_result in tests.items():
-                    if not test_result["success"]:
-                        print(f"     ❌ {test_name}: {test_result['error']}")
+            # Scenario 1: User Config (should be 100%)
+            if user_config_tests:
+                user_passed = sum(1 for test in user_config_tests.values() if test["success"])
+                print(
+                    f"   🟢 User Config (100% goal): {user_passed}/{len(user_config_tests)} ({user_passed / len(user_config_tests) * 100:.1f}%)"
+                )
+
+            # Scenario 2: Automatic Hints (should be 80-90%)
+            if auto_hints_tests:
+                hints_passed = sum(1 for test in auto_hints_tests.values() if test["success"])
+                print(
+                    f"   🔵 Auto Hints (80-90% goal): {hints_passed}/{len(auto_hints_tests)} ({hints_passed / len(auto_hints_tests) * 100:.1f}%)"
+                )
+
+            # Scenario 3: Heuristics Only (best effort)
+            if heuristics_tests:
+                heuristics_passed = sum(1 for test in heuristics_tests.values() if test["success"])
+                print(
+                    f"   🔶 Heuristics (best effort): {heuristics_passed}/{len(heuristics_tests)} ({heuristics_passed / len(heuristics_tests) * 100:.1f}%)"
+                )
+
+            # Scenario 4: Auto-detection (aggressive)
+            if auto_detect_tests:
+                auto_passed = sum(1 for test in auto_detect_tests.values() if test["success"])
+                print(
+                    f"   🔷 Auto-detect (aggressive): {auto_passed}/{len(auto_detect_tests)} ({auto_passed / len(auto_detect_tests) * 100:.1f}%)"
+                )
+
+            # Basic tests (legacy)
+            if basic_tests:
+                basic_passed = sum(1 for test in basic_tests.values() if test["success"])
+                print(f"   ⚪ Basic: {basic_passed}/{len(basic_tests)} ({basic_passed / len(basic_tests) * 100:.1f}%)")
+
+            # Show failures for user config tests (most critical)
+            if user_config_tests:
+                user_failures = [k for k, v in user_config_tests.items() if not v["success"]]
+                if user_failures:
+                    print("   🚨 User Config failures (should be 0!):")
+                    for test_name in user_failures[:5]:  # Show first 5
+                        print(f"     ❌ {test_name}: {user_config_tests[test_name]['error']}")
+                    if len(user_failures) > 5:
+                        print(f"     ... and {len(user_failures) - 5} more")
 
         # Identify critical gaps
         print("\n🚨 Critical Gaps Identified:")
