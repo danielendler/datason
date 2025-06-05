@@ -241,6 +241,17 @@ class DeserializationAudit:
             except AssertionError:
                 return False
 
+        # Handle PyTorch tensors specially
+        if HAS_TORCH and hasattr(original, "__module__") and "torch" in str(type(original)):
+            if not (hasattr(reconstructed, "__module__") and "torch" in str(type(reconstructed))):
+                return False
+            try:
+                import torch
+
+                return torch.equal(original, reconstructed)
+            except Exception:
+                return False
+
         # For complex types, basic equality check
         try:
             return original == reconstructed
