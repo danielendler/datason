@@ -122,7 +122,7 @@ def _get_version() -> str:
     return "0.5.0"
 
 
-__version__ = "0.6.0"
+__version__ = "0.7.0"
 __author__ = "datason Contributors"
 __license__ = "MIT"
 
