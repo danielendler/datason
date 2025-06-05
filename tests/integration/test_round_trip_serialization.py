@@ -424,6 +424,11 @@ class TestRoundTripSerialization:
         if test_case.skip_reason:
             pytest.skip(test_case.skip_reason)
 
+        # Clear caches to ensure clean state for each test (helps with test order dependencies)
+        from datason.deserializers import _clear_deserialization_caches
+
+        _clear_deserialization_caches()
+
         # Serialize WITHOUT type hints
         try:
             serialized = datason.serialize(test_case.value)
