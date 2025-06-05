@@ -227,7 +227,7 @@ serialize(d1)  # Warning + safe handling
 
 3. **Size Bomb Protection**
    ```python
-   MAX_OBJECT_SIZE = 10_000_000  # Prevent memory exhaustion
+   MAX_OBJECT_SIZE = 100_000  # Prevent memory exhaustion
    ```
 
 4. **String Length Protection**
