@@ -371,7 +371,7 @@ gh release edit v0.1.2 --prerelease
 
 ## 📚 Additional Resources
 
-- [Contributing Guide](CONTRIBUTING.md)
+- [Contributing Guide](community/contributing.md)
 - [CI/CD Pipeline Guide](CI_PIPELINE_GUIDE.md)
 - [CI Performance Optimization](CI_PERFORMANCE.md)
 - [Pipeline Audit Report](PIPELINE_AUDIT.md)
@@ -379,7 +379,7 @@ gh release edit v0.1.2 --prerelease
 - [Tooling Guide](TOOLING_GUIDE.md)
 - [Dependabot Setup](DEPENDABOT_GUIDE.md)
 - [GitHub Pages Setup](GITHUB_PAGES_SETUP.md)
-- [Security Policy](SECURITY.md)
+- [Security Policy](community/security.md)
 - [GitHub Flow Documentation](https://docs.github.com/en/get-started/quickstart/github-flow)
 - [Semantic Versioning Specification](https://semver.org/)
 
@@ -389,6 +389,17 @@ gh release edit v0.1.2 --prerelease
 
 ## Additional Documentation
 
-- [Contributing Guide](CONTRIBUTING.md)
-- [Security Policy](SECURITY.md)
+- [Contributing Guide](community/contributing.md)
+- [Security Policy](community/security.md)
 - [CI/CD Pipeline](CI_PIPELINE_GUIDE.md)
+
+### Key Documentation
+- [Contributing Guide](community/contributing.md)
+- [CI/CD Pipeline](CI_PIPELINE_GUIDE.md)
+- [Security Policy](community/security.md)
+- [Performance Testing](CI_PERFORMANCE.md)
+
+### Critical Documentation Updates
+- [Contributing Guide](community/contributing.md)
+- [Security Policy](community/security.md)
+- [Performance Benchmarks](advanced/benchmarks.md)

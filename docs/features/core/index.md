@@ -305,10 +305,10 @@ with warnings.catch_warnings(record=True) as w:
 
 ## 🔗 Related Features
 
-- **[Configuration System](../configuration/index.md)** - Customize serialization behavior
-- **[Advanced Types](../advanced-types/index.md)** - Extended type support  
-- **[Security](../../SECURITY.md)** - Security considerations and best practices
-- **[Performance](../performance/index.md)** - Optimization techniques
+- **[Advanced Types](../advanced-types/index.md)** - Complex type handling
+- **[Configuration](../configuration/index.md)** - Type detection settings  
+- **[Performance](../performance/index.md)** - Optimization for type detection
+- **[Security](../../community/security.md)** - Security considerations and best practices
 
 ## 🚀 Next Steps
 

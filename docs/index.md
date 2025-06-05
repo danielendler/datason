@@ -57,21 +57,21 @@ assert type(restored['array']) == np.ndarray
     **Getting Started**
     
     - [🚀 Quick Start Guide](user-guide/quick-start.md) - Get up and running in 5 minutes
-    - [💡 Basic Examples](user-guide/examples/basic.md) - Common use cases and patterns
-    - [� Configuration Guide](user-guide/configuration.md) - Customize behavior for your needs
+    - [💡 Examples Gallery](user-guide/examples/index.md) - Common use cases and patterns
+    - [🔧 Configuration Guide](features/configuration/index.md) - Customize behavior for your needs
     
     **Core Features**
     
-    - [📊 Data Types Support](features/data-types.md) - All supported types and conversion
-    - [🤖 ML/AI Integration](features/ml-ai.md) - Machine learning library support
-    - [� Data Privacy & Redaction](features/redaction.md) - Protect sensitive information
-    - [⚡ Performance & Chunking](features/performance.md) - Handle large datasets efficiently
+    - [📊 Data Types Support](features/advanced-types/index.md) - All supported types and conversion
+    - [🤖 ML/AI Integration](features/ml-ai/index.md) - Machine learning library support
+    - [🔐 Data Privacy & Redaction](features/redaction.md) - Protect sensitive information
+    - [⚡ Performance & Chunking](features/performance/index.md) - Handle large datasets efficiently
     
     **Advanced Usage**
     
-    - [🎯 Template Deserialization](features/template-deserialization.md) - Enforce data structures
-    - [🔄 Pickle Bridge](features/pickle-bridge.md) - Migrate from legacy pickle files
-    - [🔍 Type Detection](features/type-detection.md) - How automatic detection works
+    - [🎯 Template Deserialization](features/template-deserialization/index.md) - Enforce data structures
+    - [🔄 Pickle Bridge](features/pickle-bridge/index.md) - Migrate from legacy pickle files
+    - [🔍 Type Detection](features/core/index.md) - How automatic detection works
 
 === "🤖 For AI Systems"
 
@@ -79,19 +79,19 @@ assert type(restored['array']) == np.ndarray
     
     - [🤖 AI Integration Guide](ai-guide/overview.md) - How to integrate datason in AI systems
     - [📝 API Reference](api/index.md) - Complete API documentation with examples
-    - [🔧 Configuration Presets](ai-guide/presets.md) - Pre-built configs for common AI use cases
+    - [🔧 Configuration Presets](features/configuration/index.md) - Pre-built configs for common AI use cases
     
     **Automation & Tooling**
     
-    - [⚙️ Auto-Detection Capabilities](ai-guide/auto-detection.md) - What datason can detect automatically
-    - [🔌 Custom Serializers](ai-guide/custom-serializers.md) - Extend for custom types
-    - [📊 Schema Inference](ai-guide/schema-inference.md) - Automatic schema generation
+    - [⚙️ Auto-Detection Capabilities](features/core/index.md) - What datason can detect automatically
+    - [🔌 Custom Serializers](AI_USAGE_GUIDE.md) - Extend for custom types
+    - [📊 Schema Inference](features/template-deserialization/index.md) - Automatic schema generation
     
     **Deployment**
     
-    - [🚀 Production Deployment](ai-guide/deployment.md) - Best practices for production
-    - [🔍 Monitoring & Logging](ai-guide/monitoring.md) - Track serialization performance
-    - [🛡️ Security Considerations](ai-guide/security.md) - Security best practices
+    - [🚀 Production Deployment](BUILD_PUBLISH.md) - Best practices for production
+    - [🔍 Monitoring & Logging](CI_PERFORMANCE.md) - Track serialization performance
+    - [🛡️ Security Considerations](community/security.md) - Security best practices
 
 ## 📚 Documentation Sections
 
@@ -100,51 +100,42 @@ Comprehensive guides for getting started and using datason effectively.
 
 - **[Quick Start](user-guide/quick-start.md)** - Installation and first steps
 - **[Examples Gallery](user-guide/examples/index.md)** - Code examples for every feature
-- **[Configuration](user-guide/configuration.md)** - Customize behavior and presets
-- **[Migration Guide](user-guide/migration.md)** - Upgrade from older versions
 
 ### 🔧 Features
 Detailed documentation for all datason features.
 
-- **[Data Types & Conversion](features/data-types.md)** - Supported types and conversion rules
-- **[ML/AI Integration](features/ml-ai.md)** - PyTorch, TensorFlow, scikit-learn support
+- **[Features Overview](features/index.md)** - Complete feature overview
+- **[Core Serialization](features/core/index.md)** - Core serialization functionality
+- **[ML/AI Integration](features/ml-ai/index.md)** - PyTorch, TensorFlow, scikit-learn support
 - **[Data Privacy & Redaction](features/redaction.md)** - PII protection and compliance
-- **[Performance & Chunking](features/performance.md)** - Memory-efficient processing
-- **[Template System](features/template-deserialization.md)** - Structure enforcement
-- **[Pickle Bridge](features/pickle-bridge.md)** - Legacy pickle migration
+- **[Performance & Chunking](features/performance/index.md)** - Memory-efficient processing
+- **[Template System](features/template-deserialization/index.md)** - Structure enforcement
+- **[Pickle Bridge](features/pickle-bridge/index.md)** - Legacy pickle migration
 
 ### 🤖 AI Developer Guide  
 Specialized documentation for AI systems and automated workflows.
 
 - **[AI Integration Overview](ai-guide/overview.md)** - Integration patterns for AI systems
-- **[Configuration Presets](ai-guide/presets.md)** - ML, research, and inference configs
-- **[Auto-Detection](ai-guide/auto-detection.md)** - Automatic type and schema detection
-- **[Custom Extensions](ai-guide/custom-serializers.md)** - Extend for domain-specific types
 
 ### 📋 API Reference
 Complete API documentation with examples.
 
-- **[Core Functions](api/core.md)** - serialize(), deserialize(), and main functions
-- **[Configuration Classes](api/config.md)** - SerializationConfig and presets
-- **[ML Serializers](api/ml.md)** - Machine learning library serializers
-- **[Redaction Engine](api/redaction.md)** - Privacy and security features
-- **[Utilities](api/utils.md)** - Helper functions and data utilities
+- **[API Overview](api/index.md)** - Complete API documentation with examples
 
 ### 🔬 Advanced Topics
 In-depth technical documentation.
 
 - **[Performance Benchmarks](advanced/benchmarks.md)** - Performance analysis and comparisons
-- **[Security Model](advanced/security.md)** - Security architecture and best practices  
-- **[Extensibility](advanced/extensibility.md)** - Plugin system and custom handlers
-- **[Architecture](advanced/architecture.md)** - Internal design and data flow
+- **[Core Strategy](core-serialization-strategy.md)** - Internal design and architecture
+- **[Performance Improvements](performance-improvements.md)** - Optimization techniques
 
 ### 👥 Community & Development
 Resources for contributors and the community.
 
 - **[Contributing Guide](community/contributing.md)** - How to contribute to datason
-- **[Development Setup](community/development.md)** - Set up development environment
 - **[Release Notes](community/changelog.md)** - Version history and changes
 - **[Roadmap](community/roadmap.md)** - Future development plans
+- **[Security Policy](community/security.md)** - Security practices and reporting
 
 ## 🚀 Quick Start
 

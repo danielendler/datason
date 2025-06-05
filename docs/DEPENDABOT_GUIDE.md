@@ -275,12 +275,12 @@ pre-commit run --all-files  # Fix formatting
 
 ---
 
-## 📚 Additional Resources
+## 📚 Related Documentation
 
-- [GitHub Dependabot Documentation](https://docs.github.com/en/code-security/dependabot)
-- [Dependabot Configuration Reference](https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file)
-- [datason CI/CD Pipeline Guide](CI_PIPELINE_GUIDE.md)
-- [Contributing Guide](CONTRIBUTING.md)
+- [Contributing Guide](community/contributing.md)
+- [CI/CD Pipeline](CI_PIPELINE_GUIDE.md)
+- [Security Policy](community/security.md)
+- [Release Management](RELEASE_MANAGEMENT.md)
 
 ---
 

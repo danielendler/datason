@@ -232,12 +232,11 @@ markers = [
 ✅ 38/38 auto-detection tests passing
 ```
 
-## 🔗 Related Documentation
+## 🔗 Related Resources
 
-- [Contributing Guide](CONTRIBUTING.md) - Development setup and guidelines
-- [CI/CD Pipeline](CI_PIPELINE_GUIDE.md) - Understanding the full CI process
-- [Tooling Guide](TOOLING_GUIDE.md) - Development tools and configuration
-- [Security](SECURITY.md) - Security best practices in testing
+- [Contributing Guide](community/contributing.md) - Development setup and guidelines
+- [CI Pipeline Guide](CI_PIPELINE_GUIDE.md) - Complete CI/CD documentation
+- [Security](community/security.md) - Security best practices in testing
 
 ---
 

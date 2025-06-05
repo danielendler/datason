@@ -362,8 +362,8 @@ research_config = ds.get_research_config()
 Now that you're up and running, explore these topics:
 
 - **[Examples Gallery](examples/index.md)** - Comprehensive examples for every feature
-- **[Configuration Guide](configuration.md)** - Customize behavior for your needs  
-- **[ML/AI Integration](../features/ml-ai.md)** - Deep dive into ML library support
+- **[Configuration Guide](../features/configuration/index.md)** - Customize behavior for your needs  
+- **[ML/AI Integration](../features/ml-ai/index.md)** - Deep dive into ML library support
 - **[Data Privacy & Redaction](../features/redaction.md)** - Protect sensitive information
 - **[API Reference](../api/index.md)** - Complete function documentation
 

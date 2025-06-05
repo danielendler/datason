@@ -122,7 +122,7 @@ The Pickle Bridge implements multiple security layers to prevent arbitrary code 
 - **Code Inspection**: No `__reduce__` or custom deserialization methods
 - **Resource Limits**: File size and processing time constraints
 
-For detailed security guidelines, see **[Security Documentation](../../SECURITY.md)**.
+For detailed security guidelines, see **[Security Documentation](../../community/security.md)**.
 
 ## 📊 Performance & Statistics
 
@@ -636,10 +636,10 @@ results = parallel_conversion("pickles/", "json_output/", max_workers=8)
 
 ## 🔗 Related Features
 
-- **[Configuration System](../configuration/index.md)** - Customize bridge behavior
-- **[ML/AI Integration](../ml-ai/index.md)** - Framework-specific features
-- **[Advanced Types](../advanced-types/index.md)** - Extended type support
-- **[Security Documentation](../../SECURITY.md)** - Additional security considerations
+- **[Migration Guide](../migration/index.md)** - General migration strategies
+- **[Configuration](../configuration/index.md)** - Configure conversion behavior
+- **[Core Serialization](../core/index.md)** - Understand the target format
+- **[Security Documentation](../../community/security.md)** - Additional security considerations
 
 ## 🚀 Migration Checklist
 

@@ -124,60 +124,69 @@ markdown_extensions:
       custom_checkbox: true
   - pymdownx.tilde
 
-# Enhanced navigation with organized structure
+# Fixed navigation using files that actually exist
 nav:
   - Home: index.md
   
-  # User Guide Section
+  # User Guide Section  
   - User Guide:
     - Quick Start: user-guide/quick-start.md
     - Examples Gallery: user-guide/examples/index.md
-    - Configuration Guide: user-guide/configuration.md
-    - Migration Guide: user-guide/migration.md
   
-  # Features Section
+  # Features Section (using existing feature docs)
   - Features:
-    - Data Types & Conversion: features/data-types.md
-    - ML/AI Integration: features/ml-ai.md
+    - Overview: features/index.md
+    - Core Serialization: features/core/index.md
+    - Configuration: features/configuration/index.md
+    - Advanced Types: features/advanced-types/index.md
+    - Date/Time Handling: features/datetime/index.md
+    - Chunked Processing: features/chunked-processing/index.md
+    - Template Deserialization: features/template-deserialization/index.md
+    - ML/AI Integration: features/ml-ai/index.md
+    - Pandas Integration: features/pandas/index.md
+    - Pickle Bridge: features/pickle-bridge/index.md
+    - Performance: features/performance/index.md
     - Data Privacy & Redaction: features/redaction.md
-    - Performance & Chunking: features/performance.md
-    - Template Deserialization: features/template-deserialization.md
-    - Pickle Bridge: features/pickle-bridge.md
-    - Type Detection: features/type-detection.md
+    - Migration Guide: features/migration/index.md
+    - Data Utilities: features/data-utilities/index.md
   
   # AI Developer Guide Section
   - AI Developer Guide:
     - Overview: ai-guide/overview.md
-    - Configuration Presets: ai-guide/presets.md
-    - Auto-Detection: ai-guide/auto-detection.md
-    - Custom Serializers: ai-guide/custom-serializers.md
-    - Production Deployment: ai-guide/deployment.md
-    - Monitoring & Logging: ai-guide/monitoring.md
-    - Security Considerations: ai-guide/security.md
   
   # API Reference Section
   - API Reference:
     - Overview: api/index.md
-    - Core Functions: api/core.md
-    - Configuration: api/config.md
-    - ML Serializers: api/ml.md
-    - Redaction Engine: api/redaction.md
-    - Utilities: api/utils.md
   
   # Advanced Topics Section
   - Advanced Topics:
     - Performance Benchmarks: advanced/benchmarks.md
-    - Security Model: advanced/security.md
-    - Extensibility: advanced/extensibility.md
-    - Architecture: advanced/architecture.md
+    - Core Serialization Strategy: core-serialization-strategy.md
+    - Performance Improvements: performance-improvements.md
+  
+  # Reference Documentation
+  - Reference:
+    - Feature Matrix: FEATURE_MATRIX.md
+    - AI Usage Guide: AI_USAGE_GUIDE.md
   
   # Community & Development Section
   - Community & Development:
     - Contributing Guide: community/contributing.md
-    - Development Setup: community/development.md
     - Release Notes: community/changelog.md
     - Roadmap: community/roadmap.md
     - Security Policy: community/security.md
+  
+  # Development Documentation
+  - Development:
+    - Tooling Guide: TOOLING_GUIDE.md
+    - CI/CD Pipeline: CI_PIPELINE_GUIDE.md
+    - CI Performance: CI_PERFORMANCE.md
+    - Testing & Integration: TESTING_INTEGRATION_IMPROVEMENTS.md
+    - Build & Publish: BUILD_PUBLISH.md
+    - Release Management: RELEASE_MANAGEMENT.md
+    - Plugin Testing: PLUGIN_TESTING.md
+    - GitHub Pages Setup: GITHUB_PAGES_SETUP.md
+    - Dependabot Guide: DEPENDABOT_GUIDE.md
 
 # Extra
 extra:

@@ -476,12 +476,21 @@ if duration > 0.1:  # Log slow serializations
 ## 🔗 Related Features
 
 - **[Configuration System](../configuration/index.md)** - Performance-tuned configurations
-- **[Benchmarking](../../BENCHMARKING.md)** - Detailed performance analysis
+- **[Benchmarking](../../advanced/benchmarks.md)** - Detailed performance analysis
 - **[Core Serialization](../core/index.md)** - Understanding the base layer
 - **[Pandas Integration](../pandas/index.md)** - DataFrame-specific optimizations
 
 ## 🚀 Next Steps
 
 - **[Configuration →](../configuration/index.md)** - Fine-tune performance settings
-- **[Benchmarking →](../../BENCHMARKING.md)** - Run your own performance tests
-- **[Production Deployment →](../../CONTRIBUTING.md)** - Production best practices
+- **[Benchmarking →](../../advanced/benchmarks.md)** - Run your own performance tests
+- **[Production Deployment →](../../BUILD_PUBLISH.md)** - Production best practices
+
+## 📊 Performance Analysis
+
+- **[Benchmarking](../../advanced/benchmarks.md)** - Detailed performance analysis
+- **[Core Strategy](../../core-serialization-strategy.md)** - Algorithmic optimization strategies
+- **[Production Performance](../../CI_PERFORMANCE.md)** - Production environment tips
+- **[CI Performance](../../CI_PERFORMANCE.md)** - Continuous integration optimization
+- **[Benchmarking →](../../advanced/benchmarks.md)** - Run your own performance tests
+- **[Production Deployment →](../../BUILD_PUBLISH.md)** - Production best practices

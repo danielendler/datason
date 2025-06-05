@@ -424,4 +424,4 @@ except Exception as e:
 
 ## API Reference
 
-See the [Redaction API Reference](../api/redaction.md) for complete function documentation and parameters.
+See the [API Overview](../api/index.md) for complete function documentation and parameters.

@@ -419,7 +419,7 @@ def ml_pipeline_with_lineage(data: Any, step_name: str) -> dict:
 
 ## Production Deployment
 
-See the [Production Deployment Guide](deployment.md) for:
+See the [Build & Publish Guide](../BUILD_PUBLISH.md) for:
 - Container deployment strategies
 - Performance optimization
 - Monitoring and alerting
@@ -427,7 +427,7 @@ See the [Production Deployment Guide](deployment.md) for:
 
 ## Next Steps
 
-- [Configuration Presets](presets.md) - Detailed preset configurations
-- [Auto-Detection Capabilities](auto-detection.md) - What datason detects automatically
-- [Custom Serializers](custom-serializers.md) - Extend for domain-specific types
-- [Security Considerations](security.md) - Security best practices for AI systems
+- [Feature Overview](../features/index.md) - Detailed feature configurations
+- [Core Serialization](../features/core/index.md) - What datason detects automatically
+- [AI Usage Guide](../AI_USAGE_GUIDE.md) - Extend for domain-specific types
+- [Security Policy](../community/security.md) - Security best practices for AI systems
