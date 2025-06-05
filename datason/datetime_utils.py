@@ -130,11 +130,10 @@ def ensure_dates(df: Any, strip_timezone: bool = True) -> Any:
         KeyError: If date column is missing in DataFrame
         ValueError: If date format is invalid
     """
-    if pd is None:
-        raise ImportError("pandas is required for ensure_dates function")
-
-    # Handle dictionaries
+    # Handle dictionaries first so type validation happens before pandas check
     if isinstance(df, dict):
+        if pd is None:
+            raise ImportError("pandas is required for ensure_dates function")
         result = df.copy()
         # Convert date fields in the dictionary
         date_fields = [
@@ -159,6 +158,11 @@ def ensure_dates(df: Any, strip_timezone: bool = True) -> Any:
         return result
 
     # Handle DataFrames - original implementation
+    if pd is None:
+        if isinstance(df, dict):
+            raise ImportError("pandas is required for ensure_dates function")
+        raise TypeError(f"Input must be a pandas DataFrame or dict, got {type(df)}")
+
     if not isinstance(df, pd.DataFrame):
         raise TypeError(f"Input must be a pandas DataFrame or dict, got {type(df)}")
     if "date" not in df.columns:
