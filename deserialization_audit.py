@@ -199,8 +199,21 @@ class DeserializationAudit:
         if isinstance(original, uuid.UUID):
             return isinstance(reconstructed, uuid.UUID) and original == reconstructed
 
-        if isinstance(original, (list, tuple)):
-            if not isinstance(reconstructed, (list, tuple)) or len(original) != len(reconstructed):
+        if isinstance(original, tuple):
+            # For basic round-trip (no type hints), tuple → list is acceptable
+            if isinstance(reconstructed, list):
+                if len(original) != len(reconstructed):
+                    return False
+                return all(self._verify_reconstruction(o, r) for o, r in zip(original, reconstructed))
+            # For metadata round-trip, exact type match required
+            if isinstance(reconstructed, tuple):
+                if len(original) != len(reconstructed):
+                    return False
+                return all(self._verify_reconstruction(o, r) for o, r in zip(original, reconstructed))
+            return False
+
+        if isinstance(original, list):
+            if not isinstance(reconstructed, list) or len(original) != len(reconstructed):
                 return False
             return all(self._verify_reconstruction(o, r) for o, r in zip(original, reconstructed))
 
@@ -210,6 +223,10 @@ class DeserializationAudit:
             return all(self._verify_reconstruction(original[k], reconstructed[k]) for k in original)
 
         if isinstance(original, set):
+            # For basic round-trip (no type hints), set → list is acceptable
+            if isinstance(reconstructed, list):
+                return set(reconstructed) == original
+            # For metadata round-trip, exact type match required
             return isinstance(reconstructed, set) and original == reconstructed
 
         # Handle pandas objects specially
@@ -263,6 +280,13 @@ class DeserializationAudit:
         """Exact verification - types AND values must match perfectly."""
         if type(original) is not type(reconstructed):
             return False
+
+        # For exact reconstruction, use strict equality checks
+        if isinstance(original, set):
+            return isinstance(reconstructed, set) and original == reconstructed
+
+        if isinstance(original, tuple):
+            return isinstance(reconstructed, tuple) and original == reconstructed
 
         return self._verify_reconstruction(original, reconstructed)
 
