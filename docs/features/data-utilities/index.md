@@ -26,7 +26,7 @@ from datason.utils import UtilityConfig
 dev_config = UtilityConfig(
     max_depth=100,
     max_object_size=1_000_000,
-    max_string_length=10_000_000,
+    max_string_length=100_000,
     enable_circular_reference_detection=False  # For performance
 )
 
@@ -410,7 +410,7 @@ from datason.utils import UtilityConfig
 # High-performance config for trusted data
 performance_config = UtilityConfig(
     max_depth=1000,           # Deep nesting allowed
-    max_object_size=10_000_000, # Large objects allowed
+    max_object_size=100_000, # Large objects allowed
     enable_circular_reference_detection=False  # Skip circular checks
 )
 

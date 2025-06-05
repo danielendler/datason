@@ -75,7 +75,7 @@ Protects against resource exhaustion attacks:
 config = datason.SerializationConfig(
     max_depth=1000,        # Maximum nesting depth
     max_string_length=1_000_000,  # Maximum string length
-    max_sequence_length=10_000_000  # Maximum list/dict size
+    max_sequence_length=100_000  # Maximum list/dict size
 )
 ```
 
@@ -223,7 +223,7 @@ result = datason.serialize(complex_data)
 problematic_data = {
     "numbers": [1, 2, float('inf'), float('nan')],
     "circular": None,
-    "large_string": "x" * 10_000_000
+    "large_string": "x" * 100_000
 }
 problematic_data["circular"] = problematic_data
 
