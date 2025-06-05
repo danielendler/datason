@@ -570,12 +570,12 @@ else:
     result = legacy_serialize(data)
 ```
 
-## 🔗 Related Resources
+## 🔗 Related Features
 
-- **[Pickle Bridge](../pickle-bridge/index.md)** - Migrate legacy pickle files
-- **[Configuration](../configuration/index.md)** - Match your current behavior
-- **[Performance](../performance/index.md)** - Optimize after migration
-- **[Security](../../SECURITY.md)** - Security improvements over pickle
+- **[Pickle Bridge](../pickle-bridge/index.md)** - Direct pickle conversion utilities
+- **[Configuration](../configuration/index.md)** - Migration-specific settings
+- **[Security](../../community/security.md)** - Security improvements over pickle
+- **[Core Serialization](../core/index.md)** - Understanding the new format
 
 ## 🚀 Next Steps
 
