@@ -4,9 +4,11 @@ This module provides functions to convert JSON-compatible data back to appropria
 Python objects, including datetime parsing, UUID reconstruction, and pandas types.
 """
 
+import decimal
 import uuid
 import warnings
 from datetime import datetime
+from decimal import Decimal
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set
 
 # Import configuration and security constants
@@ -129,24 +131,28 @@ def deserialize(obj: Any, parse_dates: bool = True, parse_uuids: bool = True) ->
 
     # Handle strings - attempt intelligent parsing
     if isinstance(obj, str):
+        # Try to parse as UUID first (more specific pattern)
+        if parse_uuids and _looks_like_uuid(obj):
+            try:
+                import uuid as uuid_module  # Fresh import to avoid state issues
+
+                return uuid_module.UUID(obj)
+            except (ValueError, ImportError):
+                # Log parsing failure but continue with string
+                warnings.warn(f"Failed to parse UUID string: {obj}", stacklevel=2)
+
         # Try to parse as datetime if enabled
         if parse_dates and _looks_like_datetime(obj):
             try:
-                return datetime.fromisoformat(obj.replace("Z", "+00:00"))
-            except ValueError:
+                from datetime import datetime as datetime_class  # Fresh import
+
+                return datetime_class.fromisoformat(obj.replace("Z", "+00:00"))
+            except (ValueError, ImportError):
                 # Log parsing failure but continue with string
                 warnings.warn(
                     f"Failed to parse datetime string: {obj[:50]}{'...' if len(obj) > 50 else ''}",
                     stacklevel=2,
                 )
-
-        # Try to parse as UUID if enabled
-        if parse_uuids and _looks_like_uuid(obj):
-            try:
-                return uuid.UUID(obj)
-            except ValueError:
-                # Log parsing failure but continue with string
-                warnings.warn(f"Failed to parse UUID string: {obj}", stacklevel=2)
 
         # Return as string if no parsing succeeded
         return obj
@@ -281,8 +287,6 @@ def _deserialize_with_type_metadata(obj: Dict[str, Any]) -> Any:
 
             # Decimal reconstruction
             elif type_name == "decimal.Decimal":
-                from decimal import Decimal
-
                 return Decimal(str(value))
 
             # Path reconstruction
@@ -518,8 +522,6 @@ def _deserialize_with_type_metadata(obj: Dict[str, Any]) -> Any:
         try:
             # Enhanced Decimal legacy format with precision preservation
             if type_name == "decimal":
-                from decimal import Decimal
-
                 if "value" in obj:
                     return Decimal(obj["value"])
                 elif "precision" in obj and "scale" in obj:
@@ -637,17 +639,22 @@ def _deserialize_with_type_metadata(obj: Dict[str, Any]) -> Any:
 
 def _auto_detect_string_type(s: str, aggressive: bool = False) -> Any:
     """NEW: Auto-detect the most likely type for a string value."""
-    # Always try datetime and UUID detection
-    if _looks_like_datetime(s):
-        try:
-            return datetime.fromisoformat(s.replace("Z", "+00:00"))
-        except ValueError:
-            pass
-
+    # Always try UUID detection first (more specific pattern)
     if _looks_like_uuid(s):
         try:
-            return uuid.UUID(s)
-        except ValueError:
+            import uuid as uuid_module  # Fresh import to avoid state issues
+
+            return uuid_module.UUID(s)
+        except (ValueError, ImportError):
+            pass
+
+    # Then try datetime detection
+    if _looks_like_datetime(s):
+        try:
+            from datetime import datetime as datetime_class  # Fresh import
+
+            return datetime_class.fromisoformat(s.replace("Z", "+00:00"))
+        except (ValueError, ImportError):
             pass
 
     if not aggressive:
@@ -790,14 +797,18 @@ def _looks_like_datetime(s: str) -> bool:
     if not isinstance(s, str) or len(s) < 10:
         return False
 
+    # First check if it looks like a UUID - if so, it's not a datetime
+    if _looks_like_uuid(s):
+        return False
+
     # Check for ISO format patterns
     patterns = [
-        # Basic ISO patterns
+        # Basic ISO patterns - must have time component
         s.count("-") >= 2 and ("T" in s or " " in s),
-        # Common datetime patterns
+        # Common datetime patterns - must have time (colons)
         s.count(":") >= 1 and s.count("-") >= 2,
-        # Z or timezone offset
-        s.endswith("Z") or s.count("+") == 1 or s.count("-") >= 3,
+        # Z or timezone offset - but only if it also has time indicators
+        (s.endswith("Z") or s.count("+") == 1) and (":" in s or "T" in s),
     ]
 
     return any(patterns)
@@ -1159,9 +1170,18 @@ class TemplateDeserializer:
         try:
             if template_type in (int, float, str, bool):
                 return template_type(obj)
+            elif template_type is Decimal:
+                # Handle Decimal conversion explicitly
+                if isinstance(obj, str):
+                    return Decimal(obj)
+                elif isinstance(obj, (int, float)):
+                    return Decimal(str(obj))
+                else:
+                    return Decimal(str(obj))
             else:
                 return obj  # Cannot coerce, return as-is
-        except (ValueError, TypeError):
+        except (ValueError, TypeError, decimal.InvalidOperation):
+            # If coercion fails, return the original object
             return obj
 
 
@@ -1493,10 +1513,10 @@ def _process_dict_optimized(obj: dict, config: Optional["SerializationConfig"], 
         # Auto-detect Decimal from string representation (common pattern)
         if len(obj) == 1 and "value" in obj and isinstance(obj["value"], str):
             try:
-                from decimal import Decimal
-
-                return Decimal(obj["value"])
-            except (TypeError, ValueError, ImportError):
+                # Only try to convert to Decimal if the string looks numeric
+                if _looks_like_number(obj["value"]):
+                    return Decimal(obj["value"])
+            except (TypeError, ValueError, ImportError, decimal.InvalidOperation):
                 pass  # Fall through to normal processing
 
         # Check for special formats
@@ -1558,12 +1578,14 @@ def _deserialize_string_full(s: str, config: Optional["SerializationConfig"]) ->
     # Try UUID parsing with optimized detection
     if pattern_type == "uuid" or (pattern_type is None and _looks_like_uuid_optimized(s)):
         try:
-            parsed_uuid = uuid.UUID(s)
+            import uuid as uuid_module  # Fresh import to avoid state issues
+
+            parsed_uuid = uuid_module.UUID(s)
             # Cache successful parse
             if len(_PARSED_OBJECT_CACHE) < _PARSED_CACHE_SIZE_LIMIT:
                 _PARSED_OBJECT_CACHE[f"uuid:{s}"] = parsed_uuid
             return parsed_uuid
-        except ValueError:
+        except (ValueError, ImportError):
             # Cache failure to avoid repeated parsing
             if len(_PARSED_OBJECT_CACHE) < _PARSED_CACHE_SIZE_LIMIT:
                 _PARSED_OBJECT_CACHE[f"uuid:{s}"] = None
@@ -1601,10 +1623,13 @@ def _looks_like_uuid_optimized(s: str) -> bool:
     if len(s) != 36:
         return False
 
-    # Ultra-fast check: dash positions and character sets
-    return (
-        s[8] == "-" and s[13] == "-" and s[18] == "-" and s[23] == "-" and all(c in _UUID_CHAR_SET for c in s[:8])
-    )  # Only check first segment for speed
+    # Ultra-fast check: dash positions first (cheapest check)
+    if not (s[8] == "-" and s[13] == "-" and s[18] == "-" and s[23] == "-"):
+        return False
+
+    # More thorough check: validate all hex segments
+    segments = [s[:8], s[9:13], s[14:18], s[19:23], s[24:]]
+    return all(all(c in "0123456789abcdefABCDEF" for c in segment) for segment in segments)
 
 
 def _looks_like_path_optimized(s: str) -> bool:
@@ -1703,7 +1728,24 @@ def _get_cached_parsed_object(s: str, pattern_type: str) -> Any:
     cache_key = f"{pattern_type}:{s}"
 
     if cache_key in _PARSED_OBJECT_CACHE:
-        return _PARSED_OBJECT_CACHE[cache_key]
+        cached_result = _PARSED_OBJECT_CACHE[cache_key]
+
+        # Validate cached result type - if wrong, invalidate cache
+        if cached_result is not None:
+            if (
+                pattern_type == "uuid"
+                and not isinstance(cached_result, uuid.UUID)
+                or pattern_type == "datetime"
+                and not isinstance(cached_result, datetime)
+                or pattern_type == "path"
+                and not hasattr(cached_result, "as_posix")
+            ):
+                # Cache corrupted - remove and re-parse
+                del _PARSED_OBJECT_CACHE[cache_key]
+            else:
+                return cached_result
+        else:
+            return cached_result  # None (failed parse) is valid
 
     # Only cache if we have space
     if len(_PARSED_OBJECT_CACHE) >= _PARSED_CACHE_SIZE_LIMIT:
@@ -1713,9 +1755,13 @@ def _get_cached_parsed_object(s: str, pattern_type: str) -> Any:
     parsed_obj = None
     try:
         if pattern_type == "uuid":
-            parsed_obj = uuid.UUID(s)
+            import uuid as uuid_module  # Fresh import to avoid state issues
+
+            parsed_obj = uuid_module.UUID(s)
         elif pattern_type == "datetime":
-            parsed_obj = datetime.fromisoformat(s.replace("Z", "+00:00"))
+            from datetime import datetime as datetime_class  # Fresh import
+
+            parsed_obj = datetime_class.fromisoformat(s.replace("Z", "+00:00"))
         elif pattern_type == "path":
             from pathlib import Path
 
@@ -1762,6 +1808,18 @@ def _return_list_to_pool(lst: List) -> None:
     if len(_RESULT_LIST_POOL) < _POOL_SIZE_LIMIT:
         lst.clear()
         _RESULT_LIST_POOL.append(lst)
+
+
+def _clear_deserialization_caches() -> None:
+    """Clear all internal caches used by the deserialization system.
+
+    This is useful for testing or when you want to ensure fresh state.
+    """
+    global _STRING_PATTERN_CACHE, _PARSED_OBJECT_CACHE, _RESULT_DICT_POOL, _RESULT_LIST_POOL
+    _STRING_PATTERN_CACHE.clear()
+    _PARSED_OBJECT_CACHE.clear()
+    _RESULT_DICT_POOL.clear()
+    _RESULT_LIST_POOL.clear()
 
 
 def _convert_string_keys_to_int_if_possible(data: Dict[str, Any]) -> Dict[Any, Any]:
