@@ -6,6 +6,22 @@ Complete guide to datason's deserialization capabilities, supported types, and t
 
 Datason provides sophisticated deserialization with **automatic type detection** and **optional type metadata** for perfect round-trip fidelity. This page documents all supported types and their behavior with and without type hints.
 
+## 📊 Current Round-Trip Audit Status (v0.7.0)
+
+**Overall Success Rate: 67.6% (46/68 tests passed)**
+
+### Success Rate by Category:
+- **Basic Types**: 95.0% (19/20) ✅ Excellent
+- **Complex Types**: 86.7% (13/15) ✅ Good
+- **NumPy Types**: 71.4% (10/14) ⚠️ Needs work
+- **Pandas Types**: 30.8% (4/13) ❌ Critical gaps
+- **ML Types**: 0.0% (0/6) ❌ Major work needed
+
+### Enhancement Roadmap:
+- **v0.7.5 Target**: Fix critical gaps → 85%+ success rate
+- **v0.8.0 Target**: Complete round-trip support → 95%+ success rate
+- **v0.8.5 Target**: Perfect ML integration → 99%+ success rate
+
 ## 🚀 Performance Features (v0.6.0+)
 
 ### Ultra-Fast Deserializer

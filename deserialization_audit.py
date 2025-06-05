@@ -99,6 +99,11 @@ class DeserializationAudit:
     ) -> bool:
         """Test complete round-trip: serialize → JSON → deserialize."""
         try:
+            # Clear caches to ensure clean state for each test (helps with test order dependencies)
+            from datason.deserializers import _clear_deserialization_caches
+
+            _clear_deserialization_caches()
+
             # Step 1: Serialize with datason
             serialized = datason.serialize(original_data, config=config) if config else datason.serialize(original_data)
 
@@ -135,6 +140,11 @@ class DeserializationAudit:
     def test_metadata_round_trip(self, category: str, test_name: str, original_data: Any) -> bool:
         """Test round-trip with type metadata for perfect reconstruction."""
         try:
+            # Clear caches to ensure clean state for each test (helps with test order dependencies)
+            from datason.deserializers import _clear_deserialization_caches
+
+            _clear_deserialization_caches()
+
             # Use type metadata configuration
             config = SerializationConfig(include_type_hints=True)
 
