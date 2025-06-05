@@ -8,11 +8,11 @@ Datason provides sophisticated deserialization with **automatic type detection**
 
 ## 📊 Current Round-Trip Audit Status (v0.7.0)
 
-**Overall Success Rate: 72.1% (49/68 tests passed)** ⬆️ *Recently improved from 67.6%*
+**Overall Success Rate: 75.0% (51/68 tests passed)** ⬆️ *Recently improved from 67.6%*
 
 ### Success Rate by Category:
-- **Basic Types**: 95.0% (19/20) ✅ Excellent
-- **Complex Types**: 93.3% (14/15) ✅ Great (improved from 86.7%)
+- **Basic Types**: 100% (20/20) ✅ Perfect! (improved from 95.0%)
+- **Complex Types**: 100% (15/15) ✅ Perfect! (improved from 93.3%)
 - **NumPy Types**: 71.4% (10/14) ⚠️ Needs work
 - **Pandas Types**: 30.8% (4/13) ❌ Critical gaps
 - **ML Types**: 33.3% (2/6) ⚠️ Improving (was 0.0%)
@@ -21,10 +21,11 @@ Datason provides sophisticated deserialization with **automatic type detection**
 - ✅ **UUID Cache Issue**: Fixed cache pollution causing UUID detection to fail
 - ✅ **Auto-Detection**: UUID and datetime auto-detection now working reliably
 - ✅ **PyTorch Tensors**: Fixed tensor comparison logic in audit script (+3.0%)
+- ✅ **Set/Tuple Verification**: Fixed audit logic to handle expected type conversions (+2.9%)
 - ✅ **Test Infrastructure**: Added comprehensive enhanced type support tests
 
 ### Enhancement Roadmap:
-- **v0.7.5 Target**: Fix critical gaps → 85%+ success rate (need +12.9% more)
+- **v0.7.5 Target**: Fix critical gaps → 85%+ success rate (need +10% more)
 - **v0.8.0 Target**: Complete round-trip support → 95%+ success rate
 - **v0.8.5 Target**: Perfect ML integration → 99%+ success rate
 
