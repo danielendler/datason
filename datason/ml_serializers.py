@@ -35,6 +35,8 @@ def _lazy_import_torch():
         patched_value = current_module.__dict__["torch"]
         if patched_value is None:
             return None
+        _LAZY_IMPORTS["torch"] = patched_value
+        return patched_value
 
     if _LAZY_IMPORTS["torch"] is None:
         try:
@@ -56,6 +58,8 @@ def _lazy_import_tensorflow():
         patched_value = current_module.__dict__["tf"]
         if patched_value is None:
             return None
+        _LAZY_IMPORTS["tensorflow"] = patched_value
+        return patched_value
 
     if _LAZY_IMPORTS["tensorflow"] is None:
         try:
@@ -77,6 +81,12 @@ def _lazy_import_jax():
         patched_value = current_module.__dict__["jax"]
         if patched_value is None:
             return None, None
+        _LAZY_IMPORTS["jax"] = patched_value
+        _LAZY_IMPORTS["jnp"] = getattr(patched_value, "numpy", None)
+        return (
+            _LAZY_IMPORTS["jax"],
+            _LAZY_IMPORTS["jnp"],
+        )
 
     if _LAZY_IMPORTS["jax"] is None or _LAZY_IMPORTS["jnp"] is None:
         try:
@@ -101,10 +111,16 @@ def _lazy_import_sklearn():
 
     current_module = sys.modules.get(__name__)
     if current_module and hasattr(current_module, "__dict__"):
-        if "sklearn" in current_module.__dict__ and current_module.__dict__["sklearn"] is None:
-            return None, None
-        if "BaseEstimator" in current_module.__dict__ and current_module.__dict__["BaseEstimator"] is None:
-            return None, None
+        if "sklearn" in current_module.__dict__:
+            patched = current_module.__dict__["sklearn"]
+            if patched is None:
+                return None, None
+            _LAZY_IMPORTS["sklearn"] = patched
+        if "BaseEstimator" in current_module.__dict__:
+            patched_base = current_module.__dict__["BaseEstimator"]
+            if patched_base is None:
+                return None, None
+            _LAZY_IMPORTS["BaseEstimator"] = patched_base
 
     if _LAZY_IMPORTS["sklearn"] is None or _LAZY_IMPORTS["BaseEstimator"] is None:
         try:
@@ -118,7 +134,7 @@ def _lazy_import_sklearn():
             _LAZY_IMPORTS["BaseEstimator"] = False
     return (
         _LAZY_IMPORTS["sklearn"] if _LAZY_IMPORTS["sklearn"] is not False else None,
-        _LAZY_IMPORTS["BaseEstimator"] if _LAZY_IMPORTS["BaseEstimator"] is not False else None,
+        (_LAZY_IMPORTS["BaseEstimator"] if _LAZY_IMPORTS["BaseEstimator"] is not False else None),
     )
 
 
@@ -132,6 +148,8 @@ def _lazy_import_scipy():
         patched_value = current_module.__dict__["scipy"]
         if patched_value is None:
             return None
+        _LAZY_IMPORTS["scipy"] = patched_value
+        return patched_value
 
     if _LAZY_IMPORTS["scipy"] is None:
         try:
@@ -153,6 +171,8 @@ def _lazy_import_pil():
         patched_value = current_module.__dict__["Image"]
         if patched_value is None:
             return None
+        _LAZY_IMPORTS["PIL_Image"] = patched_value
+        return patched_value
 
     if _LAZY_IMPORTS["PIL_Image"] is None:
         try:
@@ -174,6 +194,8 @@ def _lazy_import_transformers():
         patched_value = current_module.__dict__["transformers"]
         if patched_value is None:
             return None
+        _LAZY_IMPORTS["transformers"] = patched_value
+        return patched_value
 
     if _LAZY_IMPORTS["transformers"] is None:
         try:
@@ -207,7 +229,7 @@ def serialize_pytorch_tensor(tensor: Any) -> Dict[str, Any]:
         "_dtype": str(cpu_tensor.dtype),
         "_data": cpu_tensor.numpy().tolist(),
         "_device": str(tensor.device),
-        "_requires_grad": tensor.requires_grad if hasattr(tensor, "requires_grad") else False,
+        "_requires_grad": (tensor.requires_grad if hasattr(tensor, "requires_grad") else False),
     }
 
 
@@ -425,7 +447,7 @@ def detect_and_serialize_ml_object(obj: Any) -> Optional[Dict[str, Any]]:
 
     # Scikit-learn models
     sklearn, BaseEstimator = _lazy_import_sklearn()
-    if sklearn is not None and BaseEstimator is not None and isinstance(obj, BaseEstimator):
+    if sklearn is not None and isinstance(BaseEstimator, type) and isinstance(obj, BaseEstimator):
         return serialize_sklearn_model(obj)
 
     # Scipy sparse matrices

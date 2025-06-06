@@ -435,10 +435,11 @@ class TestTemplateRoundTripIntegration:
         # Deserialize with template
         result = deserialize_with_template(serialized, template)
 
-        # Should perfectly reconstruct types
+        # Should perfectly reconstruct types and values
         assert isinstance(result["timestamp"], datetime)
         assert isinstance(result["uuid"], uuid.UUID)
-        assert isinstance(result["decimal_value"], dict)  # Decimal metadata
+        assert isinstance(result["decimal_value"], Decimal)  # Decimal reconstructed perfectly
+        assert result["decimal_value"] == original_data["decimal_value"]  # Value preserved
         assert result["data"] == [1, 2, 3]
 
     @pytest.mark.pandas

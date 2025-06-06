@@ -31,7 +31,7 @@ redacted = engine.process_object(sensitive_data)
 print(redacted)
 # {
 #     "customer_email": "<REDACTED>",
-#     "credit_card": "<REDACTED>", 
+#     "credit_card": "<REDACTED>",
 #     "password": "<REDACTED>",
 #     "data": [1, 2, 3, 4, 5]
 # }
@@ -49,11 +49,11 @@ datason provides three pre-configured redaction engines for common use cases:
     # Basic privacy protection
     engine = ds.create_minimal_redaction_engine()
     ```
-    
+
     **Protects:**
     - Passwords, secrets, keys, tokens
     - Email addresses
-    
+
     **Use Cases:**
     - Development environments
     - Basic privacy requirements
@@ -65,7 +65,7 @@ datason provides three pre-configured redaction engines for common use cases:
     # Financial industry compliance
     engine = ds.create_financial_redaction_engine()
     ```
-    
+
     **Protects:**
     - Credit card numbers
     - Social Security Numbers (SSN)
@@ -74,12 +74,12 @@ datason provides three pre-configured redaction engines for common use cases:
     - Routing numbers
     - CVV codes
     - PINs
-    
+
     **Features:**
     - Audit trail enabled
     - Redaction summary
     - Large object detection (5MB threshold)
-    
+
     **Use Cases:**
     - Banking applications
     - Payment processing
@@ -91,19 +91,19 @@ datason provides three pre-configured redaction engines for common use cases:
     # Healthcare compliance (HIPAA)
     engine = ds.create_healthcare_redaction_engine()
     ```
-    
+
     **Protects:**
     - Patient IDs
     - Medical record numbers
     - Personal information (names, addresses, phone)
     - Dates of birth
     - Diagnosis information
-    
+
     **Features:**
     - Full audit trail
     - Redaction summary
     - Large object protection
-    
+
     **Use Cases:**
     - Medical research
     - Healthcare analytics
@@ -126,21 +126,21 @@ engine = RedactionEngine(
         "*.ssn",                # Social Security Numbers
         "config.api_key",       # Specific field path
     ],
-    
+
     # Regex patterns for content redaction
     redact_patterns=[
         r"\b\d{4}[-\s]?\d{4}[-\s]?\d{4}[-\s]?\d{4}\b",  # Credit cards
         r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b",  # Emails
         r"\b\d{3}-\d{2}-\d{4}\b",  # US SSN format
     ],
-    
+
     # Large object redaction
     redact_large_objects=True,
     large_object_threshold=1024 * 1024,  # 1MB
-    
+
     # Customization
     redaction_replacement="[CONFIDENTIAL]",
-    
+
     # Compliance features
     include_redaction_summary=True,
     audit_trail=True,
@@ -170,16 +170,16 @@ Automatically detect sensitive content using regex patterns:
 patterns = [
     # Credit card numbers (various formats)
     r"\b\d{4}[-\s]?\d{4}[-\s]?\d{4}[-\s]?\d{4}\b",
-    
+
     # US Social Security Numbers
     r"\b\d{3}-\d{2}-\d{4}\b",
-    
+
     # Email addresses
     r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b",
-    
+
     # Phone numbers (US format)
     r"\b(?:\+?1[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}\b",
-    
+
     # IPv4 addresses
     r"\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b",
 ]
@@ -298,7 +298,7 @@ class CompanyRedactionEngine(RedactionEngine):
         super().__init__(
             redact_fields=[
                 "*.employee_id",
-                "*.salary", 
+                "*.salary",
                 "*.performance_rating",
                 "hr.*.personal_info",
                 "finance.*.budget",

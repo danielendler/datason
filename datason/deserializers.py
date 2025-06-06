@@ -9,16 +9,18 @@ import uuid
 import warnings
 from datetime import datetime
 from decimal import Decimal
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set
 
 # Import configuration and security constants
 try:
-    from .config import SerializationConfig, get_default_config
+    from .config import CacheScope, SerializationConfig, get_default_config
 
     _config_available = True
 except ImportError:
     _config_available = False
     SerializationConfig = None
+    CacheScope = None
 
     def get_default_config():
         return None
@@ -34,22 +36,30 @@ except ImportError:
     MAX_STRING_LENGTH = 1_000_000
 
 
-# OPTIMIZATION: Module-level caches for ultra-fast deserialization (mirroring core.py patterns)
+# OPTIMIZATION: Configurable scoped caches for ultra-fast deserialization
+# Using the new cache management system with configurable scopes
+try:
+    from .cache_manager import clear_caches as clear_scoped_caches
+    from .cache_manager import (
+        dict_pool,
+        list_pool,
+    )
+
+    _cache_manager_available = True
+except ImportError:
+    _cache_manager_available = False
+
+# Always define fallback caches for compatibility
 _DESERIALIZATION_TYPE_CACHE: Dict[str, str] = {}  # Maps string patterns to detected types
-_TYPE_CACHE_SIZE_LIMIT = 1000  # Prevent memory growth
-
-# OPTIMIZATION: String pattern caches for repeated type detection
 _STRING_PATTERN_CACHE: Dict[int, str] = {}  # Maps string id to detected pattern type
-_STRING_CACHE_SIZE_LIMIT = 500  # Smaller cache for strings
-
-# OPTIMIZATION: Common parsed objects cache for frequently used values
 _PARSED_OBJECT_CACHE: Dict[str, Any] = {}  # Maps string to parsed object
-_PARSED_CACHE_SIZE_LIMIT = 200  # Cache for common UUIDs/datetimes
-
-# OPTIMIZATION: Memory allocation optimization - Phase 1 Step 1.4 (mirroring core.py)
-# Pre-allocated result containers for reuse
 _RESULT_DICT_POOL: List[Dict] = []
 _RESULT_LIST_POOL: List[List] = []
+
+# Legacy cache size limits (used when cache manager not available)
+_TYPE_CACHE_SIZE_LIMIT = 1000  # Prevent memory growth
+_STRING_CACHE_SIZE_LIMIT = 500  # Smaller cache for strings
+_PARSED_CACHE_SIZE_LIMIT = 200  # Cache for common UUIDs/datetimes
 _POOL_SIZE_LIMIT = 20  # Limit pool size to prevent memory bloat
 
 # OPTIMIZATION: Function call overhead reduction - Phase 1 Step 1.5 (mirroring core.py)
@@ -1041,6 +1051,39 @@ class TemplateDeserializer:
         elif isinstance(template, uuid.UUID) and isinstance(obj, str):
             return self._deserialize_uuid_with_template(obj, template)
 
+        # NEW: NumPy array support
+        elif np is not None and isinstance(template, np.ndarray) and isinstance(obj, list):
+            return self._deserialize_numpy_with_template(obj, template)
+
+        # NEW: NumPy scalar support
+        elif (
+            np is not None
+            and hasattr(template, "__class__")
+            and hasattr(template.__class__, "__module__")
+            and template.__class__.__module__ == "numpy"
+        ):
+            return self._deserialize_numpy_scalar_with_template(obj, template)
+
+        # NEW: Complex number support
+        elif isinstance(template, complex):
+            return self._deserialize_complex_with_template(obj, template)
+
+        # NEW: PyTorch tensor support
+        elif hasattr(template, "__module__") and template.__module__ and "torch" in template.__module__:
+            return self._deserialize_torch_with_template(obj, template)
+
+        # NEW: Sklearn model support
+        elif hasattr(template, "get_params") and hasattr(template, "__module__") and "sklearn" in template.__module__:
+            return self._deserialize_sklearn_with_template(obj, template)
+
+        # NEW: Path support
+        elif isinstance(template, Path) and isinstance(obj, str):
+            return self._deserialize_path_with_template(obj, template)
+
+        # NEW: Decimal support
+        elif isinstance(template, Decimal):
+            return self._deserialize_decimal_with_template(obj, template)
+
         else:
             # For basic types or unsupported combinations, apply type coercion
             return self._coerce_to_template_type(obj, template)
@@ -1158,6 +1201,189 @@ class TemplateDeserializer:
     def _deserialize_uuid_with_template(self, obj: str, template: uuid.UUID) -> uuid.UUID:
         """Deserialize UUID string using template."""
         return uuid.UUID(obj)
+
+    def _deserialize_numpy_with_template(self, obj: List[Any], template: "np.ndarray") -> "np.ndarray":
+        """Deserialize list to NumPy array using template."""
+        if np is None:
+            raise ImportError("numpy is required for NumPy template deserialization")
+
+        try:
+            # Create array from list
+            result = np.array(obj)
+
+            # Apply template dtype if possible
+            if hasattr(template, "dtype"):
+                try:
+                    result = result.astype(template.dtype)
+                except (ValueError, TypeError, AttributeError):
+                    # If dtype conversion fails due to incompatible types, keep original
+                    pass  # nosec B110 - intentional fallback for dtype conversion
+
+            # Apply template shape if possible
+            if hasattr(template, "shape") and result.size == template.size:
+                try:
+                    result = result.reshape(template.shape)
+                except (ValueError, AttributeError):
+                    # If reshape fails due to incompatible shapes, keep original shape
+                    pass  # nosec B110 - intentional fallback for reshape
+
+            return result
+        except Exception as e:
+            warnings.warn(f"Failed to convert to NumPy array: {e}", stacklevel=3)
+            return obj
+
+    def _deserialize_numpy_scalar_with_template(self, obj: Any, template: Any) -> Any:
+        """Deserialize basic Python type to NumPy scalar using template."""
+        if np is None:
+            return obj
+
+        try:
+            # Get the template type
+            template_type = type(template)
+
+            # Convert basic Python type to NumPy scalar
+            if isinstance(obj, (int, float, bool)):
+                return template_type(obj)
+            elif isinstance(obj, str):
+                # Try to parse string to appropriate type
+                return template_type(obj)
+            else:
+                # For other types, try direct conversion
+                return template_type(obj)
+
+        except Exception as e:
+            warnings.warn(f"Failed to convert to NumPy scalar type {type(template)}: {e}", stacklevel=3)
+            return obj
+
+    def _deserialize_complex_with_template(self, obj: Any, template: complex) -> complex:
+        """Deserialize complex number using template."""
+        if isinstance(obj, dict):
+            # Handle dict format: {'_type': 'complex', 'real': 1.0, 'imag': 2.0}
+            if obj.get("_type") == "complex" and "real" in obj and "imag" in obj or "real" in obj and "imag" in obj:
+                return complex(obj["real"], obj["imag"])
+        elif isinstance(obj, (int, float)):
+            return complex(obj)
+        elif isinstance(obj, str):
+            try:
+                return complex(obj)
+            except ValueError:
+                pass
+
+        # If all else fails, return the original object
+        return obj
+
+    def _deserialize_torch_with_template(self, obj: Any, template: Any) -> Any:
+        """Deserialize PyTorch tensor using template."""
+        if isinstance(obj, dict) and obj.get("_type") in ("torch.tensor", "torch.Tensor"):
+            try:
+                import torch
+
+                # Handle tensor dict format with _data field
+                if "_data" in obj:
+                    data = obj["_data"]
+                    dtype_str = obj.get("_dtype")
+                    device = obj.get("_device", "cpu")
+
+                    # Create tensor
+                    tensor = torch.tensor(data, device=device)
+
+                    # Apply dtype if specified
+                    if dtype_str and hasattr(torch, dtype_str.replace("torch.", "")):
+                        try:
+                            torch_dtype = getattr(torch, dtype_str.replace("torch.", ""))
+                            tensor = tensor.to(torch_dtype)
+                        except (AttributeError, RuntimeError, TypeError):
+                            # If dtype conversion fails, keep original dtype
+                            pass  # nosec B110 - intentional fallback for torch dtype conversion
+
+                    return tensor
+
+                # Handle tensor dict format with data field
+                elif "data" in obj:
+                    data = obj["data"]
+                    dtype = obj.get("dtype")
+                    device = obj.get("device", "cpu")
+
+                    # Create tensor
+                    tensor = torch.tensor(data, device=device)
+
+                    # Apply dtype if specified
+                    if dtype:
+                        try:
+                            tensor = tensor.to(getattr(torch, dtype))
+                        except (AttributeError, RuntimeError, TypeError):
+                            # If dtype conversion fails, keep original dtype
+                            pass  # nosec B110 - intentional fallback for torch dtype conversion
+
+                    return tensor
+
+            except Exception as e:
+                warnings.warn(f"Failed to reconstruct PyTorch tensor: {e}", stacklevel=3)
+        elif isinstance(obj, list):
+            # Simple list → tensor conversion
+            try:
+                import torch
+
+                return torch.tensor(obj)
+            except Exception as e:
+                warnings.warn(f"Failed to convert list to PyTorch tensor: {e}", stacklevel=3)
+
+        return obj
+
+    def _deserialize_sklearn_with_template(self, obj: Any, template: Any) -> Any:
+        """Deserialize sklearn model using template."""
+        if isinstance(obj, dict) and "_type" in obj and "_class" in obj and "_params" in obj:
+            try:
+                # Import the sklearn class dynamically
+                class_name = obj["_class"]
+                module_path, class_name_only = class_name.rsplit(".", 1)
+
+                import importlib
+
+                module = importlib.import_module(module_path)
+                model_class = getattr(module, class_name_only)
+
+                # Create the model with the saved parameters
+                reconstructed = model_class(**obj["_params"])
+
+                # Verify it's the same type as template
+                if type(reconstructed) is type(template):
+                    return reconstructed
+
+            except Exception as e:
+                warnings.warn(f"Failed to reconstruct sklearn model: {e}", stacklevel=3)
+
+        # If reconstruction fails, return the original object
+        return obj
+
+    def _deserialize_path_with_template(self, obj: str, template: Path) -> Path:
+        """Deserialize Path using template."""
+        try:
+            return Path(obj)
+        except Exception as e:
+            warnings.warn(f"Failed to convert to Path: {e}", stacklevel=3)
+            return obj
+
+    def _deserialize_decimal_with_template(self, obj: Any, template: Decimal) -> Decimal:
+        """Deserialize Decimal using template."""
+        if isinstance(obj, dict) and obj.get("_type") == "decimal" and "value" in obj:
+            # Handle dict format: {'_type': 'decimal', 'value': '123.456'}
+            try:
+                return Decimal(obj["value"])
+            except (ValueError, TypeError, decimal.InvalidOperation):
+                # If decimal conversion fails, continue to fallback conversion
+                pass  # nosec B110 - intentional fallback for decimal conversion
+
+        try:
+            # Try direct conversion
+            if isinstance(obj, str):
+                return Decimal(obj)
+            elif isinstance(obj, (int, float)):
+                return Decimal(str(obj))
+        except Exception as e:
+            warnings.warn(f"Failed to convert to Decimal: {e}", stacklevel=3)
+
+        return obj
 
     def _coerce_to_template_type(self, obj: Any, template: Any) -> Any:
         """Coerce object to match template type."""
@@ -1463,8 +1689,8 @@ def deserialize_fast(
     return obj
 
 
-def _process_list_optimized(obj: list, config: Optional["SerializationConfig"], _depth: int, _seen: Set[int]) -> list:
-    """Optimized list processing with circular reference protection."""
+def _process_list_optimized(obj: list, config: Optional["SerializationConfig"], _depth: int, _seen: Set[int]) -> Any:
+    """Optimized list processing with circular reference protection and smart type detection."""
     # SECURITY: Check for circular references
     obj_id = id(obj)
     if obj_id in _seen:
@@ -1482,6 +1708,21 @@ def _process_list_optimized(obj: list, config: Optional["SerializationConfig"], 
 
             # Create final result and return list to pool
             final_result = list(result)
+
+            # METADATA-FIRST: Only do auto-detection if explicitly enabled
+            auto_detect = (config and getattr(config, "auto_detect_types", False)) or False
+
+            if auto_detect:
+                # Try NumPy array auto-detection
+                numpy_array = _try_numpy_array_detection(final_result)
+                if numpy_array is not None:
+                    return numpy_array
+
+                # Try pandas DataFrame auto-detection (list of records pattern)
+                dataframe = _try_dataframe_detection(final_result)
+                if dataframe is not None:
+                    return dataframe
+
             return final_result
         finally:
             _return_list_to_pool(result)
@@ -1519,7 +1760,34 @@ def _process_dict_optimized(obj: dict, config: Optional["SerializationConfig"], 
             except (TypeError, ValueError, ImportError, decimal.InvalidOperation):
                 pass  # Fall through to normal processing
 
-        # Check for special formats
+        # METADATA-FIRST: Only do auto-detection if explicitly enabled
+        # This avoids false positives in general usage while allowing opt-in
+        auto_detect = (config and getattr(config, "auto_detect_types", False)) or False
+
+        if auto_detect:
+            # Try pandas DataFrame detection (split format)
+            if pd is not None and _looks_like_split_format(obj):
+                try:
+                    return _reconstruct_from_split(obj)
+                except (KeyError, ValueError, TypeError, ImportError):
+                    # If pandas reconstruction fails, continue with normal processing
+                    pass  # nosec B110 - intentional fallback for pandas reconstruction
+
+            # Try pandas DataFrame detection (column-oriented dict)
+            if pd is not None and _looks_like_dataframe_dict(obj):
+                try:
+                    return _reconstruct_dataframe(obj)
+                except (KeyError, ValueError, TypeError, ImportError):
+                    # If pandas reconstruction fails, continue with normal processing
+                    pass  # nosec B110 - intentional fallback for pandas reconstruction
+
+            # Try pandas Series detection (index-oriented dict)
+            if pd is not None:
+                series = _try_series_detection(obj)
+                if series is not None:
+                    return series
+
+        # Check for special formats (legacy - keep for compatibility)
         if _looks_like_split_format(obj):
             return _reconstruct_from_split(obj)
         if _looks_like_dataframe_dict(obj):
@@ -1780,34 +2048,60 @@ def _get_cached_parsed_object(s: str, pattern_type: str) -> Any:
 
 def _get_pooled_dict() -> Dict:
     """Get a dictionary from the pool or create new one."""
-    if _RESULT_DICT_POOL:
-        result = _RESULT_DICT_POOL.pop()
-        result.clear()  # Ensure it's clean
-        return result
-    return {}
+    if _cache_manager_available:
+        try:
+            return dict_pool.get()
+        except Exception:
+            return {}
+    else:
+        if _RESULT_DICT_POOL:
+            result = _RESULT_DICT_POOL.pop()
+            result.clear()  # Ensure it's clean
+            return result
+        return {}
 
 
 def _return_dict_to_pool(d: Dict) -> None:
     """Return a dictionary to the pool for reuse."""
-    if len(_RESULT_DICT_POOL) < _POOL_SIZE_LIMIT:
-        d.clear()
-        _RESULT_DICT_POOL.append(d)
+    if _cache_manager_available:
+        try:
+            dict_pool.return_to_pool(d)
+        except (AttributeError, RuntimeError, TypeError):
+            # If pool return fails due to pool state issues, just skip pooling
+            pass  # nosec B110 - intentional fallback for object pool operations
+    else:
+        if len(_RESULT_DICT_POOL) < _POOL_SIZE_LIMIT:
+            d.clear()
+            _RESULT_DICT_POOL.append(d)
 
 
 def _get_pooled_list() -> List:
     """Get a list from the pool or create new one."""
-    if _RESULT_LIST_POOL:
-        result = _RESULT_LIST_POOL.pop()
-        result.clear()  # Ensure it's clean
-        return result
-    return []
+    if _cache_manager_available:
+        try:
+            return list_pool.get()
+        except Exception:
+            return []
+    else:
+        if _RESULT_LIST_POOL:
+            result = _RESULT_LIST_POOL.pop()
+            result.clear()  # Ensure it's clean
+            return result
+        return []
 
 
 def _return_list_to_pool(lst: List) -> None:
     """Return a list to the pool for reuse."""
-    if len(_RESULT_LIST_POOL) < _POOL_SIZE_LIMIT:
-        lst.clear()
-        _RESULT_LIST_POOL.append(lst)
+    if _cache_manager_available:
+        try:
+            list_pool.return_to_pool(lst)
+        except (AttributeError, RuntimeError, TypeError):
+            # If pool return fails due to pool state issues, just skip pooling
+            pass  # nosec B110 - intentional fallback for object pool operations
+    else:
+        if len(_RESULT_LIST_POOL) < _POOL_SIZE_LIMIT:
+            lst.clear()
+            _RESULT_LIST_POOL.append(lst)
 
 
 def _clear_deserialization_caches() -> None:
@@ -1815,11 +2109,29 @@ def _clear_deserialization_caches() -> None:
 
     This is useful for testing or when you want to ensure fresh state.
     """
-    global _STRING_PATTERN_CACHE, _PARSED_OBJECT_CACHE, _RESULT_DICT_POOL, _RESULT_LIST_POOL
-    _STRING_PATTERN_CACHE.clear()
-    _PARSED_OBJECT_CACHE.clear()
-    _RESULT_DICT_POOL.clear()
-    _RESULT_LIST_POOL.clear()
+    if _cache_manager_available:
+        # Use the scoped cache manager
+        try:
+            clear_scoped_caches()
+        except (AttributeError, ImportError, RuntimeError):
+            # Fallback to module-level caches if scoped clearing fails
+            pass  # nosec B110 - intentional fallback for cache clearing
+    else:
+        # Use module-level caches
+        global _STRING_PATTERN_CACHE, _PARSED_OBJECT_CACHE, _RESULT_DICT_POOL, _RESULT_LIST_POOL
+        if "_STRING_PATTERN_CACHE" in globals():
+            _STRING_PATTERN_CACHE.clear()
+        if "_PARSED_OBJECT_CACHE" in globals():
+            _PARSED_OBJECT_CACHE.clear()
+        if "_RESULT_DICT_POOL" in globals():
+            _RESULT_DICT_POOL.clear()
+        if "_RESULT_LIST_POOL" in globals():
+            _RESULT_LIST_POOL.clear()
+
+
+def clear_caches() -> None:
+    """Clear all caches - new name for _clear_deserialization_caches."""
+    _clear_deserialization_caches()
 
 
 def _convert_string_keys_to_int_if_possible(data: Dict[str, Any]) -> Dict[Any, Any]:
@@ -1851,3 +2163,225 @@ def _convert_string_keys_to_int_if_possible(data: Dict[str, Any]) -> Dict[Any, A
             converted_data[key] = value
 
     return converted_data
+
+
+def _try_numpy_array_detection(data: list) -> Optional[Any]:
+    """Attempt to auto-detect NumPy arrays from list data.
+
+    Returns numpy array if detection succeeds, None otherwise.
+    Uses conservative heuristics to avoid false positives.
+    """
+    try:
+        import numpy as np
+    except ImportError:
+        return None
+
+    if not data:  # Empty list
+        try:
+            return np.array(data)
+        except Exception:
+            return None
+
+    # Conservative detection: only convert if the data looks like a homogeneous numeric array
+    if _looks_like_numpy_array(data):
+        try:
+            return np.array(data)
+        except Exception:
+            # If numpy conversion fails, return None to fall back to list
+            return None
+
+    return None
+
+
+def _looks_like_numpy_array(data: list) -> bool:
+    """Check if a list looks like it should be a NumPy array.
+
+    Uses balanced heuristics targeting known serialization patterns.
+    Focuses on cases where we can be confident about the intent.
+    """
+    if not data:
+        return False  # Empty lists stay as Python lists
+
+    # Check for types that definitely shouldn't be arrays
+    if any(isinstance(item, (dict, tuple)) for item in data):
+        return False
+
+    # Handle numpy arrays that were already converted (during deserialization)
+    try:
+        import numpy as np
+
+        if any(isinstance(item, np.ndarray) for item in data):
+            if all(isinstance(item, (np.ndarray, list)) for item in data):
+                # Check if all arrays/lists have the same shape
+                shapes = []
+                for item in data:
+                    if isinstance(item, np.ndarray):
+                        shapes.append(item.shape)
+                    elif isinstance(item, list):
+                        shapes.append((len(item),))
+                return len(set(shapes)) == 1
+            return False
+    except ImportError:
+        pass
+
+    # Multi-dimensional arrays: convert if clearly rectangular and numeric
+    if all(isinstance(item, list) for item in data):
+        if (
+            len(data) >= 2  # At least 2 rows
+            and len({len(sublist) for sublist in data}) == 1  # Same length
+            and len(data[0]) >= 2
+        ):  # At least 2 columns
+            # Check if all elements are numeric
+            all_numeric = True
+            for row in data:
+                if not all(isinstance(item, (int, float, bool)) for item in row):
+                    all_numeric = False
+                    break
+
+            if all_numeric:
+                return True
+
+    # 1D arrays: Smart detection for specific patterns
+    # Target known NumPy serialization patterns while avoiding common Python lists
+    elif _is_homogeneous_basic_types(data):
+        first_type = type(data[0])
+
+        # Pattern 1: Larger homogeneous numeric arrays (likely from NumPy)
+        if first_type in (int, float) and len(data) >= 8 or first_type is bool and len(data) >= 4:
+            return True
+
+        # Pattern 3: String arrays with consistent length strings (NumPy pattern)
+        elif first_type is str and len(data) >= 6:
+            # Check if strings have consistent length (NumPy string array pattern)
+            str_lens = [len(s) for s in data]
+            if len(set(str_lens)) == 1 and str_lens[0] <= 10:  # Fixed-width strings
+                return True
+
+    return False
+
+
+def _is_homogeneous_basic_types(data: list) -> bool:
+    """Check if a list contains homogeneous basic types suitable for NumPy arrays."""
+    if not data:
+        return True
+
+    first_type = type(data[0])
+    if first_type in (int, float, bool, str, type(None)):
+        # Allow mixed int/float (common pattern), but require same type for strings
+        if first_type is str:
+            return all(isinstance(item, str) for item in data)
+        else:
+            # For numeric types, allow mixing int/float
+            return all(isinstance(item, (int, float, bool, type(None))) for item in data)
+
+    return False
+
+
+def _try_dataframe_detection(data: list) -> Optional[Any]:
+    """Attempt to auto-detect pandas DataFrames from various serialization formats.
+
+    Returns DataFrame if detection succeeds, None otherwise.
+    Handles multiple pandas serialization formats:
+    - Records: [{"col1": val1, "col2": val2}, ...]
+    - Values: [[val1, val2], [val3, val4], ...] (with consistent structure)
+    """
+    try:
+        import pandas as pd
+    except ImportError:
+        return None
+
+    if not data:
+        return None
+
+    # Pattern 1: List of records - [{"col1": val1, "col2": val2}, ...]
+    if all(isinstance(item, dict) for item in data):
+        # Check if all records have the same keys (consistent schema)
+        first_keys = set(data[0].keys()) if data else set()
+        if all(set(record.keys()) == first_keys for record in data):
+            try:
+                return pd.DataFrame(data)
+            except Exception:
+                return None
+
+    # Pattern 2: List of lists (values format) - [[val1, val2], [val3, val4], ...]
+    # Only convert if it looks like tabular data (consistent row lengths, reasonable size)
+    elif (
+        all(isinstance(item, list) for item in data)
+        and len(data) >= 2  # At least 2 rows
+        and len({len(row) for row in data}) == 1  # All rows same length
+        and len(data[0]) >= 2  # At least 2 columns
+        and len(data[0]) <= 50
+    ):  # Reasonable number of columns
+        # Additional check: avoid converting nested arrays that are likely NumPy
+        # If all elements are numbers, it's more likely a 2D NumPy array
+        all_numeric = True
+        for row in data:
+            if not all(isinstance(item, (int, float, bool)) for item in row):
+                all_numeric = False
+                break
+
+        # If it's all numeric and looks array-like, don't convert to DataFrame
+        if all_numeric and len(data) == len(data[0]):
+            # Square matrix - likely NumPy array
+            return None
+
+        try:
+            return pd.DataFrame(data)
+        except Exception:
+            return None
+
+    return None
+
+
+def _try_series_detection(data: dict) -> Optional[Any]:
+    """Attempt to auto-detect pandas Series from dict data.
+
+    Returns Series if detection succeeds, None otherwise.
+    Handles Series serialized as index-oriented dicts: {"idx1": val1, "idx2": val2, ...}
+    """
+    try:
+        import pandas as pd
+    except ImportError:
+        return None
+
+    if not data or len(data) < 2:
+        return None
+
+    # Pattern: Index-oriented dict that looks like Series data
+    # Series are often serialized as {"0": val1, "1": val2, ...} or {"idx1": val1, "idx2": val2}
+
+    # Check if all values are the same basic type (homogeneous data)
+    values = list(data.values())
+    if not values:
+        return None
+
+    # Check for homogeneous value types (common in Series)
+    first_type = type(values[0])
+    if first_type in (int, float, str, bool, type(None)):
+        # Check if most values are the same type
+        same_type_count = sum(1 for v in values if type(v) is first_type)
+        if same_type_count / len(values) >= 0.8:  # 80% same type threshold
+            # Additional heuristics to distinguish from regular dicts
+            keys = list(data.keys())
+
+            # Pattern 1: Numeric string indices (common Series pattern)
+            if all(isinstance(k, str) and k.isdigit() for k in keys):
+                try:
+                    # Convert string indices back to integers
+                    int_keys = [int(k) for k in keys]
+                    return pd.Series(values, index=int_keys)
+                except Exception:
+                    return None
+
+            # Pattern 2: Sequential integer indices
+            elif all(isinstance(k, int) for k in keys) or (
+                all(isinstance(k, str) for k in keys)
+                and len(keys) >= 3  # At least 3 items
+                and all(len(k) <= 20 for k in keys)
+            ):
+                try:
+                    return pd.Series(values, index=keys)
+                except Exception:
+                    return None
+
+    return None

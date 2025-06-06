@@ -11,6 +11,34 @@ Traditional deserialization relies on heuristics to guess data types. Template-b
 - **ML-optimized round-trip fidelity**
 - **Automatic type coercion with templates**
 
+## 🎯 **NEW in v0.5.5: Comprehensive Type Support & 4-Mode Testing**
+
+### **Enhanced Type Coverage (34 Test Cases)**
+Our template deserializer now supports **100% successful reconstruction** for:
+
+#### **Core Data Types**
+- **Basic Types**: `str`, `int`, `float`, `bool`, `list`, `dict`
+- **Complex Types**: `complex`, `decimal.Decimal`, `uuid.UUID`, `pathlib.Path`, `datetime`
+
+#### **Scientific Computing Types** 🆕
+- **NumPy Types**: `np.int32`, `np.float64`, `np.bool_`, `np.ndarray` (any shape/dtype)
+- **PyTorch Types**: `torch.Tensor` (any shape/dtype)
+- **Scikit-learn Types**: Fitted models (`LogisticRegression`, `RandomForestClassifier`, etc.)
+
+#### **4-Mode Detection Strategy Testing** 🆕
+Each type is systematically tested across all 4 detection strategies:
+
+1. **User Config/Template** (100% success target) ✅
+2. **Auto Hints** (80-90% success expected) ✅  
+3. **Heuristics Only** (best effort) ✅
+4. **Hot Path** (fast, basic) ✅
+
+### **Deterministic Behavior Guarantee**
+- **Predictable type conversion** across all modes
+- **No randomness** in type detection
+- **Consistent results** for the same input across runs
+- **Mode-specific expectations** clearly documented
+
 ## Key Features
 
 ### 1. Template-Guided Deserialization
@@ -51,7 +79,68 @@ result = deserializer.deserialize(serialized_data)
 # result['score'] is float(95.5)
 ```
 
-### 2. Automatic Template Inference
+### 2. **NEW: Scientific Computing Templates** 🆕
+
+Perfect reconstruction for NumPy, PyTorch, and scikit-learn objects:
+
+```python
+import numpy as np
+import torch
+from sklearn.linear_model import LogisticRegression
+from datason.deserializers import deserialize_with_template
+
+# NumPy template preservation
+numpy_template = np.array([1.0, 2.0, 3.0], dtype=np.float32)
+serialized = datason.serialize(numpy_template)
+reconstructed = deserialize_with_template(serialized, numpy_template)
+assert reconstructed.dtype == np.float32  # Exact dtype preserved
+assert reconstructed.shape == (3,)        # Shape preserved
+
+# PyTorch template preservation
+torch_template = torch.tensor([[1.0, 2.0], [3.0, 4.0]], dtype=torch.float64)
+serialized = datason.serialize(torch_template)
+reconstructed = deserialize_with_template(serialized, torch_template)
+assert reconstructed.dtype == torch.float64  # Exact dtype preserved
+assert reconstructed.shape == (2, 2)         # Shape preserved
+
+# Scikit-learn template preservation
+model_template = LogisticRegression(random_state=42)
+serialized = datason.serialize(model_template)
+reconstructed = deserialize_with_template(serialized, model_template)
+assert reconstructed.get_params() == model_template.get_params()  # Perfect params match
+```
+
+### 3. **NEW: 4-Mode Detection Strategy** 🆕
+
+Understand exactly how each type behaves across all detection modes:
+
+```python
+import numpy as np
+from datason.deserializers import deserialize_with_template
+from datason import deserialize, deserialize_fast
+
+# Original NumPy scalar
+original = np.int32(42)
+serialized = datason.serialize(original)
+
+# Mode 1: User Config/Template (100% success guarantee)
+template_result = deserialize_with_template(serialized, original)
+assert type(template_result) is np.int32  # Exact type preserved
+
+# Mode 2: Auto Hints (when type metadata is available)
+hints_result = deserialize(serialized)  # May preserve or convert
+# Result depends on metadata availability
+
+# Mode 3: Heuristics (best effort type detection)
+heuristics_result = deserialize(serialized)
+assert type(heuristics_result) is int  # Deterministic: np.int32 → int
+
+# Mode 4: Hot Path (fast, basic type conversion)
+hot_path_result = deserialize_fast(serialized)
+assert type(hot_path_result) is int  # Deterministic: np.int32 → int
+```
+
+### 4. Automatic Template Inference
 
 Generate templates from sample data:
 
@@ -74,7 +163,7 @@ new_data = {'name': 'Diana', 'age': '28', 'created': '2023-01-04T13:00:00'}
 result = deserializer.deserialize(new_data)
 ```
 
-### 3. ML-Optimized Templates
+### 5. ML-Optimized Templates
 
 Create templates specifically for machine learning workflows:
 
@@ -103,7 +192,7 @@ print(ml_template['structure_type'])   # 'dataframe'
 print(ml_template['dtypes'])          # Column type mapping
 ```
 
-### 4. Convenience Functions
+### 6. Convenience Functions
 
 Simple template-based deserialization:
 
@@ -136,6 +225,65 @@ data = {
     'str_field': 'hello',   # str → str
     'bool_field': 'true'    # str → bool
 }
+```
+
+### **NEW: Scientific Computing Templates** 🆕
+
+#### NumPy Templates
+```python
+import numpy as np
+
+# NumPy scalar templates
+int32_template = np.int32(0)
+float64_template = np.float64(0.0)
+bool_template = np.bool_(True)
+
+# NumPy array templates (any shape, any dtype)
+array_template = np.array([[1.0, 2.0], [3.0, 4.0]], dtype=np.float32)
+
+# Data with string representations
+data = {
+    'scalar': '42',
+    'array': [[1.5, 2.5], [3.5, 4.5]]
+}
+
+# Template-guided reconstruction preserves exact NumPy types
+result = deserialize_with_template(data, {
+    'scalar': int32_template,
+    'array': array_template
+})
+assert result['scalar'].dtype == np.int32
+assert result['array'].dtype == np.float32
+```
+
+#### PyTorch Templates
+```python
+import torch
+
+# PyTorch tensor templates
+tensor_template = torch.tensor([1.0, 2.0, 3.0], dtype=torch.float64)
+
+# Data to reconstruct
+data = {'tensor': [1.5, 2.5, 3.5]}
+
+result = deserialize_with_template(data, {'tensor': tensor_template})
+assert result['tensor'].dtype == torch.float64
+assert torch.equal(result['tensor'], torch.tensor([1.5, 2.5, 3.5], dtype=torch.float64))
+```
+
+#### Scikit-learn Templates
+```python
+from sklearn.linear_model import LogisticRegression
+
+# Model template
+model_template = LogisticRegression(random_state=42, max_iter=1000)
+
+# Serialized model data
+serialized_model = datason.serialize(model_template)
+
+# Perfect reconstruction
+reconstructed = deserialize_with_template(serialized_model, model_template)
+assert reconstructed.get_params() == model_template.get_params()
 ```
 
 ### DateTime and UUID Templates
@@ -202,13 +350,67 @@ nested_data = {
     },
     'data': [
         {'key': 'metric1', 'value': '42.5'},
-        {'key': 'metric2', 'value': '24.8'}
+        {'key': 'metric2', 'value': '38.2'}
     ]
 }
 
 result = deserialize_with_template(nested_data, template)
-# Recursive template application to nested structures
+# All nested types are correctly reconstructed
 ```
+
+## **Testing & Quality Assurance** 🧪
+
+### **Comprehensive Test Coverage**
+- **34 integration tests** covering all supported types
+- **4-mode behavior verification** for each type
+- **100% user config success rate** guaranteed
+- **Deterministic behavior** across all detection strategies
+
+### **Test Results Summary**
+```
+TEMPLATE DESERIALIZER INTEGRATION TEST COVERAGE
+============================================================
+Basic Types:       6 types (100% expected success in user config)
+Complex Types:     5 types (100% expected success in user config)
+NumPy Types:       4 types (NEW: 100% user config!)
+PyTorch Types:     1 types (NEW: 100% user config!)
+Sklearn Types:     1 types (NEW: 100% user config!)
+
+Total Coverage:    17+ types with systematic 4-mode testing
+
+🎯 USER CONFIG ACHIEVEMENT: 100% success rate verified!
+⚡ All 4 detection modes tested with realistic expectations
+🔄 Deterministic behavior verified across all modes
+============================================================
+```
+
+## **Performance Characteristics**
+
+### **Mode-Specific Performance**
+- **User Config/Template**: Highest accuracy, moderate speed
+- **Auto Hints**: Good accuracy, good speed (when metadata available)
+- **Heuristics**: Variable accuracy, good speed
+- **Hot Path**: Basic accuracy, highest speed
+
+### **Optimization Recommendations**
+- Use **templates** for critical type preservation (ML pipelines)
+- Use **auto hints** for balanced accuracy/performance
+- Use **heuristics** for general-purpose deserialization
+- Use **hot path** for maximum throughput with basic types
+
+## **Migration Guide**
+
+### **From v0.4.5 to v0.5.5**
+- **No breaking changes** - all existing template code works
+- **Enhanced type support** - NumPy/PyTorch/sklearn now fully supported
+- **Better error handling** - more descriptive error messages
+- **Improved performance** - faster template matching and type coercion
+
+### **Best Practices**
+1. **Always use templates** for ML/scientific computing objects
+2. **Test your specific use case** across all 4 modes to understand behavior
+3. **Consider caching templates** for repeated operations
+4. **Validate results** with appropriate equality checks for your data types
 
 ## Configuration Options
 

@@ -2,6 +2,8 @@
 
 This package provides intelligent serialization that handles complex data types
 with ease, perfect for ML/AI workflows and data science applications.
+
+NEW: Configurable caching system for optimized performance across different workflows.
 """
 
 # Test codecov upload after permissions and configuration fixes
@@ -56,21 +58,52 @@ from .deserializers import (
     parse_uuid_string,
     safe_deserialize,
 )
+from .deserializers import (
+    clear_caches as clear_deserialization_caches,  # noqa: F401
+)
 from .serializers import serialize_detection_details
 
 # Configuration system (new)
 try:
     from .config import (
+        CacheScope,
         DataFrameOrient,
         DateFormat,
         NanHandling,
+        OutputType,
         SerializationConfig,
         TypeCoercion,
+        cache_scope,  # noqa: F401
+        get_api_config,  # noqa: F401
+        get_batch_processing_config,  # noqa: F401
+        get_cache_scope,  # noqa: F401
+        get_default_config,  # noqa: F401
+        get_development_config,  # noqa: F401
+        get_financial_config,  # noqa: F401
+        get_inference_config,  # noqa: F401
+        get_logging_config,  # noqa: F401
+        get_ml_config,  # noqa: F401
+        get_performance_config,  # noqa: F401
+        get_realtime_config,  # noqa: F401
+        get_research_config,  # noqa: F401
+        get_strict_config,  # noqa: F401
+        get_time_series_config,  # noqa: F401
+        get_web_api_config,  # noqa: F401
+        reset_default_config,  # noqa: F401
+        set_cache_scope,  # noqa: F401
+        set_default_config,
     )
 
     _config_available = True
 except ImportError:
     _config_available = False
+    SerializationConfig = None
+    DateFormat = None
+    DataFrameOrient = None
+    OutputType = None
+    NanHandling = None
+    TypeCoercion = None
+    CacheScope = None
 
 # ML/AI serializers (optional - only available if ML libraries are installed)
 try:
@@ -96,6 +129,16 @@ except ImportError:
 
 # Always import datetime_utils module for tests
 from . import datetime_utils  # noqa: F401
+
+# Cache management functions
+from .cache_manager import (
+    clear_all_caches,  # noqa: F401
+    clear_caches,  # noqa: F401
+    get_cache_metrics,  # noqa: F401
+    operation_scope,  # noqa: F401
+    request_scope,  # noqa: F401
+    reset_cache_metrics,  # noqa: F401
+)
 
 
 def _get_version() -> str:
@@ -125,6 +168,7 @@ def _get_version() -> str:
 __version__ = "0.7.0"
 __author__ = "datason Contributors"
 __license__ = "MIT"
+__description__ = "Python serialization of complex data types for JSON with configurable caching"
 
 __all__ = [  # noqa: RUF022
     "SecurityError",
@@ -165,20 +209,6 @@ __all__ = [  # noqa: RUF022
 
 # Add configuration exports if available
 if _config_available:
-    from .config import (  # noqa: F401
-        get_api_config,
-        get_default_config,
-        get_financial_config,
-        get_inference_config,
-        get_logging_config,
-        get_ml_config,
-        get_performance_config,
-        get_research_config,
-        get_strict_config,
-        get_time_series_config,
-        reset_default_config,
-        set_default_config,
-    )
     from .type_handlers import (  # noqa: F401
         TypeHandler,
         get_object_info,
@@ -192,8 +222,10 @@ if _config_available:
             "SerializationConfig",
             "DateFormat",
             "DataFrameOrient",
+            "OutputType",
             "NanHandling",
             "TypeCoercion",
+            "CacheScope",
             # Configuration functions
             "get_default_config",
             "set_default_config",
@@ -208,6 +240,23 @@ if _config_available:
             "get_inference_config",
             "get_research_config",
             "get_logging_config",
+            # Cache-aware configurations
+            "get_batch_processing_config",
+            "get_web_api_config",
+            "get_realtime_config",
+            "get_development_config",
+            # Cache management
+            "cache_scope",
+            "get_cache_scope",
+            "set_cache_scope",
+            "clear_caches",
+            "clear_all_caches",
+            "get_cache_metrics",
+            "reset_cache_metrics",
+            "operation_scope",
+            "request_scope",
+            # Legacy cache function
+            "clear_deserialization_caches",
             # Type handling
             "TypeHandler",
             "is_nan_like",
@@ -378,3 +427,20 @@ if _utils_available:
             "enhance_numpy_array",
         ]
     )
+
+
+def get_version() -> str:
+    """Get the current version of datason."""
+    return __version__
+
+
+def get_info() -> dict:
+    """Get information about the datason package."""
+    return {
+        "version": __version__,
+        "author": __author__,
+        "email": __author__,
+        "description": __description__,
+        "config_available": _config_available,
+        "cache_system": "configurable" if _config_available else "legacy",
+    }

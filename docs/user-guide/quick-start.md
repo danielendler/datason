@@ -196,7 +196,7 @@ print(f"Estimated memory: {memory_estimate / (1024*1024):.1f} MB")
 # Use chunked processing for large data
 if memory_estimate > 50 * 1024 * 1024:  # > 50MB
     chunked_result = ds.serialize_chunked(
-        large_data, 
+        large_data,
         chunk_size=10 * 1024 * 1024  # 10MB chunks
     )
     print(f"Split into {len(chunked_result.chunks)} chunks")
@@ -248,14 +248,14 @@ def process_data():
     try:
         # Deserialize request data
         input_data = ds.deserialize(request.json)
-        
+
         # Process data (your logic here)
         result = process_your_data(input_data)
-        
+
         # Serialize response
         response = ds.serialize(result, config=api_config)
         return jsonify(response)
-        
+
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 ```
@@ -266,11 +266,11 @@ def process_data():
 def ml_pipeline_step(input_data, model):
     # Deserialize input
     data = ds.deserialize(input_data) if isinstance(input_data, dict) else input_data
-    
+
     # Process with model
     features = data["features"]
     predictions = model.predict(features)
-    
+
     # Package results
     result = {
         "predictions": predictions,
@@ -279,7 +279,7 @@ def ml_pipeline_step(input_data, model):
             "model_version": "v1.0"
         }
     }
-    
+
     # Serialize for next step
     return ds.serialize(result, config=ds.get_ml_config())
 ```
@@ -292,7 +292,7 @@ import json
 def save_complex_data(data, filename):
     """Save complex data as JSON file."""
     serialized = ds.serialize(data, config=ds.get_default_config())
-    
+
     with open(filename, 'w') as f:
         json.dump(serialized, f, indent=2)
 
@@ -300,7 +300,7 @@ def load_complex_data(filename):
     """Load complex data from JSON file."""
     with open(filename, 'r') as f:
         serialized = json.load(f)
-    
+
     return ds.deserialize(serialized)
 
 # Usage

@@ -55,20 +55,20 @@ assert type(restored['array']) == np.ndarray
 === "👨‍💻 For Developers"
 
     **Getting Started**
-    
+
     - [🚀 Quick Start Guide](user-guide/quick-start.md) - Get up and running in 5 minutes
     - [💡 Examples Gallery](user-guide/examples/index.md) - Common use cases and patterns
     - [🔧 Configuration Guide](features/configuration/index.md) - Customize behavior for your needs
-    
+
     **Core Features**
-    
+
     - [📊 Data Types Support](features/advanced-types/index.md) - All supported types and conversion
     - [🤖 ML/AI Integration](features/ml-ai/index.md) - Machine learning library support
     - [🔐 Data Privacy & Redaction](features/redaction.md) - Protect sensitive information
     - [⚡ Performance & Chunking](features/performance/index.md) - Handle large datasets efficiently
-    
+
     **Advanced Usage**
-    
+
     - [🎯 Template Deserialization](features/template-deserialization/index.md) - Enforce data structures
     - [🔄 Pickle Bridge](features/pickle-bridge/index.md) - Migrate from legacy pickle files
     - [🔍 Type Detection](features/core/index.md) - How automatic detection works
@@ -76,19 +76,19 @@ assert type(restored['array']) == np.ndarray
 === "🤖 For AI Systems"
 
     **Integration Guides**
-    
+
     - [🤖 AI Integration Guide](ai-guide/overview.md) - How to integrate datason in AI systems
     - [📝 API Reference](api/index.md) - Complete API documentation with examples
     - [🔧 Configuration Presets](features/configuration/index.md) - Pre-built configs for common AI use cases
-    
+
     **Automation & Tooling**
-    
+
     - [⚙️ Auto-Detection Capabilities](features/core/index.md) - What datason can detect automatically
     - [🔌 Custom Serializers](AI_USAGE_GUIDE.md) - Extend for custom types
     - [📊 Schema Inference](features/template-deserialization/index.md) - Automatic schema generation
-    
+
     **Deployment**
-    
+
     - [🚀 Production Deployment](BUILD_PUBLISH.md) - Best practices for production
     - [🔍 Monitoring & Logging](CI_PERFORMANCE.md) - Track serialization performance
     - [🛡️ Security Considerations](community/security.md) - Security best practices
