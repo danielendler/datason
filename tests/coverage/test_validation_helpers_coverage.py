@@ -6,12 +6,17 @@ import datason
 
 def test_core_handles_missing_validation_imports(monkeypatch):
     """serialize should work even if validation imports fail."""
+
     def raise_import_error(name):
         raise ImportError("no validation")
 
     monkeypatch.setattr(datason.validation, "__getattr__", raise_import_error, raising=False)
-    monkeypatch.setattr(datason.validation, "serialize_pydantic", lambda obj: (_ for _ in ()).throw(AssertionError()), raising=False)
-    monkeypatch.setattr(datason.validation, "serialize_marshmallow", lambda obj: (_ for _ in ()).throw(AssertionError()), raising=False)
+    monkeypatch.setattr(
+        datason.validation, "serialize_pydantic", lambda obj: (_ for _ in ()).throw(AssertionError()), raising=False
+    )
+    monkeypatch.setattr(
+        datason.validation, "serialize_marshmallow", lambda obj: (_ for _ in ()).throw(AssertionError()), raising=False
+    )
 
     result = datason.serialize({"a": 1})
     assert result == {"a": 1}
@@ -19,6 +24,7 @@ def test_core_handles_missing_validation_imports(monkeypatch):
 
 def test_core_serializes_schema_instance(monkeypatch):
     """serialize should detect marshmallow Schema instances."""
+
     class DummyField:
         pass
 
@@ -37,6 +43,7 @@ def test_core_serializes_schema_instance(monkeypatch):
 
 def test_serialize_marshmallow_fields_exception(monkeypatch):
     """serialize_marshmallow should fall back to __dict__ on error."""
+
     class DummySchema:
         pass
 
@@ -101,6 +108,7 @@ def test_lazy_import_marshmallow_failure(monkeypatch):
 
 def test_serialize_pydantic_fallbacks(monkeypatch):
     """serialize_pydantic should fall back to dict and __dict__."""
+
     class Base:
         pass
 
