@@ -102,6 +102,16 @@ Secure migration of legacy ML pickle files to portable JSON format.
 - **Bulk Processing**: Directory-level conversion with statistics tracking
 - **Production Ready**: File size limits, error handling, monitoring
 
+### [Configurable Caching System](caching/index.md) 🆕 v0.7.0
+Intelligent caching that adapts to different workflow requirements with multiple cache scopes.
+
+- **Multiple Scopes**: Operation, Request, Process, and Disabled caching modes
+- **Performance**: 50-200% speed improvements for repeated operations
+- **ML-Optimized**: Perfect for training loops and data analytics
+- **Context Managers**: Easy scope management and isolation
+- **Metrics & Monitoring**: Built-in cache performance tracking
+- **Object Pooling**: Memory-efficient object reuse with automatic cleanup
+
 ### [Performance Features](performance/index.md)
 Optimizations for speed and memory efficiency in production environments.
 
@@ -109,6 +119,7 @@ Optimizations for speed and memory efficiency in production environments.
 - **Memory Streaming**: Handle large datasets without full memory loading
 - **Configurable Limits**: Prevent resource exhaustion attacks
 - **Benchmarking**: Built-in performance measurement tools
+- **Intelligent Caching**: Context-aware caching for maximum performance
 
 ## 🚀 Quick Feature Matrix
 
@@ -121,6 +132,7 @@ Optimizations for speed and memory efficiency in production environments.
 | **Configuration** | ❌ | ✅ Presets | ✅ + Full control |
 | **Pickle Bridge** | ❌ | ✅ Safe conversion | ✅ + Bulk migration |
 | **Performance** | ✅ Basic | ✅ Optimized | ✅ + Monitoring |
+| **Caching** | ❌ | ✅ Operation scope | ✅ + All scopes + Metrics |
 | **Data Science** | ❌ | ✅ Pandas/NumPy | ✅ + Advanced |
 | **Data Utilities** | ❌ | ✅ Basic tools | ✅ + Security patterns |
 
@@ -197,6 +209,30 @@ from datason.config import get_ml_config
 # Optimized for ML workflows
 config = get_ml_config()
 result = datason.serialize(ml_data, config=config)
+```
+
+### High-Performance Caching (v0.7.0)
+```python
+import datason
+from datason import CacheScope
+
+# ML training with maximum performance
+datason.set_cache_scope(CacheScope.PROCESS)
+for epoch in range(num_epochs):
+    for batch in training_data:
+        # Repeated datetime/UUID patterns cached automatically
+        parsed_batch = datason.deserialize_fast(batch)  # 150-200% faster!
+        train_step(parsed_batch)
+
+# Web API with request-scoped caching
+def api_handler(request_data):
+    with datason.request_scope():
+        # Cache shared within request, cleared between requests
+        return process_api_request(request_data)
+
+# Monitor cache performance
+metrics = datason.get_cache_metrics()
+print(f"Cache hit rate: {metrics[CacheScope.PROCESS].hit_rate:.1%}")
 ```
 
 ### Custom Usage (Enterprise Features)

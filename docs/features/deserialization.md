@@ -342,17 +342,29 @@ result = deserialize_fast(None)       # Immediate return
 ```
 
 ### Caching Systems
-```python
-# Pattern caching for repeated strings
-datetime_str = "2023-01-01T12:00:00"
-result1 = deserialize_fast(datetime_str)  # Parse and cache
-result2 = deserialize_fast(datetime_str)  # Use cached result (faster)
 
-# Object caching for parsed results
+**New in v0.7.0**: [Configurable caching system](../caching/) with multiple scopes for different workflows.
+
+```python
+import datason
+from datason import CacheScope
+
+# Choose cache scope based on your needs
+datason.set_cache_scope(CacheScope.REQUEST)   # For web APIs
+datason.set_cache_scope(CacheScope.PROCESS)   # For ML training
+
+# Pattern caching for repeated strings (automatic)
+datetime_str = "2023-01-01T12:00:00"
+result1 = datason.deserialize_fast(datetime_str)  # Parse and cache
+result2 = datason.deserialize_fast(datetime_str)  # Cache hit! (faster)
+
+# Object caching for parsed results (automatic)
 uuid_str = "12345678-1234-5678-9012-123456789abc"
-result1 = deserialize_fast(uuid_str)   # Parse and cache UUID object
-result2 = deserialize_fast(uuid_str)   # Return cached UUID object
+result1 = datason.deserialize_fast(uuid_str)   # Parse and cache UUID object
+result2 = datason.deserialize_fast(uuid_str)   # Return cached UUID object
 ```
+
+See the [Caching Documentation](../caching/) for detailed configuration and performance tuning.
 
 ### Memory Pooling
 ```python
