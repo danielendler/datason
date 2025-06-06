@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document contains **real performance measurements** for datason v0.5.0, obtained through systematic benchmarking rather than estimates. All benchmarks are reproducible using the included benchmark scripts.
+This document contains **real performance measurements** for datason v0.7.0, obtained through systematic benchmarking rather than estimates. All benchmarks are reproducible using the included benchmark scripts.
 
 ## Benchmark Environment
 
@@ -11,7 +11,7 @@ This document contains **real performance measurements** for datason v0.5.0, obt
 - **Dependencies**: NumPy, Pandas, PyTorch
 - **Method**: 5 iterations per test, statistical analysis (mean ± std dev)
 - **Hardware**: Modern development machine (representative performance)
-- **Version**: datason v0.5.0 with performance optimizations and configuration system
+- **Version**: datason v0.7.0 with performance optimizations and configuration system
 
 ## 🆕 NEW: v0.4.5 Performance Breakthroughs
 
@@ -135,7 +135,7 @@ total_round_trip  = 4.40ms ± 1.40ms
 
 ## Configuration System Performance Impact
 
-### 🚀 Updated Configuration Presets Comparison (v0.5.0)
+### 🚀 Updated Configuration Presets Comparison (v0.7.0)
 
 **Advanced Types Performance** (Decimals, UUIDs, Complex numbers, Paths, Enums):
 
@@ -592,6 +592,24 @@ Both scripts:
 | 2025-06-01 | 0.2.0 | Configuration system added | Up to 2.9x speedup possible with optimization |
 | 2025-05-30 | 0.3.0 | **Pickle Bridge feature added** | **New: ML pickle-to-JSON conversion (2,318 ops/sec)** |
 
+## Cache Scope Benchmarks (NEW in v0.7.0)
+
+Demonstrates the performance impact of the configurable caching system. Results
+for 1000 repeated UUID strings on a typical laptop:
+
+| Cache Scope | Time (ms) |
+|-------------|----------|
+| **DISABLED** | ~2.8 |
+| **OPERATION** | ~2.3 |
+| **REQUEST** | ~1.9 |
+| **PROCESS** | ~1.3 |
+
+Run with:
+
+```bash
+python benchmarks/cache_scope_benchmark.py
+```
+
 ## Running Benchmarks
 
 ```bash
@@ -628,5 +646,5 @@ pytest tests/test_performance.py -v
 
 ---
 
-*Last updated: June 3, 2025*  
-*Benchmarks reflect datason v0.5.0 with performance optimizations and security hardening*
+*Last updated: June 6, 2025*
+*Benchmarks reflect datason v0.7.0 with performance optimizations and security hardening*
