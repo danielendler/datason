@@ -1,0 +1,43 @@
+name: E2E Supabase Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  supabase-e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .[dev,all]
+          pip install pytest
+      - name: Start Supabase
+        run: |
+          cp docker/supabase/.env.example docker/supabase/.env
+          docker compose -f docker/supabase/docker-compose.yml up -d
+      - name: Wait for Supabase API
+        run: |
+          until curl -s http://localhost:8000/rest/v1/ | grep -q "Unauthorized"; do
+            echo 'Waiting for Supabase API...'
+            sleep 5
+          done
+          until pg_isready -h localhost -p 5432 -U postgres; do
+            echo 'Waiting for Supabase DB...'
+            sleep 5
+          done
+      - name: Run Full Test Suite
+        run: |
+          pytest tests/core tests/features tests/integration
+      - name: Shutdown Supabase
+        if: always()
+        run: |
+          docker compose -f docker/supabase/docker-compose.yml down
