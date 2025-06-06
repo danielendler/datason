@@ -12,6 +12,7 @@ The benchmarks directory contains performance tests for all major datason featur
 - **Enhanced Benchmark Suite** (`enhanced_benchmark_suite.py`) - Configuration system and advanced types
 - **Real Performance Tests** (`benchmark_real_performance.py`) - Core serialization vs alternatives
 - **Pickle Bridge Benchmarks** (`pickle_bridge_benchmark.py`) - Legacy ML migration performance
+- **Cache Scope Benchmark** (`cache_scope_benchmark.py`) - Demonstrates caching performance
 
 ## 🚀 v0.4.5 Performance Breakthroughs
 
@@ -427,4 +428,4 @@ diff baseline.txt comparison.txt
 
 ---
 
-**Next Steps**: Run `python benchmarks/pickle_bridge_benchmark.py --test-flow full` to see comprehensive performance analysis of the Pickle Bridge feature.
+**Next Steps**: Run `python benchmarks/pickle_bridge_benchmark.py --test-flow full` to see comprehensive performance analysis of the Pickle Bridge feature. For caching performance, run `python benchmarks/cache_scope_benchmark.py`.
