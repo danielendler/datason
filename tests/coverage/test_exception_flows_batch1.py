@@ -9,6 +9,7 @@ from unittest.mock import patch
 
 from datason.deserializers import (
     _auto_detect_string_type,
+    _clear_deserialization_caches,
     _looks_like_datetime,
     _looks_like_uuid,
     auto_deserialize,
@@ -24,6 +25,9 @@ class TestImportErrorHandling:
 
     def test_config_import_fallback(self, monkeypatch):
         """Test fallback when config import fails (lines 20-25)."""
+        # Clear caches to ensure clean state
+        _clear_deserialization_caches()
+
         # Simulate config import failure
         with patch("datason.deserializers._config_available", False):
             with patch("datason.deserializers.SerializationConfig", None):
@@ -36,6 +40,9 @@ class TestImportErrorHandling:
 
     def test_core_import_fallback(self, monkeypatch):
         """Test fallback when core.py import fails (lines 31-35)."""
+        # Clear caches to ensure clean state
+        _clear_deserialization_caches()
+
         # Test the fallback constants are used when core import fails
         with patch.dict("sys.modules", {"datason.core": None}):
             # Re-import to trigger fallback
@@ -56,6 +63,9 @@ class TestStringPatternDetectionEdgeCases:
 
     def test_looks_like_datetime_edge_cases(self):
         """Test datetime detection edge cases (lines 147-153)."""
+        # Clear caches to ensure clean state
+        _clear_deserialization_caches()
+
         # Test various invalid datetime-like strings
         invalid_datetimes = [
             "not-a-date-at-all",
@@ -85,6 +95,9 @@ class TestStringPatternDetectionEdgeCases:
 
     def test_looks_like_uuid_edge_cases(self):
         """Test UUID detection edge cases (lines 170)."""
+        # Clear caches to ensure clean state
+        _clear_deserialization_caches()
+
         # Test various invalid UUID-like strings
         invalid_uuids = [
             "12345678-1234-5678-9012-12345678",  # Too short
@@ -101,6 +114,9 @@ class TestStringPatternDetectionEdgeCases:
 
     def test_auto_detect_string_type_edge_cases(self):
         """Test auto-detection with edge cases (lines 203-238)."""
+        # Clear caches to ensure clean state
+        _clear_deserialization_caches()
+
         # Test strings that should remain strings
         test_strings = [
             "almost-datetime-2023-01-01",
@@ -122,6 +138,9 @@ class TestParsingEdgeCases:
 
     def test_parse_datetime_string_invalid_input(self):
         """Test datetime parsing with invalid inputs (lines 89-90, 94-95)."""
+        # Clear caches to ensure clean state
+        _clear_deserialization_caches()
+
         # Test None input
         assert parse_datetime_string(None) is None
 
@@ -143,6 +162,9 @@ class TestParsingEdgeCases:
 
     def test_parse_uuid_string_invalid_input(self):
         """Test UUID parsing with invalid inputs (lines 127)."""
+        # Clear caches to ensure clean state
+        _clear_deserialization_caches()
+
         # Test None input
         assert parse_uuid_string(None) is None
 
@@ -168,6 +190,9 @@ class TestDeserializationWithNoPandas:
 
     def test_deserialize_without_pandas(self, monkeypatch):
         """Test deserialization works without pandas (lines 255)."""
+        # Clear caches to ensure clean state
+        _clear_deserialization_caches()
+
         # Mock pandas as unavailable
         monkeypatch.setattr("datason.deserializers.pd", None)
 
@@ -190,6 +215,9 @@ class TestDeserializationWithNoPandas:
 
     def test_deserialize_without_numpy(self, monkeypatch):
         """Test deserialization works without numpy (lines 287)."""
+        # Clear caches to ensure clean state
+        _clear_deserialization_caches()
+
         # Mock numpy as unavailable
         monkeypatch.setattr("datason.deserializers.np", None)
 
@@ -208,6 +236,9 @@ class TestSafeDeserializeExceptions:
 
     def test_safe_deserialize_invalid_json(self):
         """Test safe_deserialize with invalid JSON."""
+        # Clear caches to ensure clean state
+        _clear_deserialization_caches()
+
         # Test invalid JSON strings
         invalid_json_strings = [
             "{invalid json}",
@@ -225,6 +256,9 @@ class TestSafeDeserializeExceptions:
 
     def test_safe_deserialize_with_none_input(self):
         """Test safe_deserialize with None input."""
+        # Clear caches to ensure clean state
+        _clear_deserialization_caches()
+
         result = safe_deserialize(None)
         assert result is None
 
@@ -234,6 +268,9 @@ class TestAggressiveDetectionModes:
 
     def test_auto_deserialize_aggressive_mode(self):
         """Test aggressive auto-detection mode."""
+        # Clear caches to ensure clean state
+        _clear_deserialization_caches()
+
         # Test data that might be detected as pandas objects in aggressive mode
         data = {"records": [{"a": 1, "b": 2}, {"a": 3, "b": 4}, {"a": 5, "b": 6}]}
 

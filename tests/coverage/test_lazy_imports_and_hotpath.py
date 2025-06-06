@@ -5,7 +5,14 @@ import types
 import pytest
 
 from datason.config import SerializationConfig
-from datason.deserializers import DeserializationSecurityError, deserialize_fast
+from datason.deserializers import (
+    DeserializationSecurityError,
+    _clear_deserialization_caches,
+    _get_pooled_dict,
+    _is_homogeneous_basic_types,
+    _return_dict_to_pool,
+    deserialize_fast,
+)
 from datason.ml_serializers import (
     _LAZY_IMPORTS,
     _lazy_import_jax,
@@ -155,3 +162,113 @@ def test_lazy_import_transformers_respects_patch(monkeypatch):
     assert _lazy_import_transformers() is dummy
     del module.__dict__["transformers"]
     assert _lazy_import_transformers() is dummy
+
+
+def test_basic_homogeneous_list_optimization():
+    """Test the homogeneous list optimization hot path."""
+    # Clear caches to ensure clean state
+    _clear_deserialization_caches()
+
+    # Test with homogeneous integer list (should take fast path)
+    homogeneous_ints = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+    assert _is_homogeneous_basic_types(homogeneous_ints)
+
+    result = deserialize_fast(homogeneous_ints)
+    assert result == homogeneous_ints
+    assert isinstance(result, list)
+
+
+def test_basic_homogeneous_list_strings():
+    """Test homogeneous string list optimization."""
+    # Clear caches to ensure clean state
+    _clear_deserialization_caches()
+
+    # Test with homogeneous string list
+    homogeneous_strings = ["hello", "world", "test", "data"]
+    assert _is_homogeneous_basic_types(homogeneous_strings)
+
+    result = deserialize_fast(homogeneous_strings)
+    assert result == homogeneous_strings
+
+
+def test_mixed_type_list_no_optimization():
+    """Test that mixed type lists don't trigger optimization."""
+    # Clear caches to ensure clean state
+    _clear_deserialization_caches()
+
+    # Test with mixed types (should not take fast path)
+    mixed_list = [1, "hello", 3.14, True, None]
+    assert not _is_homogeneous_basic_types(mixed_list)
+
+    result = deserialize_fast(mixed_list)
+    assert result == mixed_list
+
+
+def test_nested_structure_optimization():
+    """Test optimization with nested structures."""
+    # Clear caches to ensure clean state
+    _clear_deserialization_caches()
+
+    # Test with nested structure
+    nested_data = {
+        "simple_list": [1, 2, 3, 4, 5],
+        "mixed_list": [1, "hello", True],
+        "nested_dict": {"inner_list": ["a", "b", "c"], "inner_value": 42},
+    }
+
+    result = deserialize_fast(nested_data)
+    assert result == nested_data
+
+
+def test_object_pooling_usage():
+    """Test the object pooling mechanisms."""
+    # Clear caches to ensure clean state
+    _clear_deserialization_caches()
+
+    # Get a pooled dict
+    pooled_dict = _get_pooled_dict()
+    assert isinstance(pooled_dict, dict)
+    assert len(pooled_dict) == 0
+
+    # Use it
+    pooled_dict["test"] = "value"
+    assert pooled_dict["test"] == "value"
+
+    # Return to pool
+    _return_dict_to_pool(pooled_dict)
+
+    # Get another one (might be the same, might be different)
+    pooled_dict2 = _get_pooled_dict()
+    assert isinstance(pooled_dict2, dict)
+
+
+def test_large_homogeneous_list_performance():
+    """Test performance optimization with large homogeneous lists."""
+    # Clear caches to ensure clean state
+    _clear_deserialization_caches()
+
+    # Test with large homogeneous list
+    large_list = [42] * 1000
+    assert _is_homogeneous_basic_types(large_list)
+
+    result = deserialize_fast(large_list)
+    assert result == large_list
+    assert len(result) == 1000
+
+
+def test_empty_containers_optimization():
+    """Test optimization with empty containers."""
+    # Clear caches to ensure clean state
+    _clear_deserialization_caches()
+
+    # Test empty list
+    empty_list = []
+    assert _is_homogeneous_basic_types(empty_list)  # Empty lists are homogeneous
+
+    result = deserialize_fast(empty_list)
+    assert result == empty_list
+
+    # Test empty dict
+    empty_dict = {}
+    result = deserialize_fast(empty_dict)
+    assert result == empty_dict
