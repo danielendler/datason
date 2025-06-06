@@ -4,6 +4,7 @@
 Measures repeated deserialization to highlight performance
 differences across cache scopes.
 """
+
 import time
 import uuid
 
