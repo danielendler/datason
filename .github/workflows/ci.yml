@@ -113,7 +113,8 @@ jobs:
           # - Python 3.8: Only minimal tests (core compatibility validation)
           # - Python 3.9-3.10: Minimal + one dependency set each (broader compatibility)
           # - Python 3.11: Full coverage (primary development version)
-          # - Python 3.12-3.13: Full coverage (latest stable versions)
+          # - Python 3.12: Full coverage (latest stable version)
+          # - Python 3.13: Minimal tests only (dependency availability lag)
 
           # Python 3.8 - minimal compatibility only
           - python-version: "3.8"
@@ -139,6 +140,16 @@ jobs:
           - python-version: "3.10"
             dependency-set: {name: "with-pandas"}
           - python-version: "3.10"
+            dependency-set: {name: "full"}
+
+          # Python 3.13 - minimal only (waiting for optional dependency support)
+          - python-version: "3.13"
+            dependency-set: {name: "with-numpy"}
+          - python-version: "3.13"
+            dependency-set: {name: "with-pandas"}
+          - python-version: "3.13"
+            dependency-set: {name: "with-ml-deps"}
+          - python-version: "3.13"
             dependency-set: {name: "full"}
 
     name: "🧪 ${{ matrix.dependency-set.name }} (Python ${{ matrix.python-version }})"
