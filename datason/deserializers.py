@@ -14,12 +14,13 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set
 
 # Import configuration and security constants
 try:
-    from .config import SerializationConfig, get_default_config
+    from .config import CacheScope, SerializationConfig, get_default_config
 
     _config_available = True
 except ImportError:
     _config_available = False
     SerializationConfig = None
+    CacheScope = None
 
     def get_default_config():
         return None
@@ -35,22 +36,33 @@ except ImportError:
     MAX_STRING_LENGTH = 1_000_000
 
 
-# OPTIMIZATION: Module-level caches for ultra-fast deserialization (mirroring core.py patterns)
-_DESERIALIZATION_TYPE_CACHE: Dict[str, str] = {}  # Maps string patterns to detected types
+# OPTIMIZATION: Configurable scoped caches for ultra-fast deserialization
+# Using the new cache management system with configurable scopes
+try:
+    from .cache_manager import clear_caches as clear_scoped_caches
+    from .cache_manager import (
+        dict_pool,
+        list_pool,
+        operation_scope,
+        parsed_object_cache,
+        string_pattern_cache,
+        type_cache,
+    )
+
+    _cache_manager_available = True
+except ImportError:
+    # Fallback to module-level caches if cache manager not available
+    _cache_manager_available = False
+    _DESERIALIZATION_TYPE_CACHE: Dict[str, str] = {}  # Maps string patterns to detected types
+    _STRING_PATTERN_CACHE: Dict[int, str] = {}  # Maps string id to detected pattern type
+    _PARSED_OBJECT_CACHE: Dict[str, Any] = {}  # Maps string to parsed object
+    _RESULT_DICT_POOL: List[Dict] = []
+    _RESULT_LIST_POOL: List[List] = []
+
+# Legacy cache size limits (used when cache manager not available)
 _TYPE_CACHE_SIZE_LIMIT = 1000  # Prevent memory growth
-
-# OPTIMIZATION: String pattern caches for repeated type detection
-_STRING_PATTERN_CACHE: Dict[int, str] = {}  # Maps string id to detected pattern type
 _STRING_CACHE_SIZE_LIMIT = 500  # Smaller cache for strings
-
-# OPTIMIZATION: Common parsed objects cache for frequently used values
-_PARSED_OBJECT_CACHE: Dict[str, Any] = {}  # Maps string to parsed object
 _PARSED_CACHE_SIZE_LIMIT = 200  # Cache for common UUIDs/datetimes
-
-# OPTIMIZATION: Memory allocation optimization - Phase 1 Step 1.4 (mirroring core.py)
-# Pre-allocated result containers for reuse
-_RESULT_DICT_POOL: List[Dict] = []
-_RESULT_LIST_POOL: List[List] = []
 _POOL_SIZE_LIMIT = 20  # Limit pool size to prevent memory bloat
 
 # OPTIMIZATION: Function call overhead reduction - Phase 1 Step 1.5 (mirroring core.py)
@@ -2069,11 +2081,29 @@ def _clear_deserialization_caches() -> None:
 
     This is useful for testing or when you want to ensure fresh state.
     """
-    global _STRING_PATTERN_CACHE, _PARSED_OBJECT_CACHE, _RESULT_DICT_POOL, _RESULT_LIST_POOL
-    _STRING_PATTERN_CACHE.clear()
-    _PARSED_OBJECT_CACHE.clear()
-    _RESULT_DICT_POOL.clear()
-    _RESULT_LIST_POOL.clear()
+    if _cache_manager_available:
+        # Use the scoped cache manager
+        try:
+            clear_scoped_caches()
+        except Exception:
+            # Fallback to module-level caches if scoped clearing fails
+            pass
+    else:
+        # Use module-level caches
+        global _STRING_PATTERN_CACHE, _PARSED_OBJECT_CACHE, _RESULT_DICT_POOL, _RESULT_LIST_POOL
+        if "_STRING_PATTERN_CACHE" in globals():
+            _STRING_PATTERN_CACHE.clear()
+        if "_PARSED_OBJECT_CACHE" in globals():
+            _PARSED_OBJECT_CACHE.clear()
+        if "_RESULT_DICT_POOL" in globals():
+            _RESULT_DICT_POOL.clear()
+        if "_RESULT_LIST_POOL" in globals():
+            _RESULT_LIST_POOL.clear()
+
+
+def clear_caches() -> None:
+    """Clear all caches - new name for _clear_deserialization_caches."""
+    _clear_deserialization_caches()
 
 
 def _convert_string_keys_to_int_if_possible(data: Dict[str, Any]) -> Dict[Any, Any]:
