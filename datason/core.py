@@ -897,6 +897,26 @@ def _serialize_full_path(
             # Fallback: Return enum value (legacy behavior when no config)
             return obj.value
 
+    # Handle Pydantic BaseModel objects
+    try:
+        from .validation import BaseModel  # type: ignore
+    except Exception:
+        BaseModel = None
+    if BaseModel is not None and isinstance(obj, BaseModel):
+        from .validation import serialize_pydantic
+
+        return serialize_pydantic(obj)
+
+    # Handle Marshmallow Schema objects
+    try:
+        from .validation import Schema  # type: ignore
+    except Exception:
+        Schema = None
+    if Schema is not None and isinstance(obj, Schema):
+        from .validation import serialize_marshmallow
+
+        return serialize_marshmallow(obj)
+
     # Handle objects with __dict__ (custom classes)
     if hasattr(obj, "__dict__"):
         # SECURITY: Early detection of problematic objects that can cause deep recursion

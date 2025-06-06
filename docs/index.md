@@ -78,6 +78,7 @@ assert type(restored['array']) == np.ndarray
     **Integration Guides**
 
     - [🤖 AI Integration Guide](ai-guide/overview.md) - How to integrate datason in AI systems
+    - [📦 Pydantic & Marshmallow Integration](features/pydantic-marshmallow-integration.md) - Serialize validated objects
     - [📝 API Reference](api/index.md) - Complete API documentation with examples
     - [🔧 Configuration Presets](features/configuration/index.md) - Pre-built configs for common AI use cases
 
