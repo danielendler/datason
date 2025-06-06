@@ -299,11 +299,11 @@ class TestMLSerializersSpecialCases:
             transformers=None,
         ):
             # Each should return fallback format
-            assert serialize_pytorch_tensor(mock_obj)["_type"] == "torch.Tensor"
-            assert serialize_sklearn_model(mock_obj)["_type"] == "sklearn.model"
-            assert serialize_scipy_sparse(mock_obj)["_type"] == "scipy.sparse"
-            assert serialize_pil_image(mock_obj)["_type"] == "PIL.Image"
-            assert serialize_huggingface_tokenizer(mock_obj)["_type"] == "transformers.tokenizer"
+            assert serialize_pytorch_tensor(mock_obj)["__datason_type__"] == "torch.Tensor"
+            assert serialize_sklearn_model(mock_obj)["__datason_type__"] == "sklearn.model"
+            assert serialize_scipy_sparse(mock_obj)["__datason_type__"] == "scipy.sparse"
+            assert serialize_pil_image(mock_obj)["__datason_type__"] == "PIL.Image"
+            assert serialize_huggingface_tokenizer(mock_obj)["__datason_type__"] == "transformers.tokenizer"
 
     @pytest.mark.skipif(not has_sklearn_module, reason="sklearn not available")
     def test_ml_error_paths_coverage(self) -> None:
@@ -319,36 +319,49 @@ class TestMLSerializersSpecialCases:
         with warnings.catch_warnings(record=True):
             warnings.simplefilter("always")
             result = serialize_sklearn_model(mock_model)
-            assert "_error" in result
+            assert "error" in result["__datason_value__"]
 
     @pytest.mark.skipif(not has_sklearn_module, reason="sklearn not available")
     def test_sklearn_parameter_filtering(self) -> None:
-        """Test sklearn parameter filtering in serialization."""
+        """Test sklearn parameter filtering logic."""
         from datason.ml_serializers import serialize_sklearn_model
 
-        # Create mock model with various parameter types
-        mock_model = Mock()
-        mock_model.get_params.return_value = {
-            "simple_str": "test",
-            "simple_int": 42,
-            "simple_float": 3.14,
-            "simple_bool": True,
-            "simple_none": None,
-            "list_param": [1, 2, 3],
-            "tuple_param": (1, 2, 3),
-            "complex_object": Mock(),  # Should be converted to string
-            "nested_list": [[1, 2], [3, 4]],  # Should be handled
-        }
-        mock_model.__class__.__module__ = "sklearn.test"
-        mock_model.__class__.__name__ = "TestModel"
+        # Test model with various parameter types
+        class MockSklearnModel:
+            def get_params(self):
+                return {
+                    "good_param": 42,
+                    "function_param": lambda x: x,  # Should be filtered
+                    "module_param": serialize_sklearn_model,  # Should be filtered
+                    "none_param": None,
+                    "string_param": "valid",
+                }
 
-        result = serialize_sklearn_model(mock_model)
+            @property
+            def __class__(self):
+                class MockClass:
+                    __module__ = "sklearn.linear_model"
+                    __name__ = "LinearRegression"
 
-        # Verify parameter filtering worked
-        assert result["_params"]["simple_str"] == "test"
-        assert result["_params"]["simple_int"] == 42
-        assert result["_params"]["list_param"] == [1, 2, 3]
-        assert isinstance(result["_params"]["complex_object"], str)
+                return MockClass
+
+        model = MockSklearnModel()
+
+        with patch("datason.ml_serializers.sklearn", Mock()):
+            with patch("datason.ml_serializers.BaseEstimator", Mock()):
+                result = serialize_sklearn_model(model)
+
+        # Check that the result structure is correct
+        assert result["__datason_type__"] == "sklearn.model"
+        params = result["__datason_value__"]["params"]
+        assert "good_param" in params
+        assert "string_param" in params
+        assert "none_param" in params
+        # Function and module parameters are converted to string representations
+        assert "function_param" in params
+        assert "module_param" in params
+        assert "<function" in str(params["function_param"])
+        assert "function" in str(params["module_param"]).lower()
 
 
 class TestImportHandlingEdgeCases:

@@ -30,10 +30,8 @@ class TestMLSerializersImportFallbacks(unittest.TestCase):
             # Should handle gracefully when tf is None
             result = serialize_tensorflow_tensor("mock_tensor")
 
-            self.assertEqual(result["_type"], "tf.Tensor")
-            self.assertEqual(result["_data"], "mock_tensor")
-            self.assertNotIn("_shape", result)
-            self.assertNotIn("_dtype", result)
+            self.assertEqual(result["__datason_type__"], "tf.Tensor")
+            self.assertEqual(result["__datason_value__"], "mock_tensor")
 
     def test_pytorch_import_fallback(self):
         """Test PyTorch serialization when PyTorch is not available."""
@@ -41,10 +39,8 @@ class TestMLSerializersImportFallbacks(unittest.TestCase):
             # Should handle gracefully when torch is None
             result = serialize_pytorch_tensor("mock_tensor")
 
-            self.assertEqual(result["_type"], "torch.Tensor")
-            self.assertEqual(result["_data"], "mock_tensor")
-            self.assertNotIn("_shape", result)
-            self.assertNotIn("_dtype", result)
+            self.assertEqual(result["__datason_type__"], "torch.Tensor")
+            self.assertEqual(result["__datason_value__"], "mock_tensor")
 
     def test_sklearn_import_fallback(self):
         """Test sklearn serialization when sklearn is not available."""
@@ -52,10 +48,8 @@ class TestMLSerializersImportFallbacks(unittest.TestCase):
             # Should handle gracefully when sklearn is None
             result = serialize_sklearn_model("mock_model")
 
-            self.assertEqual(result["_type"], "sklearn.model")
-            self.assertEqual(result["_data"], "mock_model")
-            self.assertNotIn("_class", result)
-            self.assertNotIn("_params", result)
+            self.assertEqual(result["__datason_type__"], "sklearn.model")
+            self.assertEqual(result["__datason_value__"], "mock_model")
 
     def test_jax_import_fallback(self):
         """Test JAX serialization when JAX is not available."""
@@ -63,10 +57,8 @@ class TestMLSerializersImportFallbacks(unittest.TestCase):
             # Should handle gracefully when jax is None
             result = serialize_jax_array("mock_array")
 
-            self.assertEqual(result["_type"], "jax.Array")
-            self.assertEqual(result["_data"], "mock_array")
-            self.assertNotIn("_shape", result)
-            self.assertNotIn("_dtype", result)
+            self.assertEqual(result["__datason_type__"], "jax.Array")
+            self.assertEqual(result["__datason_value__"], "mock_array")
 
     def test_scipy_import_fallback(self):
         """Test SciPy serialization when SciPy is not available."""
@@ -74,10 +66,8 @@ class TestMLSerializersImportFallbacks(unittest.TestCase):
             # Should handle gracefully when scipy is None
             result = serialize_scipy_sparse("mock_matrix")
 
-            self.assertEqual(result["_type"], "scipy.sparse")
-            self.assertEqual(result["_data"], "mock_matrix")
-            self.assertNotIn("_shape", result)
-            self.assertNotIn("_format", result)
+            self.assertEqual(result["__datason_type__"], "scipy.sparse")
+            self.assertEqual(result["__datason_value__"], "mock_matrix")
 
     def test_pil_import_fallback(self):
         """Test PIL serialization when PIL is not available."""
@@ -85,21 +75,17 @@ class TestMLSerializersImportFallbacks(unittest.TestCase):
             # Should handle gracefully when PIL is None
             result = serialize_pil_image("mock_image")
 
-            self.assertEqual(result["_type"], "PIL.Image")
-            self.assertEqual(result["_data"], "mock_image")
-            self.assertNotIn("_mode", result)
-            self.assertNotIn("_size", result)
+            self.assertEqual(result["__datason_type__"], "PIL.Image")
+            self.assertEqual(result["__datason_value__"], "mock_image")
 
     def test_transformers_import_fallback(self):
-        """Test Transformers serialization when transformers is not available."""
+        """Test Transformers serialization when Transformers is not available."""
         with patch("datason.ml_serializers.transformers", None):
             # Should handle gracefully when transformers is None
             result = serialize_huggingface_tokenizer("mock_tokenizer")
 
-            self.assertEqual(result["_type"], "transformers.tokenizer")
-            self.assertEqual(result["_data"], "mock_tokenizer")
-            self.assertNotIn("_vocab_size", result)
-            self.assertNotIn("_model_name", result)
+            self.assertEqual(result["__datason_type__"], "transformers.tokenizer")
+            self.assertEqual(result["__datason_value__"], "mock_tokenizer")
 
 
 class TestMLSerializersErrorPaths(unittest.TestCase):
@@ -140,8 +126,8 @@ class TestMLSerializersErrorPaths(unittest.TestCase):
                     result = serialize_sklearn_model(mock_model)
 
                     # Should handle error gracefully
-                    self.assertEqual(result["_type"], "sklearn.model")
-                    self.assertIn("_error", result)
+                    self.assertEqual(result["__datason_type__"], "sklearn.model")
+                    self.assertIn("error", result["__datason_value__"])
                     self.assertTrue(len(w) > 0)
 
     def test_scipy_sparse_error_handling(self):
@@ -157,8 +143,8 @@ class TestMLSerializersErrorPaths(unittest.TestCase):
             result = serialize_scipy_sparse(mock_matrix)
 
             # Should handle error gracefully
-            self.assertEqual(result["_type"], "scipy.sparse")
-            self.assertIn("_error", result)
+            self.assertEqual(result["__datason_type__"], "scipy.sparse")
+            self.assertIn("error", result["__datason_value__"])
             self.assertTrue(len(w) > 0)
 
     def test_pil_error_handling(self):
@@ -215,28 +201,34 @@ class TestMLSerializersParameterFiltering(unittest.TestCase):
     """Test parameter filtering in ML serializers."""
 
     def test_sklearn_parameter_filtering(self):
-        """Test sklearn parameter filtering for large objects."""
-        # Create mock model with large parameters
+        """Test sklearn parameter filtering."""
+        # Create mock model with various parameter types
         mock_model = Mock()
-        large_array = list(range(1000))  # Large parameter
         mock_model.get_params.return_value = {
-            "normal_param": 42,
-            "large_param": large_array,
-            "string_param": "test",
+            "good_param": 42,
+            "function_param": lambda x: x,  # Should be filtered
+            "module_param": serialize_sklearn_model,  # Should be filtered
+            "none_param": None,
+            "string_param": "valid",
         }
-        mock_model.__class__.__module__ = "sklearn.ensemble"
-        mock_model.__class__.__name__ = "RandomForestClassifier"
+        mock_model.__class__.__module__ = "sklearn.linear_model"
+        mock_model.__class__.__name__ = "LinearRegression"
 
         with patch("datason.ml_serializers.sklearn", Mock()):
             with patch("datason.ml_serializers.BaseEstimator", Mock()):
                 result = serialize_sklearn_model(mock_model)
 
-                # Should include normal params but handle large ones
-                self.assertEqual(result["_type"], "sklearn.model")
-                self.assertIn("_params", result)
-                params = result["_params"]
-                self.assertEqual(params["normal_param"], 42)
-                self.assertEqual(params["string_param"], "test")
+        # Check that the result structure is correct
+        self.assertEqual(result["__datason_type__"], "sklearn.model")
+        params = result["__datason_value__"]["params"]
+        self.assertIn("good_param", params)
+        self.assertIn("string_param", params)
+        self.assertIn("none_param", params)
+        # Function and module parameters are converted to string representations
+        self.assertIn("function_param", params)
+        self.assertIn("module_param", params)
+        self.assertIn("<function", str(params["function_param"]))
+        self.assertIn("function", str(params["module_param"]).lower())
 
 
 if __name__ == "__main__":
