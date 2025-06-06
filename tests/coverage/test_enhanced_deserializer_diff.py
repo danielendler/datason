@@ -286,18 +286,17 @@ class TestEnhancedTypeMetadata:
         except ImportError:
             pytest.skip("numpy not available")
 
-    def test_legacy_type_format_support(self) -> None:
-        """Test legacy _type format still works."""
-        # Legacy decimal format
+    def test_legacy_type_format_removed(self) -> None:
+        """Test legacy _type format no longer supported (Phase 2 v0.8.0)."""
+        # Legacy decimal format should now return as-is (no longer processed)
         legacy_decimal = {"_type": "decimal", "value": "99.99"}
         result = deserialize_fast(legacy_decimal)
-        assert isinstance(result, Decimal)
-        assert result == Decimal("99.99")
+        assert result == legacy_decimal  # Returned unchanged
 
-        # Legacy complex format
+        # Legacy complex format should now return as-is (no longer processed)
         legacy_complex = {"_type": "complex", "real": 1.5, "imag": 2.5}
         result = deserialize_fast(legacy_complex)
-        assert result == complex(1.5, 2.5)
+        assert result == legacy_complex  # Returned unchanged
 
 
 class TestAutoDetectionPatterns:

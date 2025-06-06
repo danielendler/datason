@@ -791,30 +791,8 @@ def _serialize_full_path(
         try:
             ml_result = _ml_serializer(obj)
             if ml_result is not None:
-                # CRITICAL FIX: Handle type metadata for ML objects when include_type_hints is enabled
-                if config and config.include_type_hints and isinstance(ml_result, dict) and "_type" in ml_result:
-                    # Add deprecation warning for legacy ML format
-                    warnings.warn(
-                        "Legacy '_type' format in ML serialization is deprecated and will be removed in v0.8.0. "
-                        "Use '__datason_type__' format instead.",
-                        DeprecationWarning,
-                        stacklevel=4,
-                    )
-                    # Convert legacy ML format to new type metadata format
-                    legacy_type = ml_result["_type"]
-
-                    # Map legacy types to new type names
-                    if legacy_type == "sklearn.model":
-                        # Use the class name directly as the type name (it already includes sklearn.)
-                        type_name = ml_result.get("_class", "sklearn.model")
-                        # Create a clean value dict without the legacy _type field
-                        value_dict = {k: v for k, v in ml_result.items() if k != "_type"}
-                        return _create_type_metadata(type_name, value_dict)
-                    elif legacy_type.startswith(("torch.", "tensorflow.", "jax.", "scipy.")):
-                        # For other ML types, use the legacy type as the new type name
-                        value_dict = {k: v for k, v in ml_result.items() if k != "_type"}
-                        return _create_type_metadata(legacy_type, value_dict)
-
+                # NOTE: Legacy '_type' format conversion removed in v0.8.0
+                # ML serializers should now output '__datason_type__' format directly
                 return ml_result
         except Exception:
             # If ML serializer fails, continue with fallback
@@ -822,27 +800,30 @@ def _serialize_full_path(
 
     # Handle complex numbers (before __dict__ handling)
     if isinstance(obj, complex):
-        # FIXED: Use TypeHandler if available for proper preserve_complex handling
-        if _type_handler:
+        # Check if TypeHandler wants to handle this type
+        if _type_handler and _type_handler.get_type_handler(obj) is not None:
             return _type_handler.handle_complex(obj)
-        # Fallback: Complex numbers get metadata for round-trip reliability (legacy behavior when no config)
-        complex_repr = {"real": obj.real, "imag": obj.imag}
-        return {"_type": "complex", **complex_repr}
+        # Handle type metadata for complex numbers when enabled
+        if config and config.include_type_hints:
+            return _create_type_metadata("complex", {"real": obj.real, "imag": obj.imag})
+        # Fallback: Convert to list format for JSON compatibility
+        return [obj.real, obj.imag]
 
     # Handle Decimal (before __dict__ handling)
     if isinstance(obj, Decimal):
-        # FIXED: Use TypeHandler if available for proper preserve_decimals handling
-        if _type_handler:
+        # Check if TypeHandler wants to handle this type
+        if _type_handler and _type_handler.get_type_handler(obj) is not None:
             return _type_handler.handle_decimal(obj)
-        # Fallback: Preserve exact precision for financial/precision calculations
-        decimal_str = str(obj)
-        # Decimals get metadata for round-trip reliability (legacy behavior when no config)
-        return {"_type": "decimal", "value": decimal_str}
+        # Handle type metadata for decimals when enabled
+        if config and config.include_type_hints:
+            return _create_type_metadata("decimal.Decimal", str(obj))
+        # Fallback: Convert to float for JSON compatibility
+        return float(obj)
 
     # Handle range objects (before __dict__ handling)
     if isinstance(obj, range):
-        # FIXED: Use TypeHandler if available for proper range handling
-        if _type_handler:
+        # Check if TypeHandler wants to handle this type
+        if _type_handler and _type_handler.get_type_handler(obj) is not None:
             return _type_handler.handle_range(obj)
         # Fallback: Basic range dict representation (legacy behavior when no config)
         range_dict = {"start": obj.start, "stop": obj.stop, "step": obj.step}

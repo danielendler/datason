@@ -124,10 +124,10 @@ class TestTemplateDeserializerNewTypes:
         """Test complex number round-trip with user config."""
         original = complex(1, 2)
 
-        # Serialize (becomes dict with metadata)
+        # Serialize (becomes list format after legacy removal)
         serialized = datason.serialize(original)
-        assert isinstance(serialized, dict)
-        assert serialized.get("_type") == "complex"
+        assert isinstance(serialized, list)
+        assert serialized == [1.0, 2.0]
 
         # Template deserialize (should restore complex)
         reconstructed = deserialize_with_template(serialized, original)
@@ -144,10 +144,9 @@ class TestTemplateDeserializerNewTypes:
         ]
 
         for original in test_cases:
-            # Step 1: Serialize (becomes dict with metadata)
+            # Step 1: Serialize (becomes float after legacy removal)
             serialized = datason.serialize(original)
-            assert isinstance(serialized, dict), f"Serialized should be dict, got {type(serialized)}"
-            assert serialized.get("_type") == "decimal", "Should have decimal metadata"
+            assert isinstance(serialized, float), f"Serialized should be float, got {type(serialized)}"
 
             # Step 2: Template deserialize (should restore Decimal)
             reconstructed = deserialize_with_template(serialized, original)

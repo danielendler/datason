@@ -348,16 +348,15 @@ class TestTypeCoercion:
         assert isinstance(result, str)
 
     def test_strict_coercion(self):
-        """Test strict type coercion."""
+        """Test strict type coercion (Phase 2: legacy format removed)."""
         config = SerializationConfig(type_coercion=TypeCoercion.STRICT)
         handler = TypeHandler(config)
 
-        # UUID should preserve details
+        # UUID now always converts to string (legacy format removed)
         test_uuid = uuid.uuid4()
         result = handler.handle_uuid(test_uuid)
-        assert isinstance(result, dict)
-        assert result["_type"] == "uuid"
-        assert "hex" in result
+        assert isinstance(result, str)
+        assert result == str(test_uuid)
 
     def test_aggressive_coercion(self):
         """Test aggressive type coercion."""
@@ -373,12 +372,12 @@ class TestAdvancedTypes:
     """Test handling of advanced Python types."""
 
     def test_decimal_preservation(self):
-        """Test decimal preservation."""
-        config = SerializationConfig(preserve_decimals=True)
+        """Test decimal preservation with type hints."""
+        config = SerializationConfig(preserve_decimals=True, include_type_hints=True)
         result = datason.serialize(decimal.Decimal("123.456"), config=config)
         assert isinstance(result, dict)
-        assert result["_type"] == "decimal"
-        assert result["value"] == "123.456"
+        assert result["__datason_type__"] == "decimal.Decimal"
+        assert result["__datason_value__"] == "123.456"
 
     def test_decimal_conversion(self):
         """Test decimal conversion to float."""
@@ -388,13 +387,13 @@ class TestAdvancedTypes:
         assert abs(result - 123.456) < 0.001
 
     def test_complex_preservation(self):
-        """Test complex number preservation."""
-        config = SerializationConfig(preserve_complex=True)
+        """Test complex number preservation with type hints."""
+        config = SerializationConfig(preserve_complex=True, include_type_hints=True)
         result = datason.serialize(3 + 4j, config=config)
         assert isinstance(result, dict)
-        assert result["_type"] == "complex"
-        assert result["real"] == 3.0
-        assert result["imag"] == 4.0
+        assert result["__datason_type__"] == "complex"
+        assert result["__datason_value__"]["real"] == 3.0
+        assert result["__datason_value__"]["imag"] == 4.0
 
     def test_uuid_handling(self):
         """Test UUID handling."""
@@ -448,11 +447,12 @@ class TestAdvancedTypes:
         result = datason.serialize(range(5))
         assert result == [0, 1, 2, 3, 4]
 
-        # Large range should preserve structure
+        # Large range should preserve structure with type hints
         large_range = range(0, 10000, 2)
-        result = datason.serialize(large_range)
+        config = SerializationConfig(include_type_hints=True)
+        result = datason.serialize(large_range, config=config)
         assert isinstance(result, dict)
-        assert result["_type"] == "range"
+        assert result["__datason_type__"] == "range"
 
 
 class TestPandasIntegration:
