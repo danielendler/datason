@@ -155,6 +155,11 @@ nav:
   # API Reference Section
   - API Reference:
     - Overview: api/index.md
+    - Core Functions: api/core.md
+    - Configuration System: api/config.md
+    - ML Library Integration: api/ml.md
+    - Redaction & Privacy: api/redaction.md
+    - Utilities: api/utils.md
 
   # Advanced Topics Section
   - Advanced Topics:
