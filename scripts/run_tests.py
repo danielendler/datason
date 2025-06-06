@@ -22,9 +22,10 @@ import argparse
 import subprocess
 import sys
 from pathlib import Path
+from typing import List
 
 
-def run_command(cmd: list[str], description: str) -> int:
+def run_command(cmd: List[str], description: str) -> int:
     """Run a command and return the exit code."""
     print(f"🏃‍♂️ {description}")
     print(f"Running: {' '.join(cmd)}")
@@ -40,7 +41,7 @@ def run_command(cmd: list[str], description: str) -> int:
     return result.returncode
 
 
-def main():
+def main() -> int:
     parser = argparse.ArgumentParser(description="Run datason tests with different categories")
     parser.add_argument(
         "category",

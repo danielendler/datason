@@ -11,7 +11,7 @@ import warnings
 from collections import defaultdict
 from contextlib import contextmanager
 from contextvars import ContextVar
-from typing import Any, Dict, Generator, List, Optional
+from typing import Any, Dict, Generator, List, Optional, Tuple
 
 from .config import CacheScope, SerializationConfig, get_cache_scope
 
@@ -77,7 +77,7 @@ class ScopedCache:
     def __init__(self, cache_name: str):
         self.cache_name = cache_name
 
-    def _get_current_cache_and_config(self) -> tuple[Dict, SerializationConfig]:
+    def _get_current_cache_and_config(self) -> Tuple[Dict, SerializationConfig]:
         """Get the current cache dict and configuration based on scope."""
         from .config import get_default_config
 
@@ -182,7 +182,7 @@ class ScopedPool:
         self.pool_name = pool_name
         self.pool_type = pool_type
 
-    def _get_current_pool_and_config(self) -> tuple[List, SerializationConfig]:
+    def _get_current_pool_and_config(self) -> Tuple[List, SerializationConfig]:
         """Get the current pool and configuration based on scope."""
         from .config import get_default_config
 

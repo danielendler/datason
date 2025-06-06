@@ -4,8 +4,6 @@ Targets remaining missing lines in deserializers.py focusing on security,
 performance optimizations, and complex data structures.
 """
 
-import pytest
-
 from datason.deserializers import (
     DeserializationSecurityError,
     TemplateDeserializationError,
@@ -27,18 +25,21 @@ class TestSecurityConstraints:
 
     def test_deserialization_security_errors(self):
         """Test various security errors are raised properly."""
-        # Clear caches to ensure clean state
+        # Comprehensive state reset for test isolation
         _clear_deserialization_caches()
-
-        # Force garbage collection to clean up any lingering state
         import gc
 
         gc.collect()
 
-        # Use explicit config to ensure consistent behavior across test contexts
-        from datason.config import SerializationConfig
+        # Import fresh to avoid any module state issues
+        import importlib
 
-        config = SerializationConfig(max_depth=50)
+        from datason import config, deserializers
+
+        importlib.reload(config)
+
+        # Use explicit config to ensure consistent behavior across test contexts
+        test_config = config.SerializationConfig(max_depth=50)
 
         # Test maximum depth exceeded - make it small enough to trigger easily
         deeply_nested = {"level": 1}
@@ -47,31 +48,46 @@ class TestSecurityConstraints:
             current["next"] = {"level": i}
             current = current["next"]
 
-        # Should trigger security check (exact depth may vary)
-        with pytest.raises(DeserializationSecurityError, match="Maximum deserialization depth"):
-            deserialize_fast(deeply_nested, config)
+        # Use direct exception checking to avoid pytest.raises context issues
+        exception_raised = False
+        try:
+            deserializers.deserialize_fast(deeply_nested, test_config)
+        except deserializers.DeserializationSecurityError as e:
+            exception_raised = True
+            assert "Maximum deserialization depth" in str(e)
+
+        assert exception_raised, "Expected DeserializationSecurityError to be raised"
 
     def test_large_object_security_check(self):
         """Test security checks on large objects."""
-        # Clear caches to ensure clean state
+        # Comprehensive state reset for test isolation
         _clear_deserialization_caches()
-
-        # Force garbage collection to clean up any lingering state
         import gc
 
         gc.collect()
 
-        # Use explicit config to ensure consistent behavior across test contexts
-        from datason.config import SerializationConfig
+        # Import fresh to avoid any module state issues
+        import importlib
 
-        config = SerializationConfig(max_size=100000)  # Set limit below our test size
+        from datason import config, deserializers
+
+        importlib.reload(config)
+
+        # Use explicit config to ensure consistent behavior across test contexts
+        test_config = config.SerializationConfig(max_size=100000)  # Set limit below our test size
 
         # Create a very large dictionary
         large_dict = {f"key_{i}": f"value_{i}" for i in range(150000)}  # Increased size
 
-        # Should trigger security checks
-        with pytest.raises(DeserializationSecurityError, match="Dictionary size.*exceeds maximum"):
-            deserialize_fast(large_dict, config)
+        # Use direct exception checking to avoid pytest.raises context issues
+        exception_raised = False
+        try:
+            deserializers.deserialize_fast(large_dict, test_config)
+        except deserializers.DeserializationSecurityError as e:
+            exception_raised = True
+            assert "Dictionary size" in str(e) and "exceeds maximum" in str(e)
+
+        assert exception_raised, "Expected DeserializationSecurityError to be raised"
 
     def test_string_length_security_check(self):
         """Test security checks on very long strings."""

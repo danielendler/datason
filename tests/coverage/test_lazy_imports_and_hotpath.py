@@ -2,11 +2,7 @@ import builtins
 import sys
 import types
 
-import pytest
-
-from datason.config import SerializationConfig
 from datason.deserializers import (
-    DeserializationSecurityError,
     _clear_deserialization_caches,
     _get_pooled_dict,
     _is_homogeneous_basic_types,
@@ -91,24 +87,51 @@ def test_lazy_import_sklearn_respects_patch(monkeypatch):
 
 
 def test_deserialize_fast_security_exceptions():
-    # Clear caches to ensure clean state
+    # Comprehensive state reset for test isolation
     _clear_deserialization_caches()
-
-    # Force garbage collection to clean up any lingering state
     import gc
 
     gc.collect()
 
-    config = SerializationConfig(max_size=3, max_depth=2)
+    # Import fresh to avoid any module state issues
+    import importlib
+
+    from datason import config as datason_config
+    from datason import deserializers
+
+    importlib.reload(datason_config)
+
+    test_config = datason_config.SerializationConfig(max_size=3, max_depth=2)
+
+    # Test list size security check with direct exception handling
     big_list = [1, 2, 3, 4]
+    exception_raised = False
+    try:
+        deserializers.deserialize_fast(big_list, test_config)
+    except deserializers.DeserializationSecurityError as e:
+        exception_raised = True
+        assert "List size" in str(e)
+    assert exception_raised, "Expected DeserializationSecurityError for list size"
+
+    # Test dictionary size security check
     big_dict = {i: i for i in range(5)}
-    with pytest.raises(DeserializationSecurityError, match="List size"):
-        deserialize_fast(big_list, config)
-    with pytest.raises(DeserializationSecurityError, match="Dictionary size"):
-        deserialize_fast(big_dict, config)
+    exception_raised = False
+    try:
+        deserializers.deserialize_fast(big_dict, test_config)
+    except deserializers.DeserializationSecurityError as e:
+        exception_raised = True
+        assert "Dictionary size" in str(e)
+    assert exception_raised, "Expected DeserializationSecurityError for dict size"
+
+    # Test depth security check
     deep = {"a": {"b": {"c": {"d": 1}}}}
-    with pytest.raises(DeserializationSecurityError, match="depth"):
-        deserialize_fast(deep, config)
+    exception_raised = False
+    try:
+        deserializers.deserialize_fast(deep, test_config)
+    except deserializers.DeserializationSecurityError as e:
+        exception_raised = True
+        assert "depth" in str(e)
+    assert exception_raised, "Expected DeserializationSecurityError for depth"
 
 
 class DummyJax(types.ModuleType):
