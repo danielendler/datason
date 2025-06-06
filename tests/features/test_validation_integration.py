@@ -56,6 +56,7 @@ def test_marshmallow_helper_import_error(monkeypatch) -> None:
 
 def test_lazy_import_pydantic_cached(monkeypatch) -> None:
     """_lazy_import_pydantic_base_model caches the imported class."""
+
     import sys
     import types
 
@@ -75,6 +76,7 @@ def test_lazy_import_pydantic_cached(monkeypatch) -> None:
 
 def test_lazy_import_marshmallow_cached(monkeypatch) -> None:
     """_lazy_import_marshmallow_schema caches the imported class."""
+
     import sys
     import types
 
