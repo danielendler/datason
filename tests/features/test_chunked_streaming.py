@@ -609,12 +609,17 @@ class TestConfigurationWithChunking:
         assert all(len(chunk) == 25 for chunk in chunks)
 
     def test_streaming_with_financial_config(self):
-        """Test streaming with financial configuration."""
+        """Test streaming with custom financial configuration."""
         from decimal import Decimal
+
+        from datason.config import DateFormat, SerializationConfig
 
         financial_data = [{"price": Decimal("123.45"), "volume": 1000, "timestamp": datetime.now()} for _ in range(50)]
 
-        config = datason.get_financial_config()
+        # Create custom financial config (replaced removed preset)
+        config = SerializationConfig(
+            preserve_decimals=True, date_format=DateFormat.UNIX_MS, ensure_ascii=True, check_if_serialized=True
+        )
 
         with tempfile.TemporaryDirectory() as temp_dir:
             file_path = Path(temp_dir) / "financial_stream.jsonl"

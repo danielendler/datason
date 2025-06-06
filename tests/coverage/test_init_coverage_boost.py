@@ -235,10 +235,12 @@ class TestConditionalImports:
             assert hasattr(datason, "DateFormat")
             assert hasattr(datason, "DataFrameOrient")
 
-            # Configuration functions
+            # Core configuration functions (Phase 1 cleanup - removed redundant presets)
             assert hasattr(datason, "get_default_config")
             assert hasattr(datason, "get_ml_config")
-            assert hasattr(datason, "get_financial_config")
+            assert hasattr(datason, "get_api_config")
+            assert hasattr(datason, "get_strict_config")
+            assert hasattr(datason, "get_performance_config")
 
             # Type handlers
             assert hasattr(datason, "TypeHandler")

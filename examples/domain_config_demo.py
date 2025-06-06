@@ -1,14 +1,16 @@
 #!/usr/bin/env python3
-"""Demonstration of datason's domain-specific configuration presets.
+"""Demonstration of datason's custom domain-specific configurations.
 
-This example showcases the new configuration presets added in v0.4.0:
-- get_financial_config(): For financial ML workflows with precise decimals
-- get_time_series_config(): For temporal data analysis with optimal DataFrame formats
-- get_inference_config(): For ML model serving with maximum performance
-- get_research_config(): For reproducible research with maximum information preservation
-- get_logging_config(): For production logging with safety and simplicity
+This example showcases how to create custom configurations for specific domains
+(updated in Phase 1 cleanup - replaced redundant presets with custom configs):
+- Financial ML workflows with precise decimals
+- Temporal data analysis with optimal DataFrame formats
+- ML model serving with maximum performance
+- Reproducible research with maximum information preservation
+- Production logging with safety and simplicity
 
-Each configuration is optimized for specific domain requirements and use cases.
+Each configuration can be customized for specific domain requirements and use cases.
+The core presets (ml, api, strict, performance) are still available for common scenarios.
 """
 
 import datetime
@@ -17,6 +19,7 @@ import time
 from decimal import Decimal
 
 import datason
+from datason.config import DataFrameOrient, DateFormat, NanHandling, OutputType, SerializationConfig, TypeCoercion
 
 # Optional imports for more comprehensive demonstrations
 try:
@@ -31,12 +34,15 @@ except ImportError:
 
 
 def demonstrate_financial_config():
-    """Show financial configuration optimized for monetary precision and trading data."""
+    """Show custom financial configuration optimized for monetary precision and trading data."""
     print("=" * 60)
-    print("FINANCIAL ML CONFIGURATION DEMO")
+    print("CUSTOM FINANCIAL ML CONFIGURATION DEMO")
     print("=" * 60)
 
-    config = datason.get_financial_config()
+    # Create custom financial config (replaced removed preset)
+    config = SerializationConfig(
+        preserve_decimals=True, date_format=DateFormat.UNIX_MS, ensure_ascii=True, check_if_serialized=True
+    )
     print(
         f"Configuration: {config.date_format}, decimals={config.preserve_decimals}, "
         f"ascii={config.ensure_ascii}, performance={config.check_if_serialized}"
@@ -74,12 +80,18 @@ def demonstrate_financial_config():
 
 
 def demonstrate_time_series_config():
-    """Show time series configuration optimized for temporal data analysis."""
+    """Show custom time series configuration optimized for temporal data analysis."""
     print("\n" + "=" * 60)
-    print("TIME SERIES ANALYSIS CONFIGURATION DEMO")
+    print("CUSTOM TIME SERIES ANALYSIS CONFIGURATION DEMO")
     print("=" * 60)
 
-    config = datason.get_time_series_config()
+    # Create custom time series config (replaced removed preset)
+    config = SerializationConfig(
+        date_format=DateFormat.ISO,
+        dataframe_orient=DataFrameOrient.SPLIT,
+        preserve_decimals=True,
+        datetime_output=OutputType.JSON_SAFE,
+    )
     print(
         f"Configuration: {config.date_format}, DataFrame={config.dataframe_orient.value}, "
         f"decimals={config.preserve_decimals}"
@@ -120,12 +132,21 @@ def demonstrate_time_series_config():
 
 
 def demonstrate_inference_config():
-    """Show inference configuration optimized for ML model serving performance."""
+    """Show custom inference configuration optimized for ML model serving performance."""
     print("\n" + "=" * 60)
-    print("ML INFERENCE CONFIGURATION DEMO")
+    print("CUSTOM ML INFERENCE CONFIGURATION DEMO")
     print("=" * 60)
 
-    config = datason.get_inference_config()
+    # Create custom inference config (replaced removed preset)
+    config = SerializationConfig(
+        date_format=DateFormat.UNIX,
+        dataframe_orient=DataFrameOrient.VALUES,
+        type_coercion=TypeCoercion.AGGRESSIVE,
+        preserve_decimals=False,
+        sort_keys=False,
+        check_if_serialized=True,
+        include_type_hints=False,
+    )
     print(
         f"Configuration: performance={config.check_if_serialized}, "
         f"coercion={config.type_coercion.value}, sort={config.sort_keys}"
@@ -157,12 +178,19 @@ def demonstrate_inference_config():
 
 
 def demonstrate_research_config():
-    """Show research configuration optimized for reproducible experiments."""
+    """Show custom research configuration optimized for reproducible experiments."""
     print("\n" + "=" * 60)
-    print("RESEARCH CONFIGURATION DEMO")
+    print("CUSTOM RESEARCH CONFIGURATION DEMO")
     print("=" * 60)
 
-    config = datason.get_research_config()
+    # Create custom research config (replaced removed preset)
+    config = SerializationConfig(
+        date_format=DateFormat.ISO,
+        preserve_decimals=True,
+        preserve_complex=True,
+        sort_keys=True,
+        include_type_hints=True,
+    )
     print(
         f"Configuration: type_hints={config.include_type_hints}, "
         f"complex={config.preserve_complex}, sort={config.sort_keys}"
@@ -205,12 +233,20 @@ def demonstrate_research_config():
 
 
 def demonstrate_logging_config():
-    """Show logging configuration optimized for production safety."""
+    """Show custom logging configuration optimized for production safety."""
     print("\n" + "=" * 60)
-    print("PRODUCTION LOGGING CONFIGURATION DEMO")
+    print("CUSTOM PRODUCTION LOGGING CONFIGURATION DEMO")
     print("=" * 60)
 
-    config = datason.get_logging_config()
+    # Create custom logging config (replaced removed preset)
+    config = SerializationConfig(
+        date_format=DateFormat.ISO,
+        nan_handling=NanHandling.STRING,
+        ensure_ascii=True,
+        max_string_length=1000,
+        preserve_decimals=False,
+        preserve_complex=False,
+    )
     print(
         f"Configuration: nan_handling={config.nan_handling.value}, "
         f"max_string={config.max_string_length}, ascii={config.ensure_ascii}"
@@ -267,12 +303,13 @@ def demonstrate_performance_comparison():
         "metadata": {"version": "1.0", "source": "benchmark"},
     }
 
+    # Core presets and custom configs for comparison
     configs = [
         ("Default", datason.SerializationConfig()),
-        ("Performance", datason.get_performance_config()),
-        ("Inference", datason.get_inference_config()),
-        ("Financial", datason.get_financial_config()),
-        ("Research", datason.get_research_config()),
+        ("Performance", datason.get_performance_config()),  # Core preset
+        ("ML", datason.get_ml_config()),  # Core preset
+        ("API", datason.get_api_config()),  # Core preset
+        ("Custom Financial", SerializationConfig(preserve_decimals=True, date_format=DateFormat.UNIX_MS)),
     ]
 
     print(f"{'Configuration':<12} {'Time (ms)':<10} {'JSON Size':<10} {'Features'}")
@@ -301,9 +338,10 @@ def demonstrate_performance_comparison():
 
 def main():
     """Run all configuration demonstrations."""
-    print("DATASON DOMAIN-SPECIFIC CONFIGURATION DEMONSTRATIONS")
-    print("====================================================")
-    print("Showcasing optimized presets for different ML/data workflows\n")
+    print("DATASON CUSTOM DOMAIN-SPECIFIC CONFIGURATION DEMONSTRATIONS")
+    print("============================================================")
+    print("Showcasing custom configurations for different ML/data workflows\n")
+    print("(Updated for Phase 1 cleanup - core presets: ml, api, strict, performance)\n")
 
     demonstrate_financial_config()
     demonstrate_time_series_config()
@@ -315,12 +353,13 @@ def main():
     print("\n" + "=" * 60)
     print("SUMMARY")
     print("=" * 60)
-    print("✓ Financial Config: Precise decimals, high-frequency performance")
-    print("✓ Time Series Config: Efficient temporal data handling with split format")
-    print("✓ Inference Config: Maximum performance for ML model serving")
-    print("✓ Research Config: Maximum information preservation and reproducibility")
-    print("✓ Logging Config: Production-safe with truncation and ASCII encoding")
-    print("\nEach configuration is optimized for its specific domain requirements!")
+    print("✓ Custom Financial Config: Precise decimals, high-frequency performance")
+    print("✓ Custom Time Series Config: Efficient temporal data handling with split format")
+    print("✓ Custom Inference Config: Maximum performance for ML model serving")
+    print("✓ Custom Research Config: Maximum information preservation and reproducibility")
+    print("✓ Custom Logging Config: Production-safe with truncation and ASCII encoding")
+    print("\nCustom configurations provide flexibility while core presets (ml, api, strict, performance)")
+    print("cover the most common scenarios. Phase 1 cleanup removed redundant presets for a cleaner API!")
 
 
 if __name__ == "__main__":
