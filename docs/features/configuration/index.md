@@ -193,7 +193,37 @@ config = SerializationConfig(
     sort_keys=True,             # Sort dictionary keys for consistent output
     preserve_decimals=True,     # Keep decimal precision vs convert to float
     preserve_complex=True,      # Preserve complex number metadata
+
+    # Caching options (New in v0.7.0)
+    cache_size_limit=10000,     # Maximum cache entries per scope
+    cache_metrics_enabled=True, # Enable cache performance monitoring
+    cache_warn_on_limit=True,   # Warn when cache size limit reached
 )
+```
+
+### Cache Scope Management
+
+**New in v0.7.0**: Control caching behavior independently from serialization configuration:
+
+```python
+import datason
+from datason import CacheScope
+
+# Set global cache scope
+datason.set_cache_scope(CacheScope.REQUEST)  # For web APIs
+datason.set_cache_scope(CacheScope.PROCESS)  # For ML training
+datason.set_cache_scope(CacheScope.OPERATION)  # For testing (default)
+
+# Use context managers for temporary scope changes
+with datason.request_scope():
+    # Multiple operations share cache within this block
+    result1 = datason.deserialize_fast(data1)
+    result2 = datason.deserialize_fast(data1)  # Cache hit!
+
+# Monitor cache performance
+metrics = datason.get_cache_metrics()
+for scope, stats in metrics.items():
+    print(f"{scope}: {stats.hit_rate:.1%} hit rate")
 ```
 
 ## 🎯 Preset Configurations

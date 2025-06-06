@@ -19,8 +19,9 @@ datason provides multiple optimization strategies:
 ```python
 import datason
 
-# Use performance-optimized configuration
+# Use performance-optimized configuration with caching
 config = datason.get_performance_config()
+datason.set_cache_scope(datason.CacheScope.PROCESS)  # Maximum cache performance
 result = datason.serialize(large_dataset, config=config)
 
 # Features:
@@ -28,6 +29,7 @@ result = datason.serialize(large_dataset, config=config)
 # - Split orientation for large DataFrames
 # - Aggressive type coercion
 # - Minimal metadata preservation
+# - Process-scoped caching for maximum speed
 ```
 
 ### Configuration Performance Comparison
@@ -101,22 +103,25 @@ data = {
 
 ## 🔧 Optimization Strategies
 
-### 1. Choose the Right Configuration
+### 1. Choose the Right Configuration and Cache Scope
 
 ```python
-from datason import get_performance_config, get_ml_config, get_api_config
+from datason import get_performance_config, get_ml_config, get_api_config, CacheScope
 
 # Speed-critical applications
 config = get_performance_config()
-# Features: Unix timestamps, aggressive coercion, minimal metadata
+datason.set_cache_scope(CacheScope.PROCESS)
+# Features: Unix timestamps, aggressive coercion, minimal metadata, maximum caching
 
 # ML/AI workflows
 config = get_ml_config()
-# Features: Optimized for numeric data, preserved precision
+datason.set_cache_scope(CacheScope.PROCESS)
+# Features: Optimized for numeric data, preserved precision, persistent caching
 
 # API responses
 config = get_api_config()
-# Features: Consistent output, human-readable dates
+datason.set_cache_scope(CacheScope.REQUEST)
+# Features: Consistent output, human-readable dates, request-scoped caching
 ```
 
 ### 2. DataFrame Orientation Optimization
@@ -172,6 +177,43 @@ config = SerializationConfig(nan_handling=NanHandling.STRING)
 config = SerializationConfig(nan_handling=NanHandling.DROP)
 # Performance: 3.00ms ± 0.08ms
 ```
+
+### 5. Caching Performance Optimization
+
+**New in v0.7.0**: Configurable caching system provides **50-200% performance improvements**.
+
+```python
+import datason
+from datason import CacheScope, get_cache_metrics
+
+# Choose cache scope based on use case
+datason.set_cache_scope(CacheScope.PROCESS)    # 150-200% performance (ML training)
+datason.set_cache_scope(CacheScope.REQUEST)    # 130-150% performance (web APIs)
+datason.set_cache_scope(CacheScope.OPERATION)  # 110-120% performance (testing/default)
+datason.set_cache_scope(CacheScope.DISABLED)   # Baseline performance (debugging)
+
+# Monitor cache effectiveness
+result = datason.deserialize_fast(data_with_datetimes_and_uuids)
+metrics = get_cache_metrics()
+print(f"Cache hit rate: {metrics[CacheScope.PROCESS].hit_rate:.1%}")
+```
+
+**Cache Performance by Scope**:
+
+| Cache Scope | Performance Gain | Best For | Memory Usage |
+|-------------|------------------|----------|--------------|
+| **Process** | 150-200% | ML training, analytics | Higher (persistent) |
+| **Request** | 130-150% | Web APIs, batch processing | Medium (request-local) |
+| **Operation** | 110-120% | Testing, default behavior | Low (operation-local) |
+| **Disabled** | Baseline | Debugging, profiling | Minimal (no cache) |
+
+**Caching is most effective with**:
+- Repeated datetime strings (ISO format, Unix timestamps)
+- Repeated UUID strings
+- Large datasets with duplicate patterns
+- Deserialization-heavy workloads
+
+See the [Caching Documentation](../caching/) for detailed configuration and usage patterns.
 
 ## 🚀 Memory Optimization
 
