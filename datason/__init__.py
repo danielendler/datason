@@ -127,6 +127,10 @@ try:
 except ImportError:
     _pickle_bridge_available = False
 
+# Validation helpers (always available, dependencies imported lazily)
+from . import validation  # noqa: F401
+from .validation import serialize_marshmallow, serialize_pydantic  # noqa: F401
+
 # Always import datetime_utils module for tests
 from . import datetime_utils  # noqa: F401
 
@@ -310,6 +314,9 @@ if _pickle_bridge_available:
             "get_ml_safe_classes",
         ]
     )
+
+# Always expose validation helpers
+__all__.extend(["serialize_pydantic", "serialize_marshmallow"])
 
 
 # Convenience functions for quick access
