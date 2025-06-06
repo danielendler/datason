@@ -218,18 +218,20 @@ def serialize_pytorch_tensor(tensor: Any) -> Dict[str, Any]:
     """
     torch = _lazy_import_torch()
     if torch is None:
-        return {"_type": "torch.Tensor", "_data": str(tensor)}
+        return {"__datason_type__": "torch.Tensor", "__datason_value__": str(tensor)}
 
     # Convert to CPU and detach from computation graph
     cpu_tensor = tensor.detach().cpu()
 
     return {
-        "_type": "torch.Tensor",
-        "_shape": list(cpu_tensor.shape),
-        "_dtype": str(cpu_tensor.dtype),
-        "_data": cpu_tensor.numpy().tolist(),
-        "_device": str(tensor.device),
-        "_requires_grad": (tensor.requires_grad if hasattr(tensor, "requires_grad") else False),
+        "__datason_type__": "torch.Tensor",
+        "__datason_value__": {
+            "shape": list(cpu_tensor.shape),
+            "dtype": str(cpu_tensor.dtype),
+            "data": cpu_tensor.numpy().tolist(),
+            "device": str(tensor.device),
+            "requires_grad": (tensor.requires_grad if hasattr(tensor, "requires_grad") else False),
+        },
     }
 
 
@@ -244,13 +246,15 @@ def serialize_tensorflow_tensor(tensor: Any) -> Dict[str, Any]:
     """
     tf = _lazy_import_tensorflow()
     if tf is None:
-        return {"_type": "tf.Tensor", "_data": str(tensor)}
+        return {"__datason_type__": "tf.Tensor", "__datason_value__": str(tensor)}
 
     return {
-        "_type": "tf.Tensor",
-        "_shape": tensor.shape.as_list(),
-        "_dtype": str(tensor.dtype.name),
-        "_data": tensor.numpy().tolist(),
+        "__datason_type__": "tf.Tensor",
+        "__datason_value__": {
+            "shape": tensor.shape.as_list(),
+            "dtype": str(tensor.dtype.name),
+            "data": tensor.numpy().tolist(),
+        },
     }
 
 
@@ -265,13 +269,15 @@ def serialize_jax_array(array: Any) -> Dict[str, Any]:
     """
     jax, jnp = _lazy_import_jax()
     if jax is None:
-        return {"_type": "jax.Array", "_data": str(array)}
+        return {"__datason_type__": "jax.Array", "__datason_value__": str(array)}
 
     return {
-        "_type": "jax.Array",
-        "_shape": list(array.shape),
-        "_dtype": str(array.dtype),
-        "_data": array.tolist(),
+        "__datason_type__": "jax.Array",
+        "__datason_value__": {
+            "shape": list(array.shape),
+            "dtype": str(array.dtype),
+            "data": array.tolist(),
+        },
     }
 
 
@@ -286,7 +292,7 @@ def serialize_sklearn_model(model: Any) -> Dict[str, Any]:
     """
     sklearn, BaseEstimator = _lazy_import_sklearn()
     if sklearn is None or BaseEstimator is None:
-        return {"_type": "sklearn.model", "_data": str(model)}
+        return {"__datason_type__": "sklearn.model", "__datason_value__": str(model)}
 
     try:
         # Get model parameters
@@ -307,14 +313,16 @@ def serialize_sklearn_model(model: Any) -> Dict[str, Any]:
                 safe_params[key] = str(value)
 
         return {
-            "_type": "sklearn.model",
-            "_class": f"{model.__class__.__module__}.{model.__class__.__name__}",
-            "_params": safe_params,
-            "_fitted": hasattr(model, "n_features_in_") or hasattr(model, "feature_names_in_"),
+            "__datason_type__": "sklearn.model",
+            "__datason_value__": {
+                "class": f"{model.__class__.__module__}.{model.__class__.__name__}",
+                "params": safe_params,
+                "fitted": hasattr(model, "n_features_in_") or hasattr(model, "feature_names_in_"),
+            },
         }
     except Exception as e:
         warnings.warn(f"Could not serialize sklearn model: {e}", stacklevel=2)
-        return {"_type": "sklearn.model", "_error": str(e)}
+        return {"__datason_type__": "sklearn.model", "__datason_value__": {"error": str(e)}}
 
 
 def serialize_scipy_sparse(matrix: Any) -> Dict[str, Any]:
@@ -328,25 +336,27 @@ def serialize_scipy_sparse(matrix: Any) -> Dict[str, Any]:
     """
     scipy = _lazy_import_scipy()
     if scipy is None:
-        return {"_type": "scipy.sparse", "_data": str(matrix)}
+        return {"__datason_type__": "scipy.sparse", "__datason_value__": str(matrix)}
 
     try:
         # Convert to COO format for easier serialization
         coo_matrix = matrix.tocoo()
 
         return {
-            "_type": "scipy.sparse",
-            "_format": type(matrix).__name__,
-            "_shape": list(coo_matrix.shape),
-            "_dtype": str(coo_matrix.dtype),
-            "_data": coo_matrix.data.tolist(),
-            "_row": coo_matrix.row.tolist(),
-            "_col": coo_matrix.col.tolist(),
-            "_nnz": coo_matrix.nnz,
+            "__datason_type__": "scipy.sparse",
+            "__datason_value__": {
+                "format": type(matrix).__name__,
+                "shape": list(coo_matrix.shape),
+                "dtype": str(coo_matrix.dtype),
+                "data": coo_matrix.data.tolist(),
+                "row": coo_matrix.row.tolist(),
+                "col": coo_matrix.col.tolist(),
+                "nnz": coo_matrix.nnz,
+            },
         }
     except Exception as e:
         warnings.warn(f"Could not serialize scipy sparse matrix: {e}", stacklevel=2)
-        return {"_type": "scipy.sparse", "_error": str(e)}
+        return {"__datason_type__": "scipy.sparse", "__datason_value__": {"error": str(e)}}
 
 
 def serialize_pil_image(image: Any) -> Dict[str, Any]:
@@ -360,7 +370,7 @@ def serialize_pil_image(image: Any) -> Dict[str, Any]:
     """
     Image = _lazy_import_pil()
     if Image is None:
-        return {"_type": "PIL.Image", "_data": str(image)}
+        return {"__datason_type__": "PIL.Image", "__datason_value__": str(image)}
 
     try:
         # Convert image to base64 string
@@ -370,15 +380,17 @@ def serialize_pil_image(image: Any) -> Dict[str, Any]:
         img_str = base64.b64encode(buffer.getvalue()).decode()
 
         return {
-            "_type": "PIL.Image",
-            "_format": format_name,
-            "_size": image.size,
-            "_mode": image.mode,
-            "_data": img_str,
+            "__datason_type__": "PIL.Image",
+            "__datason_value__": {
+                "format": format_name,
+                "size": image.size,
+                "mode": image.mode,
+                "data": img_str,
+            },
         }
     except Exception as e:
         warnings.warn(f"Could not serialize PIL Image: {e}", stacklevel=2)
-        return {"_type": "PIL.Image", "_error": str(e)}
+        return {"__datason_type__": "PIL.Image", "__datason_value__": {"error": str(e)}}
 
 
 def serialize_huggingface_tokenizer(tokenizer: Any) -> Dict[str, Any]:
@@ -392,19 +404,21 @@ def serialize_huggingface_tokenizer(tokenizer: Any) -> Dict[str, Any]:
     """
     transformers = _lazy_import_transformers()
     if transformers is None:
-        return {"_type": "transformers.tokenizer", "_data": str(tokenizer)}
+        return {"__datason_type__": "transformers.tokenizer", "__datason_value__": str(tokenizer)}
 
     try:
         return {
-            "_type": "transformers.tokenizer",
-            "_class": f"{tokenizer.__class__.__module__}.{tokenizer.__class__.__name__}",
-            "_vocab_size": len(tokenizer) if hasattr(tokenizer, "__len__") else None,
-            "_model_max_length": getattr(tokenizer, "model_max_length", None),
-            "_name_or_path": getattr(tokenizer, "name_or_path", None),
+            "__datason_type__": "transformers.tokenizer",
+            "__datason_value__": {
+                "class": f"{tokenizer.__class__.__module__}.{tokenizer.__class__.__name__}",
+                "vocab_size": len(tokenizer) if hasattr(tokenizer, "__len__") else None,
+                "model_max_length": getattr(tokenizer, "model_max_length", None),
+                "name_or_path": getattr(tokenizer, "name_or_path", None),
+            },
         }
     except Exception as e:
         warnings.warn(f"Could not serialize HuggingFace tokenizer: {e}", stacklevel=2)
-        return {"_type": "transformers.tokenizer", "_error": str(e)}
+        return {"__datason_type__": "transformers.tokenizer", "__datason_value__": {"error": str(e)}}
 
 
 def detect_and_serialize_ml_object(obj: Any) -> Optional[Dict[str, Any]]:
