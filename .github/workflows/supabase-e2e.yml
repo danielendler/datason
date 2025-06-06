@@ -20,6 +20,23 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e .[dev,all]
           pip install pytest
+      - name: Cache Supabase Docker images
+        id: cache-supabase
+        uses: actions/cache@v4
+        with:
+          path: supabase-images.tar
+          key: ${{ runner.os }}-supabase-${{ hashFiles('docker/supabase/docker-compose.yml') }}
+
+      - name: Load cached images
+        if: steps.cache-supabase.outputs.cache-hit == 'true'
+        run: docker load -i supabase-images.tar
+
+      - name: Pull Supabase images
+        if: steps.cache-supabase.outputs.cache-hit != 'true'
+        run: |
+          docker compose -f docker/supabase/docker-compose.yml pull
+          docker save $(docker compose -f docker/supabase/docker-compose.yml config | awk '/image:/ {print $2}') -o supabase-images.tar
+
       - name: Start Supabase
         run: |
           cp docker/supabase/.env.example docker/supabase/.env
