@@ -432,8 +432,9 @@ class DeserializationAudit:
                 ):
                     # Compare types and parameters
                     return type(original) is type(reconstructed) and original.get_params() == reconstructed.get_params()
-            except Exception:
-                pass
+            except (AttributeError, ImportError, ValueError):
+                # If sklearn comparison fails, return False
+                pass  # nosec B110 - intentional fallback for model comparison
 
         # Special handling for pandas with dtype tolerance for metadata round-trips
         if HAS_PANDAS:
@@ -443,8 +444,9 @@ class DeserializationAudit:
                     if original.shape == reconstructed.shape and list(original.columns) == list(reconstructed.columns):
                         # Check if values are semantically equivalent (allowing for dtype coercion)
                         return original.values.tolist() == reconstructed.values.tolist()
-                except Exception:
-                    pass
+                except (AttributeError, ValueError, TypeError):
+                    # If pandas comparison fails, return False
+                    pass  # nosec B110 - intentional fallback for pandas comparison
             elif isinstance(original, pd.Series) and isinstance(reconstructed, pd.Series):
                 try:
                     # For series, check values and name
@@ -452,8 +454,9 @@ class DeserializationAudit:
                         original.values.tolist() == reconstructed.values.tolist()
                         and original.name == reconstructed.name
                     )
-                except Exception:
-                    pass
+                except (AttributeError, ValueError, TypeError):
+                    # If pandas series comparison fails, return False
+                    pass  # nosec B110 - intentional fallback for pandas series comparison
 
         return self._verify_reconstruction(original, reconstructed)
 

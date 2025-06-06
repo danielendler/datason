@@ -30,6 +30,16 @@ class TestSecurityConstraints:
         # Clear caches to ensure clean state
         _clear_deserialization_caches()
 
+        # Force garbage collection to clean up any lingering state
+        import gc
+
+        gc.collect()
+
+        # Use explicit config to ensure consistent behavior across test contexts
+        from datason.config import SerializationConfig
+
+        config = SerializationConfig(max_depth=50)
+
         # Test maximum depth exceeded - make it small enough to trigger easily
         deeply_nested = {"level": 1}
         current = deeply_nested
@@ -39,19 +49,29 @@ class TestSecurityConstraints:
 
         # Should trigger security check (exact depth may vary)
         with pytest.raises(DeserializationSecurityError, match="Maximum deserialization depth"):
-            deserialize_fast(deeply_nested)
+            deserialize_fast(deeply_nested, config)
 
     def test_large_object_security_check(self):
         """Test security checks on large objects."""
         # Clear caches to ensure clean state
         _clear_deserialization_caches()
 
+        # Force garbage collection to clean up any lingering state
+        import gc
+
+        gc.collect()
+
+        # Use explicit config to ensure consistent behavior across test contexts
+        from datason.config import SerializationConfig
+
+        config = SerializationConfig(max_size=100000)  # Set limit below our test size
+
         # Create a very large dictionary
         large_dict = {f"key_{i}": f"value_{i}" for i in range(150000)}  # Increased size
 
         # Should trigger security checks
         with pytest.raises(DeserializationSecurityError, match="Dictionary size.*exceeds maximum"):
-            deserialize_fast(large_dict)
+            deserialize_fast(large_dict, config)
 
     def test_string_length_security_check(self):
         """Test security checks on very long strings."""

@@ -91,6 +91,14 @@ def test_lazy_import_sklearn_respects_patch(monkeypatch):
 
 
 def test_deserialize_fast_security_exceptions():
+    # Clear caches to ensure clean state
+    _clear_deserialization_caches()
+
+    # Force garbage collection to clean up any lingering state
+    import gc
+
+    gc.collect()
+
     config = SerializationConfig(max_size=3, max_depth=2)
     big_list = [1, 2, 3, 4]
     big_dict = {i: i for i in range(5)}

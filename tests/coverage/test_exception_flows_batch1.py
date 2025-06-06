@@ -194,7 +194,9 @@ class TestDeserializationWithNoPandas:
         _clear_deserialization_caches()
 
         # Mock pandas as unavailable
-        monkeypatch.setattr("datason.deserializers.pd", None)
+        from datason import deserializers
+
+        monkeypatch.setattr(deserializers, "pd", None)
 
         # Test basic deserialization still works
         data = {
@@ -219,7 +221,9 @@ class TestDeserializationWithNoPandas:
         _clear_deserialization_caches()
 
         # Mock numpy as unavailable
-        monkeypatch.setattr("datason.deserializers.np", None)
+        from datason import deserializers
+
+        monkeypatch.setattr(deserializers, "np", None)
 
         # Test with list that might look like numpy array
         data = {"array_like": [1, 2, 3, 4, 5]}

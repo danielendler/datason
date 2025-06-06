@@ -272,7 +272,9 @@ class TestDeserializerEdgeCases:
         _clear_deserialization_caches()
 
         # Mock pandas as unavailable
-        monkeypatch.setattr("datason.deserializers.pd", None)
+        from datason import deserializers
+
+        monkeypatch.setattr(deserializers, "pd", None)
 
         # Test that function handles missing pandas gracefully
         test_data = {"test": "data"}
@@ -285,7 +287,9 @@ class TestDeserializerEdgeCases:
         _clear_deserialization_caches()
 
         # Mock pandas as unavailable
-        monkeypatch.setattr("datason.deserializers.pd", None)
+        from datason import deserializers
+
+        monkeypatch.setattr(deserializers, "pd", None)
 
         # Test basic deserialization still works when pandas unavailable
         # The function should handle missing pandas gracefully
@@ -336,7 +340,9 @@ class TestNumpyEdgeCases:
         _clear_deserialization_caches()
 
         # Mock numpy as unavailable
-        monkeypatch.setattr("datason.deserializers.np", None)
+        from datason import deserializers
+
+        monkeypatch.setattr(deserializers, "np", None)
 
         # Test with list that might look like numpy array
         data = {"array_like": [1, 2, 3, 4, 5]}

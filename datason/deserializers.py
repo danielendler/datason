@@ -43,21 +43,18 @@ try:
     from .cache_manager import (
         dict_pool,
         list_pool,
-        operation_scope,
-        parsed_object_cache,
-        string_pattern_cache,
-        type_cache,
     )
 
     _cache_manager_available = True
 except ImportError:
-    # Fallback to module-level caches if cache manager not available
     _cache_manager_available = False
-    _DESERIALIZATION_TYPE_CACHE: Dict[str, str] = {}  # Maps string patterns to detected types
-    _STRING_PATTERN_CACHE: Dict[int, str] = {}  # Maps string id to detected pattern type
-    _PARSED_OBJECT_CACHE: Dict[str, Any] = {}  # Maps string to parsed object
-    _RESULT_DICT_POOL: List[Dict] = []
-    _RESULT_LIST_POOL: List[List] = []
+
+# Always define fallback caches for compatibility
+_DESERIALIZATION_TYPE_CACHE: Dict[str, str] = {}  # Maps string patterns to detected types
+_STRING_PATTERN_CACHE: Dict[int, str] = {}  # Maps string id to detected pattern type
+_PARSED_OBJECT_CACHE: Dict[str, Any] = {}  # Maps string to parsed object
+_RESULT_DICT_POOL: List[Dict] = []
+_RESULT_LIST_POOL: List[List] = []
 
 # Legacy cache size limits (used when cache manager not available)
 _TYPE_CACHE_SIZE_LIMIT = 1000  # Prevent memory growth
@@ -1218,17 +1215,17 @@ class TemplateDeserializer:
             if hasattr(template, "dtype"):
                 try:
                     result = result.astype(template.dtype)
-                except Exception:
-                    # If dtype conversion fails, keep original
-                    pass
+                except (ValueError, TypeError, AttributeError):
+                    # If dtype conversion fails due to incompatible types, keep original
+                    pass  # nosec B110 - intentional fallback for dtype conversion
 
             # Apply template shape if possible
             if hasattr(template, "shape") and result.size == template.size:
                 try:
                     result = result.reshape(template.shape)
-                except Exception:
-                    # If reshape fails, keep original shape
-                    pass
+                except (ValueError, AttributeError):
+                    # If reshape fails due to incompatible shapes, keep original shape
+                    pass  # nosec B110 - intentional fallback for reshape
 
             return result
         except Exception as e:
@@ -1295,8 +1292,9 @@ class TemplateDeserializer:
                         try:
                             torch_dtype = getattr(torch, dtype_str.replace("torch.", ""))
                             tensor = tensor.to(torch_dtype)
-                        except Exception:
-                            pass
+                        except (AttributeError, RuntimeError, TypeError):
+                            # If dtype conversion fails, keep original dtype
+                            pass  # nosec B110 - intentional fallback for torch dtype conversion
 
                     return tensor
 
@@ -1313,8 +1311,9 @@ class TemplateDeserializer:
                     if dtype:
                         try:
                             tensor = tensor.to(getattr(torch, dtype))
-                        except Exception:
-                            pass
+                        except (AttributeError, RuntimeError, TypeError):
+                            # If dtype conversion fails, keep original dtype
+                            pass  # nosec B110 - intentional fallback for torch dtype conversion
 
                     return tensor
 
@@ -1371,8 +1370,9 @@ class TemplateDeserializer:
             # Handle dict format: {'_type': 'decimal', 'value': '123.456'}
             try:
                 return Decimal(obj["value"])
-            except Exception:
-                pass
+            except (ValueError, TypeError, decimal.InvalidOperation):
+                # If decimal conversion fails, continue to fallback conversion
+                pass  # nosec B110 - intentional fallback for decimal conversion
 
         try:
             # Try direct conversion
@@ -1769,15 +1769,17 @@ def _process_dict_optimized(obj: dict, config: Optional["SerializationConfig"], 
             if pd is not None and _looks_like_split_format(obj):
                 try:
                     return _reconstruct_from_split(obj)
-                except Exception:
-                    pass  # Fall through to normal processing
+                except (KeyError, ValueError, TypeError, ImportError):
+                    # If pandas reconstruction fails, continue with normal processing
+                    pass  # nosec B110 - intentional fallback for pandas reconstruction
 
             # Try pandas DataFrame detection (column-oriented dict)
             if pd is not None and _looks_like_dataframe_dict(obj):
                 try:
                     return _reconstruct_dataframe(obj)
-                except Exception:
-                    pass  # Fall through to normal processing
+                except (KeyError, ValueError, TypeError, ImportError):
+                    # If pandas reconstruction fails, continue with normal processing
+                    pass  # nosec B110 - intentional fallback for pandas reconstruction
 
             # Try pandas Series detection (index-oriented dict)
             if pd is not None:
@@ -2046,34 +2048,60 @@ def _get_cached_parsed_object(s: str, pattern_type: str) -> Any:
 
 def _get_pooled_dict() -> Dict:
     """Get a dictionary from the pool or create new one."""
-    if _RESULT_DICT_POOL:
-        result = _RESULT_DICT_POOL.pop()
-        result.clear()  # Ensure it's clean
-        return result
-    return {}
+    if _cache_manager_available:
+        try:
+            return dict_pool.get()
+        except Exception:
+            return {}
+    else:
+        if _RESULT_DICT_POOL:
+            result = _RESULT_DICT_POOL.pop()
+            result.clear()  # Ensure it's clean
+            return result
+        return {}
 
 
 def _return_dict_to_pool(d: Dict) -> None:
     """Return a dictionary to the pool for reuse."""
-    if len(_RESULT_DICT_POOL) < _POOL_SIZE_LIMIT:
-        d.clear()
-        _RESULT_DICT_POOL.append(d)
+    if _cache_manager_available:
+        try:
+            dict_pool.return_to_pool(d)
+        except (AttributeError, RuntimeError, TypeError):
+            # If pool return fails due to pool state issues, just skip pooling
+            pass  # nosec B110 - intentional fallback for object pool operations
+    else:
+        if len(_RESULT_DICT_POOL) < _POOL_SIZE_LIMIT:
+            d.clear()
+            _RESULT_DICT_POOL.append(d)
 
 
 def _get_pooled_list() -> List:
     """Get a list from the pool or create new one."""
-    if _RESULT_LIST_POOL:
-        result = _RESULT_LIST_POOL.pop()
-        result.clear()  # Ensure it's clean
-        return result
-    return []
+    if _cache_manager_available:
+        try:
+            return list_pool.get()
+        except Exception:
+            return []
+    else:
+        if _RESULT_LIST_POOL:
+            result = _RESULT_LIST_POOL.pop()
+            result.clear()  # Ensure it's clean
+            return result
+        return []
 
 
 def _return_list_to_pool(lst: List) -> None:
     """Return a list to the pool for reuse."""
-    if len(_RESULT_LIST_POOL) < _POOL_SIZE_LIMIT:
-        lst.clear()
-        _RESULT_LIST_POOL.append(lst)
+    if _cache_manager_available:
+        try:
+            list_pool.return_to_pool(lst)
+        except (AttributeError, RuntimeError, TypeError):
+            # If pool return fails due to pool state issues, just skip pooling
+            pass  # nosec B110 - intentional fallback for object pool operations
+    else:
+        if len(_RESULT_LIST_POOL) < _POOL_SIZE_LIMIT:
+            lst.clear()
+            _RESULT_LIST_POOL.append(lst)
 
 
 def _clear_deserialization_caches() -> None:
@@ -2085,9 +2113,9 @@ def _clear_deserialization_caches() -> None:
         # Use the scoped cache manager
         try:
             clear_scoped_caches()
-        except Exception:
+        except (AttributeError, ImportError, RuntimeError):
             # Fallback to module-level caches if scoped clearing fails
-            pass
+            pass  # nosec B110 - intentional fallback for cache clearing
     else:
         # Use module-level caches
         global _STRING_PATTERN_CACHE, _PARSED_OBJECT_CACHE, _RESULT_DICT_POOL, _RESULT_LIST_POOL

@@ -10,8 +10,8 @@ datason serializes different data types. Users can configure:
 - Recursion and size limits
 """
 
-from contextvars import ContextVar
 from contextlib import contextmanager
+from contextvars import ContextVar
 from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Callable, Dict, Generator, List, Optional
@@ -367,9 +367,6 @@ def set_cache_scope(scope: CacheScope) -> None:
     _cache_scope_context.set(scope)
 
 
-
-
-
 @contextmanager
 def cache_scope(scope: CacheScope) -> Generator[None, None, None]:
     """Context manager for temporarily setting cache scope.
@@ -390,9 +387,9 @@ def cache_scope(scope: CacheScope) -> Generator[None, None, None]:
 
         if hasattr(deserializers, "clear_caches"):
             deserializers.clear_caches()
-    except Exception:
+    except (AttributeError, ImportError):
         # Ignore cache clearing errors during scope changes
-        pass
+        pass  # nosec B110 - intentional fallback for cache clearing
 
     # Set new scope
     token = _cache_scope_context.set(scope)
@@ -406,9 +403,9 @@ def cache_scope(scope: CacheScope) -> Generator[None, None, None]:
             try:
                 if hasattr(deserializers, "clear_caches"):
                     deserializers.clear_caches()
-            except Exception:
+            except (AttributeError, ImportError):
                 # Ignore cache clearing errors during scope exit
-                pass
+                pass  # nosec B110 - intentional fallback for cache clearing
 
 
 # Preset configurations with cache-aware settings
