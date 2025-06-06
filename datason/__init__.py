@@ -27,6 +27,25 @@ if sys.version_info < (3, 9):
         stacklevel=2,
     )
 
+# NEW: Modern API (Phase 3) - Intention-revealing names and composable utilities
+from .api import (
+    dump,
+    dump_api,
+    dump_chunked,
+    dump_fast,
+    dump_ml,
+    dump_secure,
+    dumps,
+    get_api_info,
+    help_api,
+    load_basic,
+    load_perfect,
+    load_smart,
+    load_typed,
+    loads,
+    stream_dump,
+    suppress_deprecation_warnings,
+)
 from .converters import safe_float, safe_int
 from .core import (
     ChunkedSerializationResult,
@@ -193,6 +212,23 @@ __all__ = [  # noqa: RUF022
     "serialize_datetimes",
     # Serializers
     "serialize_detection_details",
+    # NEW: Modern API (Phase 3) - Intention-revealing wrapper functions
+    "dump",
+    "dump_ml",
+    "dump_api",
+    "dump_secure",
+    "dump_fast",
+    "dump_chunked",
+    "stream_dump",
+    "load_basic",
+    "load_smart",
+    "load_perfect",
+    "load_typed",
+    "loads",
+    "dumps",
+    "help_api",
+    "get_api_info",
+    "suppress_deprecation_warnings",
 ]
 
 # Add configuration exports if available
