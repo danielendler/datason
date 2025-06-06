@@ -119,30 +119,30 @@ class TestPyTorchSerialization:
         tensor = torch.tensor([1.0, 2.0, 3.0])
         result = serialize_pytorch_tensor(tensor)
 
-        assert result["_type"] == "torch.Tensor"
-        assert result["_shape"] == [3]
-        assert result["_dtype"] == "torch.float32"
-        assert result["_data"] == [1.0, 2.0, 3.0]
-        assert result["_device"] == "cpu"
-        assert result["_requires_grad"] is False
+        assert result["__datason_type__"] == "torch.Tensor"
+        assert result["__datason_value__"]["shape"] == [3]
+        assert result["__datason_value__"]["dtype"] == "torch.float32"
+        assert result["__datason_value__"]["data"] == [1.0, 2.0, 3.0]
+        assert result["__datason_value__"]["device"] == "cpu"
+        assert result["__datason_value__"]["requires_grad"] is False
 
     def test_serialize_multidimensional_tensor(self) -> None:
         """Test serialization of multidimensional tensor."""
         tensor = torch.randn(2, 3, 4)
         result = serialize_pytorch_tensor(tensor)
 
-        assert result["_type"] == "torch.Tensor"
-        assert result["_shape"] == [2, 3, 4]
-        assert len(result["_data"]) == 2
-        assert len(result["_data"][0]) == 3
-        assert len(result["_data"][0][0]) == 4
+        assert result["__datason_type__"] == "torch.Tensor"
+        assert result["__datason_value__"]["shape"] == [2, 3, 4]
+        assert len(result["__datason_value__"]["data"]) == 2
+        assert len(result["__datason_value__"]["data"][0]) == 3
+        assert len(result["__datason_value__"]["data"][0][0]) == 4
 
     def test_serialize_tensor_with_gradients(self) -> None:
         """Test serialization of tensor with gradient tracking."""
         tensor = torch.tensor([1.0, 2.0, 3.0], requires_grad=True)
         result = serialize_pytorch_tensor(tensor)
 
-        assert result["_requires_grad"] is True
+        assert result["__datason_value__"]["requires_grad"] is True
 
     def test_detect_pytorch_tensor(self) -> None:
         """Test automatic detection of PyTorch tensors."""
@@ -150,7 +150,7 @@ class TestPyTorchSerialization:
         result = detect_and_serialize_ml_object(tensor)
 
         assert result is not None
-        assert result["_type"] == "torch.Tensor"
+        assert result["__datason_type__"] == "torch.Tensor"
 
 
 @pytest.mark.skipif(not HAS_SKLEARN, reason="scikit-learn not available")
@@ -169,21 +169,21 @@ class TestSklearnSerialization:
 
         result = serialize_sklearn_model(model)
 
-        assert result["_type"] == "sklearn.model"
-        assert "RandomForestClassifier" in result["_class"]
-        assert result["_fitted"] is True
-        assert result["_params"]["n_estimators"] == 10
-        assert result["_params"]["random_state"] == 42
+        assert result["__datason_type__"] == "sklearn.model"
+        assert "RandomForestClassifier" in result["__datason_value__"]["class"]
+        assert result["__datason_value__"]["fitted"] is True
+        assert result["__datason_value__"]["params"]["n_estimators"] == 10
+        assert result["__datason_value__"]["params"]["random_state"] == 42
 
     def test_serialize_unfitted_model(self) -> None:
         """Test serialization of unfitted model."""
         model = LogisticRegression(random_state=42)
         result = serialize_sklearn_model(model)
 
-        assert result["_type"] == "sklearn.model"
-        assert "LogisticRegression" in result["_class"]
-        assert result["_fitted"] is False
-        assert result["_params"]["random_state"] == 42
+        assert result["__datason_type__"] == "sklearn.model"
+        assert "LogisticRegression" in result["__datason_value__"]["class"]
+        assert result["__datason_value__"]["fitted"] is False
+        assert result["__datason_value__"]["params"]["random_state"] == 42
 
     def test_detect_sklearn_model(self) -> None:
         """Test automatic detection of sklearn models."""
@@ -191,7 +191,7 @@ class TestSklearnSerialization:
         result = detect_and_serialize_ml_object(model)
 
         assert result is not None
-        assert result["_type"] == "sklearn.model"
+        assert result["__datason_type__"] == "sklearn.model"
 
 
 @pytest.mark.skipif(not HAS_JAX, reason="JAX not available")
@@ -203,18 +203,18 @@ class TestJAXSerialization:
         array = jnp.array([1.0, 2.0, 3.0])
         result = serialize_jax_array(array)
 
-        assert result["_type"] == "jax.Array"
-        assert result["_shape"] == [3]
-        assert "float32" in result["_dtype"]
-        assert result["_data"] == [1.0, 2.0, 3.0]
+        assert result["__datason_type__"] == "jax.Array"
+        assert result["__datason_value__"]["shape"] == [3]
+        assert "float32" in result["__datason_value__"]["dtype"]
+        assert result["__datason_value__"]["data"] == [1.0, 2.0, 3.0]
 
     def test_serialize_jax_multidimensional(self) -> None:
         """Test serialization of multidimensional JAX array."""
         array = jnp.ones((2, 3))
         result = serialize_jax_array(array)
 
-        assert result["_shape"] == [2, 3]
-        assert result["_data"] == [[1.0, 1.0, 1.0], [1.0, 1.0, 1.0]]
+        assert result["__datason_value__"]["shape"] == [2, 3]
+        assert result["__datason_value__"]["data"] == [[1.0, 1.0, 1.0], [1.0, 1.0, 1.0]]
 
     def test_detect_jax_array(self) -> None:
         """Test automatic detection of JAX arrays."""
@@ -222,7 +222,7 @@ class TestJAXSerialization:
         result = detect_and_serialize_ml_object(array)
 
         assert result is not None
-        assert result["_type"] == "jax.Array"
+        assert result["__datason_type__"] == "jax.Array"
 
 
 @pytest.mark.skipif(not HAS_SCIPY, reason="scipy not available")
@@ -239,11 +239,11 @@ class TestScipySerialization:
 
         result = serialize_scipy_sparse(matrix)
 
-        assert result["_type"] == "scipy.sparse"
-        assert result["_format"] == "csr_matrix"
-        assert result["_shape"] == [3, 3]
-        assert result["_nnz"] == 3
-        assert len(result["_data"]) == 3
+        assert result["__datason_type__"] == "scipy.sparse"
+        assert result["__datason_value__"]["format"] == "csr_matrix"
+        assert result["__datason_value__"]["shape"] == [3, 3]
+        assert result["__datason_value__"]["nnz"] == 3
+        assert len(result["__datason_value__"]["data"]) == 3
 
     @pytest.mark.skipif(not HAS_NUMPY, reason="numpy not available")
     def test_serialize_coo_matrix(self) -> None:
@@ -255,9 +255,9 @@ class TestScipySerialization:
 
         result = serialize_scipy_sparse(matrix)
 
-        assert result["_type"] == "scipy.sparse"
-        assert result["_format"] == "coo_matrix"
-        assert result["_shape"] == [3, 3]
+        assert result["__datason_type__"] == "scipy.sparse"
+        assert result["__datason_value__"]["format"] == "coo_matrix"
+        assert result["__datason_value__"]["shape"] == [3, 3]
 
     def test_detect_scipy_sparse(self) -> None:
         """Test automatic detection of scipy sparse matrices."""
@@ -265,7 +265,7 @@ class TestScipySerialization:
         result = detect_and_serialize_ml_object(matrix)
 
         assert result is not None
-        assert result["_type"] == "scipy.sparse"
+        assert result["__datason_type__"] == "scipy.sparse"
 
 
 @pytest.mark.skipif(not HAS_PIL, reason="PIL not available")
@@ -282,11 +282,11 @@ class TestPILSerialization:
 
         result = serialize_pil_image(img)
 
-        assert result["_type"] == "PIL.Image"
-        assert result["_mode"] == "RGB"
+        assert result["__datason_type__"] == "PIL.Image"
+        assert result["__datason_value__"]["mode"] == "RGB"
         # Size is returned as tuple, not list
-        assert result["_size"] == (64, 64)
-        assert isinstance(result["_data"], str)  # Base64 encoded
+        assert result["__datason_value__"]["size"] == (64, 64)
+        assert isinstance(result["__datason_value__"]["data"], str)  # Base64 encoded
 
     def test_serialize_grayscale_image(self):
         """Test serialization of grayscale PIL images."""
@@ -298,11 +298,11 @@ class TestPILSerialization:
 
         result = serialize_pil_image(img)
 
-        assert result["_type"] == "PIL.Image"
-        assert result["_mode"] == "L"
+        assert result["__datason_type__"] == "PIL.Image"
+        assert result["__datason_value__"]["mode"] == "L"
         # Size is returned as tuple, not list
-        assert result["_size"] == (32, 32)
-        assert isinstance(result["_data"], str)  # Base64 encoded
+        assert result["__datason_value__"]["size"] == (32, 32)
+        assert isinstance(result["__datason_value__"]["data"], str)  # Base64 encoded
 
     def test_detect_pil_image(self) -> None:
         """Test automatic detection of PIL images."""
@@ -310,7 +310,7 @@ class TestPILSerialization:
         result = detect_and_serialize_ml_object(image)
 
         assert result is not None
-        assert result["_type"] == "PIL.Image"
+        assert result["__datason_type__"] == "PIL.Image"
 
 
 @pytest.mark.skipif(not HAS_TRANSFORMERS, reason="transformers not available")
@@ -324,10 +324,10 @@ class TestTransformersSerialization:
             tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased", trust_remote_code=True)
             result = serialize_huggingface_tokenizer(tokenizer)
 
-            assert result["_type"] == "transformers.tokenizer"
-            assert "tokenizer" in result["_class"].lower()
-            assert result["_vocab_size"] > 0
-            assert result["_model_max_length"] is not None
+            assert result["__datason_type__"] == "transformers.tokenizer"
+            assert "tokenizer" in result["__datason_value__"]["class"].lower()
+            assert result["__datason_value__"]["vocab_size"] > 0
+            assert result["__datason_value__"]["model_max_length"] is not None
         except Exception:
             # If download fails, test with mock
             pytest.skip("Could not download tokenizer for testing")
@@ -339,7 +339,7 @@ class TestTransformersSerialization:
             result = detect_and_serialize_ml_object(tokenizer)
 
             assert result is not None
-            assert result["_type"] == "transformers.tokenizer"
+            assert result["__datason_type__"] == "transformers.tokenizer"
         except Exception:
             pytest.skip("Could not download tokenizer for testing")
 
@@ -355,7 +355,7 @@ class TestMLSerializersFallbacks:
         with patch("datason.ml_serializers.torch", None):
             result = serialize_pytorch_tensor(mock_tensor)
 
-        assert result == {"_type": "torch.Tensor", "_data": "MockTensor([1, 2, 3])"}
+        assert result == {"__datason_type__": "torch.Tensor", "__datason_value__": "MockTensor([1, 2, 3])"}
 
     def test_sklearn_model_fallback(self) -> None:
         """Test sklearn model serialization fallback when sklearn not available."""
@@ -365,7 +365,7 @@ class TestMLSerializersFallbacks:
         with patch("datason.ml_serializers.sklearn", None), patch("datason.ml_serializers.BaseEstimator", None):
             result = serialize_sklearn_model(mock_model)
 
-        assert result == {"_type": "sklearn.model", "_data": "MockSKLearnModel"}
+        assert result == {"__datason_type__": "sklearn.model", "__datason_value__": "MockSKLearnModel"}
 
     def test_jax_array_fallback(self) -> None:
         """Test JAX array serialization fallback when jax not available."""
@@ -375,7 +375,7 @@ class TestMLSerializersFallbacks:
         with patch("datason.ml_serializers.jax", None):
             result = serialize_jax_array(mock_array)
 
-        assert result == {"_type": "jax.Array", "_data": "MockJaxArray"}
+        assert result == {"__datason_type__": "jax.Array", "__datason_value__": "MockJaxArray"}
 
     def test_scipy_sparse_fallback(self) -> None:
         """Test scipy sparse matrix serialization fallback when scipy not available."""
@@ -385,7 +385,7 @@ class TestMLSerializersFallbacks:
         with patch("datason.ml_serializers.scipy", None):
             result = serialize_scipy_sparse(mock_matrix)
 
-        assert result == {"_type": "scipy.sparse", "_data": "MockSparseMatrix"}
+        assert result == {"__datason_type__": "scipy.sparse", "__datason_value__": "MockSparseMatrix"}
 
     def test_pil_image_fallback(self) -> None:
         """Test PIL Image serialization fallback when PIL not available."""
@@ -395,7 +395,7 @@ class TestMLSerializersFallbacks:
         with patch("datason.ml_serializers.Image", None):
             result = serialize_pil_image(mock_image)
 
-        assert result == {"_type": "PIL.Image", "_data": "MockPILImage"}
+        assert result == {"__datason_type__": "PIL.Image", "__datason_value__": "MockPILImage"}
 
     def test_transformers_tokenizer_fallback(self) -> None:
         """Test HuggingFace tokenizer serialization fallback when transformers not available."""
@@ -405,7 +405,7 @@ class TestMLSerializersFallbacks:
         with patch("datason.ml_serializers.transformers", None):
             result = serialize_huggingface_tokenizer(mock_tokenizer)
 
-        assert result == {"_type": "transformers.tokenizer", "_data": "MockTokenizer"}
+        assert result == {"__datason_type__": "transformers.tokenizer", "__datason_value__": "MockTokenizer"}
 
 
 class TestDetectAndSerializeMLObject:
@@ -454,8 +454,8 @@ class TestMLSerializersErrorHandling:
                 warnings.simplefilter("always")
                 result = serialize_sklearn_model(model)
 
-        assert result["_type"] == "sklearn.model"
-        assert "_error" in result
+        assert result["__datason_type__"] == "sklearn.model"
+        assert "error" in result["__datason_value__"]
         assert len(w) == 1
         assert "Could not serialize sklearn model" in str(w[0].message)
 
@@ -470,8 +470,8 @@ class TestMLSerializersErrorHandling:
                 warnings.simplefilter("always")
                 result = serialize_scipy_sparse(matrix)
 
-        assert result["_type"] == "scipy.sparse"
-        assert "_error" in result
+        assert result["__datason_type__"] == "scipy.sparse"
+        assert "error" in result["__datason_value__"]
         assert len(w) == 1
         assert "Could not serialize scipy sparse matrix" in str(w[0].message)
 
@@ -486,7 +486,7 @@ class TestMLSerializersErrorHandling:
                 warnings.simplefilter("always")
                 result = serialize_pil_image(image)
 
-        assert result["_type"] == "PIL.Image"
-        assert "_error" in result
+        assert result["__datason_type__"] == "PIL.Image"
+        assert "error" in result["__datason_value__"]
         assert len(w) == 1
         assert "Could not serialize PIL Image" in str(w[0].message)

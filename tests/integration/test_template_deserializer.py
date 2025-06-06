@@ -98,7 +98,7 @@ class TestTemplateDeserializerNewTypes:
         # Serialize (becomes dict with metadata)
         serialized = datason.serialize(original)
         assert isinstance(serialized, dict)
-        assert serialized.get("_type") == "torch.Tensor"
+        assert serialized.get("__datason_type__") == "torch.Tensor"
 
         # Template deserialize (should restore tensor)
         reconstructed = deserialize_with_template(serialized, original)
@@ -113,7 +113,7 @@ class TestTemplateDeserializerNewTypes:
         # Serialize (becomes dict with metadata)
         serialized = datason.serialize(original)
         assert isinstance(serialized, dict)
-        assert serialized.get("_type") == "sklearn.model"
+        assert serialized.get("__datason_type__") == "sklearn.model"
 
         # Template deserialize (should restore model)
         reconstructed = deserialize_with_template(serialized, original)
