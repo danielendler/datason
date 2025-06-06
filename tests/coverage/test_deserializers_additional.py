@@ -4,6 +4,7 @@ from datetime import datetime
 import uuid
 from decimal import Decimal
 from pathlib import Path
+import warnings
 
 import pytest
 
@@ -104,6 +105,8 @@ class DummyPandas(types.ModuleType):
 def test_deserialize_with_type_metadata_basic(monkeypatch):
     dummy_pd = DummyPandas()
     monkeypatch.setattr(sys.modules["datason.deserializers"], "pd", dummy_pd, raising=False)
+    monkeypatch.setitem(sys.modules, "pandas", dummy_pd)
+    monkeypatch.setitem(sys.modules, "pandas", dummy_pd)
     dummy_np = DummyNumpy("numpy")
     monkeypatch.setitem(sys.modules, "numpy", dummy_np)
 
@@ -195,3 +198,54 @@ def test_deserialize_with_numpy_and_torch(monkeypatch):
     model = _deserialize_with_type_metadata(skl_meta)
     assert isinstance(model, DummyModel)
     assert model.params == {"a": 1}
+
+class DummyConfig:
+    def __init__(self):
+        from datason.config import SerializationConfig
+        self.config = SerializationConfig(auto_detect_types=True)
+
+
+def test_process_list_auto_numpy(monkeypatch):
+    dummy_np = DummyNumpy("numpy")
+    monkeypatch.setitem(sys.modules, "numpy", dummy_np)
+    from datason.deserializers import _process_list_optimized
+    lst = list(range(8))
+    cfg = DummyConfig().config
+    result = _process_list_optimized(lst, cfg, 0, set())
+    assert isinstance(result, DummyNumpy.ndarray)
+    assert list(result) == list(range(8))
+
+
+def test_process_dict_auto_dataframe_series(monkeypatch):
+    dummy_pd = DummyPandas()
+    monkeypatch.setattr(sys.modules["datason.deserializers"], "pd", dummy_pd, raising=False)
+    monkeypatch.setitem(sys.modules, "pandas", dummy_pd)
+    from datason.deserializers import _process_dict_optimized, _try_series_detection
+    cfg = DummyConfig().config
+    df_data = {"A": [1, 2], "B": [3, 4]}
+    df = _process_dict_optimized(df_data, cfg, 0, set())
+    assert isinstance(df, DummyPandas.DataFrame)
+    series_data = {"0": 1, "1": 2, "2": 3}
+    series = _try_series_detection(series_data)
+    assert isinstance(series, DummyPandas.Series)
+
+
+def test_process_list_and_dict_circular(monkeypatch):
+    from datason.deserializers import _process_list_optimized, _process_dict_optimized
+    lst = []
+    dct = {}
+    seen = {id(lst), id(dct)}
+    with warnings.catch_warnings(record=True) as w1:
+        warnings.simplefilter("always")
+        assert _process_list_optimized(lst, None, 1, seen) == []
+        assert any("Circular reference" in str(w.message) for w in w1)
+    with warnings.catch_warnings(record=True) as w2:
+        warnings.simplefilter("always")
+        assert _process_dict_optimized(dct, None, 1, seen) == {}
+        assert any("Circular reference" in str(w.message) for w in w2)
+
+
+def test_looks_like_path_function():
+    from datason.deserializers import _looks_like_path
+    assert _looks_like_path("/tmp/file.txt")
+    assert not _looks_like_path("http://example.com")

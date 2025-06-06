@@ -8,6 +8,10 @@ from datason.ml_serializers import (
     _lazy_import_torch,
     _lazy_import_tensorflow,
     _lazy_import_sklearn,
+    _lazy_import_jax,
+    _lazy_import_scipy,
+    _lazy_import_pil,
+    _lazy_import_transformers,
     __getattr__ as ml_getattr,
 )
 from datason.deserializers import deserialize_fast, DeserializationSecurityError
@@ -85,3 +89,61 @@ def test_deserialize_fast_security_exceptions():
     deep = {'a': {'b': {'c': {'d': 1}}}}
     with pytest.raises(DeserializationSecurityError, match='depth'):
         deserialize_fast(deep, config)
+
+class DummyJax(types.ModuleType):
+    def __init__(self, name='jax'):
+        super().__init__(name)
+        self.numpy = types.SimpleNamespace()
+
+class DummyScipy(types.ModuleType):
+    pass
+
+class DummyPIL(types.ModuleType):
+    def __init__(self):
+        super().__init__('PIL')
+        self.Image = object
+
+
+def test_lazy_import_jax_respects_patch(monkeypatch):
+    dummy = DummyJax()
+    _LAZY_IMPORTS["jax"] = None
+    _LAZY_IMPORTS["jnp"] = None
+    module = sys.modules['datason.ml_serializers']
+    monkeypatch.setattr(module, 'jax', dummy, raising=False)
+    jax_mod, jnp_mod = _lazy_import_jax()
+    assert jax_mod is dummy
+    assert jnp_mod is dummy.numpy
+    del module.__dict__['jax']
+    jax_cached, jnp_cached = _lazy_import_jax()
+    assert jax_cached is dummy
+    assert jnp_cached is dummy.numpy
+
+
+def test_lazy_import_scipy_respects_patch(monkeypatch):
+    dummy = DummyScipy('scipy')
+    _LAZY_IMPORTS["scipy"] = None
+    module = sys.modules['datason.ml_serializers']
+    monkeypatch.setattr(module, 'scipy', dummy, raising=False)
+    assert _lazy_import_scipy() is dummy
+    del module.__dict__['scipy']
+    assert _lazy_import_scipy() is dummy
+
+
+def test_lazy_import_pil_respects_patch(monkeypatch):
+    dummy = DummyPIL()
+    _LAZY_IMPORTS["PIL_Image"] = None
+    module = sys.modules['datason.ml_serializers']
+    monkeypatch.setattr(module, 'Image', dummy.Image, raising=False)
+    assert _lazy_import_pil() is dummy.Image
+    del module.__dict__['Image']
+    assert _lazy_import_pil() is dummy.Image
+
+
+def test_lazy_import_transformers_respects_patch(monkeypatch):
+    dummy = types.ModuleType('transformers')
+    _LAZY_IMPORTS["transformers"] = None
+    module = sys.modules['datason.ml_serializers']
+    monkeypatch.setattr(module, 'transformers', dummy, raising=False)
+    assert _lazy_import_transformers() is dummy
+    del module.__dict__['transformers']
+    assert _lazy_import_transformers() is dummy
