@@ -11,10 +11,10 @@ from uuid import UUID
 
 import pytest
 
+import datason
 from datason.deserializers import (
     TemplateDeserializationError,
     TemplateDeserializer,
-    _clear_deserialization_caches,
     _get_pooled_dict,
     _get_pooled_list,
     _return_dict_to_pool,
@@ -415,11 +415,11 @@ class TestPerformanceOptimizations:
     def test_cache_clearing(self):
         """Test deserialization cache clearing."""
         # Clear all caches - should not raise errors
-        _clear_deserialization_caches()
+        datason.clear_caches()
 
         # Should be safe to call multiple times
-        _clear_deserialization_caches()
-        _clear_deserialization_caches()
+        datason.clear_caches()
+        datason.clear_caches()
 
     def test_deserialize_fast_with_config(self):
         """Test fast deserialization with config."""

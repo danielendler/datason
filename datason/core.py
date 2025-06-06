@@ -793,6 +793,13 @@ def _serialize_full_path(
             if ml_result is not None:
                 # CRITICAL FIX: Handle type metadata for ML objects when include_type_hints is enabled
                 if config and config.include_type_hints and isinstance(ml_result, dict) and "_type" in ml_result:
+                    # Add deprecation warning for legacy ML format
+                    warnings.warn(
+                        "Legacy '_type' format in ML serialization is deprecated and will be removed in v0.8.0. "
+                        "Use '__datason_type__' format instead.",
+                        DeprecationWarning,
+                        stacklevel=4,
+                    )
                     # Convert legacy ML format to new type metadata format
                     legacy_type = ml_result["_type"]
 

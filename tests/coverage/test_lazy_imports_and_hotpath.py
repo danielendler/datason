@@ -2,8 +2,8 @@ import builtins
 import sys
 import types
 
+import datason
 from datason.deserializers import (
-    _clear_deserialization_caches,
     _get_pooled_dict,
     _is_homogeneous_basic_types,
     _return_dict_to_pool,
@@ -88,7 +88,7 @@ def test_lazy_import_sklearn_respects_patch(monkeypatch):
 
 def test_deserialize_fast_security_exceptions():
     # Comprehensive state reset for test isolation
-    _clear_deserialization_caches()
+    datason.clear_caches()
     import gc
 
     gc.collect()
@@ -198,7 +198,7 @@ def test_lazy_import_transformers_respects_patch(monkeypatch):
 def test_basic_homogeneous_list_optimization():
     """Test the homogeneous list optimization hot path."""
     # Clear caches to ensure clean state
-    _clear_deserialization_caches()
+    datason.clear_caches()
 
     # Test with homogeneous integer list (should take fast path)
     homogeneous_ints = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
@@ -212,7 +212,7 @@ def test_basic_homogeneous_list_optimization():
 def test_basic_homogeneous_list_strings():
     """Test homogeneous string list optimization."""
     # Clear caches to ensure clean state
-    _clear_deserialization_caches()
+    datason.clear_caches()
 
     # Test with homogeneous string list
     homogeneous_strings = ["hello", "world", "test", "data"]
@@ -225,7 +225,7 @@ def test_basic_homogeneous_list_strings():
 def test_mixed_type_list_no_optimization():
     """Test that mixed type lists don't trigger optimization."""
     # Clear caches to ensure clean state
-    _clear_deserialization_caches()
+    datason.clear_caches()
 
     # Test with mixed types (should not take fast path)
     mixed_list = [1, "hello", 3.14, True, None]
@@ -238,7 +238,7 @@ def test_mixed_type_list_no_optimization():
 def test_nested_structure_optimization():
     """Test optimization with nested structures."""
     # Clear caches to ensure clean state
-    _clear_deserialization_caches()
+    datason.clear_caches()
 
     # Test with nested structure
     nested_data = {
@@ -254,7 +254,7 @@ def test_nested_structure_optimization():
 def test_object_pooling_usage():
     """Test the object pooling mechanisms."""
     # Clear caches to ensure clean state
-    _clear_deserialization_caches()
+    datason.clear_caches()
 
     # Get a pooled dict
     pooled_dict = _get_pooled_dict()
@@ -276,7 +276,7 @@ def test_object_pooling_usage():
 def test_large_homogeneous_list_performance():
     """Test performance optimization with large homogeneous lists."""
     # Clear caches to ensure clean state
-    _clear_deserialization_caches()
+    datason.clear_caches()
 
     # Test with large homogeneous list
     large_list = [42] * 1000
@@ -290,7 +290,7 @@ def test_large_homogeneous_list_performance():
 def test_empty_containers_optimization():
     """Test optimization with empty containers."""
     # Clear caches to ensure clean state
-    _clear_deserialization_caches()
+    datason.clear_caches()
 
     # Test empty list
     empty_list = []

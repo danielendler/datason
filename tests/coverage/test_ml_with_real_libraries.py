@@ -480,9 +480,9 @@ class TestMLLibraryUtilities:
     def test_torch_import_with_patched_none(self):
         """Test torch import behavior when torch is None."""
         # Clear caches to ensure clean state
-        from datason.deserializers import _clear_deserialization_caches
+        import datason
 
-        _clear_deserialization_caches()
+        datason.clear_caches()
 
         # Import the correct function from ml_serializers
         from datason.ml_serializers import _lazy_import_torch

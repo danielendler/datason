@@ -10,7 +10,7 @@ import pytest
 
 import datason
 from datason.config import SerializationConfig
-from datason.deserializers import _clear_deserialization_caches, deserialize_fast
+from datason.deserializers import deserialize_fast
 
 pandas = pytest.importorskip("pandas", reason="Pandas not available")
 
@@ -20,7 +20,7 @@ class TestPandasAutoDetection:
 
     def setup_method(self) -> None:
         """Clear caches before each test to ensure clean state."""
-        _clear_deserialization_caches()
+        datason.clear_caches()
 
     def test_dataframe_from_records_auto_detection(self) -> None:
         """Test DataFrame auto-detection from list of records."""

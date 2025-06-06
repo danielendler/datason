@@ -8,8 +8,8 @@ from datetime import datetime
 
 import pytest
 
+import datason
 from datason.deserializers import (
-    _clear_deserialization_caches,
     _convert_string_keys_to_int_if_possible,
     _looks_like_dataframe_dict,
     _looks_like_series_data,
@@ -25,7 +25,7 @@ class TestDatetimeUtilsExceptionFlows:
     def test_convert_pandas_timestamps_without_pandas(self, monkeypatch):
         """Test convert_pandas_timestamps when pandas is unavailable (lines 13-14)."""
         # Clear caches to ensure clean state
-        _clear_deserialization_caches()
+        datason.clear_caches()
 
         # Mock pandas as unavailable
         monkeypatch.setattr("datason.datetime_utils.pd", None)
@@ -49,7 +49,7 @@ class TestDatetimeUtilsExceptionFlows:
     def test_ensure_timestamp_without_pandas(self, monkeypatch):
         """Test ensure_timestamp when pandas is unavailable (lines 102-116)."""
         # Clear caches to ensure clean state
-        _clear_deserialization_caches()
+        datason.clear_caches()
 
         # Mock pandas as unavailable
         monkeypatch.setattr("datason.datetime_utils.pd", None)
@@ -63,7 +63,7 @@ class TestDatetimeUtilsExceptionFlows:
     def test_ensure_timestamp_invalid_types(self):
         """Test ensure_timestamp with invalid input types (lines 102-116)."""
         # Clear caches to ensure clean state
-        _clear_deserialization_caches()
+        datason.clear_caches()
 
         pytest.importorskip("pandas")
 
@@ -83,7 +83,7 @@ class TestDatetimeUtilsExceptionFlows:
     def test_ensure_timestamp_conversion_failures(self):
         """Test ensure_timestamp with values that fail conversion (lines 134-200)."""
         # Clear caches to ensure clean state
-        _clear_deserialization_caches()
+        datason.clear_caches()
 
         pd = pytest.importorskip("pandas")
 
@@ -111,7 +111,7 @@ class TestDatetimeUtilsExceptionFlows:
     def test_ensure_dates_missing_date_column(self):
         """Test ensure_dates with DataFrame missing date column (lines 134-200)."""
         # Clear caches to ensure clean state
-        _clear_deserialization_caches()
+        datason.clear_caches()
 
         pd = pytest.importorskip("pandas")
 
@@ -127,7 +127,7 @@ class TestDatetimeUtilsExceptionFlows:
     def test_ensure_dates_invalid_input_type(self):
         """Test ensure_dates with invalid input types (lines 134-200)."""
         # Clear caches to ensure clean state
-        _clear_deserialization_caches()
+        datason.clear_caches()
 
         from datason.datetime_utils import ensure_dates
 
@@ -141,7 +141,7 @@ class TestDatetimeUtilsExceptionFlows:
     def test_ensure_dates_dict_without_pandas(self, monkeypatch):
         """Test ensure_dates with dict when pandas is unavailable (lines 134-200)."""
         # Clear caches to ensure clean state
-        _clear_deserialization_caches()
+        datason.clear_caches()
 
         # Mock pandas as unavailable
         monkeypatch.setattr("datason.datetime_utils.pd", None)
@@ -155,7 +155,7 @@ class TestDatetimeUtilsExceptionFlows:
     def test_ensure_dates_with_weird_date_types(self):
         """Test ensure_dates with problematic date column types (lines 134-200)."""
         # Clear caches to ensure clean state
-        _clear_deserialization_caches()
+        datason.clear_caches()
 
         pd = pytest.importorskip("pandas")
 
@@ -179,7 +179,7 @@ class TestDatetimeUtilsExceptionFlows:
     def test_ensure_dates_conversion_failure(self):
         """Test ensure_dates when date conversion fails (lines 134-200)."""
         # Clear caches to ensure clean state
-        _clear_deserialization_caches()
+        datason.clear_caches()
 
         pd = pytest.importorskip("pandas")
 
@@ -199,7 +199,7 @@ class TestDeserializerEdgeCases:
     def test_convert_string_keys_with_mixed_types(self):
         """Test string key conversion with mixed key types."""
         # Clear caches to ensure clean state
-        _clear_deserialization_caches()
+        datason.clear_caches()
 
         # Test with mixed key types
         data = {
@@ -221,7 +221,7 @@ class TestDeserializerEdgeCases:
     def test_looks_like_dataframe_dict_edge_cases(self):
         """Test DataFrame detection edge cases."""
         # Clear caches to ensure clean state
-        _clear_deserialization_caches()
+        datason.clear_caches()
 
         # Test empty dict
         assert not _looks_like_dataframe_dict({})
@@ -238,7 +238,7 @@ class TestDeserializerEdgeCases:
     def test_looks_like_series_data_edge_cases(self):
         """Test Series detection edge cases."""
         # Clear caches to ensure clean state
-        _clear_deserialization_caches()
+        datason.clear_caches()
 
         # Test empty dict
         assert not _looks_like_series_data({})
@@ -255,7 +255,7 @@ class TestDeserializerEdgeCases:
     def test_looks_like_split_format_edge_cases(self):
         """Test split format detection edge cases."""
         # Clear caches to ensure clean state
-        _clear_deserialization_caches()
+        datason.clear_caches()
 
         # Test empty dict
         assert not _looks_like_split_format({})
@@ -269,7 +269,7 @@ class TestDeserializerEdgeCases:
     def test_restore_pandas_types_without_pandas(self, monkeypatch):
         """Test _restore_pandas_types when pandas is unavailable."""
         # Clear caches to ensure clean state
-        _clear_deserialization_caches()
+        datason.clear_caches()
 
         # Mock pandas as unavailable
         from datason import deserializers
@@ -284,7 +284,7 @@ class TestDeserializerEdgeCases:
     def test_deserialize_to_pandas_without_pandas(self, monkeypatch):
         """Test deserialize_to_pandas when pandas is unavailable."""
         # Clear caches to ensure clean state
-        _clear_deserialization_caches()
+        datason.clear_caches()
 
         # Mock pandas as unavailable
         from datason import deserializers
@@ -304,7 +304,7 @@ class TestSpecialCharacterHandling:
     def test_string_key_conversion_edge_cases(self):
         """Test string key conversion with special characters."""
         # Clear caches to ensure clean state
-        _clear_deserialization_caches()
+        datason.clear_caches()
 
         # Test with special characters in keys
         data = {
@@ -337,7 +337,7 @@ class TestNumpyEdgeCases:
     def test_numpy_array_detection_without_numpy(self, monkeypatch):
         """Test numpy array detection when numpy is unavailable."""
         # Clear caches to ensure clean state
-        _clear_deserialization_caches()
+        datason.clear_caches()
 
         # Mock numpy as unavailable
         from datason import deserializers

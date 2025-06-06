@@ -14,12 +14,12 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+import datason
 from datason import deserialize
 from datason.deserializers import (
     DeserializationSecurityError,
     TemplateDeserializationError,
     TemplateDeserializer,
-    _clear_deserialization_caches,
     _convert_string_keys_to_int_if_possible,
     _deserialize_string_full,
     _deserialize_with_type_metadata,
@@ -187,7 +187,7 @@ class TestDeserializationCoverage:
     def test_caching_functions(self):
         """Test all caching-related functions."""
         # Clear caches first
-        _clear_deserialization_caches()
+        datason.clear_caches()
 
         # Test string pattern caching - may return 'unknown' for unrecognized patterns
         pattern = _get_cached_string_pattern("test-string")
@@ -327,7 +327,7 @@ class TestDeserializationCoverage:
     def test_memory_optimization_coverage(self):
         """Test memory optimization code paths."""
         # Test cache limits by filling caches
-        _clear_deserialization_caches()
+        datason.clear_caches()
 
         # Test with large data to trigger optimizations
         large_data = {"item_" + str(i): i for i in range(100)}

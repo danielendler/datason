@@ -527,6 +527,12 @@ def _deserialize_with_type_metadata(obj: Dict[str, Any]) -> Any:
 
     # ENHANCED LEGACY TYPE FORMATS (priority 2) - Handle older serialization formats
     if isinstance(obj, dict) and "_type" in obj:
+        # Add deprecation warning for legacy format
+        warnings.warn(
+            "Legacy '_type' format is deprecated and will be removed in v0.8.0. Use '__datason_type__' format instead.",
+            DeprecationWarning,
+            stacklevel=3,
+        )
         type_name = obj["_type"]
 
         try:
