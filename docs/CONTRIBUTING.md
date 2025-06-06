@@ -97,7 +97,7 @@ def test_large_dataset_performance():
 ## 🛠️ Development Setup
 
 ### Prerequisites
-- Python 3.8+ (we support 3.8-3.12)
+- Python 3.8+ (we support 3.8-3.13)
 - Git
 - Virtual environment (recommended)
 
