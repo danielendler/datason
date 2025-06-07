@@ -73,6 +73,13 @@ We recommend Python 3.9+ for the best experience with all features.
 pip install datason
 ```
 
+### Quick Demo
+
+```python
+import datason
+datason.demo()
+```
+
 ### Traditional API - Comprehensive & Configurable
 
 ```python
