@@ -104,10 +104,11 @@ jobs:
             cache-extra: "pandas"
 
           - name: "with-ml-deps"
-            packages: "numpy pandas scikit-learn"
-            description: "Core + ML dependencies"
-            test-pattern: "tests/core/ tests/features/ tests/integration/test_optional_dependencies.py"
+            packages: ""
+            description: "Core + ML dependencies (all frameworks)"
+            test-pattern: "tests/core/ tests/features/ tests/integration/test_optional_dependencies.py tests/test_new_ml_frameworks.py"
             cache-extra: "ml"
+            use-ml: true
         exclude:
           # Strategic test distribution for efficiency while maintaining coverage:
           # - Python 3.8: Only minimal tests (core compatibility validation)
@@ -196,6 +197,8 @@ jobs:
         # Install specific optional dependencies
         if [ "${{ matrix.dependency-set.use-dev }}" = "true" ]; then
           pip install -e ".[dev,all]"
+        elif [ "${{ matrix.dependency-set.use-ml }}" = "true" ]; then
+          pip install -e ".[ml]"
         elif [ -n "${{ matrix.dependency-set.packages }}" ]; then
           pip install ${{ matrix.dependency-set.packages }}
         fi
