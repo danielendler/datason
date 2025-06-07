@@ -75,7 +75,7 @@ skips = [ "*/test_*.py", "*/tests/*",]
 [tool.pytest.ini_options]
 minversion = "7.0"
 addopts = [ "-v", "--cov=datason", "--cov-report=term-missing", "--cov-report=html", "--cov-report=xml", "--strict-markers", "--strict-config", "--tb=short", "-m", "not benchmark",]
-testpaths = [ "tests/core", "tests/features", "tests/integration", "tests/coverage", "tests/test_new_ml_frameworks.py", "tests/test_modern_api.py",]
+testpaths = [ "tests/unit", "tests/core", "tests/features", "tests/integration", "tests/coverage", "tests/test_new_ml_frameworks.py", "tests/test_modern_api.py", "tests/test_configurable_caching.py", "tests/test_unified_ml_handlers.py",]
 python_files = [ "test_*.py",]
 python_classes = [ "Test*",]
 python_functions = [ "test_*",]
