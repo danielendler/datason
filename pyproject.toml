@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "datason"
-version = "0.7.0"
+version = "0.7.5"
 description = "A comprehensive Python package for intelligent serialization that handles complex data types with ease."
 readme = "README.md"
 requires-python = ">=3.8"

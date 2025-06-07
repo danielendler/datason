@@ -111,6 +111,24 @@ Based on real-world benchmarks with datetime and UUID heavy datasets:
 
 *Memory usage grows with cache size but provides better object reuse
 
+### Cache Scope Micro-Benchmark
+
+A simple benchmark script demonstrates real-world gains from caching. Run
+`cache_scope_benchmark.py` in the `benchmarks/` directory:
+
+```bash
+python benchmarks/cache_scope_benchmark.py
+```
+
+Typical results (1000 repeated UUID strings):
+
+| Scope | Time (ms) |
+|-------|----------|
+| **DISABLED** | ~2.8 |
+| **OPERATION** | ~2.3 |
+| **REQUEST** | ~1.9 |
+| **PROCESS** | ~1.3 |
+
 ## 🛠️ Configuration
 
 ### Basic Configuration

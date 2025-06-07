@@ -33,7 +33,8 @@ datason officially supports **Python 3.8+** and is actively tested on:
 - ✅ **Python 3.9** - Full compatibility  
 - ✅ **Python 3.10** - Full compatibility
 - ✅ **Python 3.11** - Full compatibility (primary development version)
-- ✅ **Python 3.12** - Latest stable version
+- ✅ **Python 3.12** - Full compatibility
+- ✅ **Python 3.13** - Latest stable version (core features only; many ML libraries still releasing wheels)
 
 ### Compatibility Testing
 
@@ -43,12 +44,15 @@ We maintain compatibility through:
   - **Python 3.9**: Data science focus (pandas integration)
   - **Python 3.10**: ML focus (scikit-learn, scipy)
   - **Python 3.11**: Full test suite (primary development version)
-  - **Python 3.12**: Full test suite (latest stable)
+  - **Python 3.12**: Full test suite
+  - **Python 3.13**: Core serialization tests only (latest stable)
 - **Core functionality tests** ensuring basic serialization works on Python 3.8+
 - **Dependency compatibility checks** for optional ML/data science libraries
 - **Runtime version validation** with helpful error messages
 
 > **Note**: While core functionality works on Python 3.8, some optional dependencies (like latest ML frameworks) may require newer Python versions. The package will still work - you'll just have fewer optional features available.
+>
+> **Python 3.13 Caution**: Many machine learning libraries have not yet released official 3.13 builds. Datason runs on Python 3.13, but only with core serialization features until those libraries catch up.
 
 ### Python 3.8 Limitations
 
