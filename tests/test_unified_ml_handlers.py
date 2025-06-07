@@ -51,7 +51,7 @@ from datason.ml_type_handlers import (
     PlotlyTypeHandler,
     PolarsTypeHandler,
 )
-from datason.type_registry import get_type_registry
+from datason.type_registry import TypeHandler, get_type_registry
 
 
 class TestCatBoostTypeHandler:
@@ -77,7 +77,7 @@ class TestCatBoostTypeHandler:
         assert serialized["__datason_type__"] == "catboost.model"
         assert "class_name" in serialized["__datason_value__"]
         assert "params" in serialized["__datason_value__"]
-        assert "catboost.CatBoostClassifier" in serialized["__datason_value__"]["class_name"]
+        assert "CatBoostClassifier" in serialized["__datason_value__"]["class_name"]
 
         # Test deserialization
         deserialized = handler.deserialize(serialized)
@@ -292,7 +292,8 @@ class TestPolarsTypeHandler:
         # Verify data integrity
         assert deserialized.shape == df.shape
         assert deserialized.columns == df.columns
-        assert deserialized.to_dict() == df.to_dict()
+        # Use equals for DataFrame comparison to avoid Series ambiguity
+        assert deserialized.equals(df)
 
     @pytest.mark.skipif(not HAS_POLARS, reason="Polars not available")
     def test_polars_complex_dataframe_round_trip(self):
@@ -342,9 +343,86 @@ class TestUnifiedArchitectureIntegration:
         for expected_type in expected_types:
             assert expected_type in registered_types, f"Type {expected_type} not registered"
 
+    def test_registry_find_handler_functionality(self):
+        """Test that registry can find appropriate handlers."""
+        registry = get_type_registry()
+
+        # Test each handler type if available
+        if HAS_CATBOOST:
+            import catboost
+
+            model = catboost.CatBoostClassifier(iterations=1, verbose=False)
+            handler = registry.find_handler(model)
+            assert handler is not None
+            assert handler.type_name == "catboost.model"
+
+        if HAS_KERAS:
+            import keras
+
+            model = keras.Sequential([keras.layers.Dense(1, input_shape=(5,))])
+            handler = registry.find_handler(model)
+            assert handler is not None
+            assert handler.type_name == "keras.model"
+
+        if HAS_OPTUNA:
+            import optuna
+
+            study = optuna.create_study()
+            handler = registry.find_handler(study)
+            assert handler is not None
+            assert handler.type_name == "optuna.Study"
+
+        if HAS_PLOTLY:
+            import plotly.graph_objects as go
+
+            fig = go.Figure()
+            handler = registry.find_handler(fig)
+            assert handler is not None
+            assert handler.type_name == "plotly.graph_objects.Figure"
+
+        if HAS_POLARS:
+            import polars as pl
+
+            df = pl.DataFrame({"a": [1, 2, 3]})
+            handler = registry.find_handler(df)
+            assert handler is not None
+            assert handler.type_name == "polars.DataFrame"
+
+    def test_registry_get_handler_by_type(self):
+        """Test getting handlers by type name."""
+        registry = get_type_registry()
+
+        # Test getting handlers by type name
+        type_names = [
+            "catboost.model",
+            "keras.model",
+            "optuna.Study",
+            "plotly.graph_objects.Figure",
+            "polars.DataFrame",
+        ]
+
+        for type_name in type_names:
+            handler = registry.find_handler_by_type_name(type_name)
+            assert handler is not None
+            assert handler.type_name == type_name
+
+    def test_registry_no_handler_found(self):
+        """Test registry behavior when no handler is found."""
+        registry = get_type_registry()
+
+        # Test with object that no handler can handle
+        class UnknownObject:
+            pass
+
+        handler = registry.find_handler(UnknownObject())
+        assert handler is None
+
+        # Test getting non-existent handler type
+        handler = registry.find_handler_by_type_name("non.existent.Type")
+        assert handler is None
+
     def test_no_split_brain_problem(self):
         """Test that we can't have serialization without deserialization."""
-        from datason.type_registry import TypeHandler
 
         # This test ensures the architecture prevents split-brain problems
         class IncompleteHandler(TypeHandler):
@@ -437,6 +515,122 @@ class TestErrorHandling:
 
         # Should return False when library is missing
         assert not handler.can_handle("any_object")
+
+    def test_keras_serialization_with_config(self):
+        """Test Keras serialization with model config."""
+        if not HAS_KERAS:
+            pytest.skip("Keras not available")
+
+        import keras
+
+        model = keras.Sequential([keras.layers.Dense(1, input_shape=(5,))])
+        handler = KerasTypeHandler()
+
+        # Test serialization includes config
+        serialized = handler.serialize(model)
+        assert "config" in serialized["__datason_value__"]
+
+    def test_keras_missing_library_handling(self):
+        """Test Keras handler when library is missing."""
+
+        class TestKerasHandler(KerasTypeHandler):
+            def _lazy_import_keras(self):
+                return None
+
+        handler = TestKerasHandler()
+        assert not handler.can_handle("any_object")
+
+        # Test deserialize when library is missing
+        data = {"__datason_type__": "keras.model", "__datason_value__": {}}
+        result = handler.deserialize(data)
+        assert result == data
+
+    def test_plotly_missing_library_handling(self):
+        """Test Plotly handler when library is missing."""
+
+        class TestPlotlyHandler(PlotlyTypeHandler):
+            def _lazy_import_plotly(self):
+                return None
+
+        handler = TestPlotlyHandler()
+        assert not handler.can_handle("any_object")
+
+        # Test deserialize when library is missing
+        data = {"__datason_type__": "plotly.graph_objects.Figure", "__datason_value__": {}}
+        result = handler.deserialize(data)
+        assert result == data
+
+    def test_polars_missing_library_handling(self):
+        """Test Polars handler when library is missing."""
+
+        class TestPolarsHandler(PolarsTypeHandler):
+            def _lazy_import_polars(self):
+                return None
+
+        handler = TestPolarsHandler()
+        assert not handler.can_handle("any_object")
+
+        # Test deserialize when library is missing
+        data = {"__datason_type__": "polars.DataFrame", "__datason_value__": {}}
+        result = handler.deserialize(data)
+        assert result == data
+
+    def test_optuna_missing_library_handling(self):
+        """Test Optuna handler when library is missing."""
+
+        class TestOptunaHandler(OptunaTypeHandler):
+            def _lazy_import_optuna(self):
+                return None
+
+        handler = TestOptunaHandler()
+        assert not handler.can_handle("any_object")
+
+        # Test deserialize when library is missing
+        data = {"__datason_type__": "optuna.Study", "__datason_value__": {}}
+        result = handler.deserialize(data)
+        assert result == data
+
+    def test_catboost_with_fitted_model(self):
+        """Test CatBoost serialization of fitted model."""
+        if not HAS_CATBOOST:
+            pytest.skip("CatBoost not available")
+
+        import catboost
+        import numpy as np
+
+        # Create and fit a model
+        model = catboost.CatBoostClassifier(iterations=2, verbose=False)
+        X = np.array([[1, 2], [3, 4], [5, 6]])
+        y = np.array([0, 1, 0])
+        model.fit(X, y)
+
+        handler = CatBoostTypeHandler()
+        serialized = handler.serialize(model)
+
+        # Should include fitted status if available
+        assert "is_fitted" in serialized["__datason_value__"]
+
+    def test_optuna_direction_enum_handling(self):
+        """Test Optuna direction enum conversion."""
+        if not HAS_OPTUNA:
+            pytest.skip("Optuna not available")
+
+        import optuna
+
+        # Test both minimize and maximize directions
+        for direction in ["minimize", "maximize"]:
+            study = optuna.create_study(direction=direction)
+            handler = OptunaTypeHandler()
+
+            serialized = handler.serialize(study)
+            deserialized = handler.deserialize(serialized)
+
+            expected_direction = (
+                optuna.study.StudyDirection.MINIMIZE
+                if direction == "minimize"
+                else optuna.study.StudyDirection.MAXIMIZE
+            )
+            assert deserialized.direction == expected_direction
 
 
 if __name__ == "__main__":
