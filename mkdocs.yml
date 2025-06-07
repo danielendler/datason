@@ -144,6 +144,7 @@ nav:
     - Pandas Integration: features/pandas/index.md
     - Pickle Bridge: features/pickle-bridge/index.md
     - Performance: features/performance/index.md
+    - Caching: features/caching/index.md
     - Data Privacy & Redaction: features/redaction.md
     - Migration Guide: features/migration/index.md
     - Data Utilities: features/data-utilities/index.md

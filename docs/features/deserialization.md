@@ -343,7 +343,7 @@ result = deserialize_fast(None)       # Immediate return
 
 ### Caching Systems
 
-**New in v0.7.0**: [Configurable caching system](../caching/) with multiple scopes for different workflows.
+**New in v0.7.0**: [Configurable caching system](caching/index.md) with multiple scopes for different workflows.
 
 ```python
 import datason
@@ -364,7 +364,7 @@ result1 = datason.deserialize_fast(uuid_str)   # Parse and cache UUID object
 result2 = datason.deserialize_fast(uuid_str)   # Return cached UUID object
 ```
 
-See the [Caching Documentation](../caching/) for detailed configuration and performance tuning.
+See the [Caching Documentation](caching/index.md) for detailed configuration and performance tuning.
 
 ### Memory Pooling
 ```python

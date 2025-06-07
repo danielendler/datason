@@ -213,7 +213,7 @@ print(f"Cache hit rate: {metrics[CacheScope.PROCESS].hit_rate:.1%}")
 - Large datasets with duplicate patterns
 - Deserialization-heavy workloads
 
-See the [Caching Documentation](../caching/) for detailed configuration and usage patterns.
+See the [Caching Documentation](../caching/index.md) for detailed configuration and usage patterns.
 
 ## 🚀 Memory Optimization
 

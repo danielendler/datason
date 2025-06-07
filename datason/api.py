@@ -508,7 +508,7 @@ def help_api() -> Dict[str, Any]:
 
     Example:
         >>> help_info = help_api()
-        >>> print(help_info['serialization']['recommendations'])
+        >>> print(help_info['recommendations'])
     """
     return {
         "serialization": {
