@@ -23,6 +23,7 @@ datason transforms complex Python objects into JSON-serializable formats and bac
 - ⚡ **High Performance**: Optimized for speed with minimal overhead
 - 🔌 **Extensible**: Easy to add custom serializers for your own types
 - 📦 **Zero Dependencies**: Core functionality works without additional packages
+- 🎯 **Modern API**: Intention-revealing function names with progressive complexity
 
 ## 🐍 Python Version Support
 
@@ -68,7 +69,7 @@ We recommend Python 3.9+ for the best experience with all features.
 pip install datason
 ```
 
-### Basic Usage
+### Traditional API - Comprehensive & Configurable
 
 ```python
 import datason as ds
@@ -93,6 +94,61 @@ print(serialized)
 # Deserialize back to original objects
 restored = ds.deserialize(serialized)
 print(restored)
+```
+
+### Modern API - Intention-Revealing & Progressive
+
+```python
+import datason as ds
+
+# 🎯 Clear intentions with domain-specific functions
+user_data = {"name": "Alice", "email": "alice@example.com", "ssn": "123-45-6789"}
+
+# Security-focused with automatic PII redaction
+secure_data = ds.dump_secure(user_data, redact_pii=True)
+
+# ML-optimized for models and tensors
+import torch
+model_data = {"model": torch.nn.Linear(10, 1), "weights": torch.randn(10, 1)}
+ml_serialized = ds.dump_ml(model_data)
+
+# API-safe clean JSON for web endpoints
+api_response = ds.dump_api({"status": "success", "data": [1, 2, 3]})
+
+# 📈 Progressive complexity for deserialization
+json_data = '{"values": [1, 2, 3], "metadata": {"created": "2024-01-01T12:00:00"}}'
+
+# Basic: Fast exploration (60-70% success rate)
+basic_result = ds.load_basic(json_data)
+
+# Smart: Production-ready (80-90% success rate)  
+smart_result = ds.load_smart(json_data)
+
+# Perfect: Template-based (100% success rate)
+template = {"values": [int], "metadata": {"created": datetime}}
+perfect_result = ds.load_perfect(json_data, template)
+
+# 🔍 API Discovery
+ds.help_api()  # Interactive guidance for choosing the right function
+```
+
+### Composable Options
+
+```python
+# Combine features for specific needs
+large_sensitive_ml_data = {
+    "model": trained_model,
+    "user_data": {"email": "user@example.com", "preferences": {...}},
+    "large_dataset": huge_numpy_array
+}
+
+# Secure + ML-optimized + Memory-efficient
+result = ds.dump(
+    large_sensitive_ml_data,
+    secure=True,           # Enable PII redaction
+    ml_mode=True,         # Optimize for ML objects
+    chunked=True          # Memory-efficient processing
+)
 ```
 
 ## 📚 Documentation

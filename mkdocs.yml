@@ -128,6 +128,7 @@ nav:
   # User Guide Section
   - User Guide:
     - Quick Start: user-guide/quick-start.md
+    - Modern API Guide: user-guide/modern-api-guide.md
     - Examples Gallery: user-guide/examples/index.md
 
   # Features Section (using existing feature docs)
@@ -155,6 +156,25 @@ nav:
   # API Reference Section
   - API Reference:
     - Overview: api/index.md
+    - Modern API Functions:
+      - Overview: api/modern-api.md
+      - Serialization Functions: api/modern-serialization.md
+      - Deserialization Functions: api/modern-deserialization.md
+      - Utility Functions: api/modern-utilities.md
+    - Traditional API Functions:
+      - Core Functions: api/core-functions.md
+      - Configuration System: api/configuration.md
+      - Chunked & Streaming: api/chunked-streaming.md
+      - Template System: api/template-system.md
+    - Specialized Features:
+      - ML Integration: api/ml-integration.md
+      - Data Privacy: api/data-privacy.md
+      - Type System: api/type-system.md
+      - Utilities: api/utilities.md
+    - Reference:
+      - Exceptions: api/exceptions.md
+      - Enums & Constants: api/enums-constants.md
+      - Complete API Reference: api/complete-reference.md
 
   # Advanced Topics Section
   - Advanced Topics:

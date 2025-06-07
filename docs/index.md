@@ -4,28 +4,73 @@
 
 datason transforms complex Python objects into JSON-serializable formats and back with intelligence. Perfect for ML/AI workflows, data science, and any application dealing with complex nested data structures.
 
-```python
-import datason as ds
-import pandas as pd
-import numpy as np
-from datetime import datetime
+## 🎯 Two Powerful Approaches
 
-# Complex data that "just works"
-data = {
-    'dataframe': pd.DataFrame({'A': [1, 2, 3], 'B': [4.5, 5.5, 6.5]}),
-    'timestamp': datetime.now(),
-    'array': np.array([1, 2, 3, 4, 5]),
-    'nested': {'values': [1, 2, 3], 'metadata': {'created': datetime.now()}}
-}
+=== "Modern API - Intention-Revealing"
 
-# Serialize to JSON-compatible format
-json_data = ds.serialize(data)
+    ```python
+    import datason as ds
 
-# Deserialize back to original objects - types preserved!
-restored = ds.deserialize(json_data)
-assert type(restored['dataframe']) == pd.DataFrame
-assert type(restored['array']) == np.ndarray
-```
+    # 🎯 Clear function names that tell you exactly what they do
+    user_data = {"name": "Alice", "email": "alice@example.com", "ssn": "123-45-6789"}
+
+    # Security-focused with automatic PII redaction
+    secure_data = ds.dump_secure(user_data, redact_pii=True)
+
+    # ML-optimized for models and tensors
+    import torch
+    model_data = {"model": torch.nn.Linear(10, 1), "weights": torch.randn(10, 1)}
+    ml_data = ds.dump_ml(model_data)
+
+    # API-safe clean JSON for web endpoints
+    api_response = ds.dump_api({"status": "success", "data": [1, 2, 3]})
+
+    # 📈 Progressive complexity for deserialization
+    json_data = '{"values": [1, 2, 3], "metadata": {"created": "2024-01-01T12:00:00"}}'
+
+    # Basic: Fast exploration (60-70% success rate)
+    basic = ds.load_basic(json_data)
+
+    # Smart: Production-ready (80-90% success rate)  
+    smart = ds.load_smart(json_data)
+
+    # Perfect: Template-based (100% success rate)
+    from datetime import datetime
+    template = {"values": [int], "metadata": {"created": datetime}}
+    perfect = ds.load_perfect(json_data, template)
+
+    # 🔍 Built-in help and discovery
+    ds.help_api()  # Get personalized recommendations
+    ```
+
+=== "Traditional API - Comprehensive"
+
+    ```python
+    import datason as ds
+    import pandas as pd
+    import numpy as np
+    from datetime import datetime
+
+    # Complex data that "just works"
+    data = {
+        'dataframe': pd.DataFrame({'A': [1, 2, 3], 'B': [4.5, 5.5, 6.5]}),
+        'timestamp': datetime.now(),
+        'array': np.array([1, 2, 3, 4, 5]),
+        'nested': {'values': [1, 2, 3], 'metadata': {'created': datetime.now()}}
+    }
+
+    # Serialize to JSON-compatible format
+    json_data = ds.serialize(data)
+
+    # Deserialize back to original objects - types preserved!
+    restored = ds.deserialize(json_data)
+    assert type(restored['dataframe']) == pd.DataFrame
+    assert type(restored['array']) == np.ndarray
+
+    # Use configurations for different scenarios
+    ml_config = ds.get_ml_config()
+    ml_result = ds.serialize(data, config=ml_config)
+    ```
 
 ## ✨ Key Features
 
@@ -50,6 +95,13 @@ assert type(restored['array']) == np.ndarray
 - **Fine-grained Control**: Custom serializers, type handlers, and processing rules
 - **Extensible**: Easy to add custom serializers for your own types
 
+### 🎯 **Modern API Design** *(New!)*
+- **Intention-Revealing Names**: Functions clearly indicate purpose and expected outcomes
+- **Progressive Complexity**: Clear path from basic exploration to production-critical applications  
+- **Domain-Specific Optimizations**: Specialized functions for ML, API, and security use cases
+- **Compositional Utilities**: Combine features like `secure + chunked + ml_mode`
+- **Built-in Discovery**: `help_api()` and `get_api_info()` for self-documentation
+
 ## 🎯 Quick Navigation
 
 === "👨‍💻 For Developers"
@@ -57,6 +109,7 @@ assert type(restored['array']) == np.ndarray
     **Getting Started**
 
     - [🚀 Quick Start Guide](user-guide/quick-start.md) - Get up and running in 5 minutes
+    - [🎯 Modern API Guide](user-guide/modern-api-guide.md) - Complete guide to intention-revealing functions
     - [💡 Examples Gallery](user-guide/examples/index.md) - Common use cases and patterns
     - [🔧 Configuration Guide](features/configuration/index.md) - Customize behavior for your needs
 
@@ -92,6 +145,47 @@ assert type(restored['array']) == np.ndarray
     - [🚀 Production Deployment](BUILD_PUBLISH.md) - Best practices for production
     - [🔍 Monitoring & Logging](CI_PERFORMANCE.md) - Track serialization performance
     - [🛡️ Security Considerations](community/security.md) - Security best practices
+
+## 🎯 Modern API Functions
+
+The new modern API provides intention-revealing function names with progressive complexity:
+
+### 🔹 Serialization (Dump Functions)
+
+| Function | Purpose | Use Case | Features |
+|----------|---------|----------|----------|
+| `dump()` | General-purpose serialization | Most scenarios | Composable options |
+| `dump_ml()` | ML-optimized | Models, tensors, NumPy | ML library support |
+| `dump_api()` | API-safe | Web endpoints | Clean JSON output |
+| `dump_secure()` | Security-focused | Sensitive data | PII redaction |
+| `dump_fast()` | Performance-optimized | High-throughput | Minimal overhead |
+| `dump_chunked()` | Memory-efficient | Large objects | Chunked processing |
+| `stream_dump()` | File streaming | Very large data | Direct to file |
+
+### 🔹 Deserialization (Load Functions)
+
+| Function | Success Rate | Speed | Use Case |
+|----------|-------------|-------|----------|
+| `load_basic()` | 60-70% | Fastest | Simple objects, exploration |
+| `load_smart()` | 80-90% | Moderate | General purpose, production |
+| `load_perfect()` | 100% | Fast | Critical apps (needs template) |
+| `load_typed()` | 95% | Fast | When metadata available |
+
+### 🔹 Utility & Discovery
+
+```python
+# Get personalized API recommendations
+ds.help_api()
+
+# Explore available functions and features
+api_info = ds.get_api_info()
+print(api_info['dump_functions'])    # List all dump functions
+print(api_info['recommendations'])   # Usage recommendations
+
+# JSON module compatibility
+data_str = ds.dumps({"key": "value"})  # Like json.dumps()
+data_obj = ds.loads(data_str)          # Like json.loads()
+```
 
 ## 📚 Documentation Sections
 
@@ -137,15 +231,9 @@ Resources for contributors and the community.
 - **[Roadmap](community/roadmap.md)** - Future development plans
 - **[Security Policy](community/security.md)** - Security practices and reporting
 
-## 🚀 Quick Start
+## 🚀 Quick Examples
 
-### Installation
-
-```bash
-pip install datason
-```
-
-### Basic Usage
+### Basic Serialization
 
 ```python
 import datason as ds
@@ -155,19 +243,48 @@ data = {"numbers": [1, 2, 3], "text": "hello world"}
 serialized = ds.serialize(data)
 restored = ds.deserialize(serialized)
 
-# Complex data with configuration
-import pandas as pd
-from datetime import datetime
+# Modern API equivalent
+serialized_modern = ds.dump(data)  # Same result, clearer intent
+restored_modern = ds.load_smart(serialized_modern)
+```
 
-complex_data = {
-    "df": pd.DataFrame({"A": [1, 2, 3]}),
-    "timestamp": datetime.now(),
-    "metadata": {"version": 1.0}
+### ML Workflow Example
+
+```python
+import torch
+import datason as ds
+
+# ML model and data
+model = torch.nn.Linear(10, 1)
+data = {"model": model, "weights": torch.randn(10, 1)}
+
+# Traditional API with ML config
+config = ds.get_ml_config()
+result = ds.serialize(data, config=config)
+
+# Modern API - intention is clear
+result_modern = ds.dump_ml(data)  # Optimized for ML automatically
+```
+
+### Security Example
+
+```python
+# Sensitive user data
+user_data = {
+    "name": "John Doe",
+    "email": "john@example.com",
+    "ssn": "123-45-6789",
+    "password": "secret123"
 }
 
-# Use ML-optimized configuration
-config = ds.get_ml_config()
-result = ds.serialize(complex_data, config=config)
+# Modern API - security by design
+secure_result = ds.dump_secure(user_data, redact_pii=True)
+# PII fields are automatically redacted
+
+# Traditional API equivalent
+redaction_engine = ds.create_financial_redaction_engine()
+redacted_data = redaction_engine.process_object(user_data)
+result = ds.serialize(redacted_data, config=ds.get_api_config())
 ```
 
 ## 🔗 External Links
