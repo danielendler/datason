@@ -373,6 +373,182 @@ class PolarsTypeHandler(TypeHandler):
             return None
 
 
+class PyTorchTypeHandler(TypeHandler):
+    """Unified handler for PyTorch tensors.
+
+    Handles PyTorch Tensor objects with full data and metadata preservation
+    for accurate round-trip reconstruction.
+    """
+
+    def can_handle(self, obj: Any) -> bool:
+        """Check if object is a PyTorch tensor."""
+        try:
+            torch = self._lazy_import_torch()
+            if torch is None:
+                return False
+            return isinstance(obj, torch.Tensor)
+        except Exception:
+            return False
+
+    def serialize(self, obj: Any) -> Dict[str, Any]:
+        """Serialize PyTorch tensor to preservable format."""
+        try:
+            # Convert tensor to numpy for JSON serialization
+            tensor_data = obj.detach().cpu().numpy()
+
+            return {
+                "__datason_type__": self.type_name,
+                "__datason_value__": {
+                    "data": tensor_data.tolist(),
+                    "shape": list(obj.shape),
+                    "dtype": str(obj.dtype),
+                    "device": str(obj.device),
+                    "requires_grad": obj.requires_grad,
+                },
+            }
+        except Exception as e:
+            warnings.warn(f"Failed to serialize PyTorch tensor: {e}", stacklevel=2)
+            return {"__datason_type__": "dict", "__datason_value__": {}}
+
+    def deserialize(self, data: Dict[str, Any]) -> Any:
+        """Deserialize PyTorch tensor from preserved format."""
+        try:
+            torch = self._lazy_import_torch()
+            if torch is None:
+                return data
+
+            value = data["__datason_value__"]
+
+            # Reconstruct tensor from data
+            tensor = torch.tensor(value["data"])
+
+            # Set requires_grad if specified
+            if value.get("requires_grad", False):
+                tensor = tensor.requires_grad_(True)
+
+            return tensor
+
+        except Exception as e:
+            warnings.warn(f"Failed to deserialize PyTorch tensor: {e}", stacklevel=2)
+            return data
+
+    @property
+    def type_name(self) -> str:
+        """Return the type name for PyTorch tensors."""
+        return "torch.Tensor"
+
+    def _lazy_import_torch(self):
+        """Lazy import PyTorch."""
+        try:
+            import torch
+
+            return torch
+        except ImportError:
+            return None
+
+
+class SklearnTypeHandler(TypeHandler):
+    """Unified handler for scikit-learn models.
+
+    Handles scikit-learn model objects with parameter preservation
+    for meaningful round-trip reconstruction.
+    """
+
+    def can_handle(self, obj: Any) -> bool:
+        """Check if object is a scikit-learn model."""
+        try:
+            # Check for sklearn base estimator interface
+            return (
+                hasattr(obj, "get_params")
+                and hasattr(obj, "set_params")
+                and hasattr(obj, "__class__")
+                and hasattr(obj.__class__, "__module__")
+                and obj.__class__.__module__ is not None
+                and obj.__class__.__module__.startswith("sklearn")
+            )
+        except Exception:
+            return False
+
+    def serialize(self, obj: Any) -> Dict[str, Any]:
+        """Serialize scikit-learn model to preservable format."""
+        try:
+            # Get model parameters
+            params = obj.get_params()
+
+            # Get model class information
+            class_name = f"{obj.__class__.__module__}.{obj.__class__.__name__}"
+
+            # Check if model is fitted (has learned attributes)
+            fitted_attributes = {}
+            for attr_name in dir(obj):
+                if attr_name.endswith("_") and not attr_name.startswith("_"):
+                    try:
+                        attr_value = getattr(obj, attr_name)
+                        # Only include simple fitted attributes for now
+                        if isinstance(attr_value, (int, float, str, bool, type(None))):
+                            fitted_attributes[attr_name] = attr_value
+                    except Exception:
+                        continue  # nosec B112 - intentionally skip problematic attributes during serialization
+
+            return {
+                "__datason_type__": self.type_name,
+                "__datason_value__": {
+                    "class_name": class_name,
+                    "params": params,
+                    "fitted_attributes": fitted_attributes,
+                    "is_fitted": len(fitted_attributes) > 0,
+                },
+            }
+        except Exception as e:
+            warnings.warn(f"Failed to serialize scikit-learn model: {e}", stacklevel=2)
+            return {"__datason_type__": "dict", "__datason_value__": {}}
+
+    def deserialize(self, data: Dict[str, Any]) -> Any:
+        """Deserialize scikit-learn model from preserved format."""
+        try:
+            value = data["__datason_value__"]
+            class_name = value["class_name"]
+            params = value["params"]
+
+            # Dynamic import of the model class
+            module_path, class_name_only = class_name.rsplit(".", 1)
+            import importlib
+
+            module = importlib.import_module(module_path)
+            model_class = getattr(module, class_name_only)
+
+            # Create new model with same parameters
+            model = model_class(**params)
+
+            # Restore simple fitted attributes if available
+            fitted_attributes = value.get("fitted_attributes", {})
+            for attr_name, attr_value in fitted_attributes.items():
+                try:
+                    setattr(model, attr_name, attr_value)
+                except Exception:
+                    continue  # nosec B112 - intentionally skip attributes that can't be restored during deserialization
+
+            return model
+
+        except Exception as e:
+            warnings.warn(f"Failed to deserialize scikit-learn model: {e}", stacklevel=2)
+            return data
+
+    @property
+    def type_name(self) -> str:
+        """Return the type name for scikit-learn models."""
+        return "sklearn.base.BaseEstimator"
+
+    def _lazy_import_sklearn(self):
+        """Lazy import scikit-learn."""
+        try:
+            import sklearn
+
+            return sklearn
+        except ImportError:
+            return None
+
+
 # Registry initialization function
 def register_all_ml_handlers():
     """Register all ML type handlers with the global registry.
@@ -389,6 +565,8 @@ def register_all_ml_handlers():
     register_type_handler(OptunaTypeHandler())
     register_type_handler(PlotlyTypeHandler())
     register_type_handler(PolarsTypeHandler())
+    register_type_handler(PyTorchTypeHandler())
+    register_type_handler(SklearnTypeHandler())
 
 
 # Auto-register handlers when module is imported

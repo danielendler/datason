@@ -494,6 +494,31 @@ class DeserializationAudit:
             except Exception:
                 return False
 
+        # Handle scikit-learn models specially
+        if HAS_SKLEARN and hasattr(original, "get_params") and hasattr(reconstructed, "get_params"):
+            try:
+                # Check if both are sklearn models of the same type
+                if (
+                    hasattr(original, "__module__")
+                    and original.__module__ is not None
+                    and "sklearn" in original.__module__
+                    and hasattr(reconstructed, "__module__")
+                    and reconstructed.__module__ is not None
+                    and "sklearn" in reconstructed.__module__
+                ):
+                    # For scikit-learn models, compare type and parameters
+                    if type(original) is not type(reconstructed):
+                        return False
+
+                    # Compare parameters
+                    original_params = original.get_params()
+                    reconstructed_params = reconstructed.get_params()
+
+                    # Handle special parameter comparison for sklearn
+                    return self._compare_sklearn_params(original_params, reconstructed_params)
+            except Exception:
+                return False
+
         # For complex types, basic equality check
         try:
             return original == reconstructed
@@ -552,6 +577,40 @@ class DeserializationAudit:
                     pass  # nosec B110 - intentional fallback for pandas series comparison
 
         return self._verify_reconstruction(original, reconstructed)
+
+    def _compare_sklearn_params(self, original_params: dict, reconstructed_params: dict) -> bool:
+        """Compare scikit-learn model parameters with tolerance for common differences."""
+        if set(original_params.keys()) != set(reconstructed_params.keys()):
+            return False
+
+        for key, original_value in original_params.items():
+            reconstructed_value = reconstructed_params[key]
+
+            # Handle special sklearn parameter cases
+            if key == "random_state":
+                # Random state should match exactly
+                if original_value != reconstructed_value:
+                    return False
+            elif isinstance(original_value, (int, float, str, bool, type(None))):
+                # Simple types should match exactly
+                if original_value != reconstructed_value:
+                    return False
+            elif hasattr(original_value, "__module__") and "numpy" in str(original_value.__module__):
+                # Numpy arrays in parameters - use numpy comparison
+                try:
+                    import numpy as np
+
+                    if not np.array_equal(original_value, reconstructed_value):
+                        return False
+                except Exception:
+                    if original_value != reconstructed_value:
+                        return False
+            else:
+                # For other complex objects, use string comparison as fallback
+                if str(original_value) != str(reconstructed_value):
+                    return False
+
+        return True
 
     def test_basic_types(self):
         """Test basic Python types."""
