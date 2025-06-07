@@ -177,7 +177,7 @@ def _get_version() -> str:
     return "0.5.0"
 
 
-__version__ = "0.7.5"
+__version__ = "0.8.0"
 __author__ = "datason Contributors"
 __license__ = "MIT"
 __description__ = "Python serialization of complex data types for JSON with configurable caching"
