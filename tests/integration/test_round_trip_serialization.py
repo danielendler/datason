@@ -238,13 +238,8 @@ TYPES_THAT_WORK_WITHOUT_HINTS = [
     RoundTripTestCase("datetime_simple", datetime(2023, 1, 1, 12, 0, 0)),  # ISO string auto-detectable
     RoundTripTestCase("datetime_microseconds", datetime(2023, 1, 1, 12, 0, 0, 123456)),
     RoundTripTestCase("uuid_fixed", uuid.UUID("12345678-1234-5678-9012-123456789abc")),
-    # Legacy behavior: These ALWAYS get metadata regardless of include_type_hints
-    RoundTripTestCase("complex_simple", complex(1, 2)),  # Always gets _type metadata
-    RoundTripTestCase("complex_float", complex(3.14, -2.71)),
-    RoundTripTestCase("complex_zero", complex(0, 0)),
-    RoundTripTestCase("decimal_simple", Decimal("123.45")),  # Always gets _type metadata
-    RoundTripTestCase("decimal_precision", Decimal("123.456789012345")),
-    RoundTripTestCase("decimal_large", Decimal("123456789.123456789")),
+    # PHASE 2 UPDATE: Complex numbers and decimals no longer round-trip without type hints
+    # They now use simplified fallback formats: complex -> [real, imag], decimal -> float
     # Nested structures
     RoundTripTestCase("deeply_nested", {"a": {"b": {"c": {"d": {"e": [1, 2, 3]}}}}}),
     RoundTripTestCase("large_list", list(range(100))),  # Reduced for faster tests
@@ -253,6 +248,13 @@ TYPES_THAT_WORK_WITHOUT_HINTS = [
 
 # TYPES THAT NEED HINTS: These only round-trip perfectly with include_type_hints=True
 TYPES_THAT_NEED_HINTS = [
+    # PHASE 2: Complex numbers and decimals now need type hints for perfect round-trips
+    RoundTripTestCase("complex_simple", complex(1, 2), expected_basic_type=list),  # -> [1.0, 2.0]
+    RoundTripTestCase("complex_float", complex(3.14, -2.71), expected_basic_type=list),  # -> [3.14, -2.71]
+    RoundTripTestCase("complex_zero", complex(0, 0), expected_basic_type=list),  # -> [0.0, 0.0]
+    RoundTripTestCase("decimal_simple", Decimal("123.45"), expected_basic_type=float),  # -> 123.45
+    RoundTripTestCase("decimal_precision", Decimal("123.456789012345"), expected_basic_type=float),  # precision lost
+    RoundTripTestCase("decimal_large", Decimal("123456789.123456789"), expected_basic_type=float),  # precision lost
     # Type information lost without metadata
     RoundTripTestCase("tuple_empty", (), expected_basic_type=list),
     RoundTripTestCase("tuple_simple", (1, 2, 3), expected_basic_type=list),
@@ -425,9 +427,9 @@ class TestRoundTripSerialization:
             pytest.skip(test_case.skip_reason)
 
         # Clear caches to ensure clean state for each test (helps with test order dependencies)
-        from datason.deserializers import _clear_deserialization_caches
+        import datason
 
-        _clear_deserialization_caches()
+        datason.clear_caches()
 
         # Serialize WITHOUT type hints
         try:

@@ -545,10 +545,8 @@ class TestAdditionalCoverage:
         result = serialize(data)
 
         assert result["bool_array"] == [True, False, True]
-        # Complex numbers now serialize as structured objects
-        assert isinstance(result["complex128"], dict)
-        assert result["complex128"]["_type"] == "complex"
-        assert result["complex128"]["real"] == 1.0
-        assert result["complex128"]["imag"] == 2.0
+        # PHASE 2: Complex numbers now serialize as [real, imag] list (no legacy format)
+        assert isinstance(result["complex128"], list)
+        assert result["complex128"] == [1.0, 2.0]
         # Void type should be handled gracefully
         assert result["void_type"] is not None

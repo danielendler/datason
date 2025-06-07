@@ -111,20 +111,20 @@ class TestMLSerializerCoverage(unittest.TestCase):
         # Test TensorFlow fallback when tf is None
         with patch("datason.ml_serializers.tf", None):
             tf_result = serialize_tensorflow_tensor("mock_tensor")
-            self.assertIn("_type", tf_result)
-            self.assertEqual(tf_result["_type"], "tf.Tensor")
+            self.assertIn("__datason_type__", tf_result)
+            self.assertEqual(tf_result["__datason_type__"], "tf.Tensor")
 
         # Test PyTorch fallback when torch is None
         with patch("datason.ml_serializers.torch", None):
             torch_result = serialize_pytorch_tensor("mock_tensor")
-            self.assertIn("_type", torch_result)
-            self.assertEqual(torch_result["_type"], "torch.Tensor")
+            self.assertIn("__datason_type__", torch_result)
+            self.assertEqual(torch_result["__datason_type__"], "torch.Tensor")
 
         # Test sklearn fallback when sklearn is None
         with patch("datason.ml_serializers.sklearn", None):
             sklearn_result = serialize_sklearn_model("mock_model")
-            self.assertIn("_type", sklearn_result)
-            self.assertEqual(sklearn_result["_type"], "sklearn.model")
+            self.assertIn("__datason_type__", sklearn_result)
+            self.assertEqual(sklearn_result["__datason_type__"], "sklearn.model")
 
 
 class TestDatetimeUtilsCoverage(unittest.TestCase):
@@ -182,8 +182,8 @@ class TestSimpleErrorPaths(unittest.TestCase):
             result = serialize_sklearn_model(mock_model)
 
         # Should handle error and return error info
-        self.assertEqual(result["_type"], "sklearn.model")
-        self.assertIn("_error", result)
+        self.assertEqual(result["__datason_type__"], "sklearn.model")
+        self.assertIn("error", result["__datason_value__"])
 
     def test_scipy_sparse_error_handling(self):
         """Test scipy sparse matrix error handling."""
@@ -197,7 +197,7 @@ class TestSimpleErrorPaths(unittest.TestCase):
             result = serialize_scipy_sparse(mock_matrix)
 
         # Should handle error gracefully
-        self.assertEqual(result["_type"], "scipy.sparse")
+        self.assertEqual(result["__datason_type__"], "scipy.sparse")
 
 
 class TestConvertersModule(unittest.TestCase):

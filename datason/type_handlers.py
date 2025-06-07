@@ -33,7 +33,7 @@ class TypeHandler:
         """Initialize with serialization configuration."""
         self.config = config
 
-    def handle_decimal(self, obj: decimal.Decimal) -> Union[float, str, Dict[str, Any]]:
+    def handle_decimal(self, obj: decimal.Decimal) -> Union[float, str]:
         """Handle decimal.Decimal objects.
 
         Args:
@@ -42,21 +42,13 @@ class TypeHandler:
         Returns:
             Converted value based on configuration
         """
-        if self.config.preserve_decimals:
-            # Return as dict to preserve exact precision
-            return {
-                "_type": "decimal",
-                "value": str(obj),
-                "precision": len(str(obj).replace(".", "").replace("-", "")),
-                "scale": abs(obj.as_tuple().exponent) if obj.as_tuple().exponent < 0 else 0,
-            }
-        # Convert to float (may lose precision)
+        # Phase 2: Legacy format removed - always convert to float or string
         try:
             return float(obj)
         except (ValueError, OverflowError):
             return str(obj)
 
-    def handle_complex(self, obj: complex) -> Union[Dict[str, float], List[float], str]:
+    def handle_complex(self, obj: complex) -> Union[List[float], str]:
         """Handle complex numbers.
 
         Args:
@@ -65,69 +57,47 @@ class TypeHandler:
         Returns:
             Converted value based on configuration
         """
+        # Phase 2: Legacy format removed - convert to list or string
         if self.config.type_coercion == TypeCoercion.AGGRESSIVE:
             # Convert to list [real, imag]
             return [obj.real, obj.imag]
-        if self.config.preserve_complex:
-            return {"_type": "complex", "real": obj.real, "imag": obj.imag}
-        # Convert to string representation
-        return str(obj)
+        # Convert to list format (no more legacy dict format)
+        return [obj.real, obj.imag]
 
-    def handle_uuid(self, obj: uuid.UUID) -> Union[str, Dict[str, Any]]:
+    def handle_uuid(self, obj: uuid.UUID) -> str:
         """Handle UUID objects.
 
         Args:
             obj: UUID object to convert
 
         Returns:
-            String representation or detailed dict
+            String representation
         """
-        if self.config.type_coercion == TypeCoercion.STRICT:
-            return {
-                "_type": "uuid",
-                "hex": obj.hex,
-                "version": obj.version,
-                "variant": obj.variant,
-            }
+        # Phase 2: Legacy format removed - always convert to string
         return str(obj)
 
-    def handle_path(self, obj: Path) -> Union[str, Dict[str, Any]]:
+    def handle_path(self, obj: Path) -> str:
         """Handle pathlib.Path objects.
 
         Args:
             obj: Path object to convert
 
         Returns:
-            String representation or detailed dict
+            String representation
         """
-        if self.config.type_coercion == TypeCoercion.STRICT:
-            return {
-                "_type": "path",
-                "path": str(obj),
-                "is_absolute": obj.is_absolute(),
-                "exists": obj.exists() if obj.exists() else None,
-                "suffix": obj.suffix,
-                "stem": obj.stem,
-            }
+        # Phase 2: Legacy format removed - always convert to string
         return str(obj)
 
-    def handle_enum(self, obj: enum.Enum) -> Union[str, int, float, Dict[str, Any]]:
+    def handle_enum(self, obj: enum.Enum) -> Union[str, int, float]:
         """Handle Enum objects.
 
         Args:
             obj: Enum object to convert
 
         Returns:
-            Enum value or detailed representation
+            Enum value
         """
-        if self.config.type_coercion == TypeCoercion.STRICT:
-            return {
-                "_type": "enum",
-                "class": f"{obj.__class__.__module__}.{obj.__class__.__qualname__}",
-                "name": obj.name,
-                "value": obj.value,
-            }
-        # Return the enum value directly
+        # Phase 2: Legacy format removed - always return enum value
         return obj.value
 
     def handle_namedtuple(self, obj: tuple) -> Dict[str, Any]:
@@ -140,35 +110,24 @@ class TypeHandler:
             Dict representation of the namedtuple
         """
         if hasattr(obj, "_fields"):
-            # This is a namedtuple
-            result = obj._asdict()
-            if self.config.type_coercion == TypeCoercion.STRICT:
-                result["_type"] = "namedtuple"
-                result["_class"] = f"{obj.__class__.__module__}.{obj.__class__.__qualname__}"
-            return result
+            # This is a namedtuple - Phase 2: Legacy format removed
+            return obj._asdict()
         # Regular tuple, handle elsewhere
         raise ValueError("Not a namedtuple")
 
-    def handle_pandas_categorical(self, obj: Any) -> Union[List[Any], Dict[str, Any]]:
+    def handle_pandas_categorical(self, obj: Any) -> List[Any]:
         """Handle pandas Categorical objects.
 
         Args:
             obj: pandas Categorical object
 
         Returns:
-            List of values or detailed representation
+            List of values
         """
         if pd is None:
             raise ImportError("pandas not available")
 
-        if self.config.type_coercion == TypeCoercion.STRICT:
-            return {
-                "_type": "categorical",
-                "categories": list(obj.categories),
-                "codes": obj.codes.tolist(),
-                "ordered": obj.ordered,
-            }
-        # Convert to list of actual values
+        # Phase 2: Legacy format removed - always convert to list of values
         return obj.tolist()
 
     def handle_set(self, obj: set) -> List[Any]:
@@ -198,17 +157,16 @@ class TypeHandler:
         """
         return self.handle_set(obj)
 
-    def handle_bytes(self, obj: bytes) -> Union[str, Dict[str, Any]]:
+    def handle_bytes(self, obj: bytes) -> str:
         """Handle bytes objects.
 
         Args:
             obj: Bytes object to convert
 
         Returns:
-            String representation or detailed dict
+            String representation
         """
-        if self.config.type_coercion == TypeCoercion.STRICT:
-            return {"_type": "bytes", "data": obj.hex(), "length": len(obj)}
+        # Phase 2: Legacy format removed - always convert to string
         try:
             # Try to decode as UTF-8
             return obj.decode("utf-8")
@@ -216,34 +174,21 @@ class TypeHandler:
             # Fall back to hex representation
             return obj.hex()
 
-    def handle_bytearray(self, obj: bytearray) -> Union[str, Dict[str, Any]]:
+    def handle_bytearray(self, obj: bytearray) -> str:
         """Handle bytearray objects."""
         return self.handle_bytes(bytes(obj))
 
-    def handle_range(self, obj: range) -> Union[List[int], Dict[str, Any]]:
+    def handle_range(self, obj: range) -> List[int]:
         """Handle range objects.
 
         Args:
             obj: Range object to convert
 
         Returns:
-            List of values or detailed representation
+            List of values
         """
-        if self.config.type_coercion == TypeCoercion.STRICT:
-            return {
-                "_type": "range",
-                "start": obj.start,
-                "stop": obj.stop,
-                "step": obj.step,
-            }
-        if len(obj) > 1000:  # Don't expand huge ranges
-            return {
-                "_type": "range",
-                "start": obj.start,
-                "stop": obj.stop,
-                "step": obj.step,
-                "_note": "Range too large to expand",
-            }
+        # Phase 2: Legacy format removed - always convert to list
+        # For huge ranges, this might be memory intensive, but it's consistent
         return list(obj)
 
     def handle_nan_value(self, obj: Any) -> Any:
@@ -302,7 +247,7 @@ class TypeHandler:
         if (
             hasattr(self.config, "include_type_hints")
             and self.config.include_type_hints
-            and isinstance(obj, (uuid.UUID, set))
+            and isinstance(obj, (decimal.Decimal, complex, uuid.UUID, set, range))
         ):
             # Let core handlers handle these types for type metadata
             return None

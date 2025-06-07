@@ -208,38 +208,38 @@ class TestMLSerializersUncoveredLines(unittest.TestCase):
         # Test each serializer when its library is None
         with patch("datason.ml_serializers.torch", None):
             result = serialize_pytorch_tensor("test")
-            self.assertEqual(result["_type"], "torch.Tensor")
-            self.assertEqual(result["_data"], "test")
+            self.assertEqual(result["__datason_type__"], "torch.Tensor")
+            self.assertEqual(result["__datason_value__"], "test")
 
         with patch("datason.ml_serializers.tf", None):
             result = serialize_tensorflow_tensor("test")
-            self.assertEqual(result["_type"], "tf.Tensor")
-            self.assertEqual(result["_data"], "test")
+            self.assertEqual(result["__datason_type__"], "tf.Tensor")
+            self.assertEqual(result["__datason_value__"], "test")
 
         with patch("datason.ml_serializers.sklearn", None):
             result = serialize_sklearn_model("test")
-            self.assertEqual(result["_type"], "sklearn.model")
-            self.assertEqual(result["_data"], "test")
+            self.assertEqual(result["__datason_type__"], "sklearn.model")
+            self.assertEqual(result["__datason_value__"], "test")
 
         with patch("datason.ml_serializers.jax", None):
             result = serialize_jax_array("test")
-            self.assertEqual(result["_type"], "jax.Array")
-            self.assertEqual(result["_data"], "test")
+            self.assertEqual(result["__datason_type__"], "jax.Array")
+            self.assertEqual(result["__datason_value__"], "test")
 
         with patch("datason.ml_serializers.scipy", None):
             result = serialize_scipy_sparse("test")
-            self.assertEqual(result["_type"], "scipy.sparse")
-            self.assertEqual(result["_data"], "test")
+            self.assertEqual(result["__datason_type__"], "scipy.sparse")
+            self.assertEqual(result["__datason_value__"], "test")
 
         with patch("datason.ml_serializers.Image", None):
             result = serialize_pil_image("test")
-            self.assertEqual(result["_type"], "PIL.Image")
-            self.assertEqual(result["_data"], "test")
+            self.assertEqual(result["__datason_type__"], "PIL.Image")
+            self.assertEqual(result["__datason_value__"], "test")
 
         with patch("datason.ml_serializers.transformers", None):
             result = serialize_huggingface_tokenizer("test")
-            self.assertEqual(result["_type"], "transformers.tokenizer")
-            self.assertEqual(result["_data"], "test")
+            self.assertEqual(result["__datason_type__"], "transformers.tokenizer")
+            self.assertEqual(result["__datason_value__"], "test")
 
 
 if __name__ == "__main__":

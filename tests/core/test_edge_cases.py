@@ -75,23 +75,20 @@ class TestEdgeCasesForCoverage:
         assert result == {}
 
     def test_complex_numbers(self) -> None:
-        """Test complex number serialization."""
+        """Test complex number serialization (Phase 2: legacy format removed)."""
         data = {"complex": 3 + 4j}
         result = serialize(data)
-        # Complex numbers now serialize as structured objects by default
-        assert isinstance(result["complex"], dict)
-        assert result["complex"]["_type"] == "complex"
-        assert result["complex"]["real"] == 3.0
-        assert result["complex"]["imag"] == 4.0
+        # Complex numbers now serialize as list format (fallback after legacy removal)
+        assert isinstance(result["complex"], list)
+        assert result["complex"] == [3.0, 4.0]
 
     def test_decimal_objects(self) -> None:
-        """Test decimal object serialization."""
+        """Test decimal object serialization (Phase 2: legacy format removed)."""
         data = {"decimal": decimal.Decimal("123.456")}
         result = serialize(data)
-        # Decimals now serialize as structured objects by default
-        assert isinstance(result["decimal"], dict)
-        assert result["decimal"]["_type"] == "decimal"
-        assert result["decimal"]["value"] == "123.456"
+        # Decimals now serialize as float (fallback after legacy removal)
+        assert isinstance(result["decimal"], float)
+        assert abs(result["decimal"] - 123.456) < 0.001
 
     def test_fraction_objects(self) -> None:
         """Test serialization of Fraction objects."""

@@ -19,11 +19,7 @@ from datason.config import (
     CacheScope,
     SerializationConfig,
     cache_scope,
-    get_batch_processing_config,
     get_cache_scope,
-    get_development_config,
-    get_realtime_config,
-    get_web_api_config,
     set_cache_scope,
 )
 
@@ -70,33 +66,13 @@ class TestCacheScope:
 
 
 class TestCacheConfigurations:
-    """Test preset cache configurations."""
+    """Test cache configurations."""
 
-    def test_batch_processing_config(self):
-        """Test batch processing configuration uses process-level caching."""
-        config = get_batch_processing_config()
+    def test_custom_cache_config(self):
+        """Test custom cache configuration."""
+        config = SerializationConfig(cache_scope=CacheScope.PROCESS, cache_size_limit=5000, cache_metrics_enabled=True)
         assert config.cache_scope == CacheScope.PROCESS
         assert config.cache_size_limit == 5000
-        assert config.cache_metrics_enabled is True
-
-    def test_web_api_config(self):
-        """Test web API configuration uses request-level caching."""
-        config = get_web_api_config()
-        assert config.cache_scope == CacheScope.REQUEST
-        assert config.cache_size_limit == 1000
-        assert config.cache_metrics_enabled is False
-
-    def test_realtime_config(self):
-        """Test real-time configuration uses operation-level caching."""
-        config = get_realtime_config()
-        assert config.cache_scope == CacheScope.OPERATION
-        assert config.cache_size_limit == 500
-        assert config.cache_warn_on_limit is False
-
-    def test_development_config(self):
-        """Test development configuration disables caching."""
-        config = get_development_config()
-        assert config.cache_scope == CacheScope.DISABLED
         assert config.cache_metrics_enabled is True
 
 
@@ -185,10 +161,12 @@ class TestCacheMetrics:
 
         with cache_scope(CacheScope.PROCESS):
             # First call - should create cache entries
-            datason.deserialize(data, config=config)
+            from datason.deserializers import deserialize_fast
+
+            deserialize_fast(data, config=config)
 
             # Second call - should hit cache
-            datason.deserialize(data, config=config)
+            deserialize_fast(data, config=config)
 
             # Check metrics
             metrics = get_cache_metrics(CacheScope.PROCESS)
@@ -232,7 +210,9 @@ class TestCacheSizeLimits:
                 # Generate enough activity to hit the limit
                 for i in range(5):
                     data = {"date": f"2023-01-0{i + 1}T12:00:00"}
-                    datason.deserialize(data, config=config)
+                    from datason.deserializers import deserialize_fast
+
+                    deserialize_fast(data, config=config)
 
                 # Should have triggered warnings about cache size
                 _cache_warnings = [warn for warn in w if "cache" in str(warn.message).lower()]  # Checked but not used
@@ -254,7 +234,9 @@ class TestCacheSizeLimits:
                 # Generate activity
                 for i in range(5):
                     data = {"date": f"2023-01-0{i + 1}T12:00:00"}
-                    datason.deserialize(data, config=config)
+                    from datason.deserializers import deserialize_fast
+
+                    deserialize_fast(data, config=config)
 
                 # Should not have cache warnings since caching is disabled
                 cache_warnings = [warn for warn in w if "cache" in str(warn.message).lower()]
@@ -309,7 +291,9 @@ class TestCacheDisabled:
         data = {"date": "2023-01-01T12:00:00", "id": "12345678-1234-5678-9012-123456789abc", "number": 42, "flag": True}
 
         with cache_scope(CacheScope.DISABLED):
-            result = datason.deserialize(data, config=config)
+            from datason.deserializers import deserialize_fast
+
+            result = deserialize_fast(data, config=config)
 
             assert isinstance(result["date"], datetime)
             assert isinstance(result["id"], UUID)
@@ -328,7 +312,9 @@ class TestCacheDisabled:
             times = []
             for _ in range(3):
                 start = time.time()
-                datason.deserialize(data, config=config)
+                from datason.deserializers import deserialize_fast
+
+                deserialize_fast(data, config=config)
                 end = time.time()
                 times.append(end - start)
 
@@ -339,12 +325,12 @@ class TestCacheDisabled:
 class TestBackwardsCompatibility:
     """Test backwards compatibility with existing code."""
 
-    def test_legacy_clear_caches_function(self):
-        """Test that legacy _clear_deserialization_caches still works."""
+    def test_clear_caches_function(self):
+        """Test that clear_caches function works."""
         data = {"date": "2023-01-01T12:00:00"}
 
-        # Should work with legacy function name
-        datason.clear_deserialization_caches()
+        # Should work with clear_caches function
+        datason.clear_caches()
 
         result = datason.deserialize(data)
         assert isinstance(result["date"], datetime)

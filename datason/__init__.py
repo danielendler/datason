@@ -27,6 +27,25 @@ if sys.version_info < (3, 9):
         stacklevel=2,
     )
 
+# NEW: Modern API (Phase 3) - Intention-revealing names and composable utilities
+from .api import (
+    dump,
+    dump_api,
+    dump_chunked,
+    dump_fast,
+    dump_ml,
+    dump_secure,
+    dumps,
+    get_api_info,
+    help_api,
+    load_basic,
+    load_perfect,
+    load_smart,
+    load_typed,
+    loads,
+    stream_dump,
+    suppress_deprecation_warnings,
+)
 from .converters import safe_float, safe_int
 from .core import (
     ChunkedSerializationResult,
@@ -49,6 +68,7 @@ from .deserializers import (
     TemplateDeserializationError,
     TemplateDeserializer,
     auto_deserialize,
+    clear_caches,  # noqa: F401
     create_ml_round_trip_template,
     deserialize,
     deserialize_to_pandas,
@@ -57,9 +77,6 @@ from .deserializers import (
     parse_datetime_string,
     parse_uuid_string,
     safe_deserialize,
-)
-from .deserializers import (
-    clear_caches as clear_deserialization_caches,  # noqa: F401
 )
 from .serializers import serialize_detection_details
 
@@ -75,20 +92,11 @@ try:
         TypeCoercion,
         cache_scope,  # noqa: F401
         get_api_config,  # noqa: F401
-        get_batch_processing_config,  # noqa: F401
         get_cache_scope,  # noqa: F401
         get_default_config,  # noqa: F401
-        get_development_config,  # noqa: F401
-        get_financial_config,  # noqa: F401
-        get_inference_config,  # noqa: F401
-        get_logging_config,  # noqa: F401
         get_ml_config,  # noqa: F401
         get_performance_config,  # noqa: F401
-        get_realtime_config,  # noqa: F401
-        get_research_config,  # noqa: F401
         get_strict_config,  # noqa: F401
-        get_time_series_config,  # noqa: F401
-        get_web_api_config,  # noqa: F401
         reset_default_config,  # noqa: F401
         set_cache_scope,  # noqa: F401
         set_default_config,
@@ -137,7 +145,6 @@ from . import (
 # Cache management functions
 from .cache_manager import (
     clear_all_caches,  # noqa: F401
-    clear_caches,  # noqa: F401
     get_cache_metrics,  # noqa: F401
     operation_scope,  # noqa: F401
     request_scope,  # noqa: F401
@@ -210,6 +217,23 @@ __all__ = [  # noqa: RUF022
     "serialize_datetimes",
     # Serializers
     "serialize_detection_details",
+    # NEW: Modern API (Phase 3) - Intention-revealing wrapper functions
+    "dump",
+    "dump_ml",
+    "dump_api",
+    "dump_secure",
+    "dump_fast",
+    "dump_chunked",
+    "stream_dump",
+    "load_basic",
+    "load_smart",
+    "load_perfect",
+    "load_typed",
+    "loads",
+    "dumps",
+    "help_api",
+    "get_api_info",
+    "suppress_deprecation_warnings",
 ]
 
 # Add configuration exports if available
@@ -240,16 +264,6 @@ if _config_available:
             "get_api_config",
             "get_strict_config",
             "get_performance_config",
-            "get_financial_config",
-            "get_time_series_config",
-            "get_inference_config",
-            "get_research_config",
-            "get_logging_config",
-            # Cache-aware configurations
-            "get_batch_processing_config",
-            "get_web_api_config",
-            "get_realtime_config",
-            "get_development_config",
             # Cache management
             "cache_scope",
             "get_cache_scope",
@@ -260,8 +274,6 @@ if _config_available:
             "reset_cache_metrics",
             "operation_scope",
             "request_scope",
-            # Legacy cache function
-            "clear_deserialization_caches",
             # Type handling
             "TypeHandler",
             "is_nan_like",

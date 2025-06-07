@@ -98,7 +98,7 @@ class TestTemplateDeserializerNewTypes:
         # Serialize (becomes dict with metadata)
         serialized = datason.serialize(original)
         assert isinstance(serialized, dict)
-        assert serialized.get("_type") == "torch.Tensor"
+        assert serialized.get("__datason_type__") == "torch.Tensor"
 
         # Template deserialize (should restore tensor)
         reconstructed = deserialize_with_template(serialized, original)
@@ -113,7 +113,7 @@ class TestTemplateDeserializerNewTypes:
         # Serialize (becomes dict with metadata)
         serialized = datason.serialize(original)
         assert isinstance(serialized, dict)
-        assert serialized.get("_type") == "sklearn.model"
+        assert serialized.get("__datason_type__") == "sklearn.model"
 
         # Template deserialize (should restore model)
         reconstructed = deserialize_with_template(serialized, original)
@@ -124,10 +124,10 @@ class TestTemplateDeserializerNewTypes:
         """Test complex number round-trip with user config."""
         original = complex(1, 2)
 
-        # Serialize (becomes dict with metadata)
+        # Serialize (becomes list format after legacy removal)
         serialized = datason.serialize(original)
-        assert isinstance(serialized, dict)
-        assert serialized.get("_type") == "complex"
+        assert isinstance(serialized, list)
+        assert serialized == [1.0, 2.0]
 
         # Template deserialize (should restore complex)
         reconstructed = deserialize_with_template(serialized, original)
@@ -144,10 +144,9 @@ class TestTemplateDeserializerNewTypes:
         ]
 
         for original in test_cases:
-            # Step 1: Serialize (becomes dict with metadata)
+            # Step 1: Serialize (becomes float after legacy removal)
             serialized = datason.serialize(original)
-            assert isinstance(serialized, dict), f"Serialized should be dict, got {type(serialized)}"
-            assert serialized.get("_type") == "decimal", "Should have decimal metadata"
+            assert isinstance(serialized, float), f"Serialized should be float, got {type(serialized)}"
 
             # Step 2: Template deserialize (should restore Decimal)
             reconstructed = deserialize_with_template(serialized, original)
@@ -243,29 +242,31 @@ class TestDeterministicBehaviorAcrossModes:
         """Test complex number behavior across all 4 detection modes."""
         original = complex(1, 2)
 
-        # All modes should preserve complex numbers (legacy behavior with distinctive pattern)
+        # PHASE 2: Complex numbers now serialize to [real, imag] list format
         serialized = datason.serialize(original)
+        assert isinstance(serialized, list), "Complex should serialize to list"
+        assert serialized == [1.0, 2.0], "Complex should serialize to [real, imag]"
 
-        # Mode 1: User Config/Template
+        # Mode 1: User Config/Template - should preserve complex
         user_config_result = deserialize_with_template(serialized, original)
         assert isinstance(user_config_result, complex), "User config should preserve complex"
         assert user_config_result == original
 
-        # Mode 2: Auto Hints (complex always gets metadata)
+        # Mode 2: Auto Hints - without type hints, complex becomes list
         auto_hints_result = datason.deserialize(serialized)
-        # Complex may stay as dict in some cases
-        assert auto_hints_result is not None
+        assert isinstance(auto_hints_result, list), "Without hints, complex stays as list"
+        assert auto_hints_result == [1.0, 2.0]
 
-        # Mode 3: Heuristics (complex has distinctive pattern)
+        # Mode 3: Heuristics - list format doesn't have distinctive complex pattern
         heuristics_result = datason.deserialize(serialized)
-        # Should detect complex or stay as dict
-        assert heuristics_result is not None
+        assert isinstance(heuristics_result, list), "Heuristics can't detect complex from list"
+        assert heuristics_result == [1.0, 2.0]
 
-        # Mode 4: Hot Path (may not detect complex, but shouldn't crash)
+        # Mode 4: Hot Path - list stays as list
         config = SerializationConfig()
         hot_path_result = deserialize_fast(serialized, config=config)
-        # Hot path might return dict instead of complex - that's ok for hot path
-        assert hot_path_result is not None, "Hot path should not crash"
+        assert isinstance(hot_path_result, list), "Hot path keeps list as list"
+        assert hot_path_result == [1.0, 2.0]
 
     def test_datetime_four_modes(self):
         """Test datetime behavior across all 4 detection modes."""

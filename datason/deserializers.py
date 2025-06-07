@@ -394,7 +394,7 @@ def _deserialize_with_type_metadata(obj: Dict[str, Any]) -> Any:
                         deserialized_data = []
                         for item in array_data:
                             # Recursively deserialize each element to handle complex numbers, etc.
-                            if isinstance(item, dict) and "_type" in item:
+                            if isinstance(item, dict) and ("_type" in item or "__datason_type__" in item):
                                 deserialized_item = _deserialize_with_type_metadata(item)
                             else:
                                 deserialized_item = item
@@ -477,8 +477,33 @@ def _deserialize_with_type_metadata(obj: Dict[str, Any]) -> Any:
             elif type_name.startswith("sklearn.") or type_name.startswith("scikit_learn."):
                 try:
                     # Handle new type metadata format for sklearn models
-                    if isinstance(value, dict) and "_class" in value and "_params" in value:
+                    if isinstance(value, dict) and "class" in value and "params" in value:
                         # This is the new format: reconstruct the sklearn model from class and params
+                        class_name = value["class"]
+                        params = value["params"]
+
+                        # Import the sklearn class dynamically
+                        module_path, class_name_only = class_name.rsplit(".", 1)
+                        try:
+                            import importlib
+
+                            module = importlib.import_module(module_path)
+                            model_class = getattr(module, class_name_only)
+
+                            # Create the model with the saved parameters
+                            model = model_class(**params)
+
+                            # Note: We can't restore fitted state without the actual fitted data
+                            # This is a limitation of the current serialization format
+                            return model
+                        except (ImportError, AttributeError) as e:
+                            warnings.warn(f"Could not import sklearn class {class_name}: {e}", stacklevel=2)
+                            # Fall back to returning the dict
+                            return value
+
+                    # Handle legacy format for backward compatibility
+                    elif isinstance(value, dict) and "_class" in value and "_params" in value:
+                        # This is the legacy format: reconstruct the sklearn model from _class and _params
                         class_name = value["_class"]
                         params = value["_params"]
 
@@ -525,123 +550,8 @@ def _deserialize_with_type_metadata(obj: Dict[str, Any]) -> Any:
         # Fallback to the original value
         return value
 
-    # ENHANCED LEGACY TYPE FORMATS (priority 2) - Handle older serialization formats
-    if isinstance(obj, dict) and "_type" in obj:
-        type_name = obj["_type"]
-
-        try:
-            # Enhanced Decimal legacy format with precision preservation
-            if type_name == "decimal":
-                if "value" in obj:
-                    return Decimal(obj["value"])
-                elif "precision" in obj and "scale" in obj:
-                    # Enhanced precision format
-                    return Decimal(obj["value"])
-                return Decimal(str(obj.get("value", "0")))
-
-            # Enhanced Complex number legacy format
-            elif type_name == "complex":
-                if "real" in obj and "imag" in obj:
-                    return complex(obj["real"], obj["imag"])
-                return complex(obj.get("value", 0))
-
-            # Path legacy format
-            elif type_name == "path":
-                from pathlib import Path
-
-                return Path(obj.get("value", ""))
-
-            # Enhanced PyTorch tensor legacy format
-            elif type_name == "torch.Tensor":
-                try:
-                    import torch
-
-                    # Extract tensor data and metadata
-                    data = obj.get("_data", obj.get("data", []))
-                    shape = obj.get("_shape", obj.get("shape"))
-                    dtype_str = obj.get("_dtype", obj.get("dtype", "torch.float32"))
-                    device = obj.get("_device", obj.get("device", "cpu"))
-                    requires_grad = obj.get("_requires_grad", obj.get("requires_grad", False))
-
-                    # Create tensor
-                    tensor = torch.tensor(data, device=device, requires_grad=requires_grad)
-
-                    # Set dtype if specified
-                    if dtype_str and hasattr(torch, dtype_str.replace("torch.", "")):
-                        torch_dtype = getattr(torch, dtype_str.replace("torch.", ""))
-                        tensor = tensor.to(torch_dtype)
-
-                    # Reshape if needed
-                    if shape and tensor.numel() == sum(shape):
-                        tensor = tensor.reshape(shape)
-
-                    return tensor
-                except ImportError:
-                    warnings.warn("PyTorch not available for tensor reconstruction", stacklevel=2)
-                except Exception as e:
-                    warnings.warn(f"Failed to reconstruct PyTorch tensor: {e}", stacklevel=2)
-
-            # Enhanced NumPy array legacy format
-            elif type_name == "numpy.ndarray" or type_name.startswith("numpy."):
-                if np is not None:
-                    try:
-                        data = obj.get("data", obj.get("_data", []))
-                        dtype = obj.get("dtype", obj.get("_dtype"))
-                        shape = obj.get("shape", obj.get("_shape"))
-
-                        result = np.array(data)
-                        if dtype:
-                            result = result.astype(dtype)
-                        if shape:
-                            result = result.reshape(shape)
-                        return result
-                    except Exception as e:
-                        warnings.warn(f"Failed to reconstruct NumPy array: {e}", stacklevel=2)
-
-            # Enhanced pandas DataFrame legacy format
-            elif type_name == "pandas.DataFrame":
-                if pd is not None:
-                    try:
-                        data = obj.get("data", obj.get("_data"))
-                        if isinstance(data, list):
-                            return pd.DataFrame(data)
-                        elif isinstance(data, dict):
-                            return pd.DataFrame.from_dict(data)
-                    except Exception as e:
-                        warnings.warn(f"Failed to reconstruct DataFrame: {e}", stacklevel=2)
-
-            # Enhanced pandas Series legacy format
-            elif type_name == "pandas.Series":
-                if pd is not None:
-                    try:
-                        data = obj.get("data", obj.get("_data"))
-                        name = obj.get("name", obj.get("_name"))
-                        return pd.Series(data, name=name)
-                    except Exception as e:
-                        warnings.warn(f"Failed to reconstruct Series: {e}", stacklevel=2)
-
-            # ML Models - Scikit-learn legacy format
-            elif type_name.startswith("sklearn.") or type_name.startswith("scikit_learn."):
-                try:
-                    import base64
-                    import pickle  # nosec B403
-
-                    # Try different pickle storage formats
-                    pickle_data = None
-                    if "_pickle_data" in obj:
-                        pickle_data = base64.b64decode(obj["_pickle_data"])
-                    elif "pickle_data" in obj:
-                        pickle_data = base64.b64decode(obj["pickle_data"])
-                    elif "data" in obj and isinstance(obj["data"], str):
-                        pickle_data = base64.b64decode(obj["data"])
-
-                    if pickle_data:
-                        return pickle.loads(pickle_data)  # nosec B301
-                except (ImportError, Exception) as e:
-                    warnings.warn(f"Could not reconstruct sklearn model: {e}", stacklevel=2)
-
-        except Exception as e:
-            warnings.warn(f"Failed to reconstruct legacy type {type_name}: {e}", stacklevel=2)
+    # NOTE: Legacy '_type' format support removed in v0.8.0
+    # Only '__datason_type__' format is now supported for type metadata
 
     # Not a type metadata object
     return obj
@@ -1258,9 +1168,20 @@ class TemplateDeserializer:
     def _deserialize_complex_with_template(self, obj: Any, template: complex) -> complex:
         """Deserialize complex number using template."""
         if isinstance(obj, dict):
-            # Handle dict format: {'_type': 'complex', 'real': 1.0, 'imag': 2.0}
-            if obj.get("_type") == "complex" and "real" in obj and "imag" in obj or "real" in obj and "imag" in obj:
+            # Handle new metadata format: {'__datason_type__': 'complex', '__datason_value__': {'real': 1.0, 'imag': 2.0}}
+            if obj.get("__datason_type__") == "complex" and "__datason_value__" in obj:
+                value = obj["__datason_value__"]
+                if isinstance(value, dict) and "real" in value and "imag" in value:
+                    return complex(value["real"], value["imag"])
+            # Handle legacy dict format: {'_type': 'complex', 'real': 1.0, 'imag': 2.0}
+            elif obj.get("_type") == "complex" and "real" in obj and "imag" in obj or "real" in obj and "imag" in obj:
                 return complex(obj["real"], obj["imag"])
+        elif isinstance(obj, list) and len(obj) == 2:
+            # PHASE 2: Handle new list format [real, imag]
+            try:
+                return complex(obj[0], obj[1])
+            except (ValueError, TypeError, IndexError):
+                pass
         elif isinstance(obj, (int, float)):
             return complex(obj)
         elif isinstance(obj, str):
@@ -1274,48 +1195,73 @@ class TemplateDeserializer:
 
     def _deserialize_torch_with_template(self, obj: Any, template: Any) -> Any:
         """Deserialize PyTorch tensor using template."""
-        if isinstance(obj, dict) and obj.get("_type") in ("torch.tensor", "torch.Tensor"):
+        if isinstance(obj, dict):
             try:
                 import torch
 
-                # Handle tensor dict format with _data field
-                if "_data" in obj:
-                    data = obj["_data"]
-                    dtype_str = obj.get("_dtype")
-                    device = obj.get("_device", "cpu")
+                # Handle new metadata format: {'__datason_type__': 'torch.Tensor', '__datason_value__': {...}}
+                if obj.get("__datason_type__") == "torch.Tensor" and "__datason_value__" in obj:
+                    value = obj["__datason_value__"]
+                    if isinstance(value, dict):
+                        data = value.get("data")
+                        dtype_str = value.get("dtype")
+                        device = value.get("device", "cpu")
+                        requires_grad = value.get("requires_grad", False)
 
-                    # Create tensor
-                    tensor = torch.tensor(data, device=device)
+                        # Create tensor
+                        tensor = torch.tensor(data, device=device, requires_grad=requires_grad)
 
-                    # Apply dtype if specified
-                    if dtype_str and hasattr(torch, dtype_str.replace("torch.", "")):
-                        try:
-                            torch_dtype = getattr(torch, dtype_str.replace("torch.", ""))
-                            tensor = tensor.to(torch_dtype)
-                        except (AttributeError, RuntimeError, TypeError):
-                            # If dtype conversion fails, keep original dtype
-                            pass  # nosec B110 - intentional fallback for torch dtype conversion
+                        # Apply dtype if specified
+                        if dtype_str and hasattr(torch, dtype_str.replace("torch.", "")):
+                            try:
+                                torch_dtype = getattr(torch, dtype_str.replace("torch.", ""))
+                                tensor = tensor.to(torch_dtype)
+                            except (AttributeError, RuntimeError, TypeError):
+                                pass  # nosec B110 - intentional fallback for torch dtype conversion
 
-                    return tensor
+                        return tensor
+                    else:
+                        # Simple value format
+                        return torch.tensor(value)
 
-                # Handle tensor dict format with data field
-                elif "data" in obj:
-                    data = obj["data"]
-                    dtype = obj.get("dtype")
-                    device = obj.get("device", "cpu")
+                # Handle legacy format: {'_type': 'torch.Tensor', '_data': [...], ...}
+                elif obj.get("_type") in ("torch.tensor", "torch.Tensor"):
+                    # Handle tensor dict format with _data field
+                    if "_data" in obj:
+                        data = obj["_data"]
+                        dtype_str = obj.get("_dtype")
+                        device = obj.get("_device", "cpu")
 
-                    # Create tensor
-                    tensor = torch.tensor(data, device=device)
+                        # Create tensor
+                        tensor = torch.tensor(data, device=device)
 
-                    # Apply dtype if specified
-                    if dtype:
-                        try:
-                            tensor = tensor.to(getattr(torch, dtype))
-                        except (AttributeError, RuntimeError, TypeError):
-                            # If dtype conversion fails, keep original dtype
-                            pass  # nosec B110 - intentional fallback for torch dtype conversion
+                        # Apply dtype if specified
+                        if dtype_str and hasattr(torch, dtype_str.replace("torch.", "")):
+                            try:
+                                torch_dtype = getattr(torch, dtype_str.replace("torch.", ""))
+                                tensor = tensor.to(torch_dtype)
+                            except (AttributeError, RuntimeError, TypeError):
+                                pass  # nosec B110 - intentional fallback for torch dtype conversion
 
-                    return tensor
+                        return tensor
+
+                    # Handle tensor dict format with data field
+                    elif "data" in obj:
+                        data = obj["data"]
+                        dtype = obj.get("dtype")
+                        device = obj.get("device", "cpu")
+
+                        # Create tensor
+                        tensor = torch.tensor(data, device=device)
+
+                        # Apply dtype if specified
+                        if dtype:
+                            try:
+                                tensor = tensor.to(getattr(torch, dtype))
+                            except (AttributeError, RuntimeError, TypeError):
+                                pass  # nosec B110 - intentional fallback for torch dtype conversion
+
+                        return tensor
 
             except Exception as e:
                 warnings.warn(f"Failed to reconstruct PyTorch tensor: {e}", stacklevel=3)
@@ -1332,23 +1278,45 @@ class TemplateDeserializer:
 
     def _deserialize_sklearn_with_template(self, obj: Any, template: Any) -> Any:
         """Deserialize sklearn model using template."""
-        if isinstance(obj, dict) and "_type" in obj and "_class" in obj and "_params" in obj:
+        if isinstance(obj, dict):
             try:
-                # Import the sklearn class dynamically
-                class_name = obj["_class"]
-                module_path, class_name_only = class_name.rsplit(".", 1)
+                # Handle new metadata format: {'__datason_type__': 'sklearn.model', '__datason_value__': {...}}
+                if obj.get("__datason_type__") == "sklearn.model" and "__datason_value__" in obj:
+                    value = obj["__datason_value__"]
+                    if isinstance(value, dict) and "class" in value and "params" in value:
+                        # Import the sklearn class dynamically
+                        class_name = value["class"]
+                        module_path, class_name_only = class_name.rsplit(".", 1)
 
-                import importlib
+                        import importlib
 
-                module = importlib.import_module(module_path)
-                model_class = getattr(module, class_name_only)
+                        module = importlib.import_module(module_path)
+                        model_class = getattr(module, class_name_only)
 
-                # Create the model with the saved parameters
-                reconstructed = model_class(**obj["_params"])
+                        # Create the model with the saved parameters
+                        reconstructed = model_class(**value["params"])
 
-                # Verify it's the same type as template
-                if type(reconstructed) is type(template):
-                    return reconstructed
+                        # Verify it's the same type as template
+                        if type(reconstructed) is type(template):
+                            return reconstructed
+
+                # Handle legacy format: {'_type': 'sklearn.model', '_class': '...', '_params': {...}}
+                elif "_type" in obj and "_class" in obj and "_params" in obj:
+                    # Import the sklearn class dynamically
+                    class_name = obj["_class"]
+                    module_path, class_name_only = class_name.rsplit(".", 1)
+
+                    import importlib
+
+                    module = importlib.import_module(module_path)
+                    model_class = getattr(module, class_name_only)
+
+                    # Create the model with the saved parameters
+                    reconstructed = model_class(**obj["_params"])
+
+                    # Verify it's the same type as template
+                    if type(reconstructed) is type(template):
+                        return reconstructed
 
             except Exception as e:
                 warnings.warn(f"Failed to reconstruct sklearn model: {e}", stacklevel=3)

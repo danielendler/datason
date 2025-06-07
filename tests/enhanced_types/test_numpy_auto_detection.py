@@ -10,7 +10,7 @@ import pytest
 
 import datason
 from datason.config import SerializationConfig
-from datason.deserializers import _clear_deserialization_caches, deserialize_fast
+from datason.deserializers import deserialize_fast
 
 numpy = pytest.importorskip("numpy", reason="NumPy not available")
 
@@ -20,7 +20,7 @@ class TestNumPyAutoDetection:
 
     def setup_method(self) -> None:
         """Clear caches before each test to ensure clean state."""
-        _clear_deserialization_caches()
+        datason.clear_caches()
 
     def test_1d_array_auto_detection(self) -> None:
         """Test 1D array auto-detection from lists."""

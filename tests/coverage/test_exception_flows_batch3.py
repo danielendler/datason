@@ -4,10 +4,10 @@ Targets remaining missing lines in deserializers.py focusing on security,
 performance optimizations, and complex data structures.
 """
 
+import datason
 from datason.deserializers import (
     DeserializationSecurityError,
     TemplateDeserializationError,
-    _clear_deserialization_caches,
     _get_cached_string_pattern,
     _get_pooled_dict,
     _is_homogeneous_basic_types,
@@ -26,7 +26,7 @@ class TestSecurityConstraints:
     def test_deserialization_security_errors(self):
         """Test various security errors are raised properly."""
         # Comprehensive state reset for test isolation
-        _clear_deserialization_caches()
+        datason.clear_caches()
         import gc
 
         gc.collect()
@@ -61,7 +61,7 @@ class TestSecurityConstraints:
     def test_large_object_security_check(self):
         """Test security checks on large objects."""
         # Comprehensive state reset for test isolation
-        _clear_deserialization_caches()
+        datason.clear_caches()
         import gc
 
         gc.collect()
@@ -92,7 +92,7 @@ class TestSecurityConstraints:
     def test_string_length_security_check(self):
         """Test security checks on very long strings."""
         # Clear caches to ensure clean state
-        _clear_deserialization_caches()
+        datason.clear_caches()
 
         # Create an extremely long string
         very_long_string = "x" * 2_000_000  # 2MB string
@@ -116,7 +116,7 @@ class TestCachingMechanisms:
     def test_cached_string_pattern_storage_and_retrieval(self):
         """Test string pattern caching mechanisms."""
         # Clear caches to ensure clean state
-        _clear_deserialization_caches()
+        datason.clear_caches()
 
         test_string = "2023-01-01T12:00:00"
 
@@ -133,7 +133,7 @@ class TestCachingMechanisms:
     def test_object_pooling_mechanisms(self):
         """Test object pooling for performance optimization."""
         # Clear caches to ensure clean state
-        _clear_deserialization_caches()
+        datason.clear_caches()
 
         # Test dict pooling
         pooled_dict = _get_pooled_dict()
@@ -145,7 +145,7 @@ class TestCachingMechanisms:
         _return_dict_to_pool(pooled_dict)
 
         # Test cache clearing
-        _clear_deserialization_caches()
+        datason.clear_caches()
         # Should not raise any errors
 
 
@@ -155,7 +155,7 @@ class TestStringParsingFallbacks:
     def test_parse_datetime_string_edge_cases(self):
         """Test datetime string parsing with various edge cases."""
         # Clear caches to ensure clean state
-        _clear_deserialization_caches()
+        datason.clear_caches()
 
         # Test None input
         assert parse_datetime_string(None) is None
@@ -174,7 +174,7 @@ class TestStringParsingFallbacks:
     def test_parse_uuid_string_edge_cases(self):
         """Test UUID parsing with edge cases."""
         # Clear caches to ensure clean state
-        _clear_deserialization_caches()
+        datason.clear_caches()
 
         # Test None input
         assert parse_uuid_string(None) is None
@@ -193,7 +193,7 @@ class TestBasicTypeDetection:
     def test_is_homogeneous_basic_types_edge_cases(self):
         """Test basic homogeneous type detection with edge cases."""
         # Clear caches to ensure clean state
-        _clear_deserialization_caches()
+        datason.clear_caches()
 
         # Test empty list
         assert _is_homogeneous_basic_types([])
@@ -223,7 +223,7 @@ class TestLargeDataProcessing:
     def test_auto_deserialize_with_large_data(self):
         """Test auto-deserialization with large data structures."""
         # Clear caches to ensure clean state
-        _clear_deserialization_caches()
+        datason.clear_caches()
 
         # Create moderately large data to test processing
         large_data = {
@@ -245,7 +245,7 @@ class TestDataStructureEdgeCases:
     def test_deserialize_circular_references(self):
         """Test handling of circular references in data structures."""
         # Clear caches to ensure clean state
-        _clear_deserialization_caches()
+        datason.clear_caches()
 
         # Create a structure that would cause infinite recursion if not handled
         data = {"self": None}
@@ -260,7 +260,7 @@ class TestDataStructureEdgeCases:
     def test_deserialize_very_wide_objects(self):
         """Test deserialization of objects with many keys."""
         # Clear caches to ensure clean state
-        _clear_deserialization_caches()
+        datason.clear_caches()
 
         # Create an object with many keys
         wide_object = {f"key_{i}": i for i in range(10000)}
@@ -277,7 +277,7 @@ class TestDataStructureEdgeCases:
     def test_deserialize_mixed_containers(self):
         """Test deserialization of complex mixed containers."""
         # Clear caches to ensure clean state
-        _clear_deserialization_caches()
+        datason.clear_caches()
 
         complex_data = {
             "lists": [[1, 2, 3], ["a", "b", "c"], [True, False, None]],
@@ -298,7 +298,7 @@ class TestTemplateDeserializerEdgeCases:
     def test_template_deserializer_with_invalid_template(self):
         """Test TemplateDeserializer with invalid template data."""
         # Clear caches to ensure clean state
-        _clear_deserialization_caches()
+        datason.clear_caches()
 
         from datason.deserializers import TemplateDeserializer
 
@@ -327,7 +327,7 @@ class TestTemplateDeserializerEdgeCases:
     def test_template_deserializer_with_mismatched_data(self):
         """Test TemplateDeserializer with data that doesn't match template."""
         # Clear caches to ensure clean state
-        _clear_deserialization_caches()
+        datason.clear_caches()
 
         from datason.deserializers import TemplateDeserializer
 
@@ -356,7 +356,7 @@ class TestAutoDeserializeAggressiveMode:
     def test_auto_deserialize_aggressive_with_edge_cases(self):
         """Test aggressive auto-deserialization with edge cases."""
         # Clear caches to ensure clean state
-        _clear_deserialization_caches()
+        datason.clear_caches()
 
         # Test with data that might trigger pandas detection in aggressive mode
         tabular_like_data = {"columns": ["A", "B", "C"], "data": [[1, 2, 3], [4, 5, 6], [7, 8, 9]], "index": [0, 1, 2]}
@@ -380,7 +380,7 @@ class TestAutoDeserializeAggressiveMode:
     def test_auto_deserialize_with_complex_nested_structure(self):
         """Test auto-deserialization with complex nested structures."""
         # Clear caches to ensure clean state
-        _clear_deserialization_caches()
+        datason.clear_caches()
 
         complex_structure = {
             "metadata": {

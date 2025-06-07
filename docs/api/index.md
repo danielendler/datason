@@ -1,79 +1,113 @@
 # 📋 API Reference
 
-Complete API documentation for datason with examples and auto-generated documentation from source code.
+Complete API documentation for datason with two powerful approaches to data serialization.
 
-## Modules
+## 🚀 Two Powerful Approaches
 
-- [Core Functions](core.md)
-- [Configuration System](config.md)
-- [ML Library Integration](ml.md)
-- [Redaction & Privacy](redaction.md)
-- [Utilities](utils.md)
+datason provides two complementary APIs designed for different use cases:
 
-## Quick Reference
+=== "Modern API (Recommended)"
 
-### Common Usage Patterns
+    **Intention-revealing function names with progressive complexity**
+
+    ```python
+    import datason as ds
+
+    # Clear intent - what you want to achieve
+    secure_data = ds.dump_secure(sensitive_data)    # Security-first
+    ml_data = ds.dump_ml(model_data)                # ML-optimized  
+    api_data = ds.dump_api(response_data)           # Clean web APIs
+
+    # Progressive complexity - choose your level
+    basic_data = ds.load_basic(json_data)           # 60-70% accuracy, fast
+    smart_data = ds.load_smart(json_data)           # 80-90% accuracy, balanced
+    perfect_data = ds.load_perfect(json_data)       # 100% accuracy, thorough
+    ```
+
+=== "Traditional API (Comprehensive)"
+
+    **Comprehensive configuration with maximum control**
+
+    ```python
+    import datason as ds
+
+    # Maximum configurability
+    config = ds.SerializationConfig(
+        include_type_info=True,
+        compress_arrays=True,
+        secure_mode=True,
+        ml_mode=True
+    )
+
+    # Full control over every aspect
+    result = ds.serialize(data, config=config)
+    restored = ds.deserialize(result)
+    ```
+
+## 📖 API Documentation Sections
+
+### Modern API Functions
+- **[Modern API Overview](modern-api.md)** - Intention-revealing functions with progressive complexity
+- **[Serialization Functions](modern-serialization.md)** - dump(), dump_ml(), dump_api(), dump_secure(), etc.
+- **[Deserialization Functions](modern-deserialization.md)** - load_basic(), load_smart(), load_perfect(), load_typed()
+- **[Utility Functions](modern-utilities.md)** - dumps/loads, help_api(), get_api_info()
+
+### Traditional API Functions  
+- **[Core Functions](core-functions.md)** - serialize(), deserialize(), auto_deserialize(), safe_deserialize()
+- **[Configuration System](configuration.md)** - SerializationConfig, presets, and customization
+- **[Chunked & Streaming](chunked-streaming.md)** - Large data processing and memory management
+- **[Template System](template-system.md)** - Data validation and structure enforcement
+
+### Specialized Features
+- **[ML Integration](ml-integration.md)** - Machine learning library support
+- **[Data Privacy](data-privacy.md)** - Redaction engines and security features
+- **[Type System](type-system.md)** - Advanced type handling and conversion
+- **[Utilities](utilities.md)** - Helper functions and data processing tools
+
+### Reference
+- **[Exceptions](exceptions.md)** - Error handling and custom exceptions
+- **[Enums & Constants](enums-constants.md)** - Configuration enums and constants
+- **[Complete API Reference](complete-reference.md)** - Auto-generated documentation for all functions
+
+## 🎯 Quick Start Examples
+
+### JSON Module Drop-in Replacement
 
 ```python
 import datason as ds
-import pandas as pd
-import numpy as np
-from datetime import datetime
 
-# Basic serialization
-data = {"values": [1, 2, 3], "timestamp": datetime.now()}
-serialized = ds.serialize(data)
-restored = ds.deserialize(serialized)
+# Like json.dumps() but with type intelligence
+data = {"timestamp": datetime.now(), "array": np.array([1, 2, 3])}
+json_string = ds.dumps(data)
 
-# With configuration
-config = ds.get_ml_config()
-ml_data = {"model": model, "features": pd.DataFrame(data)}
-result = ds.serialize(ml_data, config=config)
-
-# Chunked processing for large data
-large_data = {"arrays": [np.random.random((1000, 1000)) for _ in range(100)]}
-chunked = ds.serialize_chunked(large_data, chunk_size=10*1024*1024)
-
-# Template enforcement
-template = ds.infer_template_from_data(sample_data)
-validated = ds.deserialize_with_template(new_data, template)
-
-# Privacy protection
-engine = ds.create_financial_redaction_engine()
-safe_data = engine.process_object(sensitive_data)
+# Like json.loads() but with type restoration  
+restored = ds.loads(json_string)
+print(type(restored["timestamp"]))  # <class 'datetime.datetime'>
+print(type(restored["array"]))      # <class 'numpy.ndarray'>
 ```
 
-### Error Handling
+### Progressive Complexity Example
 
 ```python
-try:
-    result = ds.serialize(complex_data)
-except ds.SecurityError as e:
-    print(f"Security violation: {e}")
-except MemoryError as e:
-    # Fall back to chunked processing
-    result = ds.serialize_chunked(complex_data)
-except Exception as e:
-    # Generic error handling
-    result = ds.safe_serialize(complex_data)
+import datason as ds
+
+# Start simple, add complexity as needed
+data = ds.load_basic(json_data)      # Fast exploration
+data = ds.load_smart(json_data)      # Production use
+data = ds.load_perfect(json_data)    # Critical accuracy
+
+# Or combine features
+secure_ml_data = ds.dump_secure(model_data, ml_mode=True)
 ```
 
-### Performance Tips
+## 🔗 Getting Started
 
-```python
-# For repeated operations, reuse configuration
-config = ds.get_ml_config()
-for batch in data_batches:
-    result = ds.serialize(batch, config=config)
+- **New to datason?** Start with the [Quick Start Guide](../user-guide/quick-start.md)
+- **Need examples?** Browse the [Examples Gallery](../user-guide/examples/index.md)
+- **Looking for specific functions?** Use the [Complete API Reference](complete-reference.md)
 
-# Estimate memory before processing
-memory_estimate = ds.estimate_memory_usage(large_data)
-if memory_estimate > threshold:
-    use_chunked_processing()
+## 📚 Related Documentation
 
-# Monitor performance
-import time
-start = time.time()
-result = ds.serialize(data)
-duration = time.time() - start
-```
+- **[User Guide](../user-guide/quick-start.md)** - Getting started guide
+- **[Features](../features/configuration/index.md)** - Detailed feature documentation  
+- **[Examples](../user-guide/examples/index.md)** - Real-world usage patterns

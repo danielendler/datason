@@ -19,14 +19,9 @@ from datason.config import (
     SerializationConfig,
     TypeCoercion,
     get_api_config,
-    get_financial_config,
-    get_inference_config,
-    get_logging_config,
     get_ml_config,
     get_performance_config,
-    get_research_config,
     get_strict_config,
-    get_time_series_config,
 )
 from datason.type_handlers import (
     TypeHandler,
@@ -106,8 +101,11 @@ class TestSerializationConfig:
         assert not config.sort_keys  # Skip for speed
 
     def test_financial_config_precision(self) -> None:
-        """Test financial config preserves monetary precision."""
-        config = get_financial_config()
+        """Test custom financial config preserves monetary precision."""
+        # Create custom financial config (replaced removed preset)
+        config = SerializationConfig(
+            preserve_decimals=True, date_format=DateFormat.UNIX_MS, ensure_ascii=True, check_if_serialized=True
+        )
 
         # Should preserve decimal precision for financial data
         assert config.preserve_decimals is True
@@ -127,8 +125,14 @@ class TestSerializationConfig:
         assert result["volume"] == 1000000
 
     def test_time_series_config_temporal_handling(self) -> None:
-        """Test time series config handles temporal data appropriately."""
-        config = get_time_series_config()
+        """Test custom time series config handles temporal data appropriately."""
+        # Create custom time series config (replaced removed preset)
+        config = SerializationConfig(
+            date_format=DateFormat.ISO,
+            dataframe_orient=DataFrameOrient.SPLIT,
+            preserve_decimals=True,
+            datetime_output=OutputType.JSON_SAFE,
+        )
 
         # Should use formats optimal for time series
         assert config.date_format == DateFormat.ISO  # Standard temporal format
@@ -149,8 +153,17 @@ class TestSerializationConfig:
             assert "data" in result
 
     def test_inference_config_performance(self) -> None:
-        """Test inference config optimizes for model serving speed."""
-        config = get_inference_config()
+        """Test custom inference config optimizes for model serving speed."""
+        # Create custom inference config (replaced removed preset)
+        config = SerializationConfig(
+            date_format=DateFormat.UNIX,
+            dataframe_orient=DataFrameOrient.VALUES,
+            type_coercion=TypeCoercion.AGGRESSIVE,
+            preserve_decimals=False,
+            sort_keys=False,
+            check_if_serialized=True,
+            include_type_hints=False,
+        )
 
         # Should prioritize speed over precision
         assert config.date_format == DateFormat.UNIX  # Fast format
@@ -169,8 +182,15 @@ class TestSerializationConfig:
         assert result == inference_data  # Simple passthrough for simple data
 
     def test_research_config_reproducibility(self) -> None:
-        """Test research config preserves maximum information."""
-        config = get_research_config()
+        """Test custom research config preserves maximum information."""
+        # Create custom research config (replaced removed preset)
+        config = SerializationConfig(
+            date_format=DateFormat.ISO,
+            preserve_decimals=True,
+            preserve_complex=True,
+            sort_keys=True,
+            include_type_hints=True,
+        )
 
         # Should preserve maximum information
         assert config.date_format == DateFormat.ISO  # Human-readable
@@ -192,8 +212,16 @@ class TestSerializationConfig:
         assert len(result["results"]) == 2
 
     def test_logging_config_safety(self) -> None:
-        """Test logging config provides safe, readable output."""
-        config = get_logging_config()
+        """Test custom logging config provides safe, readable output."""
+        # Create custom logging config (replaced removed preset)
+        config = SerializationConfig(
+            date_format=DateFormat.ISO,
+            nan_handling=NanHandling.STRING,
+            ensure_ascii=True,
+            max_string_length=1000,
+            preserve_decimals=False,
+            preserve_complex=False,
+        )
 
         # Should be safe for production logging
         assert config.date_format == DateFormat.ISO  # Standard log format
@@ -215,14 +243,13 @@ class TestSerializationConfig:
         # Should handle long strings safely
         assert len(result["long_string"]) <= 1000 + 20  # Account for truncation marker
 
-    def test_all_domain_configs_work(self) -> None:
-        """Test that all domain-specific configs can be instantiated and used."""
+    def test_all_core_configs_work(self) -> None:
+        """Test that all core config presets can be instantiated and used."""
         configs = [
-            ("financial", get_financial_config()),
-            ("time_series", get_time_series_config()),
-            ("inference", get_inference_config()),
-            ("research", get_research_config()),
-            ("logging", get_logging_config()),
+            ("ml", get_ml_config()),
+            ("api", get_api_config()),
+            ("strict", get_strict_config()),
+            ("performance", get_performance_config()),
         ]
 
         test_data = {"value": 123.45, "name": "test"}
@@ -321,16 +348,15 @@ class TestTypeCoercion:
         assert isinstance(result, str)
 
     def test_strict_coercion(self):
-        """Test strict type coercion."""
+        """Test strict type coercion (Phase 2: legacy format removed)."""
         config = SerializationConfig(type_coercion=TypeCoercion.STRICT)
         handler = TypeHandler(config)
 
-        # UUID should preserve details
+        # UUID now always converts to string (legacy format removed)
         test_uuid = uuid.uuid4()
         result = handler.handle_uuid(test_uuid)
-        assert isinstance(result, dict)
-        assert result["_type"] == "uuid"
-        assert "hex" in result
+        assert isinstance(result, str)
+        assert result == str(test_uuid)
 
     def test_aggressive_coercion(self):
         """Test aggressive type coercion."""
@@ -346,12 +372,12 @@ class TestAdvancedTypes:
     """Test handling of advanced Python types."""
 
     def test_decimal_preservation(self):
-        """Test decimal preservation."""
-        config = SerializationConfig(preserve_decimals=True)
+        """Test decimal preservation with type hints."""
+        config = SerializationConfig(preserve_decimals=True, include_type_hints=True)
         result = datason.serialize(decimal.Decimal("123.456"), config=config)
         assert isinstance(result, dict)
-        assert result["_type"] == "decimal"
-        assert result["value"] == "123.456"
+        assert result["__datason_type__"] == "decimal.Decimal"
+        assert result["__datason_value__"] == "123.456"
 
     def test_decimal_conversion(self):
         """Test decimal conversion to float."""
@@ -361,13 +387,13 @@ class TestAdvancedTypes:
         assert abs(result - 123.456) < 0.001
 
     def test_complex_preservation(self):
-        """Test complex number preservation."""
-        config = SerializationConfig(preserve_complex=True)
+        """Test complex number preservation with type hints."""
+        config = SerializationConfig(preserve_complex=True, include_type_hints=True)
         result = datason.serialize(3 + 4j, config=config)
         assert isinstance(result, dict)
-        assert result["_type"] == "complex"
-        assert result["real"] == 3.0
-        assert result["imag"] == 4.0
+        assert result["__datason_type__"] == "complex"
+        assert result["__datason_value__"]["real"] == 3.0
+        assert result["__datason_value__"]["imag"] == 4.0
 
     def test_uuid_handling(self):
         """Test UUID handling."""
@@ -421,11 +447,12 @@ class TestAdvancedTypes:
         result = datason.serialize(range(5))
         assert result == [0, 1, 2, 3, 4]
 
-        # Large range should preserve structure
+        # Large range should preserve structure with type hints
         large_range = range(0, 10000, 2)
-        result = datason.serialize(large_range)
+        config = SerializationConfig(include_type_hints=True)
+        result = datason.serialize(large_range, config=config)
         assert isinstance(result, dict)
-        assert result["_type"] == "range"
+        assert result["__datason_type__"] == "range"
 
 
 class TestPandasIntegration:

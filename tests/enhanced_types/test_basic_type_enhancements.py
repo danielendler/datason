@@ -13,7 +13,7 @@ import pytest
 
 import datason
 from datason.config import SerializationConfig
-from datason.deserializers import _clear_deserialization_caches, deserialize_fast
+from datason.deserializers import deserialize_fast
 
 
 class TestBasicTypeEnhancements:
@@ -21,7 +21,7 @@ class TestBasicTypeEnhancements:
 
     def setup_method(self):
         """Clear caches before each test to ensure clean state."""
-        _clear_deserialization_caches()
+        datason.clear_caches()
 
     def test_uuid_auto_detection_comprehensive(self):
         """Test UUID auto-detection with various UUID formats."""
@@ -186,7 +186,7 @@ class TestPandasTypeDetection:
 
     def setup_method(self):
         """Clear caches before each test to ensure clean state."""
-        _clear_deserialization_caches()
+        datason.clear_caches()
 
     def test_dataframe_auto_detection_improvements(self):
         """Test improved DataFrame auto-detection capabilities."""
@@ -222,7 +222,7 @@ class TestNumPyTypeDetection:
 
     def setup_method(self):
         """Clear caches before each test to ensure clean state."""
-        _clear_deserialization_caches()
+        datason.clear_caches()
 
     def test_numpy_array_auto_detection_improvements(self):
         """Test improved NumPy array auto-detection capabilities."""
