@@ -51,6 +51,47 @@ except ImportError:
     sklearn = None
     HAS_SKLEARN = False
 
+# New ML frameworks
+try:
+    import catboost
+
+    HAS_CATBOOST = True
+except ImportError:
+    catboost = None
+    HAS_CATBOOST = False
+
+try:
+    import keras
+
+    HAS_KERAS = True
+except ImportError:
+    keras = None
+    HAS_KERAS = False
+
+try:
+    import optuna
+
+    HAS_OPTUNA = True
+except ImportError:
+    optuna = None
+    HAS_OPTUNA = False
+
+try:
+    import plotly.graph_objects as go
+
+    HAS_PLOTLY = True
+except ImportError:
+    go = None
+    HAS_PLOTLY = False
+
+try:
+    import polars as pl
+
+    HAS_POLARS = True
+except ImportError:
+    pl = None
+    HAS_POLARS = False
+
 # Import datason
 try:
     import datason
@@ -401,6 +442,58 @@ class DeserializationAudit:
             except Exception:
                 return False
 
+        # Handle CatBoost models specially
+        if HAS_CATBOOST and hasattr(original, "__module__") and "catboost" in str(type(original)):
+            if not (hasattr(reconstructed, "__module__") and "catboost" in str(type(reconstructed))):
+                return False
+            try:
+                # For CatBoost models, check type and basic attributes
+                return type(original) is type(reconstructed)
+            except Exception:
+                return False
+
+        # Handle Keras models specially
+        if HAS_KERAS and hasattr(original, "__module__") and "keras" in str(type(original)):
+            if not (hasattr(reconstructed, "__module__") and "keras" in str(type(reconstructed))):
+                return False
+            try:
+                # For Keras models, check type
+                return type(original) is type(reconstructed)
+            except Exception:
+                return False
+
+        # Handle Optuna studies specially
+        if HAS_OPTUNA and hasattr(original, "__module__") and "optuna" in str(type(original)):
+            if not (hasattr(reconstructed, "__module__") and "optuna" in str(type(reconstructed))):
+                return False
+            try:
+                # For Optuna studies, check type
+                return type(original) is type(reconstructed)
+            except Exception:
+                return False
+
+        # Handle Plotly figures specially
+        if HAS_PLOTLY and hasattr(original, "__module__") and "plotly" in str(type(original)):
+            if not (hasattr(reconstructed, "__module__") and "plotly" in str(type(reconstructed))):
+                return False
+            try:
+                # For Plotly figures, check type
+                return type(original) is type(reconstructed)
+            except Exception:
+                return False
+
+        # Handle Polars DataFrames specially
+        if HAS_POLARS and hasattr(original, "__module__") and "polars" in str(type(original)):
+            if not (hasattr(reconstructed, "__module__") and "polars" in str(type(reconstructed))):
+                return False
+            try:
+                # For Polars DataFrames, compare values
+                if hasattr(original, "equals") and hasattr(reconstructed, "equals"):
+                    return original.equals(reconstructed)
+                return type(original) is type(reconstructed)
+            except Exception:
+                return False
+
         # For complex types, basic equality check
         try:
             return original == reconstructed
@@ -612,6 +705,61 @@ class DeserializationAudit:
         else:
             print("⚠️  Skipping scikit-learn tests - sklearn not available")
 
+        # CatBoost models
+        if HAS_CATBOOST:
+            cb_model = catboost.CatBoostClassifier(iterations=10, verbose=False, random_state=42)
+            test_cases.append(("catboost_model_unfitted", cb_model))
+
+            # Fitted model
+            if HAS_NUMPY:
+                X = np.array([[1, 2], [3, 4], [5, 6], [7, 8]])
+                y = np.array([0, 0, 1, 1])
+                cb_model.fit(X, y)
+                test_cases.append(("catboost_model_fitted", cb_model))
+        else:
+            print("⚠️  Skipping CatBoost tests - catboost not available")
+
+        # Keras models
+        if HAS_KERAS:
+            keras_model = keras.Sequential(
+                [
+                    keras.layers.Dense(10, activation="relu", input_shape=(8,)),
+                    keras.layers.Dense(1, activation="sigmoid"),
+                ]
+            )
+            test_cases.append(("keras_model", keras_model))
+        else:
+            print("⚠️  Skipping Keras tests - keras not available")
+
+        # Optuna studies
+        if HAS_OPTUNA:
+            study = optuna.create_study()
+            test_cases.append(("optuna_study_empty", study))
+
+            # Study with trials
+            def objective(trial):
+                x = trial.suggest_float("x", -10, 10)
+                return x**2
+
+            study.optimize(objective, n_trials=3)
+            test_cases.append(("optuna_study_with_trials", study))
+        else:
+            print("⚠️  Skipping Optuna tests - optuna not available")
+
+        # Plotly figures
+        if HAS_PLOTLY:
+            fig = go.Figure(data=go.Bar(x=["A", "B", "C"], y=[1, 2, 3]))
+            test_cases.append(("plotly_figure", fig))
+        else:
+            print("⚠️  Skipping Plotly tests - plotly not available")
+
+        # Polars DataFrames
+        if HAS_POLARS:
+            df = pl.DataFrame({"a": [1, 2, 3], "b": [4.0, 5.0, 6.0], "c": ["x", "y", "z"]})
+            test_cases.append(("polars_dataframe", df))
+        else:
+            print("⚠️  Skipping Polars tests - polars not available")
+
         for test_name, data in test_cases:
             # Test 1: User config (should be 100%)
             self.test_user_config_round_trip("ml_types", test_name, data)
@@ -802,6 +950,9 @@ def main():
     print("🔍 Starting Comprehensive Deserialization Audit...")
     print(f"datason version: {getattr(datason, '__version__', 'unknown')}")
     print(f"Optional dependencies: pandas={HAS_PANDAS}, numpy={HAS_NUMPY}, torch={HAS_TORCH}, sklearn={HAS_SKLEARN}")
+    print(
+        f"New ML frameworks: catboost={HAS_CATBOOST}, keras={HAS_KERAS}, optuna={HAS_OPTUNA}, plotly={HAS_PLOTLY}, polars={HAS_POLARS}"
+    )
 
     # Suppress warnings during testing
     warnings.filterwarnings("ignore")
