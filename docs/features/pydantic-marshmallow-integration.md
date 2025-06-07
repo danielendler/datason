@@ -60,5 +60,3 @@ Include real-world examples in the docs (e.g., FastAPI with Pydantic, Flask with
 
 - Datason does not perform schema validation.
 - Custom Pydantic or Marshmallow fields may require user-defined type handlers for perfect fidelity.
-
-
