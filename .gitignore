@@ -195,3 +195,19 @@ benchmarks/performance-history/latest_analysis.json
 
 # Temporary performance files
 benchmarks/results/*comparison*.json
+
+# ML Framework Training Artifacts
+# CatBoost training artifacts
+catboost_info/
+catboost_training.json
+catboost.log
+
+# Optuna database files (if any)
+optuna-study-*.db
+*.db-journal
+
+# Other ML framework temporary files
+*.model
+*.pkl
+model_checkpoints/
+tensorboard_logs/

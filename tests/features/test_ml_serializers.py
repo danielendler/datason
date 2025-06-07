@@ -91,6 +91,11 @@ class TestMLLibraryAvailability:
             "scipy",
             "PIL",
             "transformers",
+            "catboost",
+            "keras",
+            "optuna",
+            "plotly",
+            "polars",
         }
         assert set(info.keys()) == expected_keys
 
