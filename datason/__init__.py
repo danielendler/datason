@@ -1,9 +1,14 @@
-"""datason - A comprehensive serialization package for Python.
+"""datason package.
 
-This package provides intelligent serialization that handles complex data types
-with ease, perfect for ML/AI workflows and data science applications.
+Type-safe, secure and flexible serialization for Python data and ML workflows.
 
-NEW: Configurable caching system for optimized performance across different workflows.
+Example:
+    >>> import datason
+    >>> datason.serialize({"a": 1})
+    {'a': 1}
+    >>> datason.demo()  # quick round trip demo
+
+For full documentation, visit https://datason.readthedocs.io.
 """
 
 # Test codecov upload after permissions and configuration fixes
@@ -448,14 +453,24 @@ if _utils_available:
         ]
     )
 
+__all__.extend(["get_version", "get_info", "demo"])
+
 
 def get_version() -> str:
-    """Get the current version of datason."""
+    """Return the installed datason version.
+
+    Returns:
+        str: Semantic version string.
+    """
     return __version__
 
 
 def get_info() -> dict:
-    """Get information about the datason package."""
+    """Return metadata about the datason package.
+
+    Returns:
+        dict: Package information including version, author, and feature flags.
+    """
     return {
         "version": __version__,
         "author": __author__,
@@ -464,3 +479,23 @@ def get_info() -> dict:
         "config_available": _config_available,
         "cache_system": "configurable" if _config_available else "legacy",
     }
+
+
+def demo() -> None:
+    """Run a quick serialization round trip demo.
+
+    Example:
+        >>> import datason
+        >>> datason.demo()
+
+    Returns:
+        None
+    """
+
+    example = {"foo": [1, 2, 3], "bar": {"baz": 4}}
+    print("Original:", example)
+    ser = serialize(example)
+    print("Serialized:", ser)
+    restored = deserialize(ser)
+    print("Restored:", restored)
+
