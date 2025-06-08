@@ -4,7 +4,7 @@ This module tests all validation functionality including Pydantic and Marshmallo
 integration, lazy imports, error handling, and edge cases.
 """
 
-from unittest.mock import Mock, PropertyMock, patch
+from unittest.mock import Mock, patch
 
 import pytest
 
@@ -139,16 +139,24 @@ class TestPydanticSerialization:
 
     def test_serialize_pydantic_dict_fallback(self):
         """Test fallback to __dict__ when both model_dump and dict fail."""
+
+        # Create a simple object that simulates a broken pydantic model
+        class BrokenPydanticModel:
+            def __init__(self):
+                self.__dict__ = {"field": "value"}
+
+            def model_dump(self):
+                raise AttributeError("model_dump not available")
+
+            def dict(self):
+                raise Exception("dict method failed")
+
         mock_base_model = Mock()
-        mock_model = Mock()
-        mock_model.__dict__ = {"field": "value"}
-        # Simulate both v2 and v1 methods failing
-        mock_model.model_dump.side_effect = AttributeError("model_dump not available")
-        mock_model.dict.side_effect = Exception("dict method failed")
+        broken_model = BrokenPydanticModel()
 
         with patch.object(validation, "_lazy_import_pydantic_base_model", return_value=mock_base_model):
             with patch("datason.validation.serialize") as mock_serialize:
-                validation.serialize_pydantic(mock_model)
+                validation.serialize_pydantic(broken_model)
                 mock_serialize.assert_called_once_with({"field": "value"})
 
     def test_serialize_pydantic_non_pydantic_object(self):
@@ -191,16 +199,30 @@ class TestMarshmallowSerialization:
 
     def test_serialize_marshmallow_schema_dict_fallback(self):
         """Test fallback to __dict__ when fields access fails."""
+
+        # Create a simple object that simulates a broken marshmallow schema
+        # This needs to pass hasattr() but fail when actually accessing fields
+        class BrokenMarshmallowSchema:
+            def __init__(self):
+                self.__dict__ = {"schema": "data"}
+                # Set a fields attribute that exists but will fail when accessed for .items()
+                self.fields = FailingFieldsDict()
+
+        class FailingFieldsDict:
+            """A dict-like object that has items() method but fails when called."""
+
+            def items(self):
+                raise Exception("fields access failed")
+
         mock_schema_class = Mock()
-        mock_schema = Mock()
-        mock_schema.__dict__ = {"schema": "data"}
-        # Simulate fields access failing
-        type(mock_schema).fields = PropertyMock(side_effect=Exception("fields access failed"))
+        broken_schema = BrokenMarshmallowSchema()
 
         with patch.object(validation, "_lazy_import_marshmallow_schema", return_value=mock_schema_class):
             with patch("datason.validation.serialize") as mock_serialize:
-                validation.serialize_marshmallow(mock_schema)
-                mock_serialize.assert_called_once_with({"schema": "data"})
+                validation.serialize_marshmallow(broken_schema)
+                # The fallback to __dict__ includes the fields object
+                expected_dict = {"schema": "data", "fields": broken_schema.fields}
+                mock_serialize.assert_called_once_with(expected_dict)
 
     def test_serialize_marshmallow_non_schema_object(self):
         """Test serialization of non-Marshmallow objects."""
