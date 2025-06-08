@@ -68,7 +68,15 @@ def _lazy_import_tensorflow():
 
     if _LAZY_IMPORTS["tensorflow"] is None:
         try:
+            # Suppress TensorFlow logging to reduce test verbosity
+            import os
+
+            os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "2")  # 0=all, 1=no INFO, 2=no WARNING, 3=no ERROR
+
             import tensorflow as tf
+
+            # Also suppress Python-level TF logging
+            tf.get_logger().setLevel("ERROR")
 
             _LAZY_IMPORTS["tensorflow"] = tf
         except ImportError:
@@ -248,7 +256,15 @@ def _lazy_import_keras():
 
     if _LAZY_IMPORTS["keras"] is None:
         try:
+            # Suppress Keras/TensorFlow logging to reduce test verbosity
+            import os
+
+            os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "2")
+
             import keras
+
+            # Suppress Keras logging
+            keras.utils.disable_interactive_logging()
 
             _LAZY_IMPORTS["keras"] = keras
         except ImportError:
