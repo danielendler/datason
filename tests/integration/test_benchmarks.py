@@ -114,6 +114,7 @@ class BenchmarkTimer:
         return self.elapsed * 1000
 
 
+@pytest.mark.benchmark
 class TestSerializationBenchmarks:
     """Benchmark serialization performance."""
 
@@ -155,6 +156,7 @@ class TestSerializationBenchmarks:
         assert "dataframe" in result
 
 
+@pytest.mark.benchmark
 class TestDataFrameOrientationBenchmarks:
     """Benchmark DataFrame orientation performance."""
 
@@ -203,6 +205,7 @@ class TestDataFrameOrientationBenchmarks:
         assert all(time_ms > 0 for time_ms in results.values())
 
 
+@pytest.mark.benchmark
 class TestAutoDetectionBenchmarks:
     """Benchmark auto-detection deserialization performance."""
 
@@ -271,6 +274,7 @@ class TestAutoDetectionBenchmarks:
         # (Note: both may detect the same things, but auto_deserialize has more features)
 
 
+@pytest.mark.benchmark
 class TestTypeMetadataBenchmarks:
     """Benchmark type metadata performance."""
 
@@ -323,6 +327,7 @@ class TestTypeMetadataBenchmarks:
         # (depending on auto-detection in deserialize function)
 
 
+@pytest.mark.benchmark
 class TestOptimizationBenchmarks:
     """Benchmark performance optimizations."""
 
@@ -389,6 +394,7 @@ class TestOptimizationBenchmarks:
         assert optimized_result == unoptimized_result
 
 
+@pytest.mark.benchmark
 class TestMemoryBenchmarks:
     """Benchmark memory usage patterns."""
 
@@ -444,6 +450,7 @@ class TestMemoryBenchmarks:
             assert "records" in result
 
 
+@pytest.mark.benchmark
 class TestScalabilityBenchmarks:
     """Benchmark scalability with different data sizes."""
 
@@ -482,6 +489,7 @@ class TestScalabilityBenchmarks:
         assert len(result["records"]) == complexity
 
 
+@pytest.mark.benchmark
 def test_benchmark_summary():
     """Print a summary of benchmark capabilities."""
     print("\n" + "=" * 60)
