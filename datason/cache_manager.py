@@ -266,6 +266,15 @@ def clear_caches() -> None:
     dict_pool.clear()
     list_pool.clear()
 
+    # Clear ML serializers lazy import cache
+    try:
+        from . import ml_serializers
+
+        for key in ml_serializers._LAZY_IMPORTS:
+            ml_serializers._LAZY_IMPORTS[key] = None
+    except ImportError:
+        pass
+
 
 def clear_all_caches() -> None:
     """Clear all caches across all scopes (for testing/debugging)."""
@@ -275,6 +284,15 @@ def clear_all_caches() -> None:
     _process_type_cache.clear()
     _process_dict_pool.clear()
     _process_list_pool.clear()
+
+    # Clear ML serializers lazy import cache
+    try:
+        from . import ml_serializers
+
+        for key in ml_serializers._LAZY_IMPORTS:
+            ml_serializers._LAZY_IMPORTS[key] = None
+    except ImportError:
+        pass
 
     # Clear request-level caches if they exist
     try:

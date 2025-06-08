@@ -13,6 +13,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LinearRegression, LogisticRegression
 from sklearn.tree import DecisionTreeClassifier
 
+import datason
 from datason.ml_serializers import (
     _lazy_import_scipy,
     _lazy_import_sklearn,
@@ -309,6 +310,10 @@ class TestScipySerializationWithRealLibrary:
 
 class TestMLObjectDetection:
     """Test ML object detection and serialization."""
+
+    def setup_method(self):
+        """Clear caches before each test to ensure clean state."""
+        datason.clear_caches()
 
     def test_detect_pytorch_tensor(self):
         """Test detection of PyTorch tensors."""

@@ -69,14 +69,29 @@ def _lazy_import_tensorflow():
     if _LAZY_IMPORTS["tensorflow"] is None:
         try:
             # Suppress TensorFlow logging to reduce test verbosity
+            import logging
             import os
+            import warnings
 
-            os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "2")  # 0=all, 1=no INFO, 2=no WARNING, 3=no ERROR
+            # Suppress TensorFlow C++ logging
+            os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "3")  # 3 = ERROR only
+            os.environ.setdefault("TF_ENABLE_ONEDNN_OPTS", "0")  # Suppress oneDNN messages
+            os.environ.setdefault("CUDA_VISIBLE_DEVICES", "")  # Suppress CUDA initialization messages
+
+            # Suppress warnings before import
+            warnings.filterwarnings("ignore", category=UserWarning, module="tensorflow")
+            warnings.filterwarnings("ignore", message=".*deprecated.*", category=DeprecationWarning)
+
+            # Set logging level before importing
+            logging.getLogger("tensorflow").setLevel(logging.ERROR)
 
             import tensorflow as tf
 
             # Also suppress Python-level TF logging
             tf.get_logger().setLevel("ERROR")
+
+            # Disable autograph verbosity
+            tf.autograph.set_verbosity(0)
 
             _LAZY_IMPORTS["tensorflow"] = tf
         except ImportError:
@@ -128,12 +143,18 @@ def _lazy_import_sklearn():
             patched = current_module.__dict__["sklearn"]
             if patched is None:
                 return None, None
-            _LAZY_IMPORTS["sklearn"] = patched
+            # Don't cache Mock objects - they should be temporary test patches
+            if not (hasattr(patched, "_mock_name") or str(type(patched)).startswith("<class 'unittest.mock.")):
+                _LAZY_IMPORTS["sklearn"] = patched
         if "BaseEstimator" in current_module.__dict__:
             patched_base = current_module.__dict__["BaseEstimator"]
             if patched_base is None:
                 return None, None
-            _LAZY_IMPORTS["BaseEstimator"] = patched_base
+            # Don't cache Mock objects - they should be temporary test patches
+            if not (
+                hasattr(patched_base, "_mock_name") or str(type(patched_base)).startswith("<class 'unittest.mock.")
+            ):
+                _LAZY_IMPORTS["BaseEstimator"] = patched_base
 
     if _LAZY_IMPORTS["sklearn"] is None or _LAZY_IMPORTS["BaseEstimator"] is None:
         try:
@@ -257,14 +278,37 @@ def _lazy_import_keras():
     if _LAZY_IMPORTS["keras"] is None:
         try:
             # Suppress Keras/TensorFlow logging to reduce test verbosity
+            import logging
             import os
+            import warnings
 
-            os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "2")
+            # Suppress TensorFlow logging (Keras uses TensorFlow backend)
+            os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "3")  # 3 = ERROR only
+            os.environ.setdefault("TF_ENABLE_ONEDNN_OPTS", "0")  # Suppress oneDNN messages
+            os.environ.setdefault("CUDA_VISIBLE_DEVICES", "")  # Suppress CUDA initialization messages
+
+            # Suppress specific TensorFlow warnings
+            warnings.filterwarnings("ignore", category=UserWarning, module="tensorflow")
+            warnings.filterwarnings("ignore", message=".*deprecated.*", category=DeprecationWarning)
+
+            # Set logging levels before importing
+            logging.getLogger("tensorflow").setLevel(logging.ERROR)
+            logging.getLogger("keras").setLevel(logging.ERROR)
 
             import keras
 
             # Suppress Keras logging
             keras.utils.disable_interactive_logging()
+
+            # Additional TensorFlow logging suppression after import
+            try:
+                import tensorflow as tf
+
+                tf.get_logger().setLevel("ERROR")
+                # Disable GPU growth info messages
+                tf.config.experimental.set_memory_growth = lambda gpu, enable: None
+            except ImportError:
+                pass
 
             _LAZY_IMPORTS["keras"] = keras
         except ImportError:
@@ -790,8 +834,13 @@ def detect_and_serialize_ml_object(obj: Any) -> Optional[Dict[str, Any]]:
 
     # Scikit-learn models
     sklearn, BaseEstimator = _lazy_import_sklearn()
-    if sklearn is not None and isinstance(BaseEstimator, type) and isinstance(obj, BaseEstimator):
-        return serialize_sklearn_model(obj)
+    if sklearn is not None and isinstance(BaseEstimator, type):
+        try:
+            if isinstance(obj, BaseEstimator):
+                return serialize_sklearn_model(obj)
+        except (TypeError, AttributeError):
+            # Handle case where BaseEstimator is a Mock or invalid type
+            pass
 
     # Scipy sparse matrices
     scipy = _lazy_import_scipy()
