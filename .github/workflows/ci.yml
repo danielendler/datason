@@ -80,7 +80,7 @@ jobs:
           - name: "minimal"
             packages: ""
             description: "Core functionality only (no optional dependencies)"
-            test-pattern: "tests/core/"
+            test-pattern: "tests/unit/"
             cache-extra: ""
 
           - name: "full"
@@ -94,19 +94,19 @@ jobs:
           - name: "with-numpy"
             packages: "numpy"
             description: "Core + NumPy support"
-            test-pattern: "tests/core/ tests/features/test_ml_serializers.py"
+            test-pattern: "tests/unit/ tests/integration/test_ml_serializers.py"
             cache-extra: "numpy"
 
           - name: "with-pandas"
             packages: "pandas"
             description: "Core + Pandas support"
-            test-pattern: "tests/core/ tests/features/test_auto_detection_and_metadata.py tests/features/test_chunked_streaming.py tests/features/test_template_deserialization.py tests/coverage/test_datetime_coverage_boost.py"
+            test-pattern: "tests/unit/ tests/integration/test_auto_detection_and_metadata.py tests/integration/test_chunked_streaming.py tests/integration/test_template_deserializer.py tests/edge_cases/test_datetime_coverage_boost.py"
             cache-extra: "pandas"
 
           - name: "with-ml-deps"
             packages: ""
             description: "Core + ML dependencies (all frameworks)"
-            test-pattern: "tests/core/ tests/features/ tests/integration/test_optional_dependencies.py tests/test_new_ml_frameworks.py"
+            test-pattern: "tests/unit/ tests/integration/"
             cache-extra: "ml"
             use-ml: true
         exclude:

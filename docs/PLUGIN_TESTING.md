@@ -114,7 +114,7 @@ pip install -e .
 pip install pytest pytest-cov
 
 # Run core tests only
-pytest tests/core/ -v
+pytest tests/unit/ -v
 ```
 
 ### Test With Specific Dependencies
@@ -150,11 +150,11 @@ Each CI job tests a specific scenario:
 
 | Job | Dependencies | Tests Run | Purpose |
 |-----|-------------|-----------|---------|
-| `minimal` | None | tests/core/ | Verify zero-dependency functionality |
-| `with-numpy` | numpy | tests/core/ + ML features | Basic array support |
-| `with-pandas` | pandas | tests/core/ + data features | DataFrame support |
-| `with-ml-deps` | numpy, pandas, sklearn | tests/core/ + tests/features/ + integration | ML model serialization |
-| `full` | All deps | tests/core/ + tests/features/ + tests/integration/ + tests/coverage/ | Complete functional testing |
+| `minimal` | None | tests/unit/ | Verify zero-dependency functionality |
+| `with-numpy` | numpy | tests/unit/ + ML features | Basic array support |
+| `with-pandas` | pandas | tests/unit/ + data features | DataFrame support |
+| `with-ml-deps` | numpy, pandas, sklearn | tests/unit/ + tests/integration/ | ML model serialization |
+| `full` | All deps | tests/unit/ + tests/edge_cases/ + tests/integration/ | Complete functional testing |
 | `performance` | All deps | tests/benchmarks/ (separate pipeline) | Performance regression tracking |
 
 ## 🔧 Adding New Optional Features

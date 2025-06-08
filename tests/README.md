@@ -168,7 +168,7 @@ testpaths = ["tests/core", "tests/features", "tests/integration", "tests/coverag
 
 ### Writing New Tests
 
-1. **Core functionality** → `tests/core/`
+1. **Core functionality** → `tests/unit/`
 2. **New features** → `tests/features/`
 3. **Integration scenarios** → `tests/integration/`
 4. **Coverage gaps** → `tests/coverage/`

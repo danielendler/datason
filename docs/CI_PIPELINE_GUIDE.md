@@ -36,11 +36,11 @@ jobs:
     - 💾 Cache pip dependencies
     - 📦 Install dev dependencies
     - 🧪 Run core tests with plugin matrix:
-        • minimal: tests/core/ (no optional deps)
-        • with-numpy: tests/core/ + ML features (numpy)
-        • with-pandas: tests/core/ + data features (pandas)
-        • with-ml-deps: tests/core/ + tests/features/ (full ML stack)
-        • full: tests/core/ + tests/features/ + tests/integration/ + tests/coverage/
+        • minimal: tests/unit/ (no optional deps)
+• with-numpy: tests/unit/ + ML features (numpy)
+• with-pandas: tests/unit/ + data features (pandas)
+• with-ml-deps: tests/unit/ + tests/integration/ (full ML stack)
+• full: tests/unit/ + tests/edge_cases/ + tests/integration/
     - 📊 Upload coverage to Codecov
     - 🔒 Security scan (bandit)
     - 📤 Upload security report
@@ -212,18 +212,18 @@ tests/
 
 | **CI Job** | **Test Directories** | **Dependencies** | **Purpose** | **Speed** |
 |------------|----------------------|------------------|-------------|-----------|
-| **minimal** | `tests/core/` | None | Core functionality only | ~7s |
-| **with-numpy** | `tests/core/` + ML features | numpy | Basic array support | ~15s |
-| **with-pandas** | `tests/core/` + data features | pandas | DataFrame support | ~25s |
-| **with-ml-deps** | `tests/core/` + `tests/features/` | numpy, pandas, sklearn | Full ML stack | ~45s |
-| **full** | `tests/core/` + `tests/features/` + `tests/integration/` + `tests/coverage/` | All dependencies | Complete test suite | ~60s |
+| **minimal** | `tests/unit/` | None | Core functionality only | ~7s |
+| **with-numpy** | `tests/unit/` + ML features | numpy | Basic array support | ~15s |
+| **with-pandas** | `tests/unit/` + data features | pandas | DataFrame support | ~25s |
+| **with-ml-deps** | `tests/unit/` + `tests/integration/` | numpy, pandas, sklearn | Full ML stack | ~45s |
+| **full** | `tests/unit/` + `tests/edge_cases/` + `tests/integration/` | All dependencies | Complete test suite | ~60s |
 | **Performance** | `tests/benchmarks/` | All dependencies | Performance tracking | ~120s (separate) |
 
 ### **Plugin Testing Strategy**
 
 Our CI implements **plugin-style testing** where the core package has zero required dependencies but gains functionality when optional dependencies are available:
 
-- **Core Tests** (`tests/core/`): Always run, no optional dependencies
+- **Core Tests** (`tests/unit/`): Always run, no optional dependencies
 - **Feature Tests** (`tests/features/`): Run only when relevant dependencies are available
 - **Integration Tests** (`tests/integration/`): Test cross-component functionality
 - **Coverage Tests** (`tests/coverage/`): Improve coverage metrics for edge cases
