@@ -355,24 +355,24 @@ class TestConvenienceFunctions:
         """Test loads function."""
         json_string = '{"key": "value"}'
 
-        with patch("datason.api.load_smart") as mock_load_smart:
-            mock_load_smart.return_value = {"loaded": "data"}
+        with patch("datason.api.load_basic") as mock_load_basic:
+            mock_load_basic.return_value = {"loaded": "data"}
 
             result = api.loads(json_string)
 
-            mock_load_smart.assert_called_once_with({"key": "value"})
+            mock_load_basic.assert_called_once_with({"key": "value"})
             assert result == {"loaded": "data"}
 
     def test_loads_with_kwargs(self):
         """Test loads with additional kwargs."""
         json_string = '{"key": "value"}'
 
-        with patch("datason.api.load_smart") as mock_load_smart:
-            mock_load_smart.return_value = {"loaded": "data"}
+        with patch("datason.api.load_basic") as mock_load_basic:
+            mock_load_basic.return_value = {"loaded": "data"}
 
-            api.loads(json_string, parse_dates=True, strict=False)
+            api.loads(json_string, parse_dates=True)
 
-            mock_load_smart.assert_called_once_with({"key": "value"}, parse_dates=True, strict=False)
+            mock_load_basic.assert_called_once_with({"key": "value"}, parse_dates=True)
 
     def test_loads_invalid_json(self):
         """Test loads with invalid JSON."""
