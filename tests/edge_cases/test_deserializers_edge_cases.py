@@ -60,7 +60,11 @@ class TestNumPyAutoDetection(unittest.TestCase):
             serialized = datason.serialize(original_array)
             json_str = json.dumps(serialized, default=str)
             parsed = json.loads(json_str)
-            reconstructed = deserialize_fast(parsed)
+            # Enable auto-detection for this test
+            from datason.config import SerializationConfig
+
+            config = SerializationConfig(auto_detect_types=True)
+            reconstructed = deserialize_fast(parsed, config=config)
 
             # Should auto-detect as NumPy array
             self.assertIsInstance(reconstructed, numpy.ndarray)
@@ -80,7 +84,11 @@ class TestNumPyAutoDetection(unittest.TestCase):
             serialized = datason.serialize(original_array)
             json_str = json.dumps(serialized, default=str)
             parsed = json.loads(json_str)
-            reconstructed = deserialize_fast(parsed)
+            # Enable auto-detection for this test
+            from datason.config import SerializationConfig
+
+            config = SerializationConfig(auto_detect_types=True)
+            reconstructed = deserialize_fast(parsed, config=config)
 
             # Should auto-detect as NumPy array
             self.assertIsInstance(reconstructed, numpy.ndarray)
@@ -120,7 +128,11 @@ class TestNumPyAutoDetection(unittest.TestCase):
             serialized = datason.serialize(original_array)
             json_str = json.dumps(serialized, default=str)
             parsed = json.loads(json_str)
-            reconstructed = deserialize_fast(parsed)
+            # Enable auto-detection for this test
+            from datason.config import SerializationConfig
+
+            config = SerializationConfig(auto_detect_types=True)
+            reconstructed = deserialize_fast(parsed, config=config)
 
             # Should auto-detect as NumPy array
             self.assertIsInstance(reconstructed, numpy.ndarray)
@@ -145,7 +157,11 @@ class TestPandasAutoDetection(unittest.TestCase):
         serialized = datason.serialize(original_df)
         json_str = json.dumps(serialized, default=str)
         parsed = json.loads(json_str)
-        reconstructed = deserialize_fast(parsed)
+        # Enable auto-detection for this test
+        from datason.config import SerializationConfig
+
+        config = SerializationConfig(auto_detect_types=True)
+        reconstructed = deserialize_fast(parsed, config=config)
 
         # Should auto-detect as DataFrame
         self.assertIsInstance(reconstructed, pd.DataFrame)
@@ -161,7 +177,11 @@ class TestPandasAutoDetection(unittest.TestCase):
             serialized = datason.serialize(original_series)
             json_str = json.dumps(serialized, default=str)
             parsed = json.loads(json_str)
-            reconstructed = deserialize_fast(parsed)
+            # Enable auto-detection for this test
+            from datason.config import SerializationConfig
+
+            config = SerializationConfig(auto_detect_types=True)
+            reconstructed = deserialize_fast(parsed, config=config)
 
             # Should auto-detect as Series
             self.assertIsInstance(reconstructed, pd.Series)

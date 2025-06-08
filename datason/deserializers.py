@@ -2305,16 +2305,14 @@ def _looks_like_numpy_array(data: list) -> bool:
     elif _is_homogeneous_basic_types(data):
         first_type = type(data[0])
 
-        # Pattern 1: Larger homogeneous numeric arrays (likely from NumPy)
-        if first_type in (int, float) and len(data) >= 8 or first_type is bool and len(data) >= 4:
+        # Pattern 1: Homogeneous numeric arrays (likely from NumPy)
+        if first_type in (int, float) and len(data) >= 3 or first_type is bool and len(data) >= 3:
             return True
 
-        # Pattern 3: String arrays with consistent length strings (NumPy pattern)
-        elif first_type is str and len(data) >= 6:
-            # Check if strings have consistent length (NumPy string array pattern)
-            str_lens = [len(s) for s in data]
-            if len(set(str_lens)) == 1 and str_lens[0] <= 10:  # Fixed-width strings
-                return True
+        # Pattern 3: String arrays (NumPy pattern)
+        elif first_type is str and len(data) >= 3:
+            # Simple string array detection
+            return True
 
     return False
 
