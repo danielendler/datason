@@ -43,6 +43,37 @@ except ImportError:
     HAS_PIL = False
 
 
+@pytest.fixture(autouse=True)
+def restore_ml_serializer():
+    """Automatically restore ML serializer state before each test to fix test isolation issues."""
+    # Clear all caches before each test
+    try:
+        import datason
+
+        datason.clear_caches()
+    except ImportError:
+        pass
+
+    # Ensure ML serializer is properly available
+    try:
+        import datason.core
+        from datason.ml_serializers import detect_and_serialize_ml_object
+
+        datason.core._ml_serializer = detect_and_serialize_ml_object
+    except ImportError:
+        pass
+
+    yield
+
+    # Clean up after test (optional)
+    try:
+        import datason
+
+        datason.clear_caches()
+    except ImportError:
+        pass
+
+
 def pytest_configure(config: Any) -> None:
     """Register custom markers for dependency-based test categorization."""
     config.addinivalue_line("markers", "core: Core functionality tests (no optional dependencies required)")

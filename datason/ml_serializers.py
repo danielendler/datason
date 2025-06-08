@@ -8,8 +8,34 @@ ML libraries are imported lazily to improve startup performance.
 
 import base64
 import io
+import os
 import warnings
 from typing import Any, Dict, Optional
+
+# Aggressively suppress TensorFlow/Keras logging at module import time
+# This must be done before any TensorFlow imports happen anywhere
+os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "3")  # ERROR only
+os.environ.setdefault("TF_ENABLE_ONEDNN_OPTS", "0")  # Suppress oneDNN messages
+os.environ.setdefault("TF_DETERMINISTIC_OPS", "1")  # Suppress deterministic warnings
+os.environ.setdefault("TF_FORCE_GPU_ALLOW_GROWTH", "true")  # Suppress GPU memory messages
+os.environ.setdefault("CUDA_VISIBLE_DEVICES", "")  # Suppress CUDA messages entirely
+os.environ.setdefault("XLA_FLAGS", "--xla_hlo_profile=false")  # Suppress XLA messages
+os.environ.setdefault("TF_XLA_FLAGS", "--tf_xla_enable_xla_devices=false")  # Disable XLA devices
+
+# Set up logging suppression before any imports
+import logging
+
+logging.getLogger("tensorflow").setLevel(logging.ERROR)
+logging.getLogger("keras").setLevel(logging.ERROR)
+logging.getLogger("absl").setLevel(logging.ERROR)  # TensorFlow uses absl logging
+
+# Suppress warnings at module level
+warnings.filterwarnings("ignore", category=UserWarning, module="tensorflow")
+warnings.filterwarnings("ignore", category=UserWarning, module="keras")
+warnings.filterwarnings("ignore", message=".*deprecated.*", category=DeprecationWarning)
+warnings.filterwarnings("ignore", message=".*oneDNN.*", category=UserWarning)
+warnings.filterwarnings("ignore", message=".*GPU.*", category=UserWarning)
+warnings.filterwarnings("ignore", message=".*CUDA.*", category=UserWarning)
 
 # Lazy import cache - libraries are imported only when first used
 _LAZY_IMPORTS = {
@@ -277,38 +303,34 @@ def _lazy_import_keras():
 
     if _LAZY_IMPORTS["keras"] is None:
         try:
-            # Suppress Keras/TensorFlow logging to reduce test verbosity
-            import logging
-            import os
-            import warnings
+            # Temporarily redirect stdout/stderr to suppress console output during import
+            import sys
+            from contextlib import redirect_stderr, redirect_stdout
+            from io import StringIO
 
-            # Suppress TensorFlow logging (Keras uses TensorFlow backend)
-            os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "3")  # 3 = ERROR only
-            os.environ.setdefault("TF_ENABLE_ONEDNN_OPTS", "0")  # Suppress oneDNN messages
-            os.environ.setdefault("CUDA_VISIBLE_DEVICES", "")  # Suppress CUDA initialization messages
+            # Create null streams to absorb output
+            null_stream = StringIO()
 
-            # Suppress specific TensorFlow warnings
-            warnings.filterwarnings("ignore", category=UserWarning, module="tensorflow")
-            warnings.filterwarnings("ignore", message=".*deprecated.*", category=DeprecationWarning)
+            with redirect_stdout(null_stream), redirect_stderr(null_stream):
+                import keras
 
-            # Set logging levels before importing
-            logging.getLogger("tensorflow").setLevel(logging.ERROR)
-            logging.getLogger("keras").setLevel(logging.ERROR)
+                # Suppress Keras logging
+                keras.utils.disable_interactive_logging()
 
-            import keras
+                # Additional TensorFlow logging suppression after import
+                try:
+                    import tensorflow as tf
 
-            # Suppress Keras logging
-            keras.utils.disable_interactive_logging()
-
-            # Additional TensorFlow logging suppression after import
-            try:
-                import tensorflow as tf
-
-                tf.get_logger().setLevel("ERROR")
-                # Disable GPU growth info messages
-                tf.config.experimental.set_memory_growth = lambda gpu, enable: None
-            except ImportError:
-                pass
+                    tf.get_logger().setLevel("ERROR")
+                    tf.autograph.set_verbosity(0)
+                    # Disable various TensorFlow verbose options
+                    if hasattr(tf.config, "experimental"):
+                        try:
+                            tf.config.experimental.enable_op_determinism()
+                        except (AttributeError, RuntimeError, ValueError):
+                            pass
+                except (ImportError, AttributeError):
+                    pass
 
             _LAZY_IMPORTS["keras"] = keras
         except ImportError:
@@ -858,23 +880,28 @@ def detect_and_serialize_ml_object(obj: Any) -> Optional[Dict[str, Any]]:
         return serialize_huggingface_tokenizer(obj)
 
     # CatBoost models - check by string type to avoid import issues
-    if "catboost" in str(type(obj)) and hasattr(obj, "get_params"):
+    obj_type_str = str(type(obj))
+    if ("catboost" in obj_type_str or "_catboost" in obj_type_str) and safe_hasattr(obj, "get_params"):
         return serialize_catboost_model(obj)
 
     # Keras models - check by string type to avoid import issues
-    if "keras" in str(type(obj)) and hasattr(obj, "layers"):
+    obj_type_str = str(type(obj))
+    if ("keras" in obj_type_str or "tensorflow.python.keras" in obj_type_str) and safe_hasattr(obj, "layers"):
         return serialize_keras_model(obj)
 
     # Optuna studies - check by string type to avoid import issues
-    if "optuna" in str(type(obj)) and hasattr(obj, "study_name"):
+    obj_type_str = str(type(obj))
+    if "optuna" in obj_type_str and safe_hasattr(obj, "study_name"):
         return serialize_optuna_study(obj)
 
     # Plotly figures - check by string type to avoid import issues
-    if "plotly" in str(type(obj)) and hasattr(obj, "to_dict"):
+    obj_type_str = str(type(obj))
+    if "plotly" in obj_type_str and safe_hasattr(obj, "to_dict"):
         return serialize_plotly_figure(obj)
 
     # Polars DataFrames - check by string type to avoid import issues
-    if "polars" in str(type(obj)) and hasattr(obj, "to_dict"):
+    obj_type_str = str(type(obj))
+    if "polars" in obj_type_str and safe_hasattr(obj, "to_dict"):
         return serialize_polars_dataframe(obj)
 
     return None
