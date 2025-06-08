@@ -38,7 +38,7 @@ def serialize_pydantic(obj: Any) -> Any:
     BaseModel = _lazy_import_pydantic_base_model()
     if BaseModel is None:
         raise ImportError("Pydantic is required for serialize_pydantic")
-    if isinstance(obj, BaseModel):
+    if BaseModel is not None and isinstance(obj, BaseModel):
         try:
             data = obj.model_dump()  # Pydantic v2
         except AttributeError:
@@ -55,7 +55,7 @@ def serialize_marshmallow(obj: Any) -> Any:
     Schema = _lazy_import_marshmallow_schema()
     if Schema is None:
         raise ImportError("Marshmallow is required for serialize_marshmallow")
-    if isinstance(obj, Schema):
+    if Schema is not None and isinstance(obj, Schema):
         try:
             fields: Dict[str, Any] = {name: field.__class__.__name__ for name, field in obj.fields.items()}
             return serialize(fields)

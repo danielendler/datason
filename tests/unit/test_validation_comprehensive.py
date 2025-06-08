@@ -19,7 +19,13 @@ class TestLazyImports:
         # Reset the lazy import cache
         validation._LAZY_IMPORTS["BaseModel"] = None
 
-        with patch("datason.validation.BaseModel", create=True) as mock_base_model:
+        # Mock the import at the module level
+        with patch("builtins.__import__") as mock_import:
+            mock_base_model = Mock()
+            mock_pydantic_module = Mock()
+            mock_pydantic_module.BaseModel = mock_base_model
+            mock_import.return_value = mock_pydantic_module
+
             result = validation._lazy_import_pydantic_base_model()
             assert result == mock_base_model
             # Should cache the result
@@ -56,7 +62,13 @@ class TestLazyImports:
         # Reset the lazy import cache
         validation._LAZY_IMPORTS["Schema"] = None
 
-        with patch("datason.validation.Schema", create=True) as mock_schema:
+        # Mock the import at the module level
+        with patch("builtins.__import__") as mock_import:
+            mock_schema = Mock()
+            mock_marshmallow_module = Mock()
+            mock_marshmallow_module.Schema = mock_schema
+            mock_import.return_value = mock_marshmallow_module
+
             result = validation._lazy_import_marshmallow_schema()
             assert result == mock_schema
             # Should cache the result
@@ -101,7 +113,7 @@ class TestPydanticSerialization:
     def test_serialize_pydantic_v2_model_dump(self):
         """Test Pydantic v2 model serialization using model_dump()."""
         mock_base_model = Mock()
-        mock_model = Mock(spec=mock_base_model)
+        mock_model = Mock()
         mock_model.model_dump.return_value = {"field": "value"}
 
         with patch.object(validation, "_lazy_import_pydantic_base_model", return_value=mock_base_model):
@@ -113,7 +125,7 @@ class TestPydanticSerialization:
     def test_serialize_pydantic_v1_dict_fallback(self):
         """Test Pydantic v1 model serialization using dict() fallback."""
         mock_base_model = Mock()
-        mock_model = Mock(spec=mock_base_model)
+        mock_model = Mock()
         # Simulate v2 method not available, but v1 method available
         mock_model.model_dump.side_effect = AttributeError("model_dump not available")
         mock_model.dict.return_value = {"field": "value"}
@@ -128,7 +140,7 @@ class TestPydanticSerialization:
     def test_serialize_pydantic_dict_fallback(self):
         """Test fallback to __dict__ when both model_dump and dict fail."""
         mock_base_model = Mock()
-        mock_model = Mock(spec=mock_base_model)
+        mock_model = Mock()
         mock_model.__dict__ = {"field": "value"}
         # Simulate both v2 and v1 methods failing
         mock_model.model_dump.side_effect = AttributeError("model_dump not available")
@@ -167,7 +179,7 @@ class TestMarshmallowSerialization:
         mock_field2 = Mock()
         mock_field2.__class__.__name__ = "IntegerField"
 
-        mock_schema = Mock(spec=mock_schema_class)
+        mock_schema = Mock()
         mock_schema.fields = {"name": mock_field1, "age": mock_field2}
 
         expected_data = {"name": "StringField", "age": "IntegerField"}
@@ -180,7 +192,7 @@ class TestMarshmallowSerialization:
     def test_serialize_marshmallow_schema_dict_fallback(self):
         """Test fallback to __dict__ when fields access fails."""
         mock_schema_class = Mock()
-        mock_schema = Mock(spec=mock_schema_class)
+        mock_schema = Mock()
         mock_schema.__dict__ = {"schema": "data"}
         # Simulate fields access failing
         type(mock_schema).fields = PropertyMock(side_effect=Exception("fields access failed"))

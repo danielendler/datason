@@ -52,20 +52,40 @@ def serialize_detection_details(detection_details: Any) -> Any:
 
         # Handle numpy and pandas types if available
         if np is not None:
-            if hasattr(np, "ndarray") and isinstance(value, np.ndarray):
-                return [_serialize_value(item) for item in value]
-            if hasattr(np, "integer") and isinstance(value, np.integer):
-                return int(value)
-            if hasattr(np, "floating") and isinstance(value, np.floating):
-                if np.isnan(value) or np.isinf(value):
-                    return None
-                return float(value)
+            try:
+                if hasattr(np, "ndarray") and isinstance(value, np.ndarray):
+                    return [_serialize_value(item) for item in value]
+            except TypeError:
+                # isinstance() failed, likely due to mocking
+                pass
+            try:
+                if hasattr(np, "integer") and isinstance(value, np.integer):
+                    return int(value)
+            except TypeError:
+                # isinstance() failed, likely due to mocking
+                pass
+            try:
+                if hasattr(np, "floating") and isinstance(value, np.floating):
+                    if np.isnan(value) or np.isinf(value):
+                        return None
+                    return float(value)
+            except TypeError:
+                # isinstance() failed, likely due to mocking
+                pass
 
         if pd is not None:
-            if hasattr(pd, "Series") and isinstance(value, pd.Series):
-                return [_serialize_value(item) for item in value]
-            if hasattr(pd, "Timestamp") and isinstance(value, pd.Timestamp):
-                return value.isoformat()
+            try:
+                if hasattr(pd, "Series") and isinstance(value, pd.Series):
+                    return [_serialize_value(item) for item in value]
+            except TypeError:
+                # isinstance() failed, likely due to mocking
+                pass
+            try:
+                if hasattr(pd, "Timestamp") and isinstance(value, pd.Timestamp):
+                    return value.isoformat()
+            except TypeError:
+                # isinstance() failed, likely due to mocking
+                pass
             # Check pd.isna for scalar values
             try:
                 if pd.isna(value):

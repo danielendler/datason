@@ -5,7 +5,7 @@ serialization, handling of numpy/pandas types, and edge cases.
 """
 
 from datetime import datetime
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 import datason.serializers as serializers
 
@@ -90,10 +90,13 @@ class TestSerializeDetectionDetailsWithNumpy:
     def test_serialize_numpy_arrays(self):
         """Test serialization of numpy arrays."""
         with patch("datason.serializers.np") as mock_np:
-            # Mock numpy array
-            mock_array = Mock()
-            mock_array.__iter__ = Mock(return_value=iter([1, 2, 3]))
-            mock_np.ndarray = type(mock_array)
+            # Create a real type for ndarray instead of using Mock type
+            class MockNumpyArray:
+                def __iter__(self):
+                    return iter([1, 2, 3])
+
+            mock_array = MockNumpyArray()
+            mock_np.ndarray = MockNumpyArray
 
             input_data = {"array": mock_array}
 
@@ -104,51 +107,59 @@ class TestSerializeDetectionDetailsWithNumpy:
     def test_serialize_numpy_integers(self):
         """Test serialization of numpy integer types."""
         with patch("datason.serializers.np") as mock_np:
-            # Mock numpy integer
-            mock_int = Mock()
-            mock_int.__class__ = Mock()
-            mock_np.integer = type(mock_int)
+            # Create a real type for integer instead of using Mock type
+            class MockNumpyInteger:
+                def __int__(self):
+                    return 42
+
+            mock_int = MockNumpyInteger()
+            mock_np.integer = MockNumpyInteger
 
             input_data = {"np_int": mock_int}
 
-            # Mock int() conversion
-            with patch("builtins.int", return_value=42):
-                result = serializers.serialize_detection_details(input_data)
-                expected = {"np_int": 42}
-                assert result == expected
+            result = serializers.serialize_detection_details(input_data)
+            expected = {"np_int": 42}
+            assert result == expected
 
     def test_serialize_numpy_floats(self):
         """Test serialization of numpy float types."""
         with patch("datason.serializers.np") as mock_np:
-            # Mock numpy float
-            mock_float = Mock()
-            mock_float.__class__ = Mock()
-            mock_np.floating = type(mock_float)
+            # Create a real type for floating instead of using Mock type
+            class MockNumpyFloat:
+                def __float__(self):
+                    return 3.14
+
+            mock_float = MockNumpyFloat()
+            mock_np.floating = MockNumpyFloat
             mock_np.isnan.return_value = False
             mock_np.isinf.return_value = False
 
             input_data = {"np_float": mock_float}
 
-            # Mock float() conversion
-            with patch("builtins.float", return_value=3.14):
-                result = serializers.serialize_detection_details(input_data)
-                expected = {"np_float": 3.14}
-                assert result == expected
+            result = serializers.serialize_detection_details(input_data)
+            expected = {"np_float": 3.14}
+            assert result == expected
 
     def test_serialize_numpy_nan_and_inf(self):
         """Test serialization of numpy NaN and Inf values."""
         with patch("datason.serializers.np") as mock_np:
-            # Mock numpy float with NaN
-            mock_nan_float = Mock()
-            mock_nan_float.__class__ = Mock()
-            mock_np.floating = type(mock_nan_float)
-            mock_np.isnan.return_value = True
-            mock_np.isinf.return_value = False
+            # Create a real type for floating instead of using Mock type
+            class MockNumpyFloat:
+                pass
 
-            # Mock numpy float with Inf
-            mock_inf_float = Mock()
-            mock_inf_float.__class__ = Mock()
-            mock_np.isinf.return_value = True
+            mock_nan_float = MockNumpyFloat()
+            mock_inf_float = MockNumpyFloat()
+            mock_np.floating = MockNumpyFloat
+
+            # Mock isnan/isinf to return appropriate values for each instance
+            def mock_isnan(value):
+                return value is mock_nan_float
+
+            def mock_isinf(value):
+                return value is mock_inf_float
+
+            mock_np.isnan.side_effect = mock_isnan
+            mock_np.isinf.side_effect = mock_isinf
 
             input_data = {"nan_float": mock_nan_float, "inf_float": mock_inf_float}
 
@@ -178,10 +189,16 @@ class TestSerializeDetectionDetailsWithPandas:
     def test_serialize_pandas_series(self):
         """Test serialization of pandas Series."""
         with patch("datason.serializers.pd") as mock_pd:
-            # Mock pandas Series
-            mock_series = Mock()
-            mock_series.__iter__ = Mock(return_value=iter([1, 2, 3]))
-            mock_pd.Series = type(mock_series)
+            # Create a real type for Series instead of using Mock type
+            class MockPandasSeries:
+                def __iter__(self):
+                    return iter([1, 2, 3])
+
+            mock_series = MockPandasSeries()
+            mock_pd.Series = MockPandasSeries
+
+            # Mock pd.isna to return False for our test values
+            mock_pd.isna.return_value = False
 
             input_data = {"series": mock_series}
 
@@ -192,10 +209,13 @@ class TestSerializeDetectionDetailsWithPandas:
     def test_serialize_pandas_timestamp(self):
         """Test serialization of pandas Timestamp."""
         with patch("datason.serializers.pd") as mock_pd:
-            # Mock pandas Timestamp
-            mock_timestamp = Mock()
-            mock_timestamp.isoformat.return_value = "2023-01-15T12:30:45"
-            mock_pd.Timestamp = type(mock_timestamp)
+            # Create a real type for Timestamp instead of using Mock type
+            class MockPandasTimestamp:
+                def isoformat(self):
+                    return "2023-01-15T12:30:45"
+
+            mock_timestamp = MockPandasTimestamp()
+            mock_pd.Timestamp = MockPandasTimestamp
 
             input_data = {"timestamp": mock_timestamp}
 

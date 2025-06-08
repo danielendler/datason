@@ -72,7 +72,7 @@ def safe_int(value: Any, default: int = 0) -> int:
     if value is None:
         return default
     try:
-        if isinstance(value, float) and math.isnan(value):
+        if isinstance(value, float) and (math.isnan(value) or math.isinf(value)):
             return default
         # Handle string representations of floats
         if isinstance(value, str):
@@ -84,5 +84,5 @@ def safe_int(value: Any, default: int = 0) -> int:
             except (ValueError, TypeError):
                 return default
         return int(value)
-    except (ValueError, TypeError):
+    except (ValueError, TypeError, OverflowError):
         return default

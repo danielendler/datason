@@ -658,6 +658,11 @@ class TestIntegrationScenarios:
         with patch("datason.api.serialize") as mock_serialize:
             mock_serialize.return_value = {"redacted": "data"}
 
+            # Actually call the function to trigger the mock
+            secure_data = {"password": "secret", "email": "user@example.com"}
+            result = api.dump_secure(secure_data)
+
+            assert result == {"redacted": "data"}
             mock_serialize.assert_called_once()
             call_args = mock_serialize.call_args
             config = call_args[1]["config"]

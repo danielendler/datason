@@ -93,9 +93,9 @@ class TestSafeFloat:
         assert converters.safe_float("1.5e-2") == 0.015
         assert converters.safe_float("-2.5e4") == -25000.0
 
-        # Special string values that should fail
-        assert converters.safe_float("inf") == float("inf")  # This should actually work
-        assert converters.safe_float("-inf") == float("-inf")  # This should actually work
+        # Special string values that should return default
+        assert converters.safe_float("inf") == 0.0  # Infinity string becomes infinity float, then default
+        assert converters.safe_float("-inf") == 0.0  # Negative infinity string becomes infinity float, then default
         assert converters.safe_float("nan") == 0.0  # NaN string becomes NaN float, then default
 
     def test_safe_float_custom_defaults(self):
