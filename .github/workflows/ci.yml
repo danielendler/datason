@@ -86,7 +86,7 @@ jobs:
           - name: "full"
             packages: ""  # Will use dev dependencies
             description: "All dependencies (full test suite)"
-            test-pattern: "tests/core/ tests/features/ tests/integration/ tests/coverage/"
+            test-pattern: "tests/unit/ tests/edge_cases/ tests/integration/"
             cache-extra: "dev"
             use-dev: true
 

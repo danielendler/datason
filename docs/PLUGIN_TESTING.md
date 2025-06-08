@@ -121,21 +121,21 @@ pytest tests/core/ -v
 ```bash
 # Test with numpy
 pip install numpy
-pytest tests/core/ tests/features/test_ml_serializers.py -v
+pytest tests/unit/ tests/integration/test_ml_serializers.py -v
 
 # Test with pandas
 pip install pandas  
-pytest tests/core/ tests/features/test_auto_detection_and_metadata.py tests/features/test_chunked_streaming.py tests/features/test_template_deserialization.py -v
+pytest tests/unit/ tests/integration/test_auto_detection_and_metadata.py tests/integration/test_chunked_streaming.py tests/integration/test_template_deserializer.py -v
 
 # Test ML features
 pip install numpy pandas scikit-learn
-pytest tests/core/ tests/features/ tests/integration/test_optional_dependencies.py -v
+pytest tests/unit/ tests/integration/ -v
 ```
 
 ### Test Full Suite
 ```bash
 pip install -e ".[dev]"
-pytest tests/core/ tests/features/ tests/integration/ tests/coverage/ -v
+pytest tests/unit/ tests/edge_cases/ tests/integration/ -v
 ```
 
 ### Test Performance (Separate)
