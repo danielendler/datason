@@ -7,6 +7,10 @@ import datason
 def test_serialize_pydantic_model() -> None:
     BaseModel = pytest.importorskip("pydantic").BaseModel
 
+    # Reset the lazy import cache to ensure clean state
+    # This prevents contamination from other tests that might have set BaseModel to False
+    datason.validation._LAZY_IMPORTS["BaseModel"] = None
+
     class MyModel(BaseModel):
         a: int
         b: str
@@ -22,6 +26,10 @@ def test_serialize_pydantic_model() -> None:
 @pytest.mark.features
 def test_serialize_marshmallow_object() -> None:
     marshmallow = pytest.importorskip("marshmallow")
+
+    # Reset the lazy import cache to ensure clean state
+    # This prevents contamination from other tests that might have set Schema to False
+    datason.validation._LAZY_IMPORTS["Schema"] = None
 
     class UserSchema(marshmallow.Schema):
         id = marshmallow.fields.Int()
