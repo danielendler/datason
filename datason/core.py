@@ -374,6 +374,17 @@ def _serialize_core(
         if obj is None:
             return None
 
+        # SECURITY CHECK 5: Early detection of problematic Mock objects
+        # This prevents expensive type checking and isinstance() calls on Mock objects
+        obj_module = getattr(type(obj), "__module__", "")
+        if obj_module == "unittest.mock":
+            obj_class_name = type(obj).__name__
+            warnings.warn(
+                f"Detected potentially problematic mock object: {obj_class_name}. Using safe string representation.",
+                stacklevel=4,
+            )
+            return f"<{obj_class_name} object>"
+
         # ==================================================================================
         # PHASE 2: PERFORMANCE OPTIMIZATIONS (ONLY FOR SECURITY-VERIFIED OBJECTS)
         # ==================================================================================
