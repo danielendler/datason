@@ -204,6 +204,7 @@ def get_ml_config() -> SerializationConfig:
         preserve_decimals=False,  # ML often doesn't need exact decimal precision
         preserve_complex=False,  # ML typically converts complex to real
         sort_keys=True,  # Consistent output for ML pipelines
+        include_type_hints=True,  # Enable type metadata for ML objects
     )
 
 

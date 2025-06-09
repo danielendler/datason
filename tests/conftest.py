@@ -40,39 +40,44 @@ def _clear_all_datason_state():
         try:
             from datason import ml_serializers
 
-            # Don't just clear - reinitialize with proper structure!
+            # Don't just clear - reinitialize with the proper structure!
             if hasattr(ml_serializers, "_LAZY_IMPORTS"):
                 ml_serializers._LAZY_IMPORTS.clear()
-                # Reinitialize with the proper keys set to None
+                # Reinitialize with ALL the required keys that are actually used in the code
                 ml_serializers._LAZY_IMPORTS.update(
                     {
                         "torch": None,
                         "tensorflow": None,
                         "jax": None,
-                        "jnp": None,
+                        "jnp": None,  # JAX numpy alias
                         "sklearn": None,
-                        "BaseEstimator": None,
+                        "BaseEstimator": None,  # sklearn base estimator class
                         "scipy": None,
-                        "PIL_Image": None,
+                        "PIL_Image": None,  # This was the missing key causing the KeyError!
+                        "PIL": None,
                         "transformers": None,
                         "catboost": None,
                         "keras": None,
                         "optuna": None,
                         "plotly": None,
                         "polars": None,
+                        "pandas": None,
+                        "numpy": None,
                     }
                 )
+        except ImportError:
+            pass
+
+        # Reset global configuration state
+        try:
+            from datason.config import SerializationConfig
+
+            datason.set_default_config(SerializationConfig())
         except (ImportError, AttributeError):
             pass
 
-        # Reset configuration to default
-        try:
-            datason.set_default_config(datason.SerializationConfig())
-        except (AttributeError, ImportError):
-            pass
-
     except ImportError:
-        # datason not available in some test environments
+        # datason not available, nothing to clear
         pass
 
 

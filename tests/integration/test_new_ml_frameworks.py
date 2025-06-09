@@ -119,15 +119,18 @@ class TestCatBoostSerialization:
                         "torch": None,
                         "tensorflow": None,
                         "jax": None,
+                        "jnp": None,  # JAX numpy alias
                         "sklearn": None,
+                        "BaseEstimator": None,  # sklearn base estimator class
                         "scipy": None,
+                        "PIL_Image": None,  # This was the missing key causing KeyError!
+                        "PIL": None,
+                        "transformers": None,
                         "catboost": None,
                         "keras": None,
                         "optuna": None,
                         "plotly": None,
                         "polars": None,
-                        "PIL": None,
-                        "transformers": None,
                         "pandas": None,
                         "numpy": None,
                     }
@@ -208,15 +211,18 @@ class TestKerasSerialization:
                         "torch": None,
                         "tensorflow": None,
                         "jax": None,
+                        "jnp": None,  # JAX numpy alias
                         "sklearn": None,
+                        "BaseEstimator": None,  # sklearn base estimator class
                         "scipy": None,
+                        "PIL_Image": None,  # This was the missing key causing KeyError!
+                        "PIL": None,
+                        "transformers": None,
                         "catboost": None,
                         "keras": None,
                         "optuna": None,
                         "plotly": None,
                         "polars": None,
-                        "PIL": None,
-                        "transformers": None,
                         "pandas": None,
                         "numpy": None,
                     }
@@ -289,15 +295,18 @@ class TestOptunaSerialization:
                         "torch": None,
                         "tensorflow": None,
                         "jax": None,
+                        "jnp": None,  # JAX numpy alias
                         "sklearn": None,
+                        "BaseEstimator": None,  # sklearn base estimator class
                         "scipy": None,
+                        "PIL_Image": None,  # This was the missing key causing KeyError!
+                        "PIL": None,
+                        "transformers": None,
                         "catboost": None,
                         "keras": None,
                         "optuna": None,
                         "plotly": None,
                         "polars": None,
-                        "PIL": None,
-                        "transformers": None,
                         "pandas": None,
                         "numpy": None,
                     }
@@ -378,15 +387,18 @@ class TestPlotlySerialization:
                         "torch": None,
                         "tensorflow": None,
                         "jax": None,
+                        "jnp": None,  # JAX numpy alias
                         "sklearn": None,
+                        "BaseEstimator": None,  # sklearn base estimator class
                         "scipy": None,
+                        "PIL_Image": None,  # This was the missing key causing KeyError!
+                        "PIL": None,
+                        "transformers": None,
                         "catboost": None,
                         "keras": None,
                         "optuna": None,
                         "plotly": None,
                         "polars": None,
-                        "PIL": None,
-                        "transformers": None,
                         "pandas": None,
                         "numpy": None,
                     }
@@ -461,15 +473,18 @@ class TestPolarsSerialization:
                         "torch": None,
                         "tensorflow": None,
                         "jax": None,
+                        "jnp": None,  # JAX numpy alias
                         "sklearn": None,
+                        "BaseEstimator": None,  # sklearn base estimator class
                         "scipy": None,
+                        "PIL_Image": None,  # This was the missing key causing KeyError!
+                        "PIL": None,
+                        "transformers": None,
                         "catboost": None,
                         "keras": None,
                         "optuna": None,
                         "plotly": None,
                         "polars": None,
-                        "PIL": None,
-                        "transformers": None,
                         "pandas": None,
                         "numpy": None,
                     }

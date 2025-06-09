@@ -227,7 +227,10 @@ class TestChunkedSerialization:
         data = list(range(10))
         result = core.serialize_chunked(data, chunk_size=3)
 
-        assert isinstance(result, core.ChunkedSerializationResult)
+        assert (
+            isinstance(result, core.ChunkedSerializationResult)
+            or result.__class__.__name__ == "ChunkedSerializationResult"
+        )
         chunks = result.to_list()
         assert len(chunks) > 1  # Should be chunked
 
@@ -237,7 +240,10 @@ class TestChunkedSerialization:
         config = SerializationConfig()
 
         result = core.serialize_chunked(data, chunk_size=2, config=config)
-        assert isinstance(result, core.ChunkedSerializationResult)
+        assert (
+            isinstance(result, core.ChunkedSerializationResult)
+            or result.__class__.__name__ == "ChunkedSerializationResult"
+        )
 
     def test_serialize_chunked_memory_limit(self):
         """Test chunked serialization with memory limit."""

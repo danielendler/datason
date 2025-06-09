@@ -414,6 +414,63 @@ class TestRoundTripSerialization:
     This ensures deterministic test results - we know exactly what should work in each case.
     """
 
+    def _get_optimal_config_for_test_case(self, test_case: RoundTripTestCase) -> SerializationConfig:
+        """Get the optimal configuration for a specific test case.
+
+        ML objects need the full ML configuration to be properly detected and serialized.
+        Other objects can use the basic config with type hints.
+        """
+        # Check if this is an ML object by looking at the test case name or value type
+        ml_indicators = [
+            "torch",
+            "pytorch",
+            "tensor",
+            "sklearn",
+            "scipy",
+            "numpy",
+            "keras",
+            "tensorflow",
+            "catboost",
+            "optuna",
+            "plotly",
+            "polars",
+            "jax",
+            "transformers",
+            "pil",
+            "image",
+        ]
+
+        test_name_lower = test_case.name.lower()
+        if any(indicator in test_name_lower for indicator in ml_indicators):
+            # Use ML configuration for ML objects
+            try:
+                from datason import get_ml_config
+
+                return get_ml_config()
+            except ImportError:
+                # Fallback to basic config if ML config not available
+                pass
+
+        # Check the actual object type
+        try:
+            # Import ML libraries to check instance types
+            obj_type_str = str(type(test_case.value))
+            if any(
+                ml_lib in obj_type_str
+                for ml_lib in ["torch", "tensorflow", "sklearn", "scipy.sparse", "numpy", "keras"]
+            ):
+                try:
+                    from datason import get_ml_config
+
+                    return get_ml_config()
+                except ImportError:
+                    pass
+        except Exception:
+            pass
+
+        # Default to basic config with type hints
+        return SerializationConfig(include_type_hints=True)
+
     @pytest.mark.parametrize("test_case", ALL_TESTS_WITHOUT_HINTS, ids=lambda tc: tc.name)
     def test_basic_round_trip(self, test_case: RoundTripTestCase):
         """Test basic round-trip serialization without metadata.
@@ -467,7 +524,8 @@ class TestRoundTripSerialization:
         if test_case.skip_reason:
             pytest.skip(test_case.skip_reason)
 
-        config = SerializationConfig(include_type_hints=True)
+        # Use ML configuration for ML objects, otherwise use basic config with type hints
+        config = self._get_optimal_config_for_test_case(test_case)
 
         # Serialize with metadata
         try:
