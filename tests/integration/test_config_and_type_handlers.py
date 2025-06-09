@@ -596,9 +596,20 @@ class TestErrorHandling:
 
     def test_security_limits(self):
         """Test that security limits are respected."""
-        config = SerializationConfig(max_depth=0)  # Very low limit
+        # Ensure completely clean state - critical for isolation
+        import datason
 
-        # Create deeply nested structure that should definitely exceed max_depth=0
+        datason.clear_all_caches()
+
+        # Also ensure default config is reset - critical for test isolation
+        from datason.config import SerializationConfig
+
+        datason.set_default_config(SerializationConfig())  # Reset to clean default
+
+        config = SerializationConfig(max_depth=0)  # Allow no nested processing
+
+        # Create nested structure that should exceed max_depth=0
+        # max_depth=0 allows processing the root object but no recursive processing
         data = {"level1": {"level2": "too deep"}}
 
         with pytest.raises(datason.SecurityError):
@@ -606,10 +617,15 @@ class TestErrorHandling:
 
     def test_large_object_limits(self):
         """Test size limits."""
-        config = SerializationConfig(max_size=10)
+        # Ensure completely clean state - critical for isolation
+        import datason
 
-        # Create large list
-        large_list = list(range(20))
+        datason.clear_all_caches()
+
+        config = SerializationConfig(max_size=20)
+
+        # Create large list that exceeds the limit
+        large_list = list(range(25))
 
         with pytest.raises(datason.SecurityError):
             datason.serialize(large_list, config=config)
