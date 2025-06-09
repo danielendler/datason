@@ -95,6 +95,46 @@ class TestNewMLFrameworkAvailability:
 class TestCatBoostSerialization:
     """Test CatBoost model serialization."""
 
+    def setup_method(self):
+        """Ensure clean state before each test."""
+        import datason
+
+        # Comprehensive state clearing
+        datason.clear_all_caches()
+
+        # Reset default configuration to prevent interference
+        from datason.config import SerializationConfig
+
+        datason.set_default_config(SerializationConfig())
+
+        # Clear any ML import state
+        try:
+            from datason import ml_serializers
+
+            # Force reinitialize lazy imports to ensure clean state
+            if hasattr(ml_serializers, "_LAZY_IMPORTS"):
+                ml_serializers._LAZY_IMPORTS.clear()
+                ml_serializers._LAZY_IMPORTS.update(
+                    {
+                        "torch": None,
+                        "tensorflow": None,
+                        "jax": None,
+                        "sklearn": None,
+                        "scipy": None,
+                        "catboost": None,
+                        "keras": None,
+                        "optuna": None,
+                        "plotly": None,
+                        "polars": None,
+                        "PIL": None,
+                        "transformers": None,
+                        "pandas": None,
+                        "numpy": None,
+                    }
+                )
+        except ImportError:
+            pass
+
     def test_serialize_catboost_classifier(self):
         """Test serialization of CatBoost classifier."""
         model = catboost.CatBoostClassifier(n_estimators=3, random_state=42, verbose=False)
@@ -137,11 +177,52 @@ class TestCatBoostSerialization:
 
         serialized = datason.dump_ml(model)
         assert "__datason_type__" in serialized
+        assert serialized["__datason_type__"] == "catboost.model"
 
 
 @pytest.mark.skipif(not HAS_KERAS, reason="Keras not available")
 class TestKerasSerialization:
     """Test Keras model serialization."""
+
+    def setup_method(self):
+        """Ensure clean state before each test."""
+        import datason
+
+        # Comprehensive state clearing
+        datason.clear_all_caches()
+
+        # Reset default configuration to prevent interference
+        from datason.config import SerializationConfig
+
+        datason.set_default_config(SerializationConfig())
+
+        # Clear any ML import state
+        try:
+            from datason import ml_serializers
+
+            # Force reinitialize lazy imports to ensure clean state
+            if hasattr(ml_serializers, "_LAZY_IMPORTS"):
+                ml_serializers._LAZY_IMPORTS.clear()
+                ml_serializers._LAZY_IMPORTS.update(
+                    {
+                        "torch": None,
+                        "tensorflow": None,
+                        "jax": None,
+                        "sklearn": None,
+                        "scipy": None,
+                        "catboost": None,
+                        "keras": None,
+                        "optuna": None,
+                        "plotly": None,
+                        "polars": None,
+                        "PIL": None,
+                        "transformers": None,
+                        "pandas": None,
+                        "numpy": None,
+                    }
+                )
+        except ImportError:
+            pass
 
     def test_serialize_keras_sequential(self):
         """Test serialization of Keras Sequential model."""
@@ -177,11 +258,52 @@ class TestKerasSerialization:
 
         serialized = datason.dump_ml(model)
         assert "__datason_type__" in serialized
+        assert serialized["__datason_type__"] == "keras.model"
 
 
 @pytest.mark.skipif(not HAS_OPTUNA, reason="Optuna not available")
 class TestOptunaSerialization:
     """Test Optuna study serialization."""
+
+    def setup_method(self):
+        """Ensure clean state before each test."""
+        import datason
+
+        # Comprehensive state clearing
+        datason.clear_all_caches()
+
+        # Reset default configuration to prevent interference
+        from datason.config import SerializationConfig
+
+        datason.set_default_config(SerializationConfig())
+
+        # Clear any ML import state
+        try:
+            from datason import ml_serializers
+
+            # Force reinitialize lazy imports to ensure clean state
+            if hasattr(ml_serializers, "_LAZY_IMPORTS"):
+                ml_serializers._LAZY_IMPORTS.clear()
+                ml_serializers._LAZY_IMPORTS.update(
+                    {
+                        "torch": None,
+                        "tensorflow": None,
+                        "jax": None,
+                        "sklearn": None,
+                        "scipy": None,
+                        "catboost": None,
+                        "keras": None,
+                        "optuna": None,
+                        "plotly": None,
+                        "polars": None,
+                        "PIL": None,
+                        "transformers": None,
+                        "pandas": None,
+                        "numpy": None,
+                    }
+                )
+        except ImportError:
+            pass
 
     def test_serialize_empty_optuna_study(self):
         """Test serialization of empty Optuna study."""
@@ -225,11 +347,52 @@ class TestOptunaSerialization:
 
         serialized = datason.dump_ml(study)
         assert "__datason_type__" in serialized
+        assert serialized["__datason_type__"] == "optuna.study"
 
 
 @pytest.mark.skipif(not HAS_PLOTLY, reason="Plotly not available")
 class TestPlotlySerialization:
     """Test Plotly figure serialization."""
+
+    def setup_method(self):
+        """Ensure clean state before each test."""
+        import datason
+
+        # Comprehensive state clearing
+        datason.clear_all_caches()
+
+        # Reset default configuration to prevent interference
+        from datason.config import SerializationConfig
+
+        datason.set_default_config(SerializationConfig())
+
+        # Clear any ML import state
+        try:
+            from datason import ml_serializers
+
+            # Force reinitialize lazy imports to ensure clean state
+            if hasattr(ml_serializers, "_LAZY_IMPORTS"):
+                ml_serializers._LAZY_IMPORTS.clear()
+                ml_serializers._LAZY_IMPORTS.update(
+                    {
+                        "torch": None,
+                        "tensorflow": None,
+                        "jax": None,
+                        "sklearn": None,
+                        "scipy": None,
+                        "catboost": None,
+                        "keras": None,
+                        "optuna": None,
+                        "plotly": None,
+                        "polars": None,
+                        "PIL": None,
+                        "transformers": None,
+                        "pandas": None,
+                        "numpy": None,
+                    }
+                )
+        except ImportError:
+            pass
 
     def test_serialize_plotly_bar_chart(self):
         """Test serialization of Plotly bar chart."""
@@ -267,11 +430,52 @@ class TestPlotlySerialization:
 
         serialized = datason.dump_ml(fig)
         assert "__datason_type__" in serialized
+        assert serialized["__datason_type__"] == "plotly.figure"
 
 
 @pytest.mark.skipif(not HAS_POLARS, reason="Polars not available")
 class TestPolarsSerialization:
     """Test Polars DataFrame serialization."""
+
+    def setup_method(self):
+        """Ensure clean state before each test."""
+        import datason
+
+        # Comprehensive state clearing
+        datason.clear_all_caches()
+
+        # Reset default configuration to prevent interference
+        from datason.config import SerializationConfig
+
+        datason.set_default_config(SerializationConfig())
+
+        # Clear any ML import state
+        try:
+            from datason import ml_serializers
+
+            # Force reinitialize lazy imports to ensure clean state
+            if hasattr(ml_serializers, "_LAZY_IMPORTS"):
+                ml_serializers._LAZY_IMPORTS.clear()
+                ml_serializers._LAZY_IMPORTS.update(
+                    {
+                        "torch": None,
+                        "tensorflow": None,
+                        "jax": None,
+                        "sklearn": None,
+                        "scipy": None,
+                        "catboost": None,
+                        "keras": None,
+                        "optuna": None,
+                        "plotly": None,
+                        "polars": None,
+                        "PIL": None,
+                        "transformers": None,
+                        "pandas": None,
+                        "numpy": None,
+                    }
+                )
+        except ImportError:
+            pass
 
     def test_serialize_polars_dataframe(self):
         """Test serialization of Polars DataFrame."""
@@ -301,6 +505,7 @@ class TestPolarsSerialization:
 
         serialized = datason.dump_ml(df)
         assert "__datason_type__" in serialized
+        assert serialized["__datason_type__"] == "polars.dataframe"
 
 
 class TestNewMLFrameworksFallbacks:
