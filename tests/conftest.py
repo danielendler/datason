@@ -116,6 +116,25 @@ def configure_test_environment():
         os.environ.setdefault("TF_ENABLE_ONEDNN_OPTS", "0")
         os.environ.setdefault("CUDA_VISIBLE_DEVICES", "")  # Disable CUDA
 
+        # Suppress Keras logging
+        os.environ.setdefault("TF_KERAS_LOG_LEVEL", "ERROR")
+
+        # Try to configure Keras logging directly
+        try:
+            import tensorflow as tf
+
+            tf.get_logger().setLevel("ERROR")
+            tf.autograph.set_verbosity(0)
+        except ImportError:
+            pass
+
+        try:
+            import keras
+
+            keras.utils.disable_interactive_logging()
+        except (ImportError, AttributeError):
+            pass
+
         # Suppress warnings
         import warnings
 
@@ -123,6 +142,7 @@ def configure_test_environment():
         warnings.filterwarnings("ignore", category=FutureWarning)
         warnings.filterwarnings("ignore", category=UserWarning, module="tensorflow")
         warnings.filterwarnings("ignore", category=UserWarning, module="torch")
+        warnings.filterwarnings("ignore", category=UserWarning, module="keras")
 
     except ImportError:
         pass

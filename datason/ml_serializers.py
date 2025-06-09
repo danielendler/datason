@@ -42,17 +42,20 @@ _LAZY_IMPORTS = {
     "torch": None,
     "tensorflow": None,
     "jax": None,
-    "jnp": None,
+    "jnp": None,  # JAX numpy alias
     "sklearn": None,
-    "BaseEstimator": None,
+    "BaseEstimator": None,  # sklearn base estimator class
     "scipy": None,
-    "PIL_Image": None,
+    "PIL_Image": None,  # PIL Image class
+    "PIL": None,  # PIL package
     "transformers": None,
     "catboost": None,
     "keras": None,
     "optuna": None,
     "plotly": None,
     "polars": None,
+    "pandas": None,  # pandas package
+    "numpy": None,  # numpy package
 }
 
 
@@ -68,6 +71,10 @@ def _lazy_import_torch():
             return None
         _LAZY_IMPORTS["torch"] = patched_value
         return patched_value
+
+    # Defensive check for missing key
+    if "torch" not in _LAZY_IMPORTS:
+        _LAZY_IMPORTS["torch"] = None
 
     if _LAZY_IMPORTS["torch"] is None:
         try:
@@ -234,6 +241,10 @@ def _lazy_import_pil():
         _LAZY_IMPORTS["PIL_Image"] = patched_value
         return patched_value
 
+    # Defensive check for missing key
+    if "PIL_Image" not in _LAZY_IMPORTS:
+        _LAZY_IMPORTS["PIL_Image"] = None
+
     if _LAZY_IMPORTS["PIL_Image"] is None:
         try:
             from PIL import Image
@@ -278,6 +289,10 @@ def _lazy_import_catboost():
             return None
         _LAZY_IMPORTS["catboost"] = patched_value
         return patched_value
+
+    # Defensive check for missing key
+    if "catboost" not in _LAZY_IMPORTS:
+        _LAZY_IMPORTS["catboost"] = None
 
     if _LAZY_IMPORTS["catboost"] is None:
         try:
