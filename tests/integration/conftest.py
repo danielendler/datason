@@ -46,8 +46,8 @@ except ImportError:
 @pytest.fixture(autouse=True)
 def restore_ml_serializer(request):
     """Automatically restore ML serializer state before each test to fix test isolation issues."""
-    # Skip fixture for security tests to avoid interference
-    if "test_security_limits" in request.node.name or "test_large_object_limits" in request.node.name:
+    # Use a marker to skip tests that manage their own state. This is more robust.
+    if request.node.get_closest_marker("no_autofixture"):
         yield
         return
 
@@ -97,6 +97,9 @@ def restore_ml_serializer(request):
 
 def pytest_configure(config: Any) -> None:
     """Register custom markers for dependency-based test categorization."""
+    config.addinivalue_line(
+        "markers", "no_autofixture: Tests that should not use the autouse restore_ml_serializer fixture."
+    )
     config.addinivalue_line("markers", "core: Core functionality tests (no optional dependencies required)")
     config.addinivalue_line("markers", "numpy: Tests requiring numpy")
     config.addinivalue_line("markers", "pandas: Tests requiring pandas")

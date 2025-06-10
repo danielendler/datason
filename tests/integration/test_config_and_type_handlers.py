@@ -594,6 +594,7 @@ class TestErrorHandling:
         result = datason.serialize("test", config=config)
         assert result == "test"
 
+    @pytest.mark.no_autofixture
     def test_security_limits(self):
         """Test that security limits are respected."""
         # Clean isolated test - fixture is skipped for security tests
@@ -614,6 +615,7 @@ class TestErrorHandling:
         with pytest.raises(datason.SecurityError):
             datason.serialize(data, config=config)
 
+    @pytest.mark.no_autofixture
     def test_large_object_limits(self):
         """Test size limits."""
         # Ensure completely clean state - critical for isolation
