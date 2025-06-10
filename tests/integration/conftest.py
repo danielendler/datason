@@ -46,11 +46,20 @@ except ImportError:
 @pytest.fixture(autouse=True)
 def restore_ml_serializer():
     """Automatically restore ML serializer state before each test to fix test isolation issues."""
-    # Clear all caches before each test
+    # Clear all caches before each test - use clear_all_caches for complete isolation
     try:
         import datason
 
-        datason.clear_caches()
+        datason.clear_all_caches()
+    except ImportError:
+        pass
+
+    # Reset default config to clean state for each test
+    try:
+        import datason
+        from datason.config import SerializationConfig
+
+        datason.set_default_config(SerializationConfig())
     except ImportError:
         pass
 
@@ -65,11 +74,11 @@ def restore_ml_serializer():
 
     yield
 
-    # Clean up after test (optional)
+    # Clean up after test - use clear_all_caches for complete cleanup
     try:
         import datason
 
-        datason.clear_caches()
+        datason.clear_all_caches()
     except ImportError:
         pass
 
