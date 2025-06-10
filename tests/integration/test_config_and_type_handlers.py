@@ -297,7 +297,7 @@ class TestDateTimeHandling:
     def test_custom_format(self) -> None:
         """Test custom strftime formatting."""
         dt = datetime(2023, 1, 1, 12, 30, 0)
-        config = SerializationConfig(date_format="%Y/%m/%d %H:%M")
+        config = SerializationConfig(date_format=DateFormat.CUSTOM, custom_date_format="%Y/%m/%d %H:%M")
         assert datason.serialize(dt, config) == "2023/01/01 12:30"
 
 
