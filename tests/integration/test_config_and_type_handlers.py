@@ -596,22 +596,21 @@ class TestErrorHandling:
 
     def test_security_limits(self):
         """Test that security limits are respected."""
-        # Ensure completely clean state - critical for isolation
+        # Clean isolated test - fixture is skipped for security tests
         import datason
-
-        datason.clear_all_caches()
-
-        # Also ensure default config is reset - critical for test isolation
         from datason.config import SerializationConfig
 
-        datason.set_default_config(SerializationConfig())  # Reset to clean default
+        # Ensure clean state
+        datason.clear_all_caches()
+        datason.set_default_config(SerializationConfig())
 
-        config = SerializationConfig(max_depth=0)  # Allow no nested processing
+        # Create config with max_depth=0
+        config = SerializationConfig(max_depth=0)
 
         # Create nested structure that should exceed max_depth=0
-        # max_depth=0 allows processing the root object but no recursive processing
         data = {"level1": {"level2": "too deep"}}
 
+        # Test that SecurityError is raised
         with pytest.raises(datason.SecurityError):
             datason.serialize(data, config=config)
 

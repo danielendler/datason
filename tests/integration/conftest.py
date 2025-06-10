@@ -44,14 +44,19 @@ except ImportError:
 
 
 @pytest.fixture(autouse=True)
-def restore_ml_serializer():
+def restore_ml_serializer(request):
     """Automatically restore ML serializer state before each test to fix test isolation issues."""
+    # Skip fixture for security tests to avoid interference
+    if "test_security_limits" in request.node.name or "test_large_object_limits" in request.node.name:
+        yield
+        return
+
     # Clear all caches before each test - use clear_all_caches for complete isolation
     try:
         import datason
 
         datason.clear_all_caches()
-    except ImportError:
+    except (ImportError, Exception):
         pass
 
     # Reset default config to clean state for each test
@@ -60,7 +65,7 @@ def restore_ml_serializer():
         from datason.config import SerializationConfig
 
         datason.set_default_config(SerializationConfig())
-    except ImportError:
+    except (ImportError, Exception):
         pass
 
     # Ensure ML serializer is properly available
@@ -69,7 +74,7 @@ def restore_ml_serializer():
         from datason.ml_serializers import detect_and_serialize_ml_object
 
         datason.core._ml_serializer = detect_and_serialize_ml_object
-    except ImportError:
+    except (ImportError, Exception):
         pass
 
     yield
@@ -79,7 +84,7 @@ def restore_ml_serializer():
         import datason
 
         datason.clear_all_caches()
-    except ImportError:
+    except (ImportError, Exception):
         pass
 
 
