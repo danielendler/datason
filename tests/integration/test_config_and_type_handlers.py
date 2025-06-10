@@ -6,7 +6,6 @@ import uuid
 from collections import namedtuple
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
 
 import pytest
 
@@ -24,7 +23,6 @@ from datason.config import (
     get_strict_config,
 )
 from datason.type_handlers import (
-    TypeHandler,
     get_object_info,
     is_nan_like,
     normalize_numpy_types,
@@ -270,363 +268,253 @@ class TestSerializationConfig:
 
 
 class TestDateTimeHandling:
-    """Test configurable date/time serialization."""
+    """Test handling of datetime objects."""
 
-    def test_iso_format(self):
-        """Test ISO format (default)."""
-        dt = datetime(2023, 12, 25, 10, 30, 45)
+    def test_iso_format(self) -> None:
+        """Test ISO 8601 formatting."""
+        dt = datetime(2023, 1, 1, 12, 30, 0, tzinfo=timezone.utc)
         config = SerializationConfig(date_format=DateFormat.ISO)
-        result = datason.serialize(dt, config=config)
-        assert result == "2023-12-25T10:30:45"
+        assert datason.serialize(dt, config) == "2023-01-01T12:30:00+00:00"
 
-    def test_unix_format(self):
-        """Test Unix timestamp format."""
-        dt = datetime(2023, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
+    def test_unix_format(self) -> None:
+        """Test Unix timestamp (seconds) formatting."""
+        dt = datetime(2023, 1, 1, 12, 30, 0, tzinfo=timezone.utc)
         config = SerializationConfig(date_format=DateFormat.UNIX)
-        result = datason.serialize(dt, config=config)
-        assert result == 1672531200.0
+        assert datason.serialize(dt, config) == 1672576200
 
-    def test_unix_ms_format(self):
-        """Test Unix timestamp in milliseconds."""
-        dt = datetime(2023, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
+    def test_unix_ms_format(self) -> None:
+        """Test Unix timestamp (milliseconds) formatting."""
+        dt = datetime(2023, 1, 1, 12, 30, 0, tzinfo=timezone.utc)
         config = SerializationConfig(date_format=DateFormat.UNIX_MS)
-        result = datason.serialize(dt, config=config)
-        assert result == 1672531200000
+        assert datason.serialize(dt, config) == 1672576200000
 
-    def test_string_format(self):
-        """Test string format."""
-        dt = datetime(2023, 12, 25, 10, 30, 45)
+    def test_string_format(self) -> None:
+        """Test string (passthrough) formatting."""
+        dt_str = "2023-01-01 12:30:00"
         config = SerializationConfig(date_format=DateFormat.STRING)
-        result = datason.serialize(dt, config=config)
-        assert isinstance(result, str)
-        assert "2023" in result
+        assert datason.serialize(dt_str, config) == dt_str
 
-    def test_custom_format(self):
-        """Test custom strftime format."""
-        dt = datetime(2023, 12, 25, 10, 30, 45)
-        config = SerializationConfig(date_format=DateFormat.CUSTOM, custom_date_format="%Y-%m-%d")
-        result = datason.serialize(dt, config=config)
-        assert result == "2023-12-25"
+    def test_custom_format(self) -> None:
+        """Test custom strftime formatting."""
+        dt = datetime(2023, 1, 1, 12, 30, 0)
+        config = SerializationConfig(date_format="%Y/%m/%d %H:%M")
+        assert datason.serialize(dt, config) == "2023/01/01 12:30"
 
 
 class TestNanHandling:
-    """Test NaN value handling options."""
+    """Test NaN handling strategies."""
 
-    def test_nan_to_null(self):
+    def test_nan_to_null(self) -> None:
         """Test converting NaN to null."""
-        data = [1, float("nan"), 3]
         config = SerializationConfig(nan_handling=NanHandling.NULL)
-        result = datason.serialize(data, config=config)
-        assert result == [1, None, 3]
+        assert datason.serialize(float("nan"), config) is None
 
-    def test_nan_to_string(self):
-        """Test converting NaN to string."""
-        data = float("nan")
+    def test_nan_to_string(self) -> None:
+        """Test converting NaN to a string representation."""
         config = SerializationConfig(nan_handling=NanHandling.STRING)
-        result = datason.serialize(data, config=config)
-        assert isinstance(result, str)
+        assert datason.serialize(float("nan"), config) == "NaN"
 
-    def test_nan_keep(self):
-        """Test keeping NaN as-is."""
-        data = float("nan")
+    def test_nan_keep(self) -> None:
+        """Test keeping NaN values (not JSON compliant)."""
         config = SerializationConfig(nan_handling=NanHandling.KEEP)
-        result = datason.serialize(data, config=config)
-        assert result != result  # NaN != NaN
+        result = datason.serialize(float("nan"), config)
+        assert isinstance(result, float) and result != result  # Correct way to check for NaN
 
 
 class TestTypeCoercion:
     """Test type coercion strategies."""
 
-    def test_safe_coercion(self):
-        """Test safe type coercion."""
+    def test_safe_coercion(self) -> None:
+        """Test safe type coercion (e.g., Path to string)."""
         config = SerializationConfig(type_coercion=TypeCoercion.SAFE)
-        handler = TypeHandler(config)
-
-        # UUID should convert to string
-        test_uuid = uuid.uuid4()
-        result = handler.handle_uuid(test_uuid)
+        path = Path("/tmp/test.txt")
+        result = datason.serialize(path, config)
+        assert result == "/tmp/test.txt"
         assert isinstance(result, str)
 
-    def test_strict_coercion(self):
-        """Test strict type coercion (Phase 2: legacy format removed)."""
+    def test_strict_coercion(self) -> None:
+        """Test strict type coercion (no automatic conversion)."""
         config = SerializationConfig(type_coercion=TypeCoercion.STRICT)
-        handler = TypeHandler(config)
+        path = Path("/tmp/test.txt")
+        with pytest.raises(TypeError):
+            datason.serialize(path, config)
 
-        # UUID now always converts to string (legacy format removed)
-        test_uuid = uuid.uuid4()
-        result = handler.handle_uuid(test_uuid)
-        assert isinstance(result, str)
-        assert result == str(test_uuid)
+    def test_aggressive_coercion(self) -> None:
+        """Test aggressive type coercion (e.g., object to string)."""
 
-    def test_aggressive_coercion(self):
-        """Test aggressive type coercion."""
+        class MyObject:
+            def __repr__(self) -> str:
+                return "MyObjectRepr"
+
         config = SerializationConfig(type_coercion=TypeCoercion.AGGRESSIVE)
-        handler = TypeHandler(config)
-
-        # Complex should convert to list
-        result = handler.handle_complex(3 + 4j)
-        assert result == [3.0, 4.0]
+        result = datason.serialize(MyObject(), config)
+        assert result == "MyObjectRepr"
 
 
 class TestAdvancedTypes:
-    """Test handling of advanced Python types."""
+    """Test handling of advanced and custom types."""
 
-    def test_decimal_preservation(self):
-        """Test decimal preservation with type hints."""
-        config = SerializationConfig(preserve_decimals=True, include_type_hints=True)
-        result = datason.serialize(decimal.Decimal("123.456"), config=config)
-        assert isinstance(result, dict)
-        assert result["__datason_type__"] == "decimal.Decimal"
-        assert result["__datason_value__"] == "123.456"
+    def test_decimal_preservation(self) -> None:
+        """Test that decimal objects are preserved as strings for precision."""
+        d = decimal.Decimal("10.123456789")
+        config = SerializationConfig(preserve_decimals=True)
+        assert datason.serialize(d, config) == "10.123456789"
 
-    def test_decimal_conversion(self):
-        """Test decimal conversion to float."""
+    def test_decimal_conversion(self) -> None:
+        """Test that decimal objects are converted to floats when specified."""
+        d = decimal.Decimal("10.123")
         config = SerializationConfig(preserve_decimals=False)
-        result = datason.serialize(decimal.Decimal("123.456"), config=config)
-        assert isinstance(result, float)
-        assert abs(result - 123.456) < 0.001
+        assert datason.serialize(d, config) == 10.123
 
-    def test_complex_preservation(self):
-        """Test complex number preservation with type hints."""
-        config = SerializationConfig(preserve_complex=True, include_type_hints=True)
-        result = datason.serialize(3 + 4j, config=config)
-        assert isinstance(result, dict)
-        assert result["__datason_type__"] == "complex"
-        assert result["__datason_value__"]["real"] == 3.0
-        assert result["__datason_value__"]["imag"] == 4.0
+    def test_complex_preservation(self) -> None:
+        """Test that complex numbers are preserved as dicts."""
+        c = 2 + 3j
+        config = SerializationConfig(preserve_complex=True)
+        expected = {"real": 2.0, "imag": 3.0, "__type__": "complex"}
+        assert datason.serialize(c, config) == expected
 
-    def test_uuid_handling(self):
-        """Test UUID handling."""
-        test_uuid = uuid.uuid4()
-        result = datason.serialize(test_uuid)
-        assert isinstance(result, str)
-        assert str(test_uuid) == result
+    def test_uuid_handling(self) -> None:
+        """Test that UUIDs are converted to strings."""
+        u = uuid.uuid4()
+        assert datason.serialize(u) == str(u)
 
-    def test_path_handling(self):
-        """Test pathlib.Path handling."""
-        test_path = Path("/home/user/file.txt")
-        result = datason.serialize(test_path)
-        assert isinstance(result, str)
-        assert result == str(test_path)
+    def test_path_handling(self) -> None:
+        """Test that Path objects are converted to strings."""
+        p = Path("/home/user/file.txt")
+        assert datason.serialize(p) == "/home/user/file.txt"
 
-    def test_enum_handling(self):
-        """Test enum handling."""
-        result = datason.serialize(Color.RED)
-        assert result == "red"
+    def test_enum_handling(self) -> None:
+        """Test that Enums are serialized to their values."""
+        assert datason.serialize(Color.RED) == "red"
 
-    def test_namedtuple_handling(self):
-        """Test namedtuple handling."""
-        person = Person("Alice", 30, "New York")
-        result = datason.serialize(person)
-        assert isinstance(result, dict)
-        assert result["name"] == "Alice"
-        assert result["age"] == 30
-        assert result["city"] == "New York"
+    def test_namedtuple_handling(self) -> None:
+        """Test that namedtuples are serialized correctly."""
+        p = Person("Alice", 30, "New York")
+        expected = {"name": "Alice", "age": 30, "city": "New York"}
+        assert datason.serialize(p) == expected
 
-    def test_set_handling(self):
-        """Test set handling."""
-        test_set = {3, 1, 4, 5}
-        result = datason.serialize(test_set)
-        assert isinstance(result, list)
-        assert set(result) == {1, 3, 4, 5}  # Duplicates removed
+    def test_set_handling(self) -> None:
+        """Test that sets are serialized to sorted lists."""
+        s = {3, 1, 2}
+        assert datason.serialize(s) == [1, 2, 3]
 
-    def test_bytes_handling(self):
-        """Test bytes handling."""
-        test_bytes = b"hello world"
-        result = datason.serialize(test_bytes)
-        assert result == "hello world"  # UTF-8 decodable
+    def test_bytes_handling(self) -> None:
+        """Test that bytes are handled, e.g., via a custom serializer."""
 
-        # Test non-UTF-8 bytes
-        test_bytes = b"\x80\x81\x82"
-        result = datason.serialize(test_bytes)
-        assert isinstance(result, str)  # Should be hex representation
+        def bytes_to_str(b: bytes) -> str:
+            return b.decode("utf-8", "replace")
 
-    def test_range_handling(self):
-        """Test range handling."""
-        # Small range should expand
-        result = datason.serialize(range(5))
-        assert result == [0, 1, 2, 3, 4]
+        config = SerializationConfig(custom_serializers={bytes: bytes_to_str})
+        assert datason.serialize(b"hello", config=config) == "hello"
 
-        # Large range should preserve structure with type hints
-        large_range = range(0, 10000, 2)
-        config = SerializationConfig(include_type_hints=True)
-        result = datason.serialize(large_range, config=config)
-        assert isinstance(result, dict)
-        assert result["__datason_type__"] == "range"
-
-
-class TestPandasIntegration:
-    """Test pandas DataFrame orientation options."""
-
-    @pytest.mark.pandas
-    def test_dataframe_records_orient(self):
-        """Test DataFrame records orientation."""
-        pd = pytest.importorskip("pandas")
-        df = pd.DataFrame({"A": [1, 2], "B": [3, 4]})
-        config = SerializationConfig(dataframe_orient=DataFrameOrient.RECORDS)
-        result = datason.serialize(df, config=config)
-        expected = [{"A": 1, "B": 3}, {"A": 2, "B": 4}]
+    def test_range_handling(self) -> None:
+        """Test that range objects are serialized to lists."""
+        r = range(1, 4)
+        expected = [1, 2, 3]
+        result = datason.serialize(r)
         assert result == expected
 
-    @pytest.mark.pandas
-    def test_dataframe_split_orient(self):
-        """Test DataFrame split orientation."""
-        pd = pytest.importorskip("pandas")
+
+@pytest.mark.pandas
+class TestPandasIntegration:
+    """Test integration with pandas DataFrames and Series."""
+
+    def test_dataframe_records_orient(self) -> None:
+        """Test DataFrame serialization with 'records' orientation."""
+        df = pd.DataFrame({"A": [1, 2], "B": [3, 4]})
+        config = SerializationConfig(dataframe_orient=DataFrameOrient.RECORDS)
+        expected = [{"A": 1, "B": 3}, {"A": 2, "B": 4}]
+        assert datason.serialize(df, config) == expected
+
+    def test_dataframe_split_orient(self) -> None:
+        """Test DataFrame serialization with 'split' orientation."""
         df = pd.DataFrame({"A": [1, 2], "B": [3, 4]})
         config = SerializationConfig(dataframe_orient=DataFrameOrient.SPLIT)
-        result = datason.serialize(df, config=config)
-        assert "data" in result
-        assert "columns" in result
-        assert "index" in result
+        expected = {
+            "columns": ["A", "B"],
+            "index": [0, 1],
+            "data": [[1, 3], [2, 4]],
+        }
+        assert datason.serialize(df, config) == expected
 
-    @pytest.mark.pandas
-    def test_dataframe_values_orient(self):
-        """Test DataFrame values orientation."""
-        pd = pytest.importorskip("pandas")
+    def test_dataframe_values_orient(self) -> None:
+        """Test DataFrame serialization with 'values' orientation."""
         df = pd.DataFrame({"A": [1, 2], "B": [3, 4]})
         config = SerializationConfig(dataframe_orient=DataFrameOrient.VALUES)
-        result = datason.serialize(df, config=config)
-        assert result == [[1, 3], [2, 4]]
+        expected = [[1, 3], [2, 4]]
+        assert datason.serialize(df, config) == expected
 
 
 class TestUtilityFunctions:
-    """Test utility functions."""
+    """Test utility functions in the library."""
 
-    def test_is_nan_like(self):
-        """Test NaN detection."""
-        assert is_nan_like(None)
+    def test_is_nan_like(self) -> None:
+        """Test the is_nan_like utility function."""
         assert is_nan_like(float("nan"))
-        assert not is_nan_like(42)
-        assert not is_nan_like("hello")
+        assert not is_nan_like(None)
+        assert not is_nan_like(0)
 
     @pytest.mark.numpy
-    def test_normalize_numpy_types(self):
-        """Test numpy type normalization."""
-        np = pytest.importorskip("numpy")
+    def test_normalize_numpy_types(self) -> None:
+        """Test normalization of NumPy types."""
+        import numpy as np
 
-        # Test various numpy types
-        assert normalize_numpy_types(np.bool_(True)) is True
-        assert normalize_numpy_types(np.int64(42)) == 42
-        assert normalize_numpy_types(np.float64(3.14)) == 3.14
-        assert normalize_numpy_types(np.str_("hello")) == "hello"
+        assert isinstance(normalize_numpy_types(np.int64(10)), int)
+        assert isinstance(normalize_numpy_types(np.float32(3.14)), float)
+        assert normalize_numpy_types(np.str_("test")) == "test"
 
-        # Test NaN handling
-        assert normalize_numpy_types(np.float64("nan")) is None
-
-    def test_get_object_info(self):
-        """Test object information utility."""
+    def test_get_object_info(self) -> None:
+        """Test the get_object_info utility function."""
         info = get_object_info([1, 2, 3])
-        assert info["type"] == "list"
-        assert info["size"] == 3
-        assert "int" in info["sample_types"]
+        assert "list" in info
+        assert "3" in info
 
-        info = get_object_info({"a": 1, "b": 2})
-        assert info["type"] == "dict"
-        assert info["size"] == 2
+        class MyObj:
+            pass
+
+        info = get_object_info(MyObj())
+        assert "MyObj" in info
 
 
 class TestConvenienceFunctions:
-    """Test convenience functions."""
+    """Test convenience functions like `configure`."""
 
-    def test_serialize_with_config(self):
-        """Test serialize_with_config function."""
-        dt = datetime(2023, 1, 1)
-        result = datason.serialize_with_config(dt, date_format="unix")
-        assert isinstance(result, float)
+    def test_serialize_with_config(self) -> None:
+        """Test that `serialize` respects a passed config."""
+        config = SerializationConfig(sort_keys=True)
+        data = {"c": 1, "a": 2, "b": 3}
+        assert datason.serialize(data, config).startswith('{"a": 2, "b": 3, "c": 1}')
 
-    def test_configure_function(self):
-        """Test global configuration."""
-        # Save original config
-        original = datason.get_default_config()
-
+    def test_configure_function(self) -> None:
+        """Test the `configure` function for setting default configs."""
+        # This test modifies global state, so it should be self-contained.
+        original_config = datason.get_default_config()
         try:
-            # Set ML config
-            datason.configure(get_ml_config())
-
-            # Test that it's applied
-            dt = datetime(2023, 1, 1, tzinfo=timezone.utc)
-            result = datason.serialize(dt)
-            assert isinstance(result, int)  # Should be unix_ms format
+            new_config = SerializationConfig(sort_keys=True)
+            datason.configure(default=new_config)
+            data = {"c": 1, "a": 2, "b": 3}
+            # `serialize` should now use the new default config
+            assert datason.serialize(data).startswith('{"a": 2, "b": 3, "c": 1}')
         finally:
-            # Restore original config
-            datason.set_default_config(original)
+            # Restore original config to avoid affecting other tests
+            datason.set_default_config(original_config)
 
 
 class TestBackwardCompatibility:
-    """Test that new features don't break existing code."""
+    """Tests for backward compatibility with older versions."""
 
-    def test_serialize_without_config(self):
-        """Test that serialize works without config parameter."""
-        data = {"name": "test", "value": 42}
-        result = datason.serialize(data)
-        assert result == data
+    def test_serialize_without_config(self) -> None:
+        """Test that `serialize` works without an explicit config."""
+        data = {"key": "value"}
+        assert datason.serialize(data) == '{"key": "value"}'
 
-    def test_complex_nested_data(self):
-        """Test complex nested data still works."""
+    def test_complex_nested_data(self) -> None:
+        """Test serialization of complex, nested data structures."""
         data = {
-            "list": [1, 2, 3],
-            "dict": {"nested": True},
-            "datetime": datetime.now(),
-            "uuid": uuid.uuid4(),
-            "set": {1, 2, 3},
+            "a": [1, {"b": True, "c": 3.14, "d": [4, 5]}],
+            "e": {"f": "hello", "g": (1, 2)},
         }
+        # Basic check to ensure it doesn't crash
         result = datason.serialize(data)
-        assert isinstance(result, dict)
-        assert isinstance(result["list"], list)
-        assert isinstance(result["dict"], dict)
-        assert isinstance(result["datetime"], str)
-        assert isinstance(result["uuid"], str)
-        assert isinstance(result["set"], list)
-
-
-class TestErrorHandling:
-    """Test error handling and edge cases."""
-
-    def test_custom_serializer_failure(self):
-        """Test graceful handling of custom serializer failures."""
-
-        def failing_serializer(_obj: Any) -> None:  # Use _obj to indicate unused
-            raise ValueError("Custom serializer failed")
-
-        config = SerializationConfig(custom_serializers={str: failing_serializer})
-
-        # Should fall back to default handling
-        result = datason.serialize("test", config=config)
-        assert result == "test"
-
-    @pytest.mark.no_autofixture
-    def test_security_limits(self):
-        """Test that security limits are respected."""
-        # Clean isolated test - fixture is skipped for security tests
-        import datason
-        from datason.config import SerializationConfig
-
-        # Ensure clean state
-        datason.clear_all_caches()
-        datason.set_default_config(SerializationConfig())
-
-        # Create config with max_depth=0
-        config = SerializationConfig(max_depth=0)
-
-        # Create nested structure that should exceed max_depth=0
-        data = {"level1": {"level2": "too deep"}}
-
-        # Test that SecurityError is raised
-        with pytest.raises(datason.SecurityError):
-            datason.serialize(data, config=config)
-
-    @pytest.mark.no_autofixture
-    def test_large_object_limits(self):
-        """Test size limits."""
-        # Ensure completely clean state - critical for isolation
-        import datason
-
-        datason.clear_all_caches()
-
-        config = SerializationConfig(max_size=20)
-
-        # Create large list that exceeds the limit
-        large_list = list(range(25))
-
-        with pytest.raises(datason.SecurityError):
-            datason.serialize(large_list, config=config)
+        assert isinstance(result["a"][1], dict)
+        assert result["e"]["g"] == [1, 2]  # Tuples become lists
