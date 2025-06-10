@@ -52,20 +52,24 @@ def restore_ml_serializer(request):
         return
 
     # Clear all caches before each test - use clear_all_caches for complete isolation
+    # Wrap in try-except to prevent SecurityErrors during fixture setup
     try:
         import datason
 
         datason.clear_all_caches()
-    except (ImportError, Exception):
+    except Exception:
+        # If clearing caches fails (e.g., due to SecurityError), continue anyway
         pass
 
     # Reset default config to clean state for each test
+    # Wrap in try-except to prevent SecurityErrors during config reset
     try:
         import datason
         from datason.config import SerializationConfig
 
         datason.set_default_config(SerializationConfig())
-    except (ImportError, Exception):
+    except Exception:
+        # If setting config fails, continue anyway
         pass
 
     # Ensure ML serializer is properly available
@@ -74,17 +78,20 @@ def restore_ml_serializer(request):
         from datason.ml_serializers import detect_and_serialize_ml_object
 
         datason.core._ml_serializer = detect_and_serialize_ml_object
-    except (ImportError, Exception):
+    except Exception:
+        # If ML serializer setup fails, continue anyway
         pass
 
     yield
 
     # Clean up after test - use clear_all_caches for complete cleanup
+    # Wrap in try-except to prevent SecurityErrors during fixture teardown
     try:
         import datason
 
         datason.clear_all_caches()
-    except (ImportError, Exception):
+    except Exception:
+        # If clearing caches fails during cleanup, continue anyway
         pass
 
 
