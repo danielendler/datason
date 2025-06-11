@@ -18,21 +18,31 @@ class TestErrorHandling:
 
     def test_security_limits(self) -> None:
         """Test that security limits (e.g., max depth) are enforced."""
-        # Save and restore global config to prevent test pollution
         # Use reset_default_config for clean isolation
         datason.reset_default_config()
 
         try:
-            # Test max depth
+            # Test max depth - should raise SecurityError
             nested_data = [1, [2, [3, [4, [5]]]]]
             config_depth_3 = SerializationConfig(max_depth=3)
 
-            with pytest.raises(SecurityError, match="Maximum serialization depth"):
+            # Test that deep nesting raises SecurityError
+            security_error_raised = False
+            try:
                 datason.serialize(nested_data, config=config_depth_3)
+            except SecurityError as e:
+                security_error_raised = True
+                assert "Maximum serialization depth" in str(e)
+            except Exception as e:
+                pytest.fail(f"Expected SecurityError but got {type(e).__name__}: {e}")
+
+            # Should have raised SecurityError
+            assert security_error_raised, "Expected SecurityError to be raised for deep nesting"
 
             # Test no error if within limits
             config_depth_5 = SerializationConfig(max_depth=5)
-            datason.serialize(nested_data, config=config_depth_5)
+            result = datason.serialize(nested_data, config=config_depth_5)
+            assert result is not None  # Should succeed
         finally:
             # Always restore defaults to avoid test pollution
             datason.reset_default_config()
