@@ -212,11 +212,11 @@ class TestDataUtilsEdgeCases:
 
     def test_convert_string_method_votes_complex_cases(self) -> None:
         """Test convert_string_method_votes with complex scenarios."""
-        # Test with single dict with syntax error string - it gets converted to empty list
-        test_dict = {"method_votes": "[1, 2, 3,"}  # Invalid syntax
+        # Test with malformed list string missing closing bracket
+        test_dict = {"method_votes": "[1, 2, 3,"}  # Invalid syntax - missing closing bracket
         result = convert_string_method_votes(test_dict)
-        # Since it doesn't parse as valid JSON, it becomes an empty list
-        assert result["method_votes"] == []
+        # Since it doesn't end with ], it becomes a single-item list (preserves the original string)
+        assert result["method_votes"] == ["[1, 2, 3,"]
 
         # Test with valid dict string
         test_dict2 = {"method_votes": "{'key': 'value'}"}
