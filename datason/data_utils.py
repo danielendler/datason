@@ -32,7 +32,7 @@ def convert_string_method_votes(
         if "method_votes" in transactions:
             # Convert string to list if needed
             if isinstance(transactions["method_votes"], str):
-                if transactions["method_votes"].startswith("["):
+                if transactions["method_votes"].startswith("[") and transactions["method_votes"].endswith("]"):
                     # This looks like a string representation of a list, try to parse it
                     try:
                         transactions["method_votes"] = ast.literal_eval(transactions["method_votes"])
