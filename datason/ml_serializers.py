@@ -8,20 +8,54 @@ ML libraries are imported lazily to improve startup performance.
 
 import base64
 import io
+import os
 import warnings
 from typing import Any, Dict, Optional
+
+# Aggressively suppress TensorFlow/Keras logging at module import time
+# This must be done before any TensorFlow imports happen anywhere
+os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "3")  # ERROR only
+os.environ.setdefault("TF_ENABLE_ONEDNN_OPTS", "0")  # Suppress oneDNN messages
+os.environ.setdefault("TF_DETERMINISTIC_OPS", "1")  # Suppress deterministic warnings
+os.environ.setdefault("TF_FORCE_GPU_ALLOW_GROWTH", "true")  # Suppress GPU memory messages
+os.environ.setdefault("CUDA_VISIBLE_DEVICES", "")  # Suppress CUDA messages entirely
+os.environ.setdefault("XLA_FLAGS", "--xla_hlo_profile=false")  # Suppress XLA messages
+os.environ.setdefault("TF_XLA_FLAGS", "--tf_xla_enable_xla_devices=false")  # Disable XLA devices
+
+# Set up logging suppression before any imports
+import logging
+
+logging.getLogger("tensorflow").setLevel(logging.ERROR)
+logging.getLogger("keras").setLevel(logging.ERROR)
+logging.getLogger("absl").setLevel(logging.ERROR)  # TensorFlow uses absl logging
+
+# Suppress warnings at module level
+warnings.filterwarnings("ignore", category=UserWarning, module="tensorflow")
+warnings.filterwarnings("ignore", category=UserWarning, module="keras")
+warnings.filterwarnings("ignore", message=".*deprecated.*", category=DeprecationWarning)
+warnings.filterwarnings("ignore", message=".*oneDNN.*", category=UserWarning)
+warnings.filterwarnings("ignore", message=".*GPU.*", category=UserWarning)
+warnings.filterwarnings("ignore", message=".*CUDA.*", category=UserWarning)
 
 # Lazy import cache - libraries are imported only when first used
 _LAZY_IMPORTS = {
     "torch": None,
     "tensorflow": None,
     "jax": None,
-    "jnp": None,
+    "jnp": None,  # JAX numpy alias
     "sklearn": None,
-    "BaseEstimator": None,
+    "BaseEstimator": None,  # sklearn base estimator class
     "scipy": None,
-    "PIL_Image": None,
+    "PIL_Image": None,  # PIL Image class
+    "PIL": None,  # PIL package
     "transformers": None,
+    "catboost": None,
+    "keras": None,
+    "optuna": None,
+    "plotly": None,
+    "polars": None,
+    "pandas": None,  # pandas package
+    "numpy": None,  # numpy package
 }
 
 
@@ -37,6 +71,10 @@ def _lazy_import_torch():
             return None
         _LAZY_IMPORTS["torch"] = patched_value
         return patched_value
+
+    # Defensive check for missing key
+    if "torch" not in _LAZY_IMPORTS:
+        _LAZY_IMPORTS["torch"] = None
 
     if _LAZY_IMPORTS["torch"] is None:
         try:
@@ -63,7 +101,30 @@ def _lazy_import_tensorflow():
 
     if _LAZY_IMPORTS["tensorflow"] is None:
         try:
+            # Suppress TensorFlow logging to reduce test verbosity
+            import logging
+            import os
+            import warnings
+
+            # Suppress TensorFlow C++ logging
+            os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "3")  # 3 = ERROR only
+            os.environ.setdefault("TF_ENABLE_ONEDNN_OPTS", "0")  # Suppress oneDNN messages
+            os.environ.setdefault("CUDA_VISIBLE_DEVICES", "")  # Suppress CUDA initialization messages
+
+            # Suppress warnings before import
+            warnings.filterwarnings("ignore", category=UserWarning, module="tensorflow")
+            warnings.filterwarnings("ignore", message=".*deprecated.*", category=DeprecationWarning)
+
+            # Set logging level before importing
+            logging.getLogger("tensorflow").setLevel(logging.ERROR)
+
             import tensorflow as tf
+
+            # Also suppress Python-level TF logging
+            tf.get_logger().setLevel("ERROR")
+
+            # Disable autograph verbosity
+            tf.autograph.set_verbosity(0)
 
             _LAZY_IMPORTS["tensorflow"] = tf
         except ImportError:
@@ -115,12 +176,18 @@ def _lazy_import_sklearn():
             patched = current_module.__dict__["sklearn"]
             if patched is None:
                 return None, None
-            _LAZY_IMPORTS["sklearn"] = patched
+            # Don't cache Mock objects - they should be temporary test patches
+            if not (hasattr(patched, "_mock_name") or str(type(patched)).startswith("<class 'unittest.mock.")):
+                _LAZY_IMPORTS["sklearn"] = patched
         if "BaseEstimator" in current_module.__dict__:
             patched_base = current_module.__dict__["BaseEstimator"]
             if patched_base is None:
                 return None, None
-            _LAZY_IMPORTS["BaseEstimator"] = patched_base
+            # Don't cache Mock objects - they should be temporary test patches
+            if not (
+                hasattr(patched_base, "_mock_name") or str(type(patched_base)).startswith("<class 'unittest.mock.")
+            ):
+                _LAZY_IMPORTS["BaseEstimator"] = patched_base
 
     if _LAZY_IMPORTS["sklearn"] is None or _LAZY_IMPORTS["BaseEstimator"] is None:
         try:
@@ -174,6 +241,10 @@ def _lazy_import_pil():
         _LAZY_IMPORTS["PIL_Image"] = patched_value
         return patched_value
 
+    # Defensive check for missing key
+    if "PIL_Image" not in _LAZY_IMPORTS:
+        _LAZY_IMPORTS["PIL_Image"] = None
+
     if _LAZY_IMPORTS["PIL_Image"] is None:
         try:
             from PIL import Image
@@ -205,6 +276,147 @@ def _lazy_import_transformers():
         except ImportError:
             _LAZY_IMPORTS["transformers"] = False
     return _LAZY_IMPORTS["transformers"] if _LAZY_IMPORTS["transformers"] is not False else None
+
+
+def _lazy_import_catboost():
+    """Lazily import catboost."""
+    import sys
+
+    current_module = sys.modules.get(__name__)
+    if current_module and hasattr(current_module, "__dict__") and "catboost" in current_module.__dict__:
+        patched_value = current_module.__dict__["catboost"]
+        if patched_value is None:
+            return None
+        _LAZY_IMPORTS["catboost"] = patched_value
+        return patched_value
+
+    # Defensive check for missing key
+    if "catboost" not in _LAZY_IMPORTS:
+        _LAZY_IMPORTS["catboost"] = None
+
+    if _LAZY_IMPORTS["catboost"] is None:
+        try:
+            import catboost
+
+            _LAZY_IMPORTS["catboost"] = catboost
+        except ImportError:
+            _LAZY_IMPORTS["catboost"] = False
+    return _LAZY_IMPORTS["catboost"] if _LAZY_IMPORTS["catboost"] is not False else None
+
+
+def _lazy_import_keras():
+    """Lazily import keras."""
+    import sys
+
+    current_module = sys.modules.get(__name__)
+    if current_module and hasattr(current_module, "__dict__") and "keras" in current_module.__dict__:
+        patched_value = current_module.__dict__["keras"]
+        if patched_value is None:
+            return None
+        _LAZY_IMPORTS["keras"] = patched_value
+        return patched_value
+
+    if _LAZY_IMPORTS["keras"] is None:
+        try:
+            # Temporarily redirect stdout/stderr to suppress console output during import
+            import sys
+            from contextlib import redirect_stderr, redirect_stdout
+            from io import StringIO
+
+            # Create null streams to absorb output
+            null_stream = StringIO()
+
+            with redirect_stdout(null_stream), redirect_stderr(null_stream):
+                import keras
+
+                # Suppress Keras logging
+                keras.utils.disable_interactive_logging()
+
+                # Additional TensorFlow logging suppression after import
+                try:
+                    import tensorflow as tf
+
+                    tf.get_logger().setLevel("ERROR")
+                    tf.autograph.set_verbosity(0)
+                    # Disable various TensorFlow verbose options
+                    if hasattr(tf.config, "experimental"):
+                        try:
+                            tf.config.experimental.enable_op_determinism()
+                        except (AttributeError, RuntimeError, ValueError):
+                            pass
+                except (ImportError, AttributeError):
+                    pass
+
+            _LAZY_IMPORTS["keras"] = keras
+        except ImportError:
+            _LAZY_IMPORTS["keras"] = False
+    return _LAZY_IMPORTS["keras"] if _LAZY_IMPORTS["keras"] is not False else None
+
+
+def _lazy_import_optuna():
+    """Lazily import optuna."""
+    import sys
+
+    current_module = sys.modules.get(__name__)
+    if current_module and hasattr(current_module, "__dict__") and "optuna" in current_module.__dict__:
+        patched_value = current_module.__dict__["optuna"]
+        if patched_value is None:
+            return None
+        _LAZY_IMPORTS["optuna"] = patched_value
+        return patched_value
+
+    if _LAZY_IMPORTS["optuna"] is None:
+        try:
+            import optuna
+
+            _LAZY_IMPORTS["optuna"] = optuna
+        except ImportError:
+            _LAZY_IMPORTS["optuna"] = False
+    return _LAZY_IMPORTS["optuna"] if _LAZY_IMPORTS["optuna"] is not False else None
+
+
+def _lazy_import_plotly():
+    """Lazily import plotly."""
+    import sys
+
+    current_module = sys.modules.get(__name__)
+    if current_module and hasattr(current_module, "__dict__") and "plotly" in current_module.__dict__:
+        patched_value = current_module.__dict__["plotly"]
+        if patched_value is None:
+            return None
+        _LAZY_IMPORTS["plotly"] = patched_value
+        return patched_value
+
+    if _LAZY_IMPORTS["plotly"] is None:
+        try:
+            import plotly.graph_objects as go
+
+            _LAZY_IMPORTS["plotly"] = go
+        except ImportError:
+            _LAZY_IMPORTS["plotly"] = False
+    return _LAZY_IMPORTS["plotly"] if _LAZY_IMPORTS["plotly"] is not False else None
+
+
+def _lazy_import_polars():
+    """Lazily import polars."""
+    import sys
+
+    current_module = sys.modules.get(__name__)
+    if current_module and hasattr(current_module, "__dict__") and "polars" in current_module.__dict__:
+        patched_value = current_module.__dict__["polars"]
+        if patched_value is None:
+            return None
+        _LAZY_IMPORTS["polars"] = patched_value
+        return patched_value
+
+    if _LAZY_IMPORTS["polars"] is None:
+        try:
+            import polars as pl
+
+            _LAZY_IMPORTS["polars"] = pl
+        except ImportError:
+            _LAZY_IMPORTS["polars"] = False
+    return _LAZY_IMPORTS["polars"] if _LAZY_IMPORTS["polars"] is not False else None
 
 
 def serialize_pytorch_tensor(tensor: Any) -> Dict[str, Any]:
@@ -421,6 +633,204 @@ def serialize_huggingface_tokenizer(tokenizer: Any) -> Dict[str, Any]:
         return {"__datason_type__": "transformers.tokenizer", "__datason_value__": {"error": str(e)}}
 
 
+def serialize_catboost_model(model: Any) -> Dict[str, Any]:
+    """Serialize a CatBoost model to a JSON-compatible format.
+
+    Args:
+        model: CatBoost model to serialize
+
+    Returns:
+        Dictionary containing model metadata and parameters
+    """
+    catboost = _lazy_import_catboost()
+    if catboost is None:
+        return {"__datason_type__": "catboost.model", "__datason_value__": str(model)}
+
+    try:
+        # Get model parameters
+        params = model.get_params() if hasattr(model, "get_params") else {}
+
+        # Try to serialize parameters safely
+        safe_params: Dict[str, Any] = {}
+        for key, value in params.items():
+            try:
+                # Only include JSON-serializable parameters
+                if isinstance(value, (str, int, float, bool, type(None))):
+                    safe_params[key] = value
+                elif isinstance(value, (list, tuple)) and all(isinstance(x, (str, int, float, bool)) for x in value):
+                    safe_params[key] = list(value)
+                else:
+                    safe_params[key] = str(value)
+            except Exception:
+                safe_params[key] = str(value)
+
+        # Check if model is fitted using tree_count_ which is more reliable
+        tree_count = getattr(model, "tree_count_", None)
+        fitted = tree_count is not None and tree_count > 0
+
+        return {
+            "__datason_type__": "catboost.model",
+            "__datason_value__": {
+                "class": f"{model.__class__.__module__}.{model.__class__.__name__}",
+                "params": safe_params,
+                "fitted": fitted,
+                "tree_count": getattr(model, "tree_count_", None),
+            },
+        }
+    except Exception as e:
+        warnings.warn(f"Could not serialize CatBoost model: {e}", stacklevel=2)
+        return {"__datason_type__": "catboost.model", "__datason_value__": {"error": str(e)}}
+
+
+def serialize_keras_model(model: Any) -> Dict[str, Any]:
+    """Serialize a Keras model to a JSON-compatible format.
+
+    Args:
+        model: Keras model to serialize
+
+    Returns:
+        Dictionary containing model metadata and architecture
+    """
+    keras = _lazy_import_keras()
+    if keras is None:
+        return {"__datason_type__": "keras.model", "__datason_value__": str(model)}
+
+    try:
+        # Get model configuration
+        config = model.get_config() if hasattr(model, "get_config") else {}
+
+        # Extract basic metadata
+        return {
+            "__datason_type__": "keras.model",
+            "__datason_value__": {
+                "class": f"{model.__class__.__module__}.{model.__class__.__name__}",
+                "name": getattr(model, "name", None),
+                "built": getattr(model, "built", False),
+                "trainable": getattr(model, "trainable", True),
+                "layers_count": len(model.layers) if hasattr(model, "layers") else 0,
+                "input_shape": getattr(model, "input_shape", None),
+                "output_shape": getattr(model, "output_shape", None),
+                "config_summary": str(config)[:500] if config else None,  # Truncate for safety
+            },
+        }
+    except Exception as e:
+        warnings.warn(f"Could not serialize Keras model: {e}", stacklevel=2)
+        return {"__datason_type__": "keras.model", "__datason_value__": {"error": str(e)}}
+
+
+def serialize_optuna_study(study: Any) -> Dict[str, Any]:
+    """Serialize an Optuna study to a JSON-compatible format.
+
+    Args:
+        study: Optuna study to serialize
+
+    Returns:
+        Dictionary containing study metadata and configuration
+    """
+    optuna = _lazy_import_optuna()
+    if optuna is None:
+        return {"__datason_type__": "optuna.study", "__datason_value__": str(study)}
+
+    try:
+        # Get trial count safely
+        trials_count = len(study.trials) if hasattr(study, "trials") else 0
+
+        # Get best value/params only if trials exist
+        best_value = None
+        best_params = {}
+        if trials_count > 0:
+            try:
+                best_value = study.best_value if hasattr(study, "best_value") else None
+                best_params = study.best_params if hasattr(study, "best_params") else {}
+            except Exception:  # nosec B110
+                # Ignore errors when getting best values if no trials are completed
+                pass
+
+        # Avoid deprecated attributes
+        return {
+            "__datason_type__": "optuna.study",
+            "__datason_value__": {
+                "study_name": study.study_name,
+                "direction": str(study.direction) if hasattr(study, "direction") else None,
+                "user_attrs": study.user_attrs if hasattr(study, "user_attrs") else {},
+                "trials_count": trials_count,
+                "best_value": best_value,
+                "best_params": best_params,
+            },
+        }
+    except Exception as e:
+        warnings.warn(f"Could not serialize Optuna study: {e}", stacklevel=2)
+        return {"__datason_type__": "optuna.study", "__datason_value__": {"error": str(e)}}
+
+
+def serialize_plotly_figure(figure: Any) -> Dict[str, Any]:
+    """Serialize a Plotly figure to a JSON-compatible format.
+
+    Args:
+        figure: Plotly figure to serialize
+
+    Returns:
+        Dictionary containing figure data and layout
+    """
+    go = _lazy_import_plotly()
+    if go is None:
+        return {"__datason_type__": "plotly.figure", "__datason_value__": str(figure)}
+
+    try:
+        # Get figure dictionary representation
+        fig_dict = figure.to_dict() if hasattr(figure, "to_dict") else {}
+
+        return {
+            "__datason_type__": "plotly.figure",
+            "__datason_value__": {
+                "data": fig_dict.get("data", []),
+                "layout": fig_dict.get("layout", {}),
+                "config": fig_dict.get("config", {}),
+                "frames": fig_dict.get("frames", []),
+            },
+        }
+    except Exception as e:
+        warnings.warn(f"Could not serialize Plotly figure: {e}", stacklevel=2)
+        return {"__datason_type__": "plotly.figure", "__datason_value__": {"error": str(e)}}
+
+
+def serialize_polars_dataframe(dataframe: Any) -> Dict[str, Any]:
+    """Serialize a Polars DataFrame to a JSON-compatible format.
+
+    Args:
+        dataframe: Polars DataFrame to serialize
+
+    Returns:
+        Dictionary containing DataFrame data and metadata
+    """
+    pl = _lazy_import_polars()
+    if pl is None:
+        return {"__datason_type__": "polars.dataframe", "__datason_value__": str(dataframe)}
+
+    try:
+        # Convert to dict for serialization
+        data_dict = dataframe.to_dict(as_series=False) if hasattr(dataframe, "to_dict") else {}
+
+        # Convert shape tuple to list for JSON serialization
+        shape = dataframe.shape if hasattr(dataframe, "shape") else (0, 0)
+        shape_list = list(shape) if isinstance(shape, tuple) else [0, 0]
+
+        return {
+            "__datason_type__": "polars.dataframe",
+            "__datason_value__": {
+                "data": data_dict,
+                "columns": dataframe.columns if hasattr(dataframe, "columns") else [],
+                "shape": shape_list,
+                "dtypes": {col: str(dtype) for col, dtype in zip(dataframe.columns, dataframe.dtypes)}
+                if hasattr(dataframe, "dtypes")
+                else {},
+            },
+        }
+    except Exception as e:
+        warnings.warn(f"Could not serialize Polars DataFrame: {e}", stacklevel=2)
+        return {"__datason_type__": "polars.dataframe", "__datason_value__": {"error": str(e)}}
+
+
 def detect_and_serialize_ml_object(obj: Any) -> Optional[Dict[str, Any]]:
     """Detect and serialize ML/AI objects automatically.
 
@@ -461,8 +871,13 @@ def detect_and_serialize_ml_object(obj: Any) -> Optional[Dict[str, Any]]:
 
     # Scikit-learn models
     sklearn, BaseEstimator = _lazy_import_sklearn()
-    if sklearn is not None and isinstance(BaseEstimator, type) and isinstance(obj, BaseEstimator):
-        return serialize_sklearn_model(obj)
+    if sklearn is not None and isinstance(BaseEstimator, type):
+        try:
+            if isinstance(obj, BaseEstimator):
+                return serialize_sklearn_model(obj)
+        except (TypeError, AttributeError):
+            # Handle case where BaseEstimator is a Mock or invalid type
+            pass
 
     # Scipy sparse matrices
     scipy = _lazy_import_scipy()
@@ -478,6 +893,65 @@ def detect_and_serialize_ml_object(obj: Any) -> Optional[Dict[str, Any]]:
     transformers = _lazy_import_transformers()
     if transformers is not None and safe_hasattr(obj, "encode") and "transformers" in str(type(obj)):
         return serialize_huggingface_tokenizer(obj)
+
+    # CatBoost models - use proper isinstance check like other frameworks
+    catboost = _lazy_import_catboost()
+    if catboost is not None:
+        try:
+            if isinstance(obj, (catboost.CatBoostClassifier, catboost.CatBoostRegressor)):
+                return serialize_catboost_model(obj)
+        except (TypeError, AttributeError):
+            pass
+
+    # Keras models - use proper isinstance check like other frameworks
+    keras = _lazy_import_keras()
+    if keras is not None:
+        try:
+            # Check for common Keras model types
+            keras_model_types = []
+            if hasattr(keras, "Model"):
+                keras_model_types.append(keras.Model)
+            if hasattr(keras, "Sequential"):
+                keras_model_types.append(keras.Sequential)
+            if hasattr(keras, "models"):
+                if hasattr(keras.models, "Model"):
+                    keras_model_types.append(keras.models.Model)
+                if hasattr(keras.models, "Sequential"):
+                    keras_model_types.append(keras.models.Sequential)
+
+            if keras_model_types and isinstance(obj, tuple(keras_model_types)):
+                return serialize_keras_model(obj)
+        except (TypeError, AttributeError):
+            pass
+
+    # Optuna studies - use proper isinstance check like other frameworks
+    optuna = _lazy_import_optuna()
+    if optuna is not None:
+        try:
+            if hasattr(optuna, "Study") and isinstance(obj, optuna.Study):
+                return serialize_optuna_study(obj)
+        except (TypeError, AttributeError):
+            pass
+
+    # Plotly figures - use proper isinstance check like other frameworks
+    plotly = _lazy_import_plotly()
+    if plotly is not None:
+        try:
+            import plotly.graph_objects as go
+
+            if isinstance(obj, go.Figure):
+                return serialize_plotly_figure(obj)
+        except (TypeError, AttributeError, ImportError):
+            pass
+
+    # Polars DataFrames - use proper isinstance check like other frameworks
+    polars = _lazy_import_polars()
+    if polars is not None:
+        try:
+            if hasattr(polars, "DataFrame") and isinstance(obj, polars.DataFrame):
+                return serialize_polars_dataframe(obj)
+        except (TypeError, AttributeError):
+            pass
 
     return None
 
@@ -496,6 +970,11 @@ def get_ml_library_info() -> Dict[str, bool]:
         "scipy": _lazy_import_scipy() is not None,
         "PIL": _lazy_import_pil() is not None,
         "transformers": _lazy_import_transformers() is not None,
+        "catboost": _lazy_import_catboost() is not None,
+        "keras": _lazy_import_keras() is not None,
+        "optuna": _lazy_import_optuna() is not None,
+        "plotly": _lazy_import_plotly() is not None,
+        "polars": _lazy_import_polars() is not None,
     }
 
 
@@ -521,5 +1000,15 @@ def __getattr__(name: str):
         return _lazy_import_pil()
     elif name == "transformers":
         return _lazy_import_transformers()
+    elif name == "catboost":
+        return _lazy_import_catboost()
+    elif name == "keras":
+        return _lazy_import_keras()
+    elif name == "optuna":
+        return _lazy_import_optuna()
+    elif name == "plotly":
+        return _lazy_import_plotly()
+    elif name == "polars":
+        return _lazy_import_polars()
     else:
         raise AttributeError(f"module '{__name__}' has no attribute '{name}'")

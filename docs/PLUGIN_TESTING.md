@@ -114,28 +114,28 @@ pip install -e .
 pip install pytest pytest-cov
 
 # Run core tests only
-pytest tests/core/ -v
+pytest tests/unit/ -v
 ```
 
 ### Test With Specific Dependencies
 ```bash
 # Test with numpy
 pip install numpy
-pytest tests/core/ tests/features/test_ml_serializers.py -v
+pytest tests/unit/ tests/integration/test_ml_serializers.py -v
 
 # Test with pandas
 pip install pandas  
-pytest tests/core/ tests/features/test_auto_detection_and_metadata.py tests/features/test_chunked_streaming.py tests/features/test_template_deserialization.py -v
+pytest tests/unit/ tests/integration/test_auto_detection_and_metadata.py tests/integration/test_chunked_streaming.py tests/integration/test_template_deserializer.py -v
 
 # Test ML features
 pip install numpy pandas scikit-learn
-pytest tests/core/ tests/features/ tests/integration/test_optional_dependencies.py -v
+pytest tests/unit/ tests/integration/ -v
 ```
 
 ### Test Full Suite
 ```bash
 pip install -e ".[dev]"
-pytest tests/core/ tests/features/ tests/integration/ tests/coverage/ -v
+pytest tests/unit/ tests/edge_cases/ tests/integration/ -v
 ```
 
 ### Test Performance (Separate)
@@ -150,11 +150,11 @@ Each CI job tests a specific scenario:
 
 | Job | Dependencies | Tests Run | Purpose |
 |-----|-------------|-----------|---------|
-| `minimal` | None | tests/core/ | Verify zero-dependency functionality |
-| `with-numpy` | numpy | tests/core/ + ML features | Basic array support |
-| `with-pandas` | pandas | tests/core/ + data features | DataFrame support |
-| `with-ml-deps` | numpy, pandas, sklearn | tests/core/ + tests/features/ + integration | ML model serialization |
-| `full` | All deps | tests/core/ + tests/features/ + tests/integration/ + tests/coverage/ | Complete functional testing |
+| `minimal` | None | tests/unit/ | Verify zero-dependency functionality |
+| `with-numpy` | numpy | tests/unit/ + ML features | Basic array support |
+| `with-pandas` | pandas | tests/unit/ + data features | DataFrame support |
+| `with-ml-deps` | numpy, pandas, sklearn | tests/unit/ + tests/integration/ | ML model serialization |
+| `full` | All deps | tests/unit/ + tests/edge_cases/ + tests/integration/ | Complete functional testing |
 | `performance` | All deps | tests/benchmarks/ (separate pipeline) | Performance regression tracking |
 
 ## 🔧 Adding New Optional Features

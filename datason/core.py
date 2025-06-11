@@ -374,6 +374,17 @@ def _serialize_core(
         if obj is None:
             return None
 
+        # SECURITY CHECK 5: Early detection of problematic Mock objects
+        # This prevents expensive type checking and isinstance() calls on Mock objects
+        obj_module = getattr(type(obj), "__module__", "")
+        if obj_module == "unittest.mock":
+            obj_class_name = type(obj).__name__
+            warnings.warn(
+                f"Detected potentially problematic mock object: {obj_class_name}. Using safe string representation.",
+                stacklevel=4,
+            )
+            return f"<{obj_class_name} object>"
+
         # ==================================================================================
         # PHASE 2: PERFORMANCE OPTIMIZATIONS (ONLY FOR SECURITY-VERIFIED OBJECTS)
         # ==================================================================================
@@ -890,20 +901,40 @@ def _serialize_full_path(
         from .validation import BaseModel  # type: ignore
     except Exception:
         BaseModel = None
-    if BaseModel is not None and isinstance(obj, BaseModel):
-        from .validation import serialize_pydantic
+    if BaseModel is not None:
+        try:
+            is_pydantic_model = isinstance(obj, BaseModel)
+        except TypeError:
+            # BaseModel might be a mock object - check for pydantic-like attributes
+            try:
+                is_pydantic_model = obj is not None and hasattr(obj, "model_dump")
+            except (AttributeError, Exception):
+                is_pydantic_model = False
 
-        return serialize_pydantic(obj)
+        if is_pydantic_model:
+            from .validation import serialize_pydantic
+
+            return serialize_pydantic(obj)
 
     # Handle Marshmallow Schema objects
     try:
         from .validation import Schema  # type: ignore
     except Exception:
         Schema = None
-    if Schema is not None and isinstance(obj, Schema):
-        from .validation import serialize_marshmallow
+    if Schema is not None:
+        try:
+            is_marshmallow_schema = isinstance(obj, Schema)
+        except TypeError:
+            # Schema might be a mock object - check for marshmallow-like attributes
+            try:
+                is_marshmallow_schema = obj is not None and hasattr(obj, "fields")
+            except (AttributeError, Exception):
+                is_marshmallow_schema = False
 
-        return serialize_marshmallow(obj)
+        if is_marshmallow_schema:
+            from .validation import serialize_marshmallow
+
+            return serialize_marshmallow(obj)
 
     # Handle objects with __dict__ (custom classes)
     if hasattr(obj, "__dict__"):

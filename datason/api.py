@@ -433,7 +433,9 @@ def loads(s: str, **kwargs: Any) -> Any:
     import json
 
     data = json.loads(s)
-    return load_smart(data, **kwargs)
+    # For json.loads compatibility, use load_basic instead of load_smart
+    # to avoid auto-detection which can create NumPy arrays
+    return load_basic(data, **kwargs)
 
 
 def dumps(obj: Any, **kwargs: Any) -> str:

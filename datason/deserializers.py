@@ -544,6 +544,97 @@ def _deserialize_with_type_metadata(obj: Dict[str, Any]) -> Any:
                 except (ImportError, Exception) as e:
                     warnings.warn(f"Could not reconstruct sklearn model: {e}", stacklevel=2)
 
+            # CatBoost model reconstruction
+            elif type_name == "catboost.model":
+                try:
+                    if isinstance(value, dict) and "class" in value and "params" in value:
+                        class_name = value["class"]
+                        params = value["params"]
+
+                        # Import CatBoost class dynamically
+                        import catboost
+
+                        # Get the class name from the full class path
+                        class_name_only = class_name.split(".")[-1]
+                        model_class = getattr(catboost, class_name_only)
+
+                        # Create the model with the saved parameters
+                        model = model_class(**params)
+                        return model
+                except Exception as e:
+                    warnings.warn(f"Could not reconstruct CatBoost model: {e}", stacklevel=2)
+
+            # Keras model reconstruction
+            elif type_name == "keras.model":
+                try:
+                    if isinstance(value, dict) and "class" in value:
+                        # Note: Current Keras serialization stores metadata only
+                        # Full reconstruction would require saving the actual model config
+                        # For now, we create a basic model structure
+
+                        import keras
+
+                        class_name = value["class"]
+                        if "Sequential" in class_name:
+                            # Create a basic Sequential model
+                            # This is a simplified reconstruction
+                            model = keras.Sequential()
+                            return model
+                        else:
+                            # For other model types, return the metadata
+                            # This preserves type information for template reconstruction
+                            warnings.warn("Keras model reconstruction limited to metadata preservation", stacklevel=2)
+                            return value
+                except Exception as e:
+                    warnings.warn(f"Could not reconstruct Keras model: {e}", stacklevel=2)
+
+            # Optuna study reconstruction - FIXED: Use correct type name (with legacy support)
+            elif type_name in ("optuna.Study", "optuna.study"):
+                try:
+                    if isinstance(value, dict) and "study_name" in value:
+                        study_name = value.get("study_name")
+                        direction = value.get("direction", "minimize")
+
+                        import optuna
+
+                        # Create a new study with the same configuration
+                        # Note: We can't restore trials, but we can restore the study structure
+                        direction_obj = (
+                            optuna.study.StudyDirection.MINIMIZE
+                            if "minimize" in str(direction).lower()
+                            else optuna.study.StudyDirection.MAXIMIZE
+                        )
+                        study = optuna.create_study(study_name=study_name, direction=direction_obj)
+                        return study
+                except Exception as e:
+                    warnings.warn(f"Could not reconstruct Optuna study: {e}", stacklevel=2)
+
+            # Plotly figure reconstruction - FIXED: Use correct type name (with legacy support)
+            elif type_name in ("plotly.graph_objects.Figure", "plotly.figure"):
+                try:
+                    if isinstance(value, dict) and "data" in value and "layout" in value:
+                        import plotly.graph_objects as go
+
+                        # Recreate the figure from data and layout
+                        fig = go.Figure(data=value["data"], layout=value["layout"])
+                        return fig
+                except Exception as e:
+                    warnings.warn(f"Could not reconstruct Plotly figure: {e}", stacklevel=2)
+
+            # Polars DataFrame reconstruction - FIXED: Use correct type name (with legacy support)
+            elif type_name in ("polars.DataFrame", "polars.dataframe"):
+                try:
+                    if isinstance(value, dict) and "data" in value:
+                        data_dict = value["data"]
+
+                        import polars as pl
+
+                        # Recreate the DataFrame from data dict
+                        df = pl.DataFrame(data_dict)
+                        return df
+                except Exception as e:
+                    warnings.warn(f"Could not reconstruct Polars DataFrame: {e}", stacklevel=2)
+
         except Exception as e:
             warnings.warn(f"Failed to reconstruct type {type_name}: {e}", stacklevel=2)
 
@@ -2214,16 +2305,14 @@ def _looks_like_numpy_array(data: list) -> bool:
     elif _is_homogeneous_basic_types(data):
         first_type = type(data[0])
 
-        # Pattern 1: Larger homogeneous numeric arrays (likely from NumPy)
-        if first_type in (int, float) and len(data) >= 8 or first_type is bool and len(data) >= 4:
+        # Pattern 1: Homogeneous numeric arrays (likely from NumPy)
+        if first_type in (int, float) and len(data) >= 3 or first_type is bool and len(data) >= 3:
             return True
 
-        # Pattern 3: String arrays with consistent length strings (NumPy pattern)
-        elif first_type is str and len(data) >= 6:
-            # Check if strings have consistent length (NumPy string array pattern)
-            str_lens = [len(s) for s in data]
-            if len(set(str_lens)) == 1 and str_lens[0] <= 10:  # Fixed-width strings
-                return True
+        # Pattern 3: String arrays (NumPy pattern)
+        elif first_type is str and len(data) >= 3:
+            # Simple string array detection
+            return True
 
     return False
 

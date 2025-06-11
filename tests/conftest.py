@@ -1,76 +1,165 @@
 """
-Test configuration for datason plugin architecture.
+Global test configuration for comprehensive test isolation and state management.
 
-This module defines pytest markers to categorize tests based on dependency requirements.
+This module ensures proper test isolation by clearing all caches and resetting
+state between tests to prevent interference in CI environments.
 """
-
-import importlib.util
-from typing import Any
 
 import pytest
 
-# Dependency availability flags
 
-# Check for numpy
-HAS_NUMPY = importlib.util.find_spec("numpy") is not None
+@pytest.fixture(autouse=True, scope="function")
+def ensure_clean_test_state():
+    """
+    Ensure complete test isolation by clearing all caches and resetting state.
 
-# Check for pandas
-HAS_PANDAS = importlib.util.find_spec("pandas") is not None
+    This fixture runs automatically before and after every test to prevent:
+    - Cache contamination between tests
+    - ML import state persistence
+    - Configuration state leakage
+    - Global variable interference
+    """
+    # Clear all state before test
+    _clear_all_datason_state()
 
-# Check for scikit-learn
-HAS_SKLEARN = importlib.util.find_spec("sklearn") is not None
+    yield
 
-# Check for PyTorch
-HAS_TORCH = importlib.util.find_spec("torch") is not None
-
-# Check for TensorFlow
-HAS_TENSORFLOW = importlib.util.find_spec("tensorflow") is not None
-
-# Check for JAX
-HAS_JAX = importlib.util.find_spec("jax") is not None
-
-# Check for PIL
-HAS_PIL = importlib.util.find_spec("PIL") is not None
-
-# Check for transformers
-HAS_TRANSFORMERS = importlib.util.find_spec("transformers") is not None
-
-try:
-    from PIL import Image  # noqa: F401
-
-    HAS_PIL = True
-except ImportError:
-    HAS_PIL = False
+    # Clear all state after test
+    _clear_all_datason_state()
 
 
-def pytest_configure(config: Any) -> None:
-    """Register custom markers for dependency-based test categorization."""
-    config.addinivalue_line("markers", "core: Core functionality tests (no optional dependencies required)")
-    config.addinivalue_line("markers", "numpy: Tests requiring numpy")
-    config.addinivalue_line("markers", "pandas: Tests requiring pandas")
-    config.addinivalue_line("markers", "sklearn: Tests requiring scikit-learn")
-    config.addinivalue_line("markers", "ml: Tests requiring ML dependencies (torch, tensorflow, etc.)")
-    config.addinivalue_line("markers", "optional: Tests for optional dependency functionality")
-    config.addinivalue_line("markers", "fallback: Tests for fallback behavior when dependencies are missing")
-    config.addinivalue_line("markers", "intensive: Memory/CPU intensive tests (skipped in CI environments)")
+def _clear_all_datason_state():
+    """Clear all possible datason state and caches."""
+    try:
+        import datason
+
+        # Clear all caches using the comprehensive clear function
+        datason.clear_all_caches()
+
+        # Additional cleanup for ML state - PROPERLY reinitialize lazy imports
+        try:
+            from datason import ml_serializers
+
+            # Don't just clear - reinitialize with the proper structure!
+            if hasattr(ml_serializers, "_LAZY_IMPORTS"):
+                ml_serializers._LAZY_IMPORTS.clear()
+                # Reinitialize with ALL the required keys that are actually used in the code
+                ml_serializers._LAZY_IMPORTS.update(
+                    {
+                        "torch": None,
+                        "tensorflow": None,
+                        "jax": None,
+                        "jnp": None,  # JAX numpy alias
+                        "sklearn": None,
+                        "BaseEstimator": None,  # sklearn base estimator class
+                        "scipy": None,
+                        "PIL_Image": None,  # This was the missing key causing the KeyError!
+                        "PIL": None,
+                        "transformers": None,
+                        "catboost": None,
+                        "keras": None,
+                        "optuna": None,
+                        "plotly": None,
+                        "polars": None,
+                        "pandas": None,
+                        "numpy": None,
+                    }
+                )
+        except ImportError:
+            pass
+
+        # Reset global configuration state
+        try:
+            from datason.config import SerializationConfig
+
+            datason.set_default_config(SerializationConfig())
+        except (ImportError, AttributeError):
+            pass
+
+        # Ensure ML serializer is properly restored
+        try:
+            import datason.core
+            from datason.ml_serializers import detect_and_serialize_ml_object
+
+            datason.core._ml_serializer = detect_and_serialize_ml_object
+        except (ImportError, AttributeError):
+            # If ML serializers are not available, set to None
+            try:
+                import datason.core
+
+                datason.core._ml_serializer = None
+            except ImportError:
+                pass
+
+    except ImportError:
+        # datason not available, nothing to clear
+        pass
 
 
-# Convenience skip decorators
-requires_numpy = pytest.mark.skipif(not HAS_NUMPY, reason="numpy not available")
-requires_pandas = pytest.mark.skipif(not HAS_PANDAS, reason="pandas not available")
-requires_sklearn = pytest.mark.skipif(not HAS_SKLEARN, reason="sklearn not available")
-requires_torch = pytest.mark.skipif(not HAS_TORCH, reason="torch not available")
-requires_tensorflow = pytest.mark.skipif(not HAS_TENSORFLOW, reason="tensorflow not available")
-requires_jax = pytest.mark.skipif(not HAS_JAX, reason="jax not available")
-requires_pil = pytest.mark.skipif(not HAS_PIL, reason="PIL not available")
-requires_transformers = pytest.mark.skipif(not HAS_TRANSFORMERS, reason="transformers not available")
+@pytest.fixture
+def ml_config():
+    """Provide a fresh ML configuration for ML-specific tests."""
+    try:
+        from datason.config import get_ml_config
 
-# Combined requirements
-requires_ml_basic = pytest.mark.skipif(
-    not (HAS_NUMPY and HAS_SKLEARN),
-    reason="Basic ML dependencies (numpy, sklearn) not available",
-)
-requires_data_science = pytest.mark.skipif(
-    not (HAS_NUMPY and HAS_PANDAS),
-    reason="Data science dependencies (numpy, pandas) not available",
-)
+        return get_ml_config()
+    except ImportError:
+        # Fallback if config module is not available
+        return None
+
+
+@pytest.fixture(scope="function")
+def isolated_test_environment():
+    """Provide completely isolated test environment for critical tests."""
+    # Pre-test cleanup
+    _clear_all_datason_state()
+
+    yield
+
+    # Post-test cleanup
+    _clear_all_datason_state()
+
+
+@pytest.fixture(autouse=True, scope="session")
+def configure_test_environment():
+    """Configure the test environment for optimal CI performance."""
+    try:
+        import os
+
+        # Set environment variables for reduced ML library verbosity
+        os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "3")  # TensorFlow
+        os.environ.setdefault("TF_ENABLE_ONEDNN_OPTS", "0")
+        os.environ.setdefault("CUDA_VISIBLE_DEVICES", "")  # Disable CUDA
+
+        # Suppress Keras logging
+        os.environ.setdefault("TF_KERAS_LOG_LEVEL", "ERROR")
+
+        # Try to configure Keras logging directly
+        try:
+            import tensorflow as tf
+
+            tf.get_logger().setLevel("ERROR")
+            tf.autograph.set_verbosity(0)
+        except ImportError:
+            pass
+
+        try:
+            import keras
+
+            keras.utils.disable_interactive_logging()
+        except (ImportError, AttributeError):
+            pass
+
+        # Suppress warnings
+        import warnings
+
+        warnings.filterwarnings("ignore", category=DeprecationWarning)
+        warnings.filterwarnings("ignore", category=FutureWarning)
+        warnings.filterwarnings("ignore", category=UserWarning, module="tensorflow")
+        warnings.filterwarnings("ignore", category=UserWarning, module="torch")
+        warnings.filterwarnings("ignore", category=UserWarning, module="keras")
+
+    except ImportError:
+        pass
+
+    yield
