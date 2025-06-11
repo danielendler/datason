@@ -7,11 +7,8 @@ import warnings
 from unittest.mock import patch
 
 import numpy as np
+import pytest
 import scipy.sparse
-import torch
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.linear_model import LinearRegression, LogisticRegression
-from sklearn.tree import DecisionTreeClassifier
 
 import datason
 from datason.ml_serializers import (
@@ -25,10 +22,28 @@ from datason.ml_serializers import (
     serialize_sklearn_model,
 )
 
+# Conditional imports to avoid PyTorch corruption
+try:
+    import torch
+
+    HAS_TORCH = True
+except ImportError:
+    HAS_TORCH = False
+
+try:
+    from sklearn.ensemble import RandomForestClassifier
+    from sklearn.linear_model import LinearRegression, LogisticRegression
+    from sklearn.tree import DecisionTreeClassifier
+
+    HAS_SKLEARN = True
+except ImportError:
+    HAS_SKLEARN = False
+
 
 class TestPyTorchSerializationWithRealLibrary:
     """Test PyTorch serialization using real library."""
 
+    @pytest.mark.skipif(not HAS_TORCH, reason="PyTorch not available")
     def test_serialize_basic_tensor(self):
         """Test basic tensor serialization."""
         tensor = torch.tensor([1.0, 2.0, 3.0])
