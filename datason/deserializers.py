@@ -561,7 +561,7 @@ def _deserialize_with_type_metadata(obj: Dict[str, Any]) -> Any:
                         # Create the model with the saved parameters
                         model = model_class(**params)
                         return model
-                except (ImportError, AttributeError) as e:
+                except Exception as e:
                     warnings.warn(f"Could not reconstruct CatBoost model: {e}", stacklevel=2)
 
             # Keras model reconstruction
@@ -585,11 +585,11 @@ def _deserialize_with_type_metadata(obj: Dict[str, Any]) -> Any:
                             # This preserves type information for template reconstruction
                             warnings.warn("Keras model reconstruction limited to metadata preservation", stacklevel=2)
                             return value
-                except (ImportError, AttributeError) as e:
+                except Exception as e:
                     warnings.warn(f"Could not reconstruct Keras model: {e}", stacklevel=2)
 
-            # Optuna study reconstruction
-            elif type_name == "optuna.study":
+            # Optuna study reconstruction - FIXED: Use correct type name (with legacy support)
+            elif type_name in ("optuna.Study", "optuna.study"):
                 try:
                     if isinstance(value, dict) and "study_name" in value:
                         study_name = value.get("study_name")
@@ -606,11 +606,11 @@ def _deserialize_with_type_metadata(obj: Dict[str, Any]) -> Any:
                         )
                         study = optuna.create_study(study_name=study_name, direction=direction_obj)
                         return study
-                except (ImportError, AttributeError) as e:
+                except Exception as e:
                     warnings.warn(f"Could not reconstruct Optuna study: {e}", stacklevel=2)
 
-            # Plotly figure reconstruction
-            elif type_name == "plotly.figure":
+            # Plotly figure reconstruction - FIXED: Use correct type name (with legacy support)
+            elif type_name in ("plotly.graph_objects.Figure", "plotly.figure"):
                 try:
                     if isinstance(value, dict) and "data" in value and "layout" in value:
                         import plotly.graph_objects as go
@@ -618,11 +618,11 @@ def _deserialize_with_type_metadata(obj: Dict[str, Any]) -> Any:
                         # Recreate the figure from data and layout
                         fig = go.Figure(data=value["data"], layout=value["layout"])
                         return fig
-                except (ImportError, AttributeError) as e:
+                except Exception as e:
                     warnings.warn(f"Could not reconstruct Plotly figure: {e}", stacklevel=2)
 
-            # Polars DataFrame reconstruction
-            elif type_name == "polars.dataframe":
+            # Polars DataFrame reconstruction - FIXED: Use correct type name (with legacy support)
+            elif type_name in ("polars.DataFrame", "polars.dataframe"):
                 try:
                     if isinstance(value, dict) and "data" in value:
                         data_dict = value["data"]
@@ -632,7 +632,7 @@ def _deserialize_with_type_metadata(obj: Dict[str, Any]) -> Any:
                         # Recreate the DataFrame from data dict
                         df = pl.DataFrame(data_dict)
                         return df
-                except (ImportError, AttributeError) as e:
+                except Exception as e:
                     warnings.warn(f"Could not reconstruct Polars DataFrame: {e}", stacklevel=2)
 
         except Exception as e:

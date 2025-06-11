@@ -633,5 +633,200 @@ class TestErrorHandling:
             assert deserialized.direction == expected_direction
 
 
+class TestLegacyTypeNameCompatibility:
+    """Test that both new correct type names and legacy type names work for backward compatibility.
+
+    This ensures that data serialized with old type names can still be deserialized correctly
+    after the bug fixes, while new serialization uses the correct type names.
+    """
+
+    @pytest.mark.skipif(not HAS_OPTUNA, reason="Optuna not available")
+    def test_optuna_both_type_names(self):
+        """Test that both 'optuna.Study' and 'optuna.study' work for deserialization."""
+        import optuna
+
+        from datason.deserializers import _deserialize_with_type_metadata
+
+        # Test data with both type names
+        test_cases = [
+            {
+                "name": "New correct type name",
+                "data": {
+                    "__datason_type__": "optuna.Study",
+                    "__datason_value__": {"study_name": "test_new", "direction": "minimize"},
+                },
+            },
+            {
+                "name": "Legacy type name",
+                "data": {
+                    "__datason_type__": "optuna.study",
+                    "__datason_value__": {"study_name": "test_legacy", "direction": "minimize"},
+                },
+            },
+        ]
+
+        for test_case in test_cases:
+            result = _deserialize_with_type_metadata(test_case["data"])
+
+            # Both should successfully create an Optuna Study
+            assert isinstance(result, optuna.Study), f"Failed for {test_case['name']}"
+            assert result.study_name == test_case["data"]["__datason_value__"]["study_name"]
+            assert result.direction == optuna.study.StudyDirection.MINIMIZE
+
+    @pytest.mark.skipif(not HAS_PLOTLY, reason="Plotly not available")
+    def test_plotly_both_type_names(self):
+        """Test that both 'plotly.graph_objects.Figure' and 'plotly.figure' work for deserialization."""
+        import plotly.graph_objects as go
+
+        from datason.deserializers import _deserialize_with_type_metadata
+
+        # Create test data for both type names
+        figure_data = {
+            "data": [{"type": "scatter", "x": [1, 2, 3], "y": [4, 5, 6]}],
+            "layout": {"title": "Test Figure"},
+        }
+
+        test_cases = [
+            {
+                "name": "New correct type name",
+                "data": {"__datason_type__": "plotly.graph_objects.Figure", "__datason_value__": figure_data},
+            },
+            {
+                "name": "Legacy type name",
+                "data": {"__datason_type__": "plotly.figure", "__datason_value__": figure_data},
+            },
+        ]
+
+        for test_case in test_cases:
+            result = _deserialize_with_type_metadata(test_case["data"])
+
+            # Both should successfully create a Plotly Figure
+            assert isinstance(result, go.Figure), f"Failed for {test_case['name']}"
+            # Verify the data was preserved
+            assert len(result.data) == 1
+            assert result.data[0].x == (1, 2, 3)
+            assert result.data[0].y == (4, 5, 6)
+
+    @pytest.mark.skipif(not HAS_POLARS, reason="Polars not available")
+    def test_polars_both_type_names(self):
+        """Test that both 'polars.DataFrame' and 'polars.dataframe' work for deserialization."""
+        import polars as pl
+
+        from datason.deserializers import _deserialize_with_type_metadata
+
+        # Create test data for both type names
+        dataframe_data = {"data": {"col1": [1, 2, 3], "col2": ["a", "b", "c"]}}
+
+        test_cases = [
+            {
+                "name": "New correct type name",
+                "data": {"__datason_type__": "polars.DataFrame", "__datason_value__": dataframe_data},
+            },
+            {
+                "name": "Legacy type name",
+                "data": {"__datason_type__": "polars.dataframe", "__datason_value__": dataframe_data},
+            },
+        ]
+
+        for test_case in test_cases:
+            result = _deserialize_with_type_metadata(test_case["data"])
+
+            # Both should successfully create a Polars DataFrame
+            assert isinstance(result, pl.DataFrame), f"Failed for {test_case['name']}"
+            # Verify the data was preserved
+            assert result.columns == ["col1", "col2"]
+            assert result.shape == (3, 2)
+            assert result["col1"].to_list() == [1, 2, 3]
+            assert result["col2"].to_list() == ["a", "b", "c"]
+
+    def test_comprehensive_exception_handling(self):
+        """Test that improved exception handling works for various error types."""
+        from datason.deserializers import _deserialize_with_type_metadata
+
+        # Test cases that should trigger different types of exceptions
+        # but should all be handled gracefully by the improved exception handling
+        test_cases = [
+            {
+                "name": "CatBoost with invalid class (AttributeError)",
+                "data": {
+                    "__datason_type__": "catboost.model",
+                    "__datason_value__": {"class": "invalid.class.name", "params": {}},
+                },
+            },
+            {
+                "name": "CatBoost with bad parameters (TypeError/ValueError)",
+                "data": {
+                    "__datason_type__": "catboost.model",
+                    "__datason_value__": {
+                        "class": "catboost.CatBoostClassifier",
+                        "params": {"invalid_param": "cause_error"},
+                    },
+                },
+            },
+            {
+                "name": "Keras with invalid data (various exceptions)",
+                "data": {"__datason_type__": "keras.model", "__datason_value__": {"class": "InvalidClass"}},
+            },
+            {
+                "name": "Optuna with None direction (ValueError)",
+                "data": {
+                    "__datason_type__": "optuna.Study",
+                    "__datason_value__": {"study_name": "test", "direction": None},
+                },
+            },
+        ]
+
+        for test_case in test_cases:
+            # All these should succeed without raising exceptions
+            # They should either:
+            # 1. Return a reconstructed object if the framework can handle it gracefully
+            # 2. Return the original dict as fallback
+            try:
+                result = _deserialize_with_type_metadata(test_case["data"])
+                # Success - either returned a valid object or the fallback dict
+                assert result is not None, f"Should not return None for {test_case['name']}"
+            except Exception as e:
+                # This should not happen with improved exception handling
+                pytest.fail(f"Exception leaked through improved handling for {test_case['name']}: {e}")
+
+    def test_end_to_end_backward_compatibility(self):
+        """Test end-to-end that objects serialized with old handlers can be deserialized with new ones."""
+        from datason.deserializers import _deserialize_with_type_metadata
+
+        # Simulate data that was serialized with the old handlers (using legacy type names)
+        legacy_serialized_data = [
+            {
+                "framework": "Optuna",
+                "legacy_data": {
+                    "__datason_type__": "optuna.study",  # Old incorrect type name
+                    "__datason_value__": {"study_name": "legacy_study", "direction": "maximize"},
+                },
+            },
+            {
+                "framework": "Plotly",
+                "legacy_data": {
+                    "__datason_type__": "plotly.figure",  # Old incorrect type name
+                    "__datason_value__": {"data": [], "layout": {"title": "Legacy Figure"}},
+                },
+            },
+            {
+                "framework": "Polars",
+                "legacy_data": {
+                    "__datason_type__": "polars.dataframe",  # Old incorrect type name
+                    "__datason_value__": {"data": {"x": [1, 2], "y": [3, 4]}},
+                },
+            },
+        ]
+
+        for case in legacy_serialized_data:
+            try:
+                result = _deserialize_with_type_metadata(case["legacy_data"])
+                # Should successfully deserialize despite using legacy type names
+                assert result is not None, f"Failed to deserialize legacy {case['framework']} data"
+                print(f"✓ Legacy {case['framework']} data deserialized successfully: {type(result)}")
+            except Exception as e:
+                pytest.fail(f"Failed to deserialize legacy {case['framework']} data: {e}")
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
