@@ -76,6 +76,21 @@ def _clear_all_datason_state():
         except (ImportError, AttributeError):
             pass
 
+        # Ensure ML serializer is properly restored
+        try:
+            import datason.core
+            from datason.ml_serializers import detect_and_serialize_ml_object
+
+            datason.core._ml_serializer = detect_and_serialize_ml_object
+        except (ImportError, AttributeError):
+            # If ML serializers are not available, set to None
+            try:
+                import datason.core
+
+                datason.core._ml_serializer = None
+            except ImportError:
+                pass
+
     except ImportError:
         # datason not available, nothing to clear
         pass
