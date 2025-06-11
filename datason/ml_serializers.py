@@ -894,30 +894,64 @@ def detect_and_serialize_ml_object(obj: Any) -> Optional[Dict[str, Any]]:
     if transformers is not None and safe_hasattr(obj, "encode") and "transformers" in str(type(obj)):
         return serialize_huggingface_tokenizer(obj)
 
-    # CatBoost models - check by string type to avoid import issues
-    obj_type_str = str(type(obj))
-    if ("catboost" in obj_type_str or "_catboost" in obj_type_str) and safe_hasattr(obj, "get_params"):
-        return serialize_catboost_model(obj)
+    # CatBoost models - use proper isinstance check like other frameworks
+    catboost = _lazy_import_catboost()
+    if catboost is not None:
+        try:
+            if isinstance(obj, (catboost.CatBoostClassifier, catboost.CatBoostRegressor)):
+                return serialize_catboost_model(obj)
+        except (TypeError, AttributeError):
+            pass
 
-    # Keras models - check by string type to avoid import issues
-    obj_type_str = str(type(obj))
-    if ("keras" in obj_type_str or "tensorflow.python.keras" in obj_type_str) and safe_hasattr(obj, "layers"):
-        return serialize_keras_model(obj)
+    # Keras models - use proper isinstance check like other frameworks
+    keras = _lazy_import_keras()
+    if keras is not None:
+        try:
+            # Check for common Keras model types
+            keras_model_types = []
+            if hasattr(keras, "Model"):
+                keras_model_types.append(keras.Model)
+            if hasattr(keras, "Sequential"):
+                keras_model_types.append(keras.Sequential)
+            if hasattr(keras, "models"):
+                if hasattr(keras.models, "Model"):
+                    keras_model_types.append(keras.models.Model)
+                if hasattr(keras.models, "Sequential"):
+                    keras_model_types.append(keras.models.Sequential)
 
-    # Optuna studies - check by string type to avoid import issues
-    obj_type_str = str(type(obj))
-    if "optuna" in obj_type_str and safe_hasattr(obj, "study_name"):
-        return serialize_optuna_study(obj)
+            if keras_model_types and isinstance(obj, tuple(keras_model_types)):
+                return serialize_keras_model(obj)
+        except (TypeError, AttributeError):
+            pass
 
-    # Plotly figures - check by string type to avoid import issues
-    obj_type_str = str(type(obj))
-    if "plotly" in obj_type_str and safe_hasattr(obj, "to_dict"):
-        return serialize_plotly_figure(obj)
+    # Optuna studies - use proper isinstance check like other frameworks
+    optuna = _lazy_import_optuna()
+    if optuna is not None:
+        try:
+            if hasattr(optuna, "Study") and isinstance(obj, optuna.Study):
+                return serialize_optuna_study(obj)
+        except (TypeError, AttributeError):
+            pass
 
-    # Polars DataFrames - check by string type to avoid import issues
-    obj_type_str = str(type(obj))
-    if "polars" in obj_type_str and safe_hasattr(obj, "to_dict"):
-        return serialize_polars_dataframe(obj)
+    # Plotly figures - use proper isinstance check like other frameworks
+    plotly = _lazy_import_plotly()
+    if plotly is not None:
+        try:
+            import plotly.graph_objects as go
+
+            if isinstance(obj, go.Figure):
+                return serialize_plotly_figure(obj)
+        except (TypeError, AttributeError, ImportError):
+            pass
+
+    # Polars DataFrames - use proper isinstance check like other frameworks
+    polars = _lazy_import_polars()
+    if polars is not None:
+        try:
+            if hasattr(polars, "DataFrame") and isinstance(obj, polars.DataFrame):
+                return serialize_polars_dataframe(obj)
+        except (TypeError, AttributeError):
+            pass
 
     return None
 
