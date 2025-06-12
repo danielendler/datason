@@ -141,6 +141,10 @@ nav:
     - Chunked Processing: features/chunked-processing/index.md
     - Template Deserialization: features/template-deserialization/index.md
     - ML/AI Integration: features/ml-ai/index.md
+    - Model Serving Integration:
+      - Overview: features/model-serving/index.md
+      - Architecture Overview: features/model-serving/architecture-overview.md
+      - Production Patterns: features/model-serving/production-patterns.md
     - Pandas Integration: features/pandas/index.md
     - Pickle Bridge: features/pickle-bridge/index.md
     - Performance: features/performance/index.md

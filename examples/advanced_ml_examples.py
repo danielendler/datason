@@ -12,9 +12,43 @@ from datetime import datetime
 import datason as ds
 
 
+def simple_pytorch_workflow():
+    """Demonstrate the simple ML API with PyTorch - just use dump_ml()!"""
+    print("=== Simple PyTorch ML API ===")
+
+    try:
+        import torch
+
+        # Simulate training results
+        pytorch_results = {
+            "model_name": "ResNet-50",
+            "training_accuracy": 0.95,
+            "loss_history": [0.8, 0.5, 0.3, 0.2, 0.15],
+            "weights": torch.randn(100, 50),  # Sample weights tensor
+            "bias": torch.randn(50),  # Sample bias tensor
+            "hyperparameters": {
+                "learning_rate": 0.001,
+                "batch_size": 32,
+                "epochs": 100,
+            },
+            "device_info": "cuda" if torch.cuda.is_available() else "cpu",
+        }
+
+        # Simple ML API - automatic PyTorch handling!
+        ml_serialized = ds.dump_ml(pytorch_results)
+        print("✅ ML-optimized serialization with dump_ml():")
+        print(json.dumps(ml_serialized, indent=2))
+        print("🎯 PyTorch tensors automatically converted!")
+        return ml_serialized
+
+    except ImportError:
+        print("⚠️  PyTorch not available - skipping PyTorch simple API demo")
+        return {}
+
+
 def demonstrate_pytorch_workflow() -> None:
     """Demonstrate PyTorch tensor serialization in a realistic ML workflow."""
-    print("🔥 PyTorch ML Workflow")
+    print("🔥 PyTorch ML Workflow (Traditional API)")
     print("=" * 50)
 
     try:
@@ -541,6 +575,9 @@ def main() -> None:
     print("=" * 70)
     print("Demonstrating datason's capabilities with real-world ML workflows")
     print()
+
+    simple_pytorch_workflow()
+    print("\n" + "─" * 70 + "\n")
 
     demonstrate_pytorch_workflow()
     print("\n" + "─" * 70 + "\n")
