@@ -226,4 +226,4 @@ result2 = datason.auto_deserialize(data2, config=API_CONFIG)
 - **[API Integration Guide](../features/api-integration.md)** - Framework-specific integration patterns
 - **[Core Functions](core-functions.md)** - Using configurations with serialize/deserialize
 - **[Modern API](modern-api.md)** - Compare with intention-revealing approach
-- **[Examples](../../examples/)** - Real-world integration examples
+- **[Examples](../user-guide/examples/index.md)** - Real-world integration examples

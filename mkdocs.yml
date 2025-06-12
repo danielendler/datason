@@ -134,6 +134,7 @@ nav:
   # Features Section (using existing feature docs)
   - Features:
     - Overview: features/index.md
+    - API Integration: features/api-integration.md
     - Core Serialization: features/core/index.md
     - Configuration: features/configuration/index.md
     - Advanced Types: features/advanced-types/index.md
@@ -196,6 +197,7 @@ nav:
   - Community & Development:
     - Contributing Guide: community/contributing.md
     - Release Notes: community/changelog.md
+    - Full Changelog: CHANGELOG.md
     - Roadmap: community/roadmap.md
     - Security Policy: community/security.md
 
