@@ -462,16 +462,16 @@ processed_users = datason.auto_deserialize(large_dataset, config=api_config)
 
 ## 📚 Related Documentation
 
-- [Configuration System](../configuration/) - Complete configuration reference
-- [Type Handling](../advanced-types/) - How datason handles different Python types
-- [Performance Guide](../performance/) - Optimization strategies
-- [Security Guide](../../SECURITY.md) - Security considerations for web APIs
+- [Configuration System](configuration/index.md) - Complete configuration reference
+- [Type Handling](advanced-types/index.md) - How datason handles different Python types
+- [Performance Guide](performance/index.md) - Optimization strategies
+- [Security Guide](../SECURITY.md) - Security considerations for web APIs
 
 ## 💡 Need Help?
 
 - **FastAPI specific questions**: Check our [FastAPI examples](../../examples/)
 - **Django integration**: See [Django integration patterns](../../examples/)
-- **Performance optimization**: Review [Performance Guide](../performance/)
-- **Custom configurations**: See [Configuration System](../configuration/)
+- **Performance optimization**: Review [Performance Guide](performance/index.md)
+- **Custom configurations**: See [Configuration System](configuration/index.md)
 
 The UUID/Pydantic compatibility issue is now solved! 🎉 Use `get_api_config()` for instant compatibility with modern Python web frameworks.
