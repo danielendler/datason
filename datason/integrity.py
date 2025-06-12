@@ -18,8 +18,11 @@ def _apply_redaction(obj: Any, config: dict[str, Any]) -> Any:
     """Apply redaction to an object using :class:`RedactionEngine`."""
     try:
         from .redaction import RedactionEngine
-    except ImportError as exc:  # pragma: no cover - redaction always available
-        raise RuntimeError("Redaction module unavailable") from exc
+    except ImportError as exc:
+        raise RuntimeError(
+            "Redaction module is not available. Install datason with redaction support "
+            "or use integrity functions without the 'redact' parameter."
+        ) from exc
 
     engine = RedactionEngine(
         redact_fields=config.get("fields"),
@@ -39,6 +42,17 @@ def canonicalize(obj: Any, *, redact: dict[str, Any] | None = None) -> str:
     If ``redact`` is provided, redaction is applied before serialization.
     The output uses sorted keys and compact separators to ensure stable
     ordering for hashing.
+
+    Args:
+        obj: Object to canonicalize
+        redact: Optional redaction configuration. If provided but redaction
+               module is not available, raises RuntimeError.
+
+    Returns:
+        Canonical JSON string representation
+
+    Raises:
+        RuntimeError: If redact is specified but redaction module is unavailable
     """
     if redact:
         obj = _apply_redaction(obj, redact)
@@ -47,12 +61,20 @@ def canonicalize(obj: Any, *, redact: dict[str, Any] | None = None) -> str:
     return json.dumps(serialized, sort_keys=True, separators=(",", ":"))
 
 
-def hash_object(
-    obj: Any, *, redact: dict[str, Any] | None = None, hash_algo: str = "sha256"
-) -> str:
+def hash_object(obj: Any, *, redact: dict[str, Any] | None = None, hash_algo: str = "sha256") -> str:
     """Compute a deterministic hash of ``obj``.
 
-    Redaction is applied if ``redact`` is given.
+    Args:
+        obj: Object to hash
+        redact: Optional redaction configuration. If provided but redaction
+               module is not available, raises RuntimeError.
+        hash_algo: Hash algorithm to use (default: sha256)
+
+    Returns:
+        Hexadecimal hash string
+
+    Raises:
+        RuntimeError: If redact is specified but redaction module is unavailable
     """
     canon = canonicalize(obj, redact=redact)
     h = hashlib.new(hash_algo)
@@ -75,7 +97,21 @@ def verify_object(
     redact: dict[str, Any] | None = None,
     hash_algo: str = "sha256",
 ) -> bool:
-    """Verify that ``obj`` hashes to ``expected_hash``."""
+    """Verify that ``obj`` hashes to ``expected_hash``.
+
+    Args:
+        obj: Object to verify
+        expected_hash: Expected hash value
+        redact: Optional redaction configuration. If provided but redaction
+               module is not available, raises RuntimeError.
+        hash_algo: Hash algorithm to use (default: sha256)
+
+    Returns:
+        True if hash matches, False otherwise
+
+    Raises:
+        RuntimeError: If redact is specified but redaction module is unavailable
+    """
     actual = hash_object(obj, redact=redact, hash_algo=hash_algo)
     return actual == expected_hash
 
@@ -86,10 +122,21 @@ def verify_json(json_data: Any, expected_hash: str, hash_algo: str = "sha256") -
     return actual == expected_hash
 
 
-def hash_and_redact(
-    obj: Any, *, redact: dict[str, Any] | None = None, hash_algo: str = "sha256"
-) -> tuple[Any, str]:
-    """Redact ``obj``, hash the result, and return ``(redacted_obj, hash)``."""
+def hash_and_redact(obj: Any, *, redact: dict[str, Any] | None = None, hash_algo: str = "sha256") -> tuple[Any, str]:
+    """Redact ``obj``, hash the result, and return ``(redacted_obj, hash)``.
+
+    Args:
+        obj: Object to redact and hash
+        redact: Redaction configuration. If None, no redaction is applied.
+               If provided but redaction module is not available, raises RuntimeError.
+        hash_algo: Hash algorithm to use (default: sha256)
+
+    Returns:
+        Tuple of (redacted_object, hash_string)
+
+    Raises:
+        RuntimeError: If redact is specified but redaction module is unavailable
+    """
     redacted = _apply_redaction(obj, redact or {}) if redact else obj
     hash_val = hash_object(redacted, hash_algo=hash_algo)
     return redacted, hash_val
@@ -105,6 +152,20 @@ def sign_object(
 
     The signature is returned as base64-encoded text. This function lazily
     imports :mod:`cryptography` so the package is only required when used.
+
+    Args:
+        obj: Object to sign
+        private_key_pem: Ed25519 private key in PEM format
+        redact: Optional redaction configuration. If provided but redaction
+               module is not available, raises RuntimeError.
+
+    Returns:
+        Base64-encoded signature string
+
+    Raises:
+        RuntimeError: If cryptography package is not available or if redact
+                     is specified but redaction module is unavailable
+        TypeError: If key is not an Ed25519 private key
     """
 
     try:  # Lazy import
@@ -116,9 +177,7 @@ def sign_object(
         raise RuntimeError("cryptography is required for signing") from exc
 
     canon = canonicalize(obj, redact=redact)
-    private_key = serialization.load_pem_private_key(
-        private_key_pem.encode("utf-8"), password=None
-    )
+    private_key = serialization.load_pem_private_key(private_key_pem.encode("utf-8"), password=None)
     if not isinstance(private_key, Ed25519PrivateKey):
         raise TypeError("Only Ed25519 keys are supported for signing")
 
@@ -133,7 +192,23 @@ def verify_signature(
     *,
     redact: dict[str, Any] | None = None,
 ) -> bool:
-    """Verify ``signature`` for ``obj`` using the given Ed25519 public key."""
+    """Verify ``signature`` for ``obj`` using the given Ed25519 public key.
+
+    Args:
+        obj: Object to verify signature for
+        signature: Base64-encoded signature to verify
+        public_key_pem: Ed25519 public key in PEM format
+        redact: Optional redaction configuration. If provided but redaction
+               module is not available, raises RuntimeError.
+
+    Returns:
+        True if signature is valid, False otherwise
+
+    Raises:
+        RuntimeError: If cryptography package is not available or if redact
+                     is specified but redaction module is unavailable
+        TypeError: If key is not an Ed25519 public key
+    """
 
     try:  # Lazy import
         from cryptography.hazmat.primitives import serialization
@@ -153,4 +228,3 @@ def verify_signature(
         return True
     except Exception:  # pragma: no cover - verification failure path
         return False
-
