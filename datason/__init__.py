@@ -58,6 +58,7 @@ from .core import (
     stream_serialize,
 )
 from .data_utils import convert_string_method_votes
+from .file_io import load, save
 from .datetime_utils import (
     convert_pandas_timestamps,
     ensure_dates,
@@ -225,6 +226,8 @@ __all__ = [  # noqa: RUF022
     "dump_fast",
     "dump_chunked",
     "stream_dump",
+    "save",
+    "load",
     "load_basic",
     "load_smart",
     "load_perfect",
