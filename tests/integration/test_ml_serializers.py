@@ -462,7 +462,7 @@ class TestMLSerializersErrorHandling:
         assert result["__datason_type__"] == "sklearn.model"
         assert "error" in result["__datason_value__"]
         assert len(w) == 1
-        assert "Could not serialize sklearn model" in str(w[0].message)
+        assert "Could not serialize sklearn model due to an internal error" in str(w[0].message)
 
     @pytest.mark.skipif(not HAS_SCIPY, reason="scipy not available")
     def test_scipy_sparse_serialization_error_handling(self) -> None:

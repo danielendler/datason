@@ -233,7 +233,12 @@ def create_fastapi_production_service():
             "timestamp": datetime.now(),
             "models": {model_id: model.get_health_status() for model_id, model in models.items()},
         }
-        return datason.serialize(health_status, config=serving_config.api_config)
+        try:
+            return datason.serialize(health_status, config=serving_config.api_config)
+        except Exception:
+            # Don't expose internal error details to external users
+            logger.error("Failed to serialize health status due to an internal error.")
+            return {"status": "error", "message": "An internal error occurred while processing the request."}
 
     @app.post("/predict")
     async def predict(request: PredictionRequest):
@@ -283,7 +288,12 @@ def create_fastapi_production_service():
             for model_id, model in models.items()
         }
 
-        return datason.serialize(model_info, config=serving_config.api_config)
+        try:
+            return datason.serialize(model_info, config=serving_config.api_config)
+        except Exception:
+            # Don't expose internal error details to external users
+            logger.error("Failed to serialize model info due to an internal error.")
+            return {"status": "error", "message": "An internal error occurred while processing the request."}
 
     @app.get("/metrics")
     async def get_metrics():

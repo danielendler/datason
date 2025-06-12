@@ -293,8 +293,13 @@ class DatasonAPIView(View):
 
     def json_response(self, data, status=200):
         """Create JSON response with datason processing."""
-        processed_data = self.process_response_data(data)
-        return JsonResponse(processed_data, status=status, safe=False)
+        try:
+            processed_data = self.process_response_data(data)
+            return JsonResponse(processed_data, status=status, safe=False)
+        except Exception:
+            # Don't expose internal error details to external users
+            error_response = {"error": "An internal error occurred while processing the request."}
+            return JsonResponse(error_response, status=500, safe=False)
 
 
 class UserListAPIView(DatasonAPIView):
@@ -484,13 +489,18 @@ if HAS_DRF:
             user_data = [user.to_datason() for user in users]
             processed_data = datason.serialize(user_data, config=self.get_datason_config())
 
-            return Response(
-                {
-                    "users": processed_data,
-                    "count": len(processed_data),
-                    "exported_at": datetime.now(timezone.utc).isoformat(),
-                }
-            )
+            try:
+                return Response(
+                    {
+                        "users": processed_data,
+                        "count": len(processed_data),
+                        "exported_at": datetime.now(timezone.utc).isoformat(),
+                    }
+                )
+            except Exception:
+                # Don't expose internal error details to external users
+                error_response = {"error": "An internal error occurred while processing the request."}
+                return Response(error_response, status=500)
 
 # =============================================================================
 # DJANGO FORMS WITH DATASON INTEGRATION
