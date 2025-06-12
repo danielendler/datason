@@ -335,7 +335,11 @@ class UserListAPIView(DatasonAPIView):
         except json.JSONDecodeError:
             return self.json_response({"error": "Invalid JSON"}, status=400)
         except Exception as e:
-            return self.json_response({"error": str(e)}, status=400)
+            # Log the error internally for debugging, but don't expose details to users
+            import logging
+
+            logging.error("An error occurred while creating user: %s", e, exc_info=True)
+            return self.json_response({"error": "An internal error occurred while processing the request."}, status=400)
 
 
 class UserDetailAPIView(DatasonAPIView):
@@ -375,7 +379,11 @@ class UserDetailAPIView(DatasonAPIView):
         except json.JSONDecodeError:
             return self.json_response({"error": "Invalid JSON"}, status=400)
         except Exception as e:
-            return self.json_response({"error": str(e)}, status=400)
+            # Log the error internally for debugging, but don't expose details to users
+            import logging
+
+            logging.error("An error occurred while updating user: %s", e, exc_info=True)
+            return self.json_response({"error": "An internal error occurred while processing the request."}, status=400)
 
 
 class OrganizationAPIView(DatasonAPIView):
