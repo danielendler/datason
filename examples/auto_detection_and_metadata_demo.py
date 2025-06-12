@@ -5,6 +5,7 @@ This example demonstrates the advanced features of datason's auto-detection
 deserialization and type metadata support for perfect round-trip serialization.
 
 Features demonstrated:
+- Simple & Direct API for progressive loading
 - Auto-detection deserialization with intelligent type recognition
 - Type metadata for perfect round-trip serialization
 - Aggressive mode for DataFrame/Series detection
@@ -20,8 +21,52 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+import datason as ds
 from datason import auto_deserialize, deserialize, serialize
 from datason.config import SerializationConfig
+
+
+def demo_simple_progressive_loading():
+    """Demonstrate the simple & direct API for progressive loading."""
+    print("=== Simple & Direct API for Progressive Loading ===")
+
+    # Sample data with mixed types
+    test_data = {
+        "user_id": "12345678-1234-5678-9012-123456789abc",
+        "timestamp": "2023-12-25T10:30:00",
+        "score": "95.5",
+        "active": "true",
+        "metadata": {"version": "1.0", "source": "api"},
+    }
+
+    print("Original data (all strings from JSON):")
+    for key, value in test_data.items():
+        print(f"  {key}: {value} ({type(value).__name__})")
+
+    print("\n🚀 Progressive Loading with Simple API:")
+
+    # 1. Basic loading (60-70% success)
+    print("\n1️⃣ load_basic() - Quick exploration (60-70% success):")
+    basic_result = ds.load_basic(test_data)
+    print("   Results:")
+    for key, value in basic_result.items():
+        print(f"     {key}: {value} ({type(value).__name__})")
+
+    # 2. Smart loading (80-90% success)
+    print("\n2️⃣ load_smart() - Production ready (80-90% success):")
+    smart_result = ds.load_smart(test_data)
+    print("   Results:")
+    for key, value in smart_result.items():
+        print(f"     {key}: {value} ({type(value).__name__})")
+
+    print("\n✅ Smart loading automatically detected:")
+    print("   • UUID strings → UUID objects")
+    print("   • ISO datetime strings → datetime objects")
+    print("   • Numeric strings → numbers")
+    print("   • Boolean strings → booleans")
+    print()
+
+    return test_data
 
 
 def create_complex_test_data():
@@ -563,6 +608,7 @@ def main():
     print("=" * 60)
     print()
 
+    demo_simple_progressive_loading()
     demo_basic_auto_detection()
     demo_aggressive_mode()
     demo_type_metadata_round_trip()

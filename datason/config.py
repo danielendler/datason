@@ -112,6 +112,10 @@ class SerializationConfig:
     date_format: DateFormat = DateFormat.ISO
     custom_date_format: Optional[str] = None
 
+    # NEW: UUID handling configuration (addressing FastAPI/Pydantic integration feedback)
+    uuid_format: str = "object"  # "object" (uuid.UUID) or "string" (str)
+    parse_uuids: bool = True  # Whether to auto-convert UUID strings to UUID objects
+
     # DataFrame formatting
     dataframe_orient: DataFrameOrient = DataFrameOrient.RECORDS
 
@@ -223,6 +227,9 @@ def get_api_config() -> SerializationConfig:
         preserve_complex=True,
         sort_keys=True,
         ensure_ascii=True,  # Safe for all HTTP clients
+        # NEW: Keep UUIDs as strings for API compatibility (Pydantic/FastAPI)
+        uuid_format="string",
+        parse_uuids=False,
     )
 
 
