@@ -150,6 +150,18 @@ from .cache_manager import (
     request_scope,  # noqa: F401
     reset_cache_metrics,  # noqa: F401
 )
+
+# Integrity utilities (always available)
+from .integrity import (  # noqa: F401
+    canonicalize,
+    hash_and_redact,
+    hash_json,
+    hash_object,
+    sign_object,
+    verify_json,
+    verify_object,
+    verify_signature,
+)
 from .validation import serialize_marshmallow, serialize_pydantic  # noqa: F401
 
 
@@ -281,6 +293,20 @@ if _config_available:
             "get_object_info",
         ]
     )
+
+# Integrity utilities always available
+__all__.extend(
+    [
+        "canonicalize",
+        "hash_and_redact",
+        "hash_json",
+        "hash_object",
+        "sign_object",
+        "verify_json",
+        "verify_object",
+        "verify_signature",
+    ]
+)
 
 # Add ML serializers to __all__ if available
 if _ml_available:

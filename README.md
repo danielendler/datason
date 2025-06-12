@@ -26,6 +26,7 @@ datason transforms complex Python objects into JSON-serializable formats and bac
 - 🎯 **Simple & Direct API**: Intention-revealing functions (`dump_api`, `dump_ml`, `dump_secure`, `dump_fast`) with automatic optimization
 - 📈 **Progressive Loading**: Choose your success rate - `load_basic` (60-70%), `load_smart` (80-90%), `load_perfect` (100%)
 - 🏗️ **Production Ready**: Enterprise-grade ML serving with monitoring, A/B testing, and security
+- 📝 **Integrity Verification**: Hash, sign, and verify objects for compliance workflows
 
 ## 🤖 ML Framework Support
 
