@@ -138,6 +138,46 @@ python examples/ai_ml_examples.py
 python examples/advanced_ml_examples.py
 ```
 
+### [`bentoml_integration_guide.py`](bentoml_integration_guide.py)
+
+**BentoML service using datason for request/response serialization.**
+
+```bash
+python examples/bentoml_integration_guide.py
+```
+
+### [`ray_serve_integration_guide.py`](ray_serve_integration_guide.py)
+
+**Ray Serve deployment with datason serialization.**
+
+```bash
+python examples/ray_serve_integration_guide.py
+```
+
+### [`streamlit_gradio_integration.py`](streamlit_gradio_integration.py)
+
+**UI demo for Streamlit and Gradio using datason.**
+
+```bash
+python examples/streamlit_gradio_integration.py
+```
+
+### [`mlflow_artifact_tracking.py`](mlflow_artifact_tracking.py)
+
+**Log datason artifacts to MLflow.**
+
+```bash
+python examples/mlflow_artifact_tracking.py
+```
+
+### [`seldon_kserve_integration.py`](seldon_kserve_integration.py)
+
+**Seldon Core / KServe model wrapper using datason.**
+
+```bash
+python examples/seldon_kserve_integration.py
+```
+
 **Features:**
 - Model checkpointing
 - Large tensor handling
@@ -281,8 +321,15 @@ python examples/django_integration_guide.py
 # Basic ML integration
 python examples/ai_ml_examples.py
 
-# Advanced ML workflows  
+# Advanced ML workflows
 python examples/advanced_ml_examples.py
+
+# Model serving examples
+python examples/bentoml_integration_guide.py
+python examples/ray_serve_integration_guide.py
+python examples/streamlit_gradio_integration.py
+python examples/mlflow_artifact_tracking.py
+python examples/seldon_kserve_integration.py
 ```
 
 ### 🔒 **Security & Production**
@@ -323,6 +370,11 @@ python examples/advanced_serialization_demo.py
 - [ ] Run `ai_ml_examples.py` for library support
 - [ ] Review `advanced_ml_examples.py` for workflows
 - [ ] Choose between `get_ml_config()` and `get_api_config()` based on needs
+- [ ] Try `bentoml_integration_guide.py` for BentoML services
+- [ ] Use `ray_serve_integration_guide.py` for Ray Serve deployments
+- [ ] Explore `streamlit_gradio_integration.py` for UI demos
+- [ ] Log experiments with `mlflow_artifact_tracking.py`
+- [ ] Wrap models using `seldon_kserve_integration.py`
 
 ---
 
