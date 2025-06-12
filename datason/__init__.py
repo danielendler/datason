@@ -39,11 +39,20 @@ from .api import (
     get_api_info,
     help_api,
     load_basic,
+    # NEW: File I/O operations integrated with modern API
+    load_basic_file,
     load_perfect,
+    load_perfect_file,
     load_smart,
+    load_smart_file,
     load_typed,
     loads,
+    save_api,
+    save_chunked,
+    save_ml,
+    save_secure,
     stream_dump,
+    stream_save_ml,
     suppress_deprecation_warnings,
 )
 from .converters import safe_float, safe_int
@@ -58,7 +67,8 @@ from .core import (
     stream_serialize,
 )
 from .data_utils import convert_string_method_votes
-from .file_io import load, save
+
+# Removed simple file_io - now using modern API with file operations
 from .datetime_utils import (
     convert_pandas_timestamps,
     ensure_dates,
@@ -226,8 +236,16 @@ __all__ = [  # noqa: RUF022
     "dump_fast",
     "dump_chunked",
     "stream_dump",
-    "save",
-    "load",
+    # File I/O Operations - Modern API Integration
+    "save_ml",
+    "save_secure",
+    "save_api",
+    "save_chunked",
+    "load_smart_file",
+    "load_perfect_file",
+    "load_basic_file",
+    "stream_save_ml",
+    # Progressive Loading
     "load_basic",
     "load_smart",
     "load_perfect",
