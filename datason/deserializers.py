@@ -719,12 +719,13 @@ def _auto_detect_string_type(s: str, aggressive: bool = False, config: Optional[
             import re
             from datetime import datetime as datetime_class  # Fresh import
 
-            # Validate ISO 8601 format before parsing to prevent CodeQL false positive
-            # This also provides additional security by validating input format
+            # Validate ISO 8601 format BEFORE any operations to prevent CodeQL false positive
+            # This provides security by validating input format before processing
             iso8601_pattern = r"^\d{4}-\d{2}-\d{2}(?:T| )\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?$"
-            normalized_input = s.replace("Z", "+00:00")
 
             if re.match(iso8601_pattern, s):
+                # Only perform operations AFTER validation
+                normalized_input = s.replace("Z", "+00:00")
                 return datetime_class.fromisoformat(normalized_input)  # Now safe from CodeQL false positive
         except (ValueError, ImportError, re.error):
             pass
