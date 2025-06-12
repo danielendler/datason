@@ -207,7 +207,35 @@ nav:
     - GitHub Pages Setup: GITHUB_PAGES_SETUP.md
     - Dependabot Guide: DEPENDABOT_GUIDE.md
 
+    - Documentation Fix Summary: DOCUMENTATION_FIX_SUMMARY.md
+    - Documentation Restructure Summary: DOCUMENTATION_RESTRUCTURE_SUMMARY.md
+    - Integration Feedback Analysis: INTEGRATION_FEEDBACK_ANALYSIS.md
+    - Pipeline Audit: PIPELINE_AUDIT.md
+    - Release Workflows: RELEASE_WORKFLOWS.md
+    - Roadmap Discussion: ROADMAP_DISCUSSION.md
+    - Roadmap Updated: ROADMAP_UPDATED.md
+    - Deserialization Details: features/deserialization.md
+    - Pydantic/Marshmallow Integration: features/pydantic-marshmallow-integration.md
+    - API Modernization: migration/api-modernization.md
 # Extra
+  - Internal Notes:
+    - Caching Guide: internal-notes/CACHING_GUIDE.md
+    - Consolidation Completed: internal-notes/CONSOLIDATION_COMPLETED.md
+    - Coverage Analysis Strategy: internal-notes/COVERAGE_ANALYSIS_STRATEGY.md
+    - Coverage Strategy Results: internal-notes/COVERAGE_STRATEGY_RESULTS.md
+    - Deserializer Optimization: internal-notes/DESERIALIZER_OPTIMIZATION_SUMMARY.md
+    - Enhanced Type Plan: internal-notes/ENHANCED_TYPE_PLAN.md
+    - Final Consolidation Plan: internal-notes/FINAL_CONSOLIDATION_PLAN.md
+    - Legacy Cleanup Implementation: internal-notes/LEGACY_CLEANUP_IMPLEMENTATION.md
+    - Module-based Consolidation: internal-notes/MODULE_BASED_CONSOLIDATION.md
+    - Phase 3 Implementation Summary: internal-notes/PHASE_3_IMPLEMENTATION_SUMMARY.md
+    - Progress Summary: internal-notes/PROGRESS_SUMMARY.md
+    - Proper Test Reorganization: internal-notes/PROPER_TEST_REORGANIZATION.md
+    - Proper Test Structure: internal-notes/PROPER_TEST_STRUCTURE.md
+    - PR Description Performance: internal-notes/PR_DESCRIPTION_PERFORMANCE.md
+    - Roadmap Analysis & Legacy Cleanup: internal-notes/ROADMAP_ANALYSIS_AND_LEGACY_CLEANUP.md
+    - Test Cleanup Plan: internal-notes/TEST_CLEANUP_PLAN.md
+    - Test Cleanup Summary: internal-notes/TEST_CLEANUP_SUMMARY.md
 extra:
   version:
     provider: mike
