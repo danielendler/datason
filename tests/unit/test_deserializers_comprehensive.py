@@ -611,6 +611,14 @@ class TestUtilityFunctions:
         # Should handle gracefully - may return None, dict, or the original string
         assert result is None or isinstance(result, (dict, str))
 
+        # Test new allow_pickle parameter
+        json_str_safe = '{"datetime": "2023-01-01T12:00:00"}'
+        result = deserializers.safe_deserialize(json_str_safe, allow_pickle=False)
+        assert isinstance(result, dict)
+
+        result = deserializers.safe_deserialize(json_str_safe, allow_pickle=True)
+        assert isinstance(result, dict)
+
     def test_restore_pandas_types(self):
         """Test _restore_pandas_types function."""
         data = {"test": "value", "number": 42}
@@ -661,6 +669,175 @@ class TestTemplateUtilityFunctions:
 
         template = deserializers.create_ml_round_trip_template(mock_ml_object)
         assert isinstance(template, dict)
+
+
+class TestSecurityFeatures:
+    """Test security-related features and enhancements."""
+
+    def test_contains_pickle_data_detection(self):
+        """Test _contains_pickle_data function correctly detects pickle data."""
+        # Test sklearn data with pickle format (string)
+        sklearn_pickle_str = {
+            "__datason_type__": "sklearn.linear_model.LogisticRegression",
+            "__datason_value__": "base64_encoded_pickle_data_here",
+        }
+        assert deserializers._contains_pickle_data(sklearn_pickle_str) is True
+
+        # Test sklearn data with pickle format (dict with _pickle_data)
+        sklearn_pickle_dict = {
+            "__datason_type__": "sklearn.ensemble.RandomForestClassifier",
+            "__datason_value__": {"_pickle_data": "base64_encoded_pickle_data"},
+        }
+        assert deserializers._contains_pickle_data(sklearn_pickle_dict) is True
+
+        # Test non-pickle data
+        safe_data = {"__datason_type__": "datetime", "__datason_value__": "2023-01-01T12:00:00"}
+        assert deserializers._contains_pickle_data(safe_data) is False
+
+        # Test nested data structures
+        nested_with_pickle = {"data": [{"safe": "value"}, sklearn_pickle_str]}
+        assert deserializers._contains_pickle_data(nested_with_pickle) is True
+
+        # Test completely safe data
+        safe_nested = {"data": [{"safe": "value"}, {"also": "safe"}], "config": {"setting": "value"}}
+        assert deserializers._contains_pickle_data(safe_nested) is False
+
+    def test_safe_deserialize_default_security(self):
+        """Test safe_deserialize rejects pickle data by default."""
+        import json
+
+        # Test safe data works normally
+        safe_data = {"datetime": "2023-01-01T12:00:00", "number": 42}
+        json_str = json.dumps(safe_data)
+        result = deserializers.safe_deserialize(json_str)
+        assert isinstance(result, dict)
+        assert result["number"] == 42
+
+        # Test sklearn pickle data is rejected by default
+        unsafe_data = {
+            "__datason_type__": "sklearn.linear_model.LogisticRegression",
+            "__datason_value__": "unsafe_pickle_data",
+        }
+        unsafe_json = json.dumps(unsafe_data)
+
+        with pytest.raises(deserializers.DeserializationSecurityError) as exc_info:
+            deserializers.safe_deserialize(unsafe_json)
+
+        assert "pickle-serialized objects" in str(exc_info.value)
+        assert "unsafe to deserialize" in str(exc_info.value)
+
+    def test_safe_deserialize_allow_pickle_override(self):
+        """Test safe_deserialize allows pickle when allow_pickle=True."""
+        import json
+
+        # Test that allow_pickle=True bypasses security check
+        unsafe_data = {
+            "__datason_type__": "sklearn.linear_model.LogisticRegression",
+            "__datason_value__": "pickle_data_here",
+        }
+        unsafe_json = json.dumps(unsafe_data)
+
+        # This should work without raising an exception
+        # (though it will likely warn about deserialization failure)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            result = deserializers.safe_deserialize(unsafe_json, allow_pickle=True)
+            # Should return something (either reconstructed object or fallback)
+            assert result is not None
+
+    def test_pickle_deserialization_warnings(self):
+        """Test that pickle deserialization shows appropriate warnings."""
+        # Create mock sklearn data with legacy pickle format
+        sklearn_data = {
+            "__datason_type__": "sklearn.linear_model.LogisticRegression",
+            "__datason_value__": "fake_base64_pickle_data",
+        }
+
+        # Capture warnings during deserialization
+        with warnings.catch_warnings(record=True) as warning_list:
+            warnings.simplefilter("always")
+
+            # This should trigger warnings about unsafe pickle deserialization
+            deserializers._deserialize_with_type_metadata(sklearn_data)
+
+            # Check if any security warnings were issued
+            security_warnings = [
+                w for w in warning_list if "unsafe" in str(w.message).lower() and "pickle" in str(w.message).lower()
+            ]
+
+            # We expect at least one security warning about pickle deserialization
+            assert len(security_warnings) >= 1, (
+                f"Expected security warning, got: {[str(w.message) for w in warning_list]}"
+            )
+
+    def test_datetime_parsing_security_fix(self):
+        """Test that datetime parsing works correctly (path injection false positive fix)."""
+        # Test that datetime strings are parsed correctly
+        datetime_string = "2023-01-01T12:00:00Z"
+        result = deserializers._auto_detect_string_type(datetime_string)
+
+        # Should successfully parse as datetime
+        assert isinstance(result, (datetime, str))
+
+        # Test with various datetime formats
+        test_cases = [
+            "2023-01-01T12:00:00",
+            "2023-01-01T12:00:00Z",
+            "2023-01-01T12:00:00+00:00",
+            "2023-12-31T23:59:59.999Z",
+        ]
+
+        for dt_str in test_cases:
+            result = deserializers._auto_detect_string_type(dt_str)
+            # Should not raise any path injection errors
+            assert isinstance(result, (datetime, str))
+
+    def test_legacy_sklearn_model_reconstruction_security(self):
+        """Test security handling in legacy sklearn model reconstruction."""
+        # Test various sklearn type names
+        sklearn_types = [
+            "sklearn.linear_model.LogisticRegression",
+            "sklearn.ensemble.RandomForestClassifier",
+            "sklearn.svm.SVC",
+        ]
+
+        for sklearn_type in sklearn_types:
+            # Test with invalid pickle data (should fail gracefully)
+            invalid_data = {"__datason_type__": sklearn_type, "__datason_value__": "invalid_pickle_data"}
+
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                result = deserializers._deserialize_with_type_metadata(invalid_data)
+
+                # Should return something (may be value or original data), not crash
+                assert result is not None
+                # Could be the value itself or the original data structure
+                assert result in ["invalid_pickle_data", invalid_data]
+
+    def test_security_error_exception(self):
+        """Test DeserializationSecurityError can be raised and caught properly."""
+        with pytest.raises(deserializers.DeserializationSecurityError) as exc_info:
+            raise deserializers.DeserializationSecurityError("Test security violation")
+
+        assert "Test security violation" in str(exc_info.value)
+        assert isinstance(exc_info.value, Exception)
+
+    def test_auto_deserialize_config_fallback_security(self):
+        """Test that auto_deserialize handles config availability securely."""
+        # This tests the bug fix for undefined variables
+        # The function should work regardless of config availability
+
+        test_data = {"string": "test", "number": 42, "datetime": "2023-01-01T12:00:00"}
+
+        # Should work with None config
+        result = deserializers.auto_deserialize(test_data, config=None)
+        assert isinstance(result, dict)
+        assert result["number"] == 42
+
+        # Should work with no config parameter
+        result = deserializers.auto_deserialize(test_data)
+        assert isinstance(result, dict)
+        assert result["number"] == 42
 
 
 class TestErrorHandling:

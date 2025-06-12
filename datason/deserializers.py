@@ -207,6 +207,8 @@ def auto_deserialize(obj: Any, aggressive: bool = False, config: Optional["Seria
         return None
 
     # Get default config if none provided
+    # Note: _config_available and get_default_config are defined at module level
+    # through conditional imports at the top of this file
     if config is None and _config_available:
         config = get_default_config()
 
@@ -285,6 +287,10 @@ def _deserialize_with_type_metadata(obj: Dict[str, Any]) -> Any:
 
     Supports both new format (__datason_type__) and legacy format (_type) with
     comprehensive ML framework support and robust error handling.
+
+    SECURITY WARNING: This function may deserialize pickle data for legacy sklearn models.
+    Pickle deserialization can execute arbitrary code if the data is untrusted.
+    Only use with data from trusted sources.
     """
 
     # NEW TYPE METADATA FORMAT (priority 1)
@@ -536,21 +542,43 @@ def _deserialize_with_type_metadata(obj: Dict[str, Any]) -> Any:
                             # Fall back to returning the dict
                             return value
 
-                    # Handle legacy pickle format
+                    # Handle legacy pickle format (SECURITY WARNING: Pickle deserialization is unsafe)
                     elif isinstance(value, str):
-                        # Assume base64 encoded pickle
-                        import base64
-                        import pickle  # nosec B403
+                        # SECURITY WARNING: This is for legacy compatibility only
+                        # Pickle deserialization can execute arbitrary code if the data is untrusted
+                        warnings.warn(
+                            "Deserializing pickle data from sklearn models. This is unsafe with untrusted data. "
+                            "Consider re-serializing your models with the newer format.",
+                            UserWarning,
+                            stacklevel=3,
+                        )
+                        try:
+                            import base64
+                            import pickle  # nosec B403
 
-                        pickle_data = base64.b64decode(value)
-                        return pickle.loads(pickle_data)  # nosec B301
+                            pickle_data = base64.b64decode(value)
+                            return pickle.loads(pickle_data)  # nosec B301
+                        except Exception as e:
+                            warnings.warn(f"Failed to deserialize legacy pickle data: {e}", stacklevel=2)
+                            return value
                     elif isinstance(value, dict) and "_pickle_data" in value:
-                        # Alternative pickle storage format
-                        import base64
-                        import pickle  # nosec B403
+                        # SECURITY WARNING: This is for legacy compatibility only
+                        # Pickle deserialization can execute arbitrary code if the data is untrusted
+                        warnings.warn(
+                            "Deserializing pickle data from sklearn models. This is unsafe with untrusted data. "
+                            "Consider re-serializing your models with the newer format.",
+                            UserWarning,
+                            stacklevel=3,
+                        )
+                        try:
+                            import base64
+                            import pickle  # nosec B403
 
-                        pickle_data = base64.b64decode(value["_pickle_data"])
-                        return pickle.loads(pickle_data)  # nosec B301
+                            pickle_data = base64.b64decode(value["_pickle_data"])
+                            return pickle.loads(pickle_data)  # nosec B301
+                        except Exception as e:
+                            warnings.warn(f"Failed to deserialize legacy pickle data: {e}", stacklevel=2)
+                            return value
                 except (ImportError, Exception) as e:
                     warnings.warn(f"Could not reconstruct sklearn model: {e}", stacklevel=2)
 
@@ -690,7 +718,7 @@ def _auto_detect_string_type(s: str, aggressive: bool = False, config: Optional[
         try:
             from datetime import datetime as datetime_class  # Fresh import
 
-            return datetime_class.fromisoformat(s.replace("Z", "+00:00"))
+            return datetime_class.fromisoformat(s.replace("Z", "+00:00"))  # nosec B104  # This is datetime parsing, not file path access
         except (ValueError, ImportError):
             pass
 
@@ -894,23 +922,60 @@ def _restore_pandas_types(obj: Any) -> Any:
 
 
 # Convenience functions for common use cases
-def safe_deserialize(json_str: str, **kwargs: Any) -> Any:
+def safe_deserialize(json_str: str, allow_pickle: bool = False, **kwargs: Any) -> Any:
     """Safely deserialize a JSON string, handling parse errors gracefully.
 
     Args:
         json_str: JSON string to parse and deserialize
+        allow_pickle: Whether to allow unsafe pickle deserialization (default: False)
         **kwargs: Arguments passed to deserialize()
 
     Returns:
         Deserialized Python object, or the original string if parsing fails
+
+    Security Note:
+        When allow_pickle=False, this function will refuse to deserialize
+        legacy sklearn models that use pickle format, providing safer operation
+        at the cost of some backward compatibility.
     """
     import json
 
     try:
         parsed = json.loads(json_str)
+
+        # Add security configuration
+        if not allow_pickle and _contains_pickle_data(parsed):
+            raise DeserializationSecurityError(
+                "Data contains pickle-serialized objects which are unsafe to deserialize. "
+                "Set allow_pickle=True to override this security check, but only with trusted data."
+            )
+
         return deserialize(parsed, **kwargs)
     except (json.JSONDecodeError, TypeError, ValueError):
         return json_str
+
+
+def _contains_pickle_data(obj: Any) -> bool:
+    """Check if an object contains pickle-serialized data (recursive check)."""
+    if isinstance(obj, dict):
+        # Check for sklearn types with pickle data
+        if obj.get("__datason_type__", "").startswith("sklearn.") and (
+            isinstance(obj.get("__datason_value__"), str)
+            or (isinstance(obj.get("__datason_value__"), dict) and "_pickle_data" in obj.get("__datason_value__", {}))
+        ):
+            return True
+
+        # Recursively check all values
+        for value in obj.values():
+            if _contains_pickle_data(value):
+                return True
+    elif isinstance(obj, list):
+        # Recursively check all items
+        for item in obj:
+            if _contains_pickle_data(item):
+                return True
+
+    return False
 
 
 def parse_datetime_string(s: Any) -> Optional[datetime]:
