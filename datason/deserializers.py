@@ -542,43 +542,43 @@ def _deserialize_with_type_metadata(obj: Dict[str, Any]) -> Any:
                             # Fall back to returning the dict
                             return value
 
-                    # Handle legacy pickle format (SECURITY WARNING: Pickle deserialization is unsafe)
+                    # Handle legacy pickle format (SECURITY: Pickle deserialization disabled)
                     elif isinstance(value, str):
-                        # SECURITY WARNING: This is for legacy compatibility only
-                        # Pickle deserialization can execute arbitrary code if the data is untrusted
-                        warnings.warn(
-                            "Deserializing pickle data from sklearn models. This is unsafe with untrusted data. "
-                            "Consider re-serializing your models with the newer format.",
-                            UserWarning,
-                            stacklevel=3,
-                        )
-                        try:
-                            import base64
-                            import pickle  # nosec B403
+                        # Legacy pickle data detected - try JSON first, disable pickle for security
+                        import base64
+                        import json
 
-                            pickle_data = base64.b64decode(value)
-                            return pickle.loads(pickle_data)  # nosec B301
-                        except Exception as e:
-                            warnings.warn(f"Failed to deserialize legacy pickle data: {e}", stacklevel=2)
-                            return value
+                        try:
+                            # Try JSON format first (safe)
+                            json_data = base64.b64decode(value).decode("utf-8")
+                            return json.loads(json_data)
+                        except (json.JSONDecodeError, UnicodeDecodeError, ValueError):
+                            # Legacy pickle data detected - disabled for security
+                            warnings.warn(
+                                "Legacy pickle deserialization is disabled for security reasons. "
+                                "Please re-serialize your models using a safer format.",
+                                UserWarning,
+                                stacklevel=3,
+                            )
+                            return value  # Return original value as fallback
                     elif isinstance(value, dict) and "_pickle_data" in value:
-                        # SECURITY WARNING: This is for legacy compatibility only
-                        # Pickle deserialization can execute arbitrary code if the data is untrusted
-                        warnings.warn(
-                            "Deserializing pickle data from sklearn models. This is unsafe with untrusted data. "
-                            "Consider re-serializing your models with the newer format.",
-                            UserWarning,
-                            stacklevel=3,
-                        )
-                        try:
-                            import base64
-                            import pickle  # nosec B403
+                        # Alternative pickle storage format - try JSON first, disable pickle for security
+                        import base64
+                        import json
 
-                            pickle_data = base64.b64decode(value["_pickle_data"])
-                            return pickle.loads(pickle_data)  # nosec B301
-                        except Exception as e:
-                            warnings.warn(f"Failed to deserialize legacy pickle data: {e}", stacklevel=2)
-                            return value
+                        try:
+                            # Try JSON format first (safe)
+                            json_data = base64.b64decode(value["_pickle_data"]).decode("utf-8")
+                            return json.loads(json_data)
+                        except (json.JSONDecodeError, UnicodeDecodeError, ValueError):
+                            # Legacy pickle data detected - disabled for security
+                            warnings.warn(
+                                "Legacy pickle deserialization is disabled for security reasons. "
+                                "Please re-serialize your models using a safer format.",
+                                UserWarning,
+                                stacklevel=3,
+                            )
+                            return value  # Return original value as fallback
                 except (ImportError, Exception) as e:
                     warnings.warn(f"Could not reconstruct sklearn model: {e}", stacklevel=2)
 

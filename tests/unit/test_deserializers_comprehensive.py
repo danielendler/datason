@@ -746,7 +746,7 @@ class TestSecurityFeatures:
             assert result is not None
 
     def test_pickle_deserialization_warnings(self):
-        """Test that pickle deserialization shows appropriate warnings."""
+        """Test that legacy pickle deserialization shows security warnings."""
         # Create mock sklearn data with legacy pickle format
         sklearn_data = {
             "__datason_type__": "sklearn.linear_model.LogisticRegression",
@@ -757,18 +757,21 @@ class TestSecurityFeatures:
         with warnings.catch_warnings(record=True) as warning_list:
             warnings.simplefilter("always")
 
-            # This should trigger warnings about unsafe pickle deserialization
-            deserializers._deserialize_with_type_metadata(sklearn_data)
+            # This should trigger warnings about disabled pickle deserialization
+            result = deserializers._deserialize_with_type_metadata(sklearn_data)
 
-            # Check if any security warnings were issued
+            # Check if security warnings were issued about disabled pickle
             security_warnings = [
-                w for w in warning_list if "unsafe" in str(w.message).lower() and "pickle" in str(w.message).lower()
+                w for w in warning_list if "disabled" in str(w.message).lower() and "security" in str(w.message).lower()
             ]
 
-            # We expect at least one security warning about pickle deserialization
+            # We expect at least one security warning about disabled pickle deserialization
             assert len(security_warnings) >= 1, (
                 f"Expected security warning, got: {[str(w.message) for w in warning_list]}"
             )
+
+            # Should return the original value since pickle is disabled
+            assert result == sklearn_data["__datason_value__"]
 
     def test_datetime_parsing_security_fix(self):
         """Test that datetime parsing works correctly (path injection false positive fix)."""
