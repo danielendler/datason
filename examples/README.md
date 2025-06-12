@@ -1,6 +1,28 @@
 # 📚 Datason Examples Gallery
 
-Comprehensive examples demonstrating datason's features, with special focus on **UUID/Pydantic compatibility** and web framework integration.
+Comprehensive examples demonstrating datason's **simple & direct API** alongside traditional features, with special focus on **UUID/Pydantic compatibility** and web framework integration.
+
+## 🎯 **Simple & Direct API - No Configuration Needed!**
+
+**New in v0.9.0:** Just pick the right function for your use case!
+
+```python
+import datason as ds
+
+# Web APIs - automatic UUID handling, clean JSON
+api_data = ds.dump_api(response_data)  # UUIDs become strings automatically
+
+# ML models - automatic framework detection  
+ml_data = ds.dump_ml(model_data)      # Optimized for ML objects
+
+# Security - automatic PII redaction
+safe_data = ds.dump_secure(user_data) # Redacts emails, SSNs, etc.
+
+# Choose your loading success rate
+basic_data = ds.load_basic(json_string)    # 60-70% success, fastest
+smart_data = ds.load_smart(json_string)    # 80-90% success, balanced
+perfect_data = ds.load_perfect(json_string, template)  # 100% success
+```
 
 ## 🚀 **Quick Start: UUID + Pydantic Problem Solved**
 
@@ -83,19 +105,33 @@ python examples/uuid_api_compatibility_demo.py
 
 ## 🧠 **Core Functionality Examples**
 
-### [`basic_usage.py`](basic_usage.py)
+### [`basic_usage.py`](basic_usage.py) ⭐ **Simple API First**
 
-**Fundamental datason operations and concepts.**
+**Start here! Showcases the simple & direct API alongside traditional operations.**
 
 ```bash
 python examples/basic_usage.py
 ```
 
 **Learn:**
-- Basic serialize/deserialize operations
-- Type preservation and restoration
-- Configuration basics
-- Error handling patterns
+- ✨ **Simple API:** `dump_api()`, `dump_ml()`, `dump_secure()`, `load_basic()`, `load_smart()`
+- 🔧 **Traditional API:** `serialize()`, `deserialize()` with configuration
+- 🆔 **UUID handling:** Automatic string conversion for APIs
+- 🔒 **Security:** Automatic PII redaction patterns
+- 📊 **Progressive loading:** Choose your success rate (60% → 100%)
+
+### [`modern_api_demo.py`](modern_api_demo.py)
+
+**Complete tour of the modern intention-revealing API.**
+
+```bash
+python examples/modern_api_demo.py
+```
+
+**Features:**
+- 🎯 **Intention-revealing names:** Clear function purposes
+- 📈 **Progressive complexity:** Choose your level of sophistication
+- 🔍 **API discovery:** Built-in help and recommendations
 
 ### [`advanced_serialization_demo.py`](advanced_serialization_demo.py)
 
@@ -115,74 +151,50 @@ python examples/advanced_serialization_demo.py
 
 ## 🤖 **Machine Learning Examples**
 
-### [`ai_ml_examples.py`](ai_ml_examples.py)
+### [`ai_ml_examples.py`](ai_ml_examples.py) ⭐ **Simple ML API**
 
-**ML/AI library integration patterns.**
+**ML/AI workflows using the simple & direct API.**
 
 ```bash
 python examples/ai_ml_examples.py
 ```
 
-**Supports:**
-- PyTorch tensors and models
-- TensorFlow objects
-- Scikit-learn models
-- NumPy arrays
-- Pandas DataFrames
+**Features:**
+- ✨ **Simple API:** Just use `dump_ml()` and `dump_api()` - no configuration needed!
+- 🧠 **Auto-detection:** Automatically handles ML frameworks
+- 🌐 **API responses:** Clean JSON for FastAPI/Flask with `dump_api()`
+- 📊 **15+ frameworks:** PyTorch, TensorFlow, Scikit-learn, NumPy, Pandas, and more
 
 ### [`advanced_ml_examples.py`](advanced_ml_examples.py)
 
-**Advanced ML workflows and model serialization.**
+**Comprehensive ML workflow examples across multiple frameworks.**
 
 ```bash
 python examples/advanced_ml_examples.py
 ```
 
-### [`bentoml_integration_guide.py`](bentoml_integration_guide.py)
+**Advanced ML Scenarios:**
+- 🔥 **PyTorch:** Tensor serialization and training workflows
+- 🤖 **Scikit-learn:** Pipeline metadata and model comparison
+- 👁️ **Computer Vision:** Image processing and CNN workflows
+- 📊 **Time Series:** Forecasting and temporal analysis
+- 📝 **NLP:** Text processing and transformer models
+- 🔬 **Experiment Tracking:** Hyperparameter optimization workflows
 
-**BentoML service using datason for request/response serialization.**
+## 🔗 **Framework Integration Examples**
 
-```bash
-python examples/bentoml_integration_guide.py
-```
-
-### [`ray_serve_integration_guide.py`](ray_serve_integration_guide.py)
-
-**Ray Serve deployment with datason serialization.**
-
-```bash
-python examples/ray_serve_integration_guide.py
-```
-
-### [`streamlit_gradio_integration.py`](streamlit_gradio_integration.py)
-
-**UI demo for Streamlit and Gradio using datason.**
+**Framework-specific examples are in the [`framework_integrations/`](framework_integrations/) directory:**
 
 ```bash
-python examples/streamlit_gradio_integration.py
+ls examples/framework_integrations/
 ```
 
-### [`mlflow_artifact_tracking.py`](mlflow_artifact_tracking.py)
+**Available integrations:**
+- 🤖 **ML Serving:** BentoML, Ray Serve, MLflow, Seldon/KServe
+- 🌐 **Web Frameworks:** FastAPI, Django with UUID/Pydantic compatibility
+- 🎨 **UI Frameworks:** Streamlit, Gradio dashboards
 
-**Log datason artifacts to MLflow.**
-
-```bash
-python examples/mlflow_artifact_tracking.py
-```
-
-### [`seldon_kserve_integration.py`](seldon_kserve_integration.py)
-
-**Seldon Core / KServe model wrapper using datason.**
-
-```bash
-python examples/seldon_kserve_integration.py
-```
-
-**Features:**
-- Model checkpointing
-- Large tensor handling
-- Training pipeline integration
-- Model versioning patterns
+See [`framework_integrations/README.md`](framework_integrations/README.md) for details.
 
 ---
 
@@ -190,17 +202,18 @@ python examples/seldon_kserve_integration.py
 
 ### [`auto_detection_and_metadata_demo.py`](auto_detection_and_metadata_demo.py)
 
-**Type detection and metadata handling.**
+**Advanced type detection and perfect round-trip serialization.**
 
 ```bash
 python examples/auto_detection_and_metadata_demo.py
 ```
 
 **Learn:**
-- How automatic type detection works
-- Metadata preservation
-- Custom type handlers
-- Detection accuracy tuning
+- ✨ **Simple API:** Progressive loading (`load_basic()` → `load_smart()` → `load_perfect()`)
+- 🔍 **Auto-detection:** Intelligent type recognition from JSON
+- 🎯 **Aggressive mode:** Pandas DataFrame/Series detection
+- 🔄 **Type metadata:** Perfect round-trip serialization
+- ⚡ **Performance:** Comparison of different detection modes
 
 ### [`chunked_and_template_demo.py`](chunked_and_template_demo.py)
 

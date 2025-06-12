@@ -59,7 +59,7 @@ if not settings.configured:
             "django.contrib.messages",
             "rest_framework" if HAS_DRF else None,
         ],
-        SECRET_KEY="dev-secret-key-for-example",
+        SECRET_KEY="dev-secret-key-for-example",  # nosec B106 - Demo only, not production
         USE_TZ=True,
         ROOT_URLCONF=__name__,
     )
@@ -134,7 +134,7 @@ class DatasonModelMixin:
                     if related_obj and hasattr(related_obj, "to_datason"):
                         data[f"{field.name}_data"] = related_obj.to_datason(config=config)
                 except Exception:  # More specific exception handling
-                    pass  # Skip if relation can't be loaded
+                    pass  # nosec B110 - Skip if relation can't be loaded (demo code)
 
         # Process with datason
         return datason.serialize(data, config=config)

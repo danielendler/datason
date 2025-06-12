@@ -35,6 +35,7 @@ from datason.config import get_api_config
 
 # Define User model if Pydantic is available
 if HAS_PYDANTIC:
+
     class User(BaseModel):
         user_id: str
         session_id: str

@@ -24,9 +24,11 @@ import numpy as np
 import datason
 
 
-# Example 1: Basic ML Model Training Results
-def serialize_training_results():
-    """Serialize ML model training results including metrics and metadata."""
+# Example 1: Simple ML API - No Configuration Needed!
+def simple_ml_serialization():
+    """Demonstrate the simple ML API - just use dump_ml()!"""
+    print("=== Simple ML API Demo ===")
+
     training_results = {
         "model_name": "neural_network_classifier",
         "version": "1.0.0",
@@ -45,9 +47,38 @@ def serialize_training_results():
         "confusion_matrix": np.array([[85, 5], [3, 87]]),
     }
 
-    # Serialize complex training results
+    # Simple ML API - automatic optimization for ML data!
+    ml_serialized = datason.dump_ml(training_results)
+    print("✅ ML-optimized serialization with dump_ml():")
+    print(json.dumps(ml_serialized, indent=2))
+    print("🎯 NumPy arrays automatically handled!")
+    return ml_serialized
+
+
+# Example 1b: Traditional API for comparison
+def serialize_training_results():
+    """Serialize ML model training results using traditional API."""
+    training_results = {
+        "model_name": "neural_network_classifier",
+        "version": "1.0.0",
+        "training_accuracy": 0.95,
+        "validation_accuracy": 0.87,
+        "loss_history": [0.8, 0.5, 0.3, 0.2, 0.15],
+        "training_time_seconds": 3600,
+        "timestamp": datetime.now(),
+        "hyperparameters": {
+            "learning_rate": 0.001,
+            "batch_size": 32,
+            "epochs": 100,
+            "dropout_rate": 0.2,
+        },
+        "feature_importance": np.array([0.3, 0.25, 0.2, 0.15, 0.1]),
+        "confusion_matrix": np.array([[85, 5], [3, 87]]),
+    }
+
+    # Traditional API
     serialized = datason.serialize(training_results)
-    print("Training Results JSON:")
+    print("\nTraditional API Training Results JSON:")
     print(json.dumps(serialized, indent=2))
     return serialized
 
@@ -143,9 +174,40 @@ def serialize_model_comparison():
     return serialized
 
 
-# Example 4: Real-time Prediction API Response
+# Example 4: API Response with Simple API
+def simple_api_prediction_response():
+    """Use dump_api() for clean ML prediction responses."""
+    print("\n=== Simple API for ML Predictions ===")
+
+    prediction_response = {
+        "request_id": "pred_20240115_143022_abc123",
+        "model_version": "2.1.3",
+        "prediction": {
+            "class": "high_value_customer",
+            "probability": 0.847,
+            "confidence_interval": [0.82, 0.87],
+            "class_probabilities": {
+                "low_value": 0.053,
+                "medium_value": 0.100,
+                "high_value": 0.847,
+            },
+        },
+        "feature_vector": np.array([25.5, 45000, 3.2, 12, 0.85]),
+        "processing_time_ms": 23.7,
+        "timestamp": datetime.now(),
+    }
+
+    # Perfect for API responses - clean JSON, no type metadata
+    api_response = datason.dump_api(prediction_response)
+    print("✅ Clean API response with dump_api():")
+    print(json.dumps(api_response, indent=2))
+    print("🎯 Perfect for FastAPI/Flask responses!")
+    return api_response
+
+
+# Example 4b: Traditional Real-time Prediction API Response
 def serialize_prediction_response():
-    """Serialize a real-time ML prediction API response."""
+    """Serialize a real-time ML prediction API response using traditional API."""
     prediction_response = {
         "request_id": "pred_20240115_143022_abc123",
         "model_version": "2.1.3",
@@ -185,7 +247,7 @@ def serialize_prediction_response():
     }
 
     serialized = datason.serialize(prediction_response)
-    print("\nPrediction Response JSON:")
+    print("\nTraditional Prediction Response JSON:")
     print(json.dumps(serialized, indent=2))
     return serialized
 
@@ -333,10 +395,18 @@ np.random.correlation_matrix = correlation_matrix
 
 
 if __name__ == "__main__":
-    print("datason AI/ML Examples")
-    print("=" * 50)
+    print("datason AI/ML Examples - Simple & Direct API")
+    print("=" * 60)
 
-    # Run all examples
+    # Simple API examples first - no configuration needed!
+    print("🚀 Simple & Direct API Examples:")
+    simple_ml_serialization()
+    simple_api_prediction_response()
+
+    print("\n" + "=" * 60)
+    print("📚 Traditional API Examples (for comparison):")
+
+    # Traditional API examples
     serialize_training_results()
     serialize_data_pipeline()
     serialize_model_comparison()
@@ -344,6 +414,7 @@ if __name__ == "__main__":
     serialize_forecasting_results()
     serialize_experiment_tracking()
 
-    print("\n" + "=" * 50)
-    print("All examples completed successfully!")
-    print("datason handled all complex ML objects seamlessly.")
+    print("\n" + "=" * 60)
+    print("✅ All examples completed successfully!")
+    print("🎯 Simple API: Just use dump_ml() and dump_api()!")
+    print("⚙️  Traditional API: Full configuration control available.")

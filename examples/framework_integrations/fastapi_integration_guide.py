@@ -606,4 +606,4 @@ if __name__ == "__main__":
     print("   • GET  /demo/performance - Performance testing")
     print("   • GET  /config-info      - View current configuration")
 
-    uvicorn.run("fastapi_integration_guide:app", host="0.0.0.0", port=8000, reload=True, log_level="info")
+    uvicorn.run("fastapi_integration_guide:app", host="0.0.0.0", port=8000, reload=True, log_level="info")  # nosec B104 - Demo binding
