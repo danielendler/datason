@@ -35,8 +35,8 @@ class TestIntegrity:
         assert datason.verify_json(obj, json_hash)
 
         # Different algorithms should produce different hashes
-        sha1_hash = datason.hash_object(obj, hash_algo="sha1")
-        assert sha1_hash != hash1
+        sha512_hash = datason.hash_object(obj, hash_algo="sha512")
+        assert sha512_hash != hash1
 
     def test_redaction_hashing(self) -> None:
         """Test redaction-aware hashing when redaction is available."""
@@ -146,20 +146,25 @@ class TestIntegrity:
         assert hash1 == hash2
 
     def test_hash_different_algorithms(self) -> None:
-        """Test different hash algorithms produce different results."""
+        """Test different secure hash algorithms produce different results."""
         obj = {"test": "data"}
 
         sha256_hash = datason.hash_object(obj, hash_algo="sha256")
-        sha1_hash = datason.hash_object(obj, hash_algo="sha1")
-        md5_hash = datason.hash_object(obj, hash_algo="md5")
+        sha512_hash = datason.hash_object(obj, hash_algo="sha512")
+        sha3_256_hash = datason.hash_object(obj, hash_algo="sha3_256")
+        sha3_512_hash = datason.hash_object(obj, hash_algo="sha3_512")
 
         # All should be different
-        assert sha256_hash != sha1_hash
-        assert sha256_hash != md5_hash
-        assert sha1_hash != md5_hash
+        assert sha256_hash != sha512_hash
+        assert sha256_hash != sha3_256_hash
+        assert sha256_hash != sha3_512_hash
+        assert sha512_hash != sha3_256_hash
+        assert sha512_hash != sha3_512_hash
+        assert sha3_256_hash != sha3_512_hash
 
         # But should be consistent
         assert sha256_hash == datason.hash_object(obj, hash_algo="sha256")
+        assert sha512_hash == datason.hash_object(obj, hash_algo="sha512")
 
     def test_empty_and_none_objects(self) -> None:
         """Test integrity functions with edge case objects."""

@@ -13,6 +13,25 @@ from typing import Any
 
 from .core import serialize
 
+# Allowed secure hash algorithms (cryptographically strong)
+ALLOWED_HASH_ALGORITHMS = {"sha256", "sha3_256", "sha3_512", "sha512"}
+
+
+def validate_hash_algorithm(hash_algo: str) -> None:
+    """Validate that the hash algorithm is strong and supported.
+
+    Args:
+        hash_algo: Hash algorithm to validate
+
+    Raises:
+        ValueError: If the hash algorithm is not supported or insecure
+    """
+    if hash_algo not in ALLOWED_HASH_ALGORITHMS:
+        raise ValueError(
+            f"Unsupported or insecure hash algorithm: {hash_algo}. "
+            f"Must be one of: {', '.join(sorted(ALLOWED_HASH_ALGORITHMS))}"
+        )
+
 
 def _apply_redaction(obj: Any, config: dict[str, Any]) -> Any:
     """Apply redaction to an object using :class:`RedactionEngine`."""
@@ -68,14 +87,17 @@ def hash_object(obj: Any, *, redact: dict[str, Any] | None = None, hash_algo: st
         obj: Object to hash
         redact: Optional redaction configuration. If provided but redaction
                module is not available, raises RuntimeError.
-        hash_algo: Hash algorithm to use (default: sha256)
+        hash_algo: Hash algorithm to use (default: sha256). Must be a strong
+                  algorithm.
 
     Returns:
         Hexadecimal hash string
 
     Raises:
         RuntimeError: If redact is specified but redaction module is unavailable
+        ValueError: If an unsupported hash algorithm is specified
     """
+    validate_hash_algorithm(hash_algo)
     canon = canonicalize(obj, redact=redact)
     h = hashlib.new(hash_algo)
     h.update(canon.encode("utf-8"))
@@ -83,7 +105,20 @@ def hash_object(obj: Any, *, redact: dict[str, Any] | None = None, hash_algo: st
 
 
 def hash_json(json_data: Any, hash_algo: str = "sha256") -> str:
-    """Compute a deterministic hash for a JSON-compatible structure."""
+    """Compute a deterministic hash for a JSON-compatible structure.
+
+    Args:
+        json_data: JSON-compatible structure to hash
+        hash_algo: Hash algorithm to use (default: sha256). Must be a strong
+                  algorithm.
+
+    Returns:
+        Hexadecimal hash string
+
+    Raises:
+        ValueError: If an unsupported hash algorithm is specified
+    """
+    validate_hash_algorithm(hash_algo)
     canon = json.dumps(json_data, sort_keys=True, separators=(",", ":"))
     h = hashlib.new(hash_algo)
     h.update(canon.encode("utf-8"))
@@ -104,20 +139,35 @@ def verify_object(
         expected_hash: Expected hash value
         redact: Optional redaction configuration. If provided but redaction
                module is not available, raises RuntimeError.
-        hash_algo: Hash algorithm to use (default: sha256)
+        hash_algo: Hash algorithm to use (default: sha256). Must be a strong
+                  algorithm.
 
     Returns:
         True if hash matches, False otherwise
 
     Raises:
         RuntimeError: If redact is specified but redaction module is unavailable
+        ValueError: If an unsupported hash algorithm is specified
     """
     actual = hash_object(obj, redact=redact, hash_algo=hash_algo)
     return actual == expected_hash
 
 
 def verify_json(json_data: Any, expected_hash: str, hash_algo: str = "sha256") -> bool:
-    """Verify a JSON-compatible structure against ``expected_hash``."""
+    """Verify a JSON-compatible structure against ``expected_hash``.
+
+    Args:
+        json_data: JSON-compatible structure to verify
+        expected_hash: Expected hash value
+        hash_algo: Hash algorithm to use (default: sha256). Must be a strong
+                  algorithm.
+
+    Returns:
+        True if hash matches, False otherwise
+
+    Raises:
+        ValueError: If an unsupported hash algorithm is specified
+    """
     actual = hash_json(json_data, hash_algo=hash_algo)
     return actual == expected_hash
 
@@ -129,13 +179,15 @@ def hash_and_redact(obj: Any, *, redact: dict[str, Any] | None = None, hash_algo
         obj: Object to redact and hash
         redact: Redaction configuration. If None, no redaction is applied.
                If provided but redaction module is not available, raises RuntimeError.
-        hash_algo: Hash algorithm to use (default: sha256)
+        hash_algo: Hash algorithm to use (default: sha256). Must be a strong
+                  algorithm.
 
     Returns:
         Tuple of (redacted_object, hash_string)
 
     Raises:
         RuntimeError: If redact is specified but redaction module is unavailable
+        ValueError: If an unsupported hash algorithm is specified
     """
     redacted = _apply_redaction(obj, redact or {}) if redact else obj
     hash_val = hash_object(redacted, hash_algo=hash_algo)

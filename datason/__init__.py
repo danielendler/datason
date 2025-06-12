@@ -150,6 +150,18 @@ from .cache_manager import (
     request_scope,  # noqa: F401
     reset_cache_metrics,  # noqa: F401
 )
+
+# Integrity utilities (always available)
+from .integrity import (  # noqa: F401
+    canonicalize,
+    hash_and_redact,
+    hash_json,
+    hash_object,
+    sign_object,
+    verify_json,
+    verify_object,
+    verify_signature,
+)
 from .validation import serialize_marshmallow, serialize_pydantic  # noqa: F401
 
 
@@ -285,12 +297,13 @@ if _config_available:
 # Integrity utilities always available
 __all__.extend(
     [
-        "hash_object",
-        "hash_json",
-        "verify_object",
-        "verify_json",
+        "canonicalize",
         "hash_and_redact",
+        "hash_json",
+        "hash_object",
         "sign_object",
+        "verify_json",
+        "verify_object",
         "verify_signature",
     ]
 )
@@ -430,17 +443,6 @@ try:
     _utils_available = True
 except ImportError:
     _utils_available = False
-
-# Integrity utilities (always available)
-from .integrity import (
-    hash_and_redact,
-    sign_object,
-    verify_signature,
-    hash_json,
-    hash_object,
-    verify_json,
-    verify_object,
-)
 
 # Add redaction exports to __all__ if available (v0.5.5)
 if _redaction_available:
