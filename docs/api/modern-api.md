@@ -23,6 +23,12 @@ The Modern API follows these principles:
 - `dump_chunked()` - Memory-efficient for large data
 - `stream_dump()` - Direct file streaming
 
+### File Operations (Save/Load) 🆕 v0.9.1
+- `save_ml()` / `save_secure()` / `save_api()` / `save_chunked()` - File saving variants
+- `load_smart_file()` / `load_perfect_file()` - File loading variants
+- **Dual Format Support**: JSON (.json) and JSONL (.jsonl) with auto-detection
+- **Compression**: Automatic .gz handling for all formats
+
 ### Deserialization Functions (Load) - Progressive Complexity
 - `load_basic()` - 60-70% accuracy, fastest (exploration)
 - `load_smart()` - 80-90% accuracy, balanced (production)
@@ -103,6 +109,10 @@ safe_data = ds.dump_secure(user_data, redact_pii=True)
 
 # Large dataset processing
 chunked_data = ds.dump_chunked(massive_dataset, chunk_size=1000)
+
+# File operations with ML data
+ds.save_ml({"model": trained_model, "data": features}, "experiment.json")
+loaded_data = ds.load_smart_file("experiment.json")
 ```
 
 ## 🔗 Next Steps
