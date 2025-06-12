@@ -267,7 +267,7 @@ jobs:
                         # Extract datason standard performance only
                         if 'datason_standard' in test_data:
                             # Create shorter, more readable test names
-                            short_name = f'{category.replace("_", " ").title()}: {test_name.replace("_", " ").title()}'
+                            short_name = f\"{category.replace('_', ' ').title()}: {test_name.replace('_', ' ').title()}\"
                             data.append({
                                 'version': version,
                                 'timestamp': timestamp,
