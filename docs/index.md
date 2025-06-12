@@ -220,7 +220,7 @@ class User(BaseModel):
 user = User(**result)  # ✅ Perfect!
 ```
 
-[**📖 Complete integration guide →**](features/api-integration.md) | [**🏃‍♂️ Quick examples →**](examples/)
+[**📖 Complete integration guide →**](features/api-integration.md) | [**🏃‍♂️ Quick examples →**](user-guide/examples/index.md)
 
 ## 🎯 Modern API Functions
 

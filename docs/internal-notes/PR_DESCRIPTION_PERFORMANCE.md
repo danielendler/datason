@@ -163,7 +163,7 @@ python -m pytest tests/test_template_deserialization_benchmarks.py -v
 ```
 
 ### **Documentation & Analysis**
-- 📋 **Complete performance guide** in `docs/performance-improvements.md`
+- 📋 **Complete performance guide** in [performance-improvements](../performance-improvements.md)
 - 📈 **Competitive analysis** vs OrJSON, JSON, pickle
 - 🎯 **Proven optimization patterns** for future development
 - 📊 **Environment-aware CI integration** with performance tracking
@@ -241,6 +241,6 @@ datason v0.5.0 represents a **major performance breakthrough** with **critical s
 
 ---
 
-**🔗 Performance Documentation**: [docs/performance-improvements.md](docs/performance-improvements.md)  
+**🔗 Performance Documentation**: [performance-improvements](../performance-improvements.md)  
 **🔍 Benchmark Scripts**: `benchmarks/` directory  
-**🛡️ Security Details**: [SECURITY.md](SECURITY.md)
+**🛡️ Security Details**: [SECURITY](../community/security.md)

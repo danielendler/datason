@@ -465,12 +465,12 @@ processed_users = datason.auto_deserialize(large_dataset, config=api_config)
 - [Configuration System](configuration/index.md) - Complete configuration reference
 - [Type Handling](advanced-types/index.md) - How datason handles different Python types
 - [Performance Guide](performance/index.md) - Optimization strategies
-- [Security Guide](../SECURITY.md) - Security considerations for web APIs
+- [Security Guide](../community/security.md) - Security considerations for web APIs
 
 ## 💡 Need Help?
 
-- **FastAPI specific questions**: Check our [FastAPI examples](../../examples/)
-- **Django integration**: See [Django integration patterns](../../examples/)
+- **FastAPI specific questions**: Check our [FastAPI examples](../user-guide/examples/index.md)
+- **Django integration**: See [Django integration patterns](../user-guide/examples/index.md)
 - **Performance optimization**: Review [Performance Guide](performance/index.md)
 - **Custom configurations**: See [Configuration System](configuration/index.md)
 
