@@ -12,8 +12,9 @@ pip install datason  # ← Works with no additional dependencies!
 ### Enhanced Functionality
 ```bash
 pip install datason[numpy]     # ← Adds NumPy support
-pip install datason[pandas]    # ← Adds Pandas support  
+pip install datason[pandas]    # ← Adds Pandas support
 pip install datason[ml]        # ← Adds ML library support
+pip install datason[crypto]    # ← Adds digital signature support
 pip install datason[all]       # ← All optional features
 ```
 
@@ -164,7 +165,7 @@ When adding support for a new optional dependency:
 1. **Add to `pyproject.toml`**:
    ```toml
    [project.optional-dependencies]
-   newfeature = ["newlibrary>=1.0.0"]
+   crypto = ["cryptography>=42.0.0"]
    ```
 
 2. **Add conditional import**:
@@ -178,9 +179,9 @@ When adding support for a new optional dependency:
 
 3. **Add to CI matrix**:
    ```yaml
-   - name: "with-newfeature"
-     install: "pip install -e . && pip install newlibrary"
-     description: "Core + NewLibrary support"
+   - name: "with-crypto"
+     install: "pip install -e . && pip install cryptography"
+     description: "Core + digital signature support"
    ```
 
 4. **Add tests with proper markers**:

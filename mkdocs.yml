@@ -149,6 +149,7 @@ nav:
     - Migration Guide: features/migration/index.md
     - Data Utilities: features/data-utilities/index.md
     - Data Utilities Summary: features/data-utilities/SUMMARY.md
+    - Data Integrity & Verification: integrity.md
 
   # AI Developer Guide Section
   - AI Developer Guide:

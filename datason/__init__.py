@@ -282,6 +282,19 @@ if _config_available:
         ]
     )
 
+# Integrity utilities always available
+__all__.extend(
+    [
+        "hash_object",
+        "hash_json",
+        "verify_object",
+        "verify_json",
+        "hash_and_redact",
+        "sign_object",
+        "verify_signature",
+    ]
+)
+
 # Add ML serializers to __all__ if available
 if _ml_available:
     from .ml_serializers import (  # noqa: F401
@@ -417,6 +430,17 @@ try:
     _utils_available = True
 except ImportError:
     _utils_available = False
+
+# Integrity utilities (always available)
+from .integrity import (
+    hash_and_redact,
+    sign_object,
+    verify_signature,
+    hash_json,
+    hash_object,
+    verify_json,
+    verify_object,
+)
 
 # Add redaction exports to __all__ if available (v0.5.5)
 if _redaction_available:

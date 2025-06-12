@@ -24,6 +24,7 @@ datason transforms complex Python objects into JSON-serializable formats and bac
 - 🔌 **Extensible**: Easy to add custom serializers for your own types
 - 📦 **Zero Dependencies**: Core functionality works without additional packages
 - 🎯 **Modern API**: Intention-revealing function names with progressive complexity
+- 📝 **Integrity Verification**: Hash, sign, and verify objects for compliance workflows
 
 ## 🐍 Python Version Support
 
