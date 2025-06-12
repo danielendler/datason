@@ -26,15 +26,17 @@ def sync_docs() -> None:
 
     for filename in FILES_TO_SYNC:
         source_file = root_dir / filename
-        dest_file = docs_dir / filename.lower()
+        dest_file = docs_dir / filename
 
         if source_file.exists():
-            # Warn if the docs version is newer than the root version
+            # Check if the docs version is newer than the root version
             if dest_file.exists() and dest_file.stat().st_mtime > source_file.stat().st_mtime:
                 files_warned.append(str(dest_file))
-                print(f"⚠️  {dest_file} is newer than {source_file}. Update the root file.")
+                print(f"⚠️  {dest_file} is newer than {source_file}. Update the root file first!")
+                print("   Skipping copy to avoid overwriting newer content.")
+                continue
 
-            # Copy the file
+            # Copy the file only if source is newer or dest doesn't exist
             dest_file.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(source_file, dest_file)
             files_copied.append(str(dest_file))
@@ -54,7 +56,8 @@ def sync_docs() -> None:
         print(f"   • Files skipped: {', '.join(files_skipped)}")
 
     if files_warned:
-        print(f"   • Warnings: {', '.join(files_warned)} were newer than their root counterparts")
+        print(f"   ⚠️  Warnings: {len(files_warned)} docs files are newer than root")
+        print(f"   • Please update root files first: {', '.join(files_warned)}")
 
 
 if __name__ == "__main__":

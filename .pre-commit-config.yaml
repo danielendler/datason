@@ -58,7 +58,7 @@ repos:
         entry: python scripts/sync_docs.py
         language: python
         files: >-
-          ^(CONTRIBUTING|SECURITY|CHANGELOG)\.md$|^docs/community/(contributing|security|changelog)\.md$
+          ^(CONTRIBUTING|SECURITY|CHANGELOG)\.md$|^docs/community/(CONTRIBUTING|SECURITY|CHANGELOG)\.md$
         pass_filenames: false
         always_run: false
 
