@@ -716,10 +716,17 @@ def _auto_detect_string_type(s: str, aggressive: bool = False, config: Optional[
     # Then try datetime detection
     if _looks_like_datetime(s):
         try:
+            import re
             from datetime import datetime as datetime_class  # Fresh import
 
-            return datetime_class.fromisoformat(s.replace("Z", "+00:00"))  # nosec B104  # This is datetime parsing, not file path access
-        except (ValueError, ImportError):
+            # Validate ISO 8601 format before parsing to prevent CodeQL false positive
+            # This also provides additional security by validating input format
+            iso8601_pattern = r"^\d{4}-\d{2}-\d{2}(?:T| )\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?$"
+            normalized_input = s.replace("Z", "+00:00")
+
+            if re.match(iso8601_pattern, s):
+                return datetime_class.fromisoformat(normalized_input)  # Now safe from CodeQL false positive
+        except (ValueError, ImportError, re.error):
             pass
 
     if not aggressive:

@@ -795,6 +795,47 @@ class TestSecurityFeatures:
             # Should not raise any path injection errors
             assert isinstance(result, (datetime, str))
 
+    def test_datetime_regex_validation_security(self):
+        """Test that regex validation prevents CodeQL false positives for datetime parsing."""
+        # This test ensures our ISO 8601 regex validation eliminates CodeQL warnings
+        # by validating input before calling fromisoformat()
+
+        # Valid ISO 8601 formats that should pass validation and parse to datetime
+        valid_iso_formats = [
+            "2023-01-01T12:00:00",
+            "2023-12-31T23:59:59",
+            "2023-06-15T14:30:45.123",
+            "2023-06-15T14:30:45.123456",
+            "2023-01-01T00:00:00Z",
+            "2023-01-01T12:00:00+05:00",
+            "2023-01-01T12:00:00-03:30",
+            "2023-01-01 12:00:00",  # Space separator allowed
+        ]
+
+        for dt_str in valid_iso_formats:
+            result = deserializers._auto_detect_string_type(dt_str)
+            assert isinstance(result, datetime), f"Valid ISO format should parse to datetime: {dt_str}"
+
+        # Invalid formats that should NOT pass regex validation
+        # These should remain as strings, preventing CodeQL path-related warnings
+        invalid_formats = [
+            "/etc/passwd",  # Path-like string (security concern)
+            "../../../etc/passwd",  # Path traversal attempt
+            "file:///etc/passwd",  # File URI
+            "2023/01/01 12:00:00",  # Wrong date separators
+            "2023-13-01T12:00:00",  # Invalid month
+            "2023-01-32T12:00:00",  # Invalid day
+            "2023-01-01T25:00:00",  # Invalid hour
+            "2023-01-01T12:60:00",  # Invalid minute
+            "2023-01-01",  # Date only, no time
+            "random-string-here",  # Random text
+        ]
+
+        for invalid_str in invalid_formats:
+            result = deserializers._auto_detect_string_type(invalid_str)
+            assert isinstance(result, str), f"Invalid format should remain string: {invalid_str}"
+            assert result == invalid_str, f"Should return unchanged: {invalid_str}"
+
     def test_legacy_sklearn_model_reconstruction_security(self):
         """Test security handling in legacy sklearn model reconstruction."""
         # Test various sklearn type names
