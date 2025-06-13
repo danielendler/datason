@@ -21,11 +21,26 @@ from datetime import datetime
 from decimal import Decimal
 from pathlib import Path
 
-import numpy as np
-import pandas as pd
 import pytest
 
 import datason
+
+# Optional imports for ML functionality
+try:
+    import numpy as np
+
+    HAS_NUMPY = True
+except ImportError:
+    HAS_NUMPY = False
+    np = None
+
+try:
+    import pandas as pd
+
+    HAS_PANDAS = True
+except ImportError:
+    HAS_PANDAS = False
+    pd = None
 
 # Optional ML imports
 try:
@@ -45,6 +60,7 @@ except ImportError:
     HAS_TORCH = False
 
 
+@pytest.mark.skipif(not (HAS_NUMPY and HAS_PANDAS), reason="NumPy and pandas not available")
 class ComplexMLPipeline:
     """A complex ML pipeline that uses many datason features."""
 
@@ -182,6 +198,7 @@ class ComplexMLPipeline:
 
 
 @pytest.mark.integration
+@pytest.mark.skipif(not (HAS_NUMPY and HAS_PANDAS), reason="NumPy and pandas not available")
 class TestUltimateFileOperations:
     """The ultimate test of datason file operations with complete feature integration."""
 

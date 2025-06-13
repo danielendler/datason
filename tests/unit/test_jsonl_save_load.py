@@ -1,13 +1,23 @@
 import tempfile
 from pathlib import Path
 
-import numpy as np
+import pytest
 
 import datason
+
+# Optional imports for ML functionality
+try:
+    import numpy as np
+
+    HAS_NUMPY = True
+except ImportError:
+    HAS_NUMPY = False
+    np = None
 
 # Legacy tests removed - replaced with modern API tests below
 
 
+@pytest.mark.skipif(not HAS_NUMPY, reason="NumPy not available")
 def test_ml_jsonl_roundtrip():
     """Test ML-optimized JSONL serialization with type preservation."""
     ml_data = [{"weights": np.array([1.0, 2.0, 3.0]), "epoch": 1}, {"weights": np.array([1.1, 2.1, 3.1]), "epoch": 2}]
@@ -77,6 +87,7 @@ def test_api_jsonl_roundtrip():
         assert loaded[1]["code"] == 404
 
 
+@pytest.mark.skipif(not HAS_NUMPY, reason="NumPy not available")
 def test_chunked_jsonl_save():
     """Test chunked JSONL saving for large datasets."""
     large_data = list(range(10000))
@@ -97,6 +108,7 @@ def test_chunked_jsonl_save():
         assert len(loaded[0]) == 1000
 
 
+@pytest.mark.skipif(not HAS_NUMPY, reason="NumPy not available")
 def test_streaming_ml_save():
     """Test streaming ML data saving."""
     with tempfile.TemporaryDirectory() as tmp_dir:
@@ -159,7 +171,7 @@ def test_progressive_loading():
         # Array comparison - handle potential numpy conversion
         basic_array = basic_loaded[2]["array"]
         smart_array = smart_loaded[2]["array"]
-        if isinstance(basic_array, np.ndarray) or isinstance(smart_array, np.ndarray):
+        if HAS_NUMPY and (isinstance(basic_array, np.ndarray) or isinstance(smart_array, np.ndarray)):
             # Convert both to lists for comparison
             basic_list = basic_array.tolist() if isinstance(basic_array, np.ndarray) else basic_array
             smart_list = smart_array.tolist() if isinstance(smart_array, np.ndarray) else smart_array
