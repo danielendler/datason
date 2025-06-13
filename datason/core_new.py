@@ -791,6 +791,12 @@ def _serialize_full_path(
             else:
                 serialized_df = obj.to_dict(orient="records")  # Default orientation
 
+            # BUGFIX: Recursively serialize the DataFrame contents to handle complex types like UUID, datetime, etc.
+            # The to_dict() method returns raw Python objects that may not be JSON-serializable
+            # Only do this if we detect non-JSON-serializable objects to avoid unnecessary conversions
+            if _contains_non_json_serializable_objects(serialized_df):
+                serialized_df = serialize(serialized_df, config, _depth + 1, _seen, _type_handler)
+
             # Handle type metadata for DataFrames
             if config and config.include_type_hints:
                 return _create_type_metadata("pandas.DataFrame", serialized_df)
@@ -805,6 +811,11 @@ def _serialize_full_path(
 
             # Default: convert to dict for JSON-safe output
             serialized_series = obj.to_dict()
+
+            # BUGFIX: Recursively serialize the Series contents to handle complex types like UUID, datetime, etc.
+            # Only do this if we detect non-JSON-serializable objects to avoid unnecessary conversions
+            if _contains_non_json_serializable_objects(serialized_series):
+                serialized_series = serialize(serialized_series, config, _depth + 1, _seen, _type_handler)
 
             # Handle type metadata for Series with name preservation
             if config and config.include_type_hints:
@@ -2446,6 +2457,53 @@ def _contains_potentially_exploitable_nested_structure(obj: dict, _depth: int) -
 
 
 # SECURITY FUNCTION: Check if a list contains nested structures that could exploit homogeneity optimization
+def _contains_non_json_serializable_objects(obj: Any, _max_depth: int = 3, _current_depth: int = 0) -> bool:
+    """Check if an object contains non-JSON-serializable objects like UUID, datetime, etc.
+
+    This is used to determine if we need to recursively serialize pandas DataFrame/Series contents.
+    """
+    import uuid
+    from decimal import Decimal
+
+    if _current_depth > _max_depth:
+        return False
+
+    # Check for known non-JSON-serializable types
+    # Note: datetime, date, time are handled by datason's serialization and should not be recursively serialized
+    if isinstance(obj, (uuid.UUID, Decimal, complex, bytes, bytearray)):
+        return True
+
+    # Check for numpy types if available
+    try:
+        import numpy as np
+
+        if isinstance(obj, (np.ndarray, np.integer, np.floating, np.complexfloating)):
+            return True
+    except ImportError:
+        pass
+
+    # Check for pandas types if available
+    try:
+        import pandas as pd
+
+        if isinstance(obj, (pd.DataFrame, pd.Series, pd.Timestamp)):
+            return True
+    except ImportError:
+        pass
+
+    # Recursively check containers
+    if isinstance(obj, dict):
+        for value in obj.values():
+            if _contains_non_json_serializable_objects(value, _max_depth, _current_depth + 1):
+                return True
+    elif isinstance(obj, (list, tuple)):
+        for item in obj:
+            if _contains_non_json_serializable_objects(item, _max_depth, _current_depth + 1):
+                return True
+
+    return False
+
+
 def _contains_potentially_exploitable_nested_list_structure(obj: list, _depth: int) -> bool:
     """
     Check if a list contains nested structures that could exploit the homogeneity bypass attack.

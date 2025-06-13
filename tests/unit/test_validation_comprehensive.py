@@ -120,9 +120,7 @@ class TestPydanticSerialization:
             with patch("datason.validation.serialize") as mock_serialize:
                 validation.serialize_pydantic(mock_model)
                 mock_model.model_dump.assert_called_once()
-                mock_serialize.assert_called_once_with(
-                    {"__datason_type__": "pydantic.model", "__datason_value__": {"field": "value"}}
-                )
+                mock_serialize.assert_called_once_with({"field": "value"})
 
     def test_serialize_pydantic_v1_dict_fallback(self):
         """Test Pydantic v1 model serialization using dict() fallback."""
@@ -137,9 +135,7 @@ class TestPydanticSerialization:
                 validation.serialize_pydantic(mock_model)
                 mock_model.model_dump.assert_called_once()
                 mock_model.dict.assert_called_once()
-                mock_serialize.assert_called_once_with(
-                    {"__datason_type__": "pydantic.model", "__datason_value__": {"field": "value"}}
-                )
+                mock_serialize.assert_called_once_with({"field": "value"})
 
     def test_serialize_pydantic_dict_fallback(self):
         """Test fallback to __dict__ when both model_dump and dict fail."""
@@ -160,9 +156,7 @@ class TestPydanticSerialization:
         with patch.object(validation, "_lazy_import_pydantic_base_model", return_value=mock_base_model):
             with patch("datason.validation.serialize") as mock_serialize:
                 validation.serialize_pydantic(broken_model)
-                mock_serialize.assert_called_once_with(
-                    {"__datason_type__": "pydantic.model", "__datason_value__": {"field": "value"}}
-                )
+                mock_serialize.assert_called_once_with({"field": "value"})
 
     def test_serialize_pydantic_non_pydantic_object(self):
         """Test serialization of non-Pydantic objects."""

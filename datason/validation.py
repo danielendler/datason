@@ -62,9 +62,8 @@ def serialize_pydantic(obj: Any) -> Any:
                     data = obj.dict()  # Pydantic v1
                 except Exception:
                     data = obj.__dict__
-            # Create unified format for Pydantic models
-            unified_data = {"__datason_type__": "pydantic.model", "__datason_value__": data}
-            return serialize(unified_data)
+            # Return the plain data, not wrapped format
+            return serialize(data)
 
     return serialize(obj)
 
