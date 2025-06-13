@@ -62,6 +62,7 @@ def serialize_pydantic(obj: Any) -> Any:
                     data = obj.dict()  # Pydantic v1
                 except Exception:
                     data = obj.__dict__
+            # Return the plain data, not wrapped format
             return serialize(data)
 
     return serialize(obj)
@@ -90,9 +91,25 @@ def serialize_marshmallow(obj: Any) -> Any:
 
         if is_marshmallow_schema:
             try:
-                fields: Dict[str, Any] = {name: field.__class__.__name__ for name, field in obj.fields.items()}
+                # Try to extract field types from field objects
+                fields: Dict[str, Any] = {}
+                for name, field in obj.fields.items():
+                    if hasattr(field, "__class__") and hasattr(field.__class__, "__name__"):
+                        # Check if this is a real field object (not a string)
+                        field_type = field.__class__.__name__
+                        if field_type != "str":  # Avoid converting string values to 'str'
+                            fields[name] = field_type
+                        else:
+                            # This is likely a string value, use it directly
+                            fields[name] = field
+                    else:
+                        # Fallback to string representation
+                        fields[name] = str(field)
+
+                # Return the plain fields data, not wrapped format
                 return serialize(fields)
             except Exception:
+                # Fallback to __dict__ serialization
                 return serialize(obj.__dict__)
 
     return serialize(obj)

@@ -13,6 +13,11 @@ Intention-revealing dump functions for different use cases and optimization need
 | `dump_fast()` | Performance-optimized | High-throughput |
 | `dump_chunked()` | Memory-efficient for large data | Big datasets |
 | `stream_dump()` | Direct file streaming | Very large files |
+| **FILE OPERATIONS** | | |
+| `save_ml()` | Save ML data to JSON/JSONL files | ML model persistence |
+| `save_secure()` | Save with PII redaction to files | Secure file storage |
+| `save_api()` | Save clean data to files | API data export |
+| `save_chunked()` | Save large data efficiently to files | Big dataset export |
 
 ## 📦 Detailed Function Documentation
 
@@ -190,6 +195,132 @@ huge_data = {"massive_array": np.random.random((1000000, 100))}
 
 with open('large_output.json', 'w') as f:
     ds.stream_dump(huge_data, f)
+```
+
+## 🗃️ File Operations Functions
+
+### save_ml()
+
+ML-optimized file saving with perfect type preservation.
+
+::: datason.save_ml
+    options:
+      show_source: true
+      show_signature: true
+      show_signature_annotations: true
+
+**ML File Workflow Example:**
+```python
+import torch
+import numpy as np
+from sklearn.ensemble import RandomForestClassifier
+
+# Complete ML experiment data
+experiment = {
+    "model": RandomForestClassifier(n_estimators=100),
+    "weights": torch.randn(100, 50),
+    "features": np.random.random((1000, 20)),
+    "metadata": {"version": "1.0", "accuracy": 0.95}
+}
+
+# Save to JSON file with perfect ML type preservation
+ds.save_ml(experiment, "experiment.json")
+
+# Save to JSONL file (each key as separate line)
+ds.save_ml(experiment, "experiment.jsonl")
+
+# Automatic compression detection
+ds.save_ml(experiment, "experiment.json.gz")  # Compressed
+```
+
+### save_secure()
+
+Secure file saving with PII redaction and integrity verification.
+
+::: datason.save_secure
+    options:
+      show_source: true
+      show_signature: true
+      show_signature_annotations: true
+
+**Secure File Example:**
+```python
+# Sensitive data with PII
+user_data = {
+    "users": [
+        {"name": "John Doe", "ssn": "123-45-6789", "email": "john@example.com"},
+        {"name": "Jane Smith", "ssn": "987-65-4321", "email": "jane@example.com"}
+    ],
+    "api_key": "sk-1234567890abcdef"
+}
+
+# Automatic PII redaction with audit trail
+ds.save_secure(user_data, "users.json", redact_pii=True)
+
+# Custom redaction patterns
+ds.save_secure(
+    user_data,
+    "users_custom.json",
+    redact_fields=["api_key"],
+    redact_patterns=[r'\b\d{3}-\d{2}-\d{4}\b']  # SSN pattern
+)
+```
+
+### save_api()
+
+Clean API-safe file saving with null removal and formatting.
+
+::: datason.save_api
+    options:
+      show_source: true
+      show_signature: true
+      show_signature_annotations: true
+
+**API Export Example:**
+```python
+# API response data with nulls and complex types
+api_response = {
+    "status": "success",
+    "data": [1, 2, 3],
+    "errors": None,  # Will be removed
+    "timestamp": datetime.now(),
+    "pagination": {"page": 1, "total": None}  # Null removed
+}
+
+# Clean JSON output for API consumption
+ds.save_api(api_response, "api_export.json")
+
+# Multiple responses to JSONL
+responses = [api_response, api_response, api_response]
+ds.save_api(responses, "api_batch.jsonl")
+```
+
+### save_chunked()
+
+Memory-efficient file saving for large datasets.
+
+::: datason.save_chunked
+    options:
+      show_source: true
+      show_signature: true
+      show_signature_annotations: true
+
+**Large Dataset File Example:**
+```python
+# Large dataset that might not fit in memory
+large_data = {
+    "training_data": [{"features": np.random.random(1000)} for _ in range(10000)],
+    "metadata": {"size": "10K samples", "version": "1.0"}
+}
+
+# Memory-efficient chunked file saving
+ds.save_chunked(large_data, "training.json", chunk_size=1000)
+
+# JSONL format for streaming
+ds.save_chunked(large_data, "training.jsonl", chunk_size=500)
+
+# Compressed chunked saving
+ds.save_chunked(large_data, "training.json.gz", chunk_size=1000)
 ```
 
 ## 🔄 Choosing the Right Function

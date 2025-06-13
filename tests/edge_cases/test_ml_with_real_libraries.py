@@ -6,7 +6,6 @@ Tests ML serialization paths now that PyTorch, scikit-learn, and scipy are avail
 import warnings
 from unittest.mock import patch
 
-import numpy as np
 import pytest
 import scipy.sparse
 
@@ -21,6 +20,15 @@ from datason.ml_serializers import (
     serialize_scipy_sparse,
     serialize_sklearn_model,
 )
+
+# Optional imports for ML functionality
+try:
+    import numpy as np
+
+    HAS_NUMPY = True
+except ImportError:
+    HAS_NUMPY = False
+    np = None
 
 # Conditional imports to avoid PyTorch corruption
 try:
@@ -40,10 +48,10 @@ except ImportError:
     HAS_SKLEARN = False
 
 
+@pytest.mark.skipif(not HAS_TORCH, reason="PyTorch not available")
 class TestPyTorchSerializationWithRealLibrary:
     """Test PyTorch serialization using real library."""
 
-    @pytest.mark.skipif(not HAS_TORCH, reason="PyTorch not available")
     def test_serialize_basic_tensor(self):
         """Test basic tensor serialization."""
         tensor = torch.tensor([1.0, 2.0, 3.0])
@@ -131,6 +139,7 @@ class TestPyTorchSerializationWithRealLibrary:
         assert tensor_data.get("requires_grad", False) is False
 
 
+@pytest.mark.skipif(not HAS_SKLEARN, reason="scikit-learn not available")
 class TestScikitLearnSerializationWithRealLibrary:
     """Test scikit-learn serialization using real library."""
 

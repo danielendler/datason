@@ -37,6 +37,15 @@ Comprehensive support for temporal data with timezone awareness.
 - **Pandas Integration**: `pd.Timestamp`, `pd.NaT`, `pd.DatetimeIndex`
 - **Timezone Support**: Aware and naive datetime handling
 
+### [File Operations](file-operations.md) 🆕 v0.9.1
+Complete JSON/JSONL file I/O integrated as first-class citizens in the modern API.
+
+- **Dual Format Support**: Both JSON (.json) and JSONL (.jsonl) with auto-detection
+- **Progressive API**: Basic → Smart → Perfect loading complexity
+- **Full Integration**: All datason features work with files (ML, security, streaming, compression)
+- **Domain-Specific**: Specialized `save_ml()`, `save_secure()`, `save_api()` functions
+- **Auto-Compression**: Automatic .gz compression detection and handling
+
 ### [Chunked Processing & Streaming](chunked-processing/index.md) 🆕 v0.4.0
 Memory-efficient handling of large datasets that exceed available RAM.
 
