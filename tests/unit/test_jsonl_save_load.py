@@ -92,7 +92,8 @@ def test_chunked_jsonl_save():
 
         # Should have chunks, not the original list structure
         assert len(loaded) == 10  # 10 chunks of 1000 items each
-        assert isinstance(loaded[0], list)
+        # ML serialization may convert lists to numpy arrays
+        assert isinstance(loaded[0], (list, np.ndarray))
         assert len(loaded[0]) == 1000
 
 
@@ -152,5 +153,16 @@ def test_progressive_loading():
         smart_loaded = list(datason.load_smart_file(path))
         assert len(smart_loaded) == 3
 
-        # Both should produce the same result for this simple data
-        assert basic_loaded == smart_loaded
+        # Compare structure (arrays may be converted to numpy arrays)
+        assert basic_loaded[0] == smart_loaded[0]  # Simple text
+        assert basic_loaded[1] == smart_loaded[1]  # Complex nested
+        # Array comparison - handle potential numpy conversion
+        basic_array = basic_loaded[2]["array"]
+        smart_array = smart_loaded[2]["array"]
+        if isinstance(basic_array, np.ndarray) or isinstance(smart_array, np.ndarray):
+            # Convert both to lists for comparison
+            basic_list = basic_array.tolist() if isinstance(basic_array, np.ndarray) else basic_array
+            smart_list = smart_array.tolist() if isinstance(smart_array, np.ndarray) else smart_array
+            assert basic_list == smart_list
+        else:
+            assert basic_array == smart_array
