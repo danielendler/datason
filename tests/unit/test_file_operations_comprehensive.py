@@ -17,11 +17,26 @@ import tempfile
 from datetime import datetime
 from pathlib import Path
 
-import numpy as np
-import pandas as pd
 import pytest
 
 import datason
+
+# Optional imports for ML functionality
+try:
+    import numpy as np
+
+    HAS_NUMPY = True
+except ImportError:
+    HAS_NUMPY = False
+    np = None
+
+try:
+    import pandas as pd
+
+    HAS_PANDAS = True
+except ImportError:
+    HAS_PANDAS = False
+    pd = None
 
 
 class TestFileFormatDetection:
@@ -73,7 +88,7 @@ class TestBasicFileOperations:
         assert loaded_data["simple"] == self.test_data["simple"]
         assert loaded_data["nested"] == self.test_data["nested"]
         # Numbers may be converted to numpy array by ML serialization
-        if isinstance(loaded_data["numbers"], np.ndarray):
+        if HAS_NUMPY and isinstance(loaded_data["numbers"], np.ndarray):
             assert loaded_data["numbers"].tolist() == self.test_data["numbers"]
         else:
             assert loaded_data["numbers"] == self.test_data["numbers"]
@@ -94,7 +109,7 @@ class TestBasicFileOperations:
         assert loaded_data["simple"] == self.test_data["simple"]
         assert loaded_data["nested"] == self.test_data["nested"]
         # Numbers may be converted to numpy array by ML serialization
-        if isinstance(loaded_data["numbers"], np.ndarray):
+        if HAS_NUMPY and isinstance(loaded_data["numbers"], np.ndarray):
             assert loaded_data["numbers"].tolist() == self.test_data["numbers"]
         else:
             assert loaded_data["numbers"] == self.test_data["numbers"]
@@ -133,9 +148,12 @@ class TestBasicFileOperations:
         # Load with explicit format
         loaded = list(datason.load_smart_file(override_path, format="json"))
         assert len(loaded) == 1
-        assert loaded[0] == data
+        # Safe comparison for simple data without DataFrames
+        loaded_data = loaded[0]
+        assert loaded_data == data
 
 
+@pytest.mark.skipif(not HAS_NUMPY, reason="NumPy not available")
 class TestCompressionSupport:
     """Test compression functionality."""
 
@@ -170,11 +188,19 @@ class TestCompressionSupport:
         # Compare non-DataFrame fields
         for key in expected_data:
             if key != "dataframe":
-                if isinstance(loaded_data[key], np.ndarray) and isinstance(expected_data[key], np.ndarray):
+                if (
+                    HAS_NUMPY
+                    and isinstance(loaded_data[key], np.ndarray)
+                    and isinstance(expected_data[key], np.ndarray)
+                ):
                     assert np.array_equal(loaded_data[key], expected_data[key])
-                elif isinstance(loaded_data[key], pd.Series) and isinstance(expected_data[key], pd.Series):
+                elif (
+                    HAS_PANDAS and isinstance(loaded_data[key], pd.Series) and isinstance(expected_data[key], pd.Series)
+                ):
                     pd.testing.assert_series_equal(loaded_data[key], expected_data[key])
-                elif isinstance(loaded_data[key], pd.Series) or isinstance(expected_data[key], pd.Series):
+                elif HAS_PANDAS and (
+                    isinstance(loaded_data[key], pd.Series) or isinstance(expected_data[key], pd.Series)
+                ):
                     # Convert both to lists for comparison if one is a Series
                     loaded_list = (
                         loaded_data[key].tolist() if isinstance(loaded_data[key], pd.Series) else loaded_data[key]
@@ -190,7 +216,7 @@ class TestCompressionSupport:
         if "dataframe" in expected_data:
             loaded_df = loaded_data["dataframe"]
             expected_df = expected_data["dataframe"]
-            if isinstance(loaded_df, pd.DataFrame) and isinstance(expected_df, pd.DataFrame):
+            if HAS_PANDAS and isinstance(loaded_df, pd.DataFrame) and isinstance(expected_df, pd.DataFrame):
                 pd.testing.assert_frame_equal(loaded_df, expected_df)
             else:
                 assert loaded_df == expected_df
@@ -237,11 +263,21 @@ class TestCompressionSupport:
             # Compare non-DataFrame fields
             for key in expected_data:
                 if key != "dataframe":
-                    if isinstance(loaded_data[key], np.ndarray) and isinstance(expected_data[key], np.ndarray):
+                    if (
+                        HAS_NUMPY
+                        and isinstance(loaded_data[key], np.ndarray)
+                        and isinstance(expected_data[key], np.ndarray)
+                    ):
                         assert np.array_equal(loaded_data[key], expected_data[key])
-                    elif isinstance(loaded_data[key], pd.Series) and isinstance(expected_data[key], pd.Series):
+                    elif (
+                        HAS_PANDAS
+                        and isinstance(loaded_data[key], pd.Series)
+                        and isinstance(expected_data[key], pd.Series)
+                    ):
                         pd.testing.assert_series_equal(loaded_data[key], expected_data[key])
-                    elif isinstance(loaded_data[key], pd.Series) or isinstance(expected_data[key], pd.Series):
+                    elif HAS_PANDAS and (
+                        isinstance(loaded_data[key], pd.Series) or isinstance(expected_data[key], pd.Series)
+                    ):
                         # Convert both to lists for comparison if one is a Series
                         loaded_list = (
                             loaded_data[key].tolist() if isinstance(loaded_data[key], pd.Series) else loaded_data[key]
@@ -259,12 +295,13 @@ class TestCompressionSupport:
             if "dataframe" in expected_data:
                 loaded_df = loaded_data["dataframe"]
                 expected_df = expected_data["dataframe"]
-                if isinstance(loaded_df, pd.DataFrame) and isinstance(expected_df, pd.DataFrame):
+                if HAS_PANDAS and isinstance(loaded_df, pd.DataFrame) and isinstance(expected_df, pd.DataFrame):
                     pd.testing.assert_frame_equal(loaded_df, expected_df)
                 else:
                     assert loaded_df == expected_df
 
 
+@pytest.mark.skipif(not (HAS_NUMPY and HAS_PANDAS), reason="NumPy and pandas not available")
 class TestMLDataTypes:
     """Test ML-specific data type handling."""
 
@@ -367,23 +404,28 @@ class TestStreamingOperations:
 
     def test_streaming_with_ml_data(self):
         """Test streaming with ML data types."""
+        if not HAS_NUMPY:
+            pytest.skip("NumPy not available")
+
         stream_path = self.temp_dir / "ml_stream.jsonl"
 
-        # Stream ML records
+        # Stream ML data
         with datason.stream_save_ml(stream_path) as stream:
-            for epoch in range(5):
+            for i in range(5):
                 record = {
-                    "epoch": epoch,
+                    "id": i,
                     "weights": np.random.randn(10, 10),
                     "metrics": {"loss": np.random.exponential(), "accuracy": np.random.random()},
                 }
                 stream.write(record)
 
-        # Verify ML data is preserved
-        records = list(datason.load_smart_file(stream_path))
-        assert len(records) == 5
+        # Load back
+        loaded = list(datason.load_smart_file(stream_path))
+        assert len(loaded) == 5
 
-        first_record = records[0]
+        # Check first record
+        first_record = loaded[0]
+        assert "id" in first_record
         assert isinstance(first_record["weights"], np.ndarray)
         assert first_record["weights"].shape == (10, 10)
 
@@ -570,8 +612,10 @@ class TestAPIDiscovery:
         # Should include info about file operations
         assert isinstance(api_info, dict)
         # Note: Exact structure depends on implementation
+        assert api_info["file_operations"]["formats"] == ["json", "jsonl"]
 
 
+@pytest.mark.skipif(not HAS_NUMPY, reason="NumPy not available")
 class TestPerformance:
     """Test performance characteristics."""
 
