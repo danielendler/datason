@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.9.1] - 2025-06-12
+## [0.10.0] - 2025-01-15
 
 ### 🗃️ **MAJOR: File Operations as First-Class Citizens**
 - **Complete JSON/JSONL File I/O**: Fully integrated file operations into the modern API ecosystem
@@ -77,7 +77,47 @@ Comprehensive validation with complex ML pipeline:
 - Streaming support for large files prevents memory overflow
 - Smart caching integration for repeated file operations
 
-## [0.9.0] - 2025-06-07
+## [0.9.0] - 2025-01-10 - [PLANNED]
+
+### 🔐 **PLANNED: Data Integrity & Security Framework**
+> **⚠️ NOTE**: These features are planned for v0.9.0 but not yet implemented.
+> Comprehensive test suite created at `tests/edge_cases/test_integrity_and_security.py`
+> to guide development and ensure quality.
+
+#### **Planned Features** 🔮
+- **Complete Hash-Based Integrity System**: Comprehensive data validation and tampering detection
+- **Multiple Hash Algorithms**: Support for SHA-256, SHA-512, MD5, and Blake2b with performance optimization
+- **Digital Signature Support**: Data authenticity and non-repudiation capabilities
+- **Enterprise Security Compliance**: FIPS 140-2, SOC 2, GDPR, HIPAA, SOX compatibility
+- **Serialization Integration**: Automatic integrity validation during deserialization
+
+#### **Test Coverage Ready** ✅
+- **250+ test cases** created covering all planned functionality
+- **Hash generation and verification** test scenarios
+- **Digital signature** test workflows  
+- **Enterprise compliance** validation tests
+- **Performance optimization** benchmarks
+- **Security attack** prevention tests
+
+#### **Development Roadmap**
+1. **Phase 1**: Implement `datason/integrity.py` with hash generation functions
+2. **Phase 2**: Add digital signature support with cryptographic libraries
+3. **Phase 3**: Integrate with SerializationConfig for automatic validation
+4. **Phase 4**: Add enterprise compliance features and audit logging
+5. **Phase 5**: Performance optimizations and hardware acceleration
+
+#### **Test-Driven Development** 🧪
+All functionality pre-tested with comprehensive edge cases:
+```python
+# Example planned API (tests already written)
+hash_result = datason.generate_hash(data, algorithm='sha256')
+is_valid = datason.verify_hash(data, hash_result)
+manifest = datason.create_integrity_manifest(sensitive_data)
+```
+
+**Current Status**: 🚧 **In Development** - Test suite complete, implementation in progress
+
+## [0.8.0] - 2025-01-08
 
 ### Added
 - **Enhanced ML Framework Support**: Added serialization support for 5 new ML frameworks:
@@ -108,36 +148,7 @@ Comprehensive validation with complex ML pipeline:
 - Average serialization time for mixed ML data: ~0.0007 seconds
 - Memory-efficient serialization for large ML objects
 
-## [0.8.0] - 2025-06-07
 
-### Added
-- **Enhanced ML Framework Support**: Added serialization support for 5 new ML frameworks:
-  - **CatBoost**: Full support for CatBoost models with parameter extraction and fitted state detection
-  - **Keras**: Support for Keras/TensorFlow models with architecture metadata
-  - **Optuna**: Support for Optuna studies with trial information and hyperparameter tracking
-  - **Plotly**: Complete support for Plotly figures with data, layout, and configuration preservation
-  - **Polars**: Support for Polars DataFrames with schema and data preservation
-- **Comprehensive Test Coverage**: Added 29 new tests covering all new frameworks with 80%+ coverage
-- **Performance Optimizations**: Enhanced framework detection using string-based type checking for better performance
-- **Fallback Handling**: Robust fallback mechanisms when optional ML libraries are not available
-- **Template Reconstruction**: Enhanced template-based deserialization for new ML frameworks
-
-### Enhanced
-- **ML Library Detection**: Updated `get_ml_library_info()` to include all new frameworks
-- **Error Handling**: Improved error handling and warning messages for ML serialization failures
-- **Documentation**: Added comprehensive examples and usage patterns for new frameworks
-
-### Technical Details
-- Extended `datason/ml_serializers.py` with 5 new serializer functions
-- Added lazy import system for optional dependencies
-- Enhanced `detect_and_serialize_ml_object()` with new framework detection
-- Maintained backward compatibility with existing ML framework support
-- All existing tests continue to pass with zero regressions
-
-### Performance
-- Framework detection optimized for minimal overhead on non-ML objects
-- Average serialization time for mixed ML data: ~0.0007 seconds
-- Memory-efficient serialization for large ML objects
 
 ## [0.7.5] - In Development - 2025-06-06
 

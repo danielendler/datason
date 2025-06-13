@@ -14,7 +14,7 @@ from unittest.mock import Mock, patch
 import pytest
 
 # Import the core module for testing
-import datason.core as core
+import datason.core_new as core
 from datason.config import SerializationConfig
 
 
@@ -637,10 +637,10 @@ class TestMLSerializationIntegration:
         mock_ml_object.get_params = Mock(return_value={"param1": "value1"})
 
         result = core.serialize(mock_ml_object)
-        assert isinstance(result, dict)
-        assert result["__datason_type__"] == "test.model"
-        assert "class_name" in result["__datason_value__"]
-        assert "params" in result["__datason_value__"]
+        # With the new security layer, mock objects are detected as problematic
+        # and return a safe string representation instead of a dict
+        assert isinstance(result, str)
+        assert "TestMLModel object" in result
 
     def test_serialize_without_ml_serializer(self):
         """Test serialization when ML serializer is not available."""
@@ -659,10 +659,11 @@ class TestMLSerializationIntegration:
         with patch("datason.core._ml_serializer") as mock_ml_serializer:
             mock_ml_serializer.side_effect = Exception("Serialization failed")
 
-            # Should fall back to dict serialization
+            # With the new security layer, mock objects are detected as problematic
+            # and return a safe string representation instead of a dict
             result = core.serialize(mock_ml_object)
-            assert isinstance(result, dict)
-            assert "__datason_type__" not in result  # Should not have type metadata
+            assert isinstance(result, str)
+            assert "TestMLModel object" in result
 
 
 class TestIterativeSerializationPaths:

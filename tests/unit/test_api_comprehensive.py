@@ -38,19 +38,19 @@ class TestDumpFunction:
     def test_dump_basic_usage(self):
         """Test basic dump functionality."""
         with patch("datason.api.serialize") as mock_serialize:
-            mock_serialize.return_value = {"test": "data"}
+            mock_serialize.return_value = {"__datason_type__": "dict", "__datason_value__": {"test": "data"}}
 
             result = api.dump({"input": "data"})
 
             mock_serialize.assert_called_once()
-            assert result == {"test": "data"}
+            assert result == {"__datason_type__": "dict", "__datason_value__": {"test": "data"}}
 
     def test_dump_with_config(self):
         """Test dump with explicit config."""
         config = SerializationConfig()
 
         with patch("datason.api.serialize") as mock_serialize:
-            mock_serialize.return_value = {"test": "data"}
+            mock_serialize.return_value = {"__datason_type__": "dict", "__datason_value__": {"test": "data"}}
 
             api.dump({"input": "data"}, config=config)
 
@@ -61,7 +61,7 @@ class TestDumpFunction:
         with patch("datason.api.serialize") as mock_serialize, patch("datason.api.get_ml_config") as mock_get_ml_config:
             mock_config = SerializationConfig()
             mock_get_ml_config.return_value = mock_config
-            mock_serialize.return_value = {"test": "data"}
+            mock_serialize.return_value = {"__datason_type__": "ml.model", "__datason_value__": {"test": "data"}}
 
             api.dump({"input": "data"}, ml_mode=True)
 
@@ -75,7 +75,7 @@ class TestDumpFunction:
         ) as mock_get_api_config:
             mock_config = SerializationConfig()
             mock_get_api_config.return_value = mock_config
-            mock_serialize.return_value = {"test": "data"}
+            mock_serialize.return_value = {"__datason_type__": "api.response", "__datason_value__": {"test": "data"}}
 
             api.dump({"input": "data"}, api_mode=True)
 
@@ -161,13 +161,13 @@ class TestDumpVariants:
         with patch("datason.api.serialize") as mock_serialize, patch("datason.api.get_ml_config") as mock_get_ml_config:
             mock_config = SerializationConfig()
             mock_get_ml_config.return_value = mock_config
-            mock_serialize.return_value = {"ml": "data"}
+            mock_serialize.return_value = {"__datason_type__": "ml.model", "__datason_value__": {"model": "data"}}
 
             result = api.dump_ml({"model": "data"})
 
             mock_get_ml_config.assert_called_once()
             mock_serialize.assert_called_once_with({"model": "data"}, config=mock_config)
-            assert result == {"ml": "data"}
+            assert result == {"__datason_type__": "ml.model", "__datason_value__": {"model": "data"}}
 
     def test_dump_api(self):
         """Test dump_api function."""
@@ -176,18 +176,24 @@ class TestDumpVariants:
         ) as mock_get_api_config:
             mock_config = SerializationConfig()
             mock_get_api_config.return_value = mock_config
-            mock_serialize.return_value = {"api": "data"}
+            mock_serialize.return_value = {
+                "__datason_type__": "api.response",
+                "__datason_value__": {"response": "data"},
+            }
 
             result = api.dump_api({"response": "data"})
 
             mock_get_api_config.assert_called_once()
             mock_serialize.assert_called_once_with({"response": "data"}, config=mock_config)
-            assert result == {"api": "data"}
+            assert result == {"__datason_type__": "api.response", "__datason_value__": {"response": "data"}}
 
     def test_dump_secure_default_settings(self):
         """Test dump_secure with default settings."""
         with patch("datason.api.serialize") as mock_serialize:
-            mock_serialize.return_value = {"secure": "data"}
+            mock_serialize.return_value = {
+                "__datason_type__": "secure.data",
+                "__datason_value__": {"sensitive": "data"},
+            }
 
             result = api.dump_secure({"sensitive": "data"})
 
@@ -199,7 +205,7 @@ class TestDumpVariants:
             assert config.redact_patterns is not None
             assert config.redact_fields is not None
             assert "password" in config.redact_fields
-            assert result == {"secure": "data"}
+            assert result == {"__datason_type__": "secure.data", "__datason_value__": {"sensitive": "data"}}
 
     def test_dump_secure_custom_settings(self):
         """Test dump_secure with custom settings."""

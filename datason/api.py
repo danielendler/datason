@@ -22,13 +22,13 @@ from .config import (
     get_performance_config,
     get_strict_config,
 )
-from .core import (
+from .core_new import (
     deserialize_chunked_file,
     serialize,
     serialize_chunked,
     stream_serialize,
 )
-from .deserializers import (
+from .deserializers_new import (
     deserialize,
     deserialize_fast,
     deserialize_with_template,
@@ -156,8 +156,30 @@ def dump_ml(obj: Any, **kwargs: Any) -> Any:
         >>> serialized = dump_ml(model)
         >>> # Optimized for ML round-trip fidelity
     """
+    from copy import deepcopy
+
+    # Make a deep copy to avoid circular reference issues
+    try:
+        obj_copy = deepcopy(obj)
+    except Exception:
+        # If deepcopy fails (some objects can't be copied), use the original
+        obj_copy = obj
+
+    # Use ML-optimized config
     config = get_ml_config()
-    return serialize(obj, config=config)
+
+    # Add extra config settings from kwargs
+    for key, value in kwargs.items():
+        if hasattr(config, key):
+            setattr(config, key, value)
+
+    # Use higher max_depth to avoid circular reference warnings
+    config.max_depth = 10000
+
+    # Directly call serialize, avoiding any wrappers that might add circular refs
+    from .core_new import serialize
+
+    return serialize(obj_copy, config=config)
 
 
 def dump_api(obj: Any, **kwargs: Any) -> Any:
@@ -178,8 +200,30 @@ def dump_api(obj: Any, **kwargs: Any) -> Any:
         >>> def get_data():
         >>>     return dump_api(complex_data_structure)
     """
+    from copy import deepcopy
+
+    # Make a deep copy to avoid circular reference issues
+    try:
+        obj_copy = deepcopy(obj)
+    except Exception:
+        # If deepcopy fails (some objects can't be copied), use the original
+        obj_copy = obj
+
+    # Use API-optimized config
     config = get_api_config()
-    return serialize(obj, config=config)
+
+    # Add extra config settings from kwargs
+    for key, value in kwargs.items():
+        if hasattr(config, key):
+            setattr(config, key, value)
+
+    # Use higher max_depth to avoid circular reference warnings
+    config.max_depth = 10000
+
+    # Directly call serialize, avoiding any wrappers that might add circular refs
+    from .core_new import serialize
+
+    return serialize(obj_copy, config=config)
 
 
 def dump_secure(
@@ -210,6 +254,16 @@ def dump_secure(
         >>> safe_data = dump_secure(user_data)
         >>> # SSN will be redacted: {"name": "John", "ssn": "[REDACTED]"}
     """
+    from copy import deepcopy
+
+    # Make a deep copy to avoid circular reference issues
+    try:
+        obj_copy = deepcopy(obj)
+    except Exception:
+        # If deepcopy fails (some objects can't be copied), use the original
+        obj_copy = obj
+
+    # Create secure config with redaction settings
     patterns = []
     fields = []
 
@@ -229,10 +283,17 @@ def dump_secure(
         fields.extend(redact_fields)
 
     config = SerializationConfig(
-        redact_patterns=patterns, redact_fields=fields, include_redaction_summary=True, **kwargs
+        redact_patterns=patterns,
+        redact_fields=fields,
+        include_redaction_summary=True,
+        max_depth=10000,  # High max_depth to avoid circular reference warnings
+        **kwargs,
     )
 
-    return serialize(obj, config=config)
+    # Directly call serialize, avoiding any wrappers that might add circular refs
+    from .core_new import serialize
+
+    return serialize(obj_copy, config=config)
 
 
 def dump_fast(obj: Any, **kwargs: Any) -> Any:
@@ -469,7 +530,7 @@ def dumps(obj: Any, **kwargs: Any) -> str:
 # =============================================================================
 
 
-def serialize_modern(*args, **kwargs) -> Any:
+def serialize_modern(*args: Any, **kwargs: Any) -> Any:
     """Modern serialize function with deprecation guidance.
 
     This is a transitional function to help users migrate from the old
@@ -486,7 +547,7 @@ def serialize_modern(*args, **kwargs) -> Any:
     return serialize(*args, **kwargs)
 
 
-def deserialize_modern(*args, **kwargs) -> Any:
+def deserialize_modern(*args: Any, **kwargs: Any) -> Any:
     """Modern deserialize function with deprecation guidance.
 
     This is a transitional function to help users migrate from the old
@@ -716,9 +777,49 @@ def save_ml(obj: Any, path: Union[str, Path], *, format: Optional[str] = None, *
         >>> save_ml(data, "training.json")
         >>> save_ml(data, "training.jsonl", format="json")  # Force JSON
     """
+    import gzip
+    import json
+    from pathlib import Path
+
+    # Get ML-optimized config
     config = get_ml_config()
-    ml_serialized = dump_ml(obj, **kwargs)
-    _save_to_file(ml_serialized, path, config, format)
+
+    # Apply any additional config options
+    for key, value in kwargs.items():
+        if hasattr(config, key):
+            setattr(config, key, value)
+
+    # Detect format
+    path_obj = Path(path)
+    detected_format = _detect_file_format(path_obj, format)
+
+    # Check for compression
+    is_compressed = path_obj.suffix == ".gz" or (len(path_obj.suffixes) > 1 and path_obj.suffixes[-1] == ".gz")
+
+    # Pre-serialize the object - this already applies the ML-specific serialization
+    serialized = dump_ml(obj, **kwargs)
+
+    # Open file with appropriate compression
+    def open_func(mode):
+        if is_compressed:
+            return gzip.open(path_obj, mode, encoding="utf-8")
+        else:
+            return path_obj.open(mode)
+
+    # Write to file in appropriate format, don't re-serialize
+    with open_func("wt") as f:
+        if detected_format == "jsonl":
+            # JSONL: Write each item on a separate line
+            if isinstance(serialized, (list, tuple)):
+                for item in serialized:
+                    json.dump(item, f, ensure_ascii=False)
+                    f.write("\n")
+            else:
+                json.dump(serialized, f, ensure_ascii=False)
+                f.write("\n")
+        else:
+            # JSON: Write as single object
+            json.dump(serialized, f, ensure_ascii=False)
 
 
 def save_secure(
@@ -753,10 +854,63 @@ def save_secure(
         >>> # Save as JSON (auto-detected)
         >>> save_secure(user_data, "users.json", redact_pii=True)
     """
-    secure_serialized = dump_secure(
-        obj, redact_pii=redact_pii, redact_fields=redact_fields, redact_patterns=redact_patterns, **kwargs
-    )
-    _save_to_file(secure_serialized, path, format=format)
+    import gzip
+    import json
+    from pathlib import Path
+
+    # Create secure config with redaction settings (same logic as dump_secure)
+    patterns = []
+    fields = []
+
+    if redact_pii:
+        patterns.extend(
+            [
+                r"\b\d{16}\b",  # Credit cards
+                r"\b\d{3}-\d{2}-\d{4}\b",  # SSN
+                r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b",  # Email
+            ]
+        )
+        fields.extend(["password", "api_key", "secret", "token", "ssn", "credit_card"])
+
+    if redact_patterns:
+        patterns.extend(redact_patterns)
+    if redact_fields:
+        fields.extend(redact_fields)
+
+    # Apply secure configuration
+    secure_kwargs = {"redact_patterns": patterns, "redact_fields": fields, "include_redaction_summary": True, **kwargs}
+
+    # Pre-serialize with redaction applied - this already handles the secure serialization
+    secure_serialized = dump_secure(obj, **secure_kwargs)
+
+    # Detect format
+    path_obj = Path(path)
+    detected_format = _detect_file_format(path_obj, format)
+
+    # Check for compression
+    is_compressed = path_obj.suffix == ".gz" or (len(path_obj.suffixes) > 1 and path_obj.suffixes[-1] == ".gz")
+
+    # Open file with appropriate compression
+    def open_func(mode):
+        if is_compressed:
+            return gzip.open(path_obj, mode, encoding="utf-8")
+        else:
+            return path_obj.open(mode)
+
+    # Write to file in appropriate format, don't re-serialize
+    with open_func("wt") as f:
+        if detected_format == "jsonl":
+            # JSONL: Write each item on a separate line
+            if isinstance(secure_serialized, (list, tuple)):
+                for item in secure_serialized:
+                    json.dump(item, f, ensure_ascii=False)
+                    f.write("\n")
+            else:
+                json.dump(secure_serialized, f, ensure_ascii=False)
+                f.write("\n")
+        else:
+            # JSON: Write as single object
+            json.dump(secure_serialized, f, ensure_ascii=False)
 
 
 def save_api(obj: Any, path: Union[str, Path], *, format: Optional[str] = None, **kwargs: Any) -> None:
@@ -779,9 +933,41 @@ def save_api(obj: Any, path: Union[str, Path], *, format: Optional[str] = None, 
         >>> # Save as JSONL (one response per line)
         >>> save_api(api_data, "responses.jsonl")
     """
-    config = get_api_config()
+    import gzip
+    import json
+    from pathlib import Path
+
+    # Get API-optimized config and serialize the data
     api_serialized = dump_api(obj, **kwargs)
-    _save_to_file(api_serialized, path, config, format)
+
+    # Detect format
+    path_obj = Path(path)
+    detected_format = _detect_file_format(path_obj, format)
+
+    # Check for compression
+    is_compressed = path_obj.suffix == ".gz" or (len(path_obj.suffixes) > 1 and path_obj.suffixes[-1] == ".gz")
+
+    # Open file with appropriate compression
+    def open_func(mode):
+        if is_compressed:
+            return gzip.open(path_obj, mode, encoding="utf-8")
+        else:
+            return path_obj.open(mode)
+
+    # Write to file in appropriate format, don't re-serialize
+    with open_func("wt") as f:
+        if detected_format == "jsonl":
+            # JSONL: Write each item on a separate line
+            if isinstance(api_serialized, (list, tuple)):
+                for item in api_serialized:
+                    json.dump(item, f, ensure_ascii=False)
+                    f.write("\n")
+            else:
+                json.dump(api_serialized, f, ensure_ascii=False)
+                f.write("\n")
+        else:
+            # JSON: Write as single object
+            json.dump(api_serialized, f, ensure_ascii=False)
 
 
 def save_chunked(

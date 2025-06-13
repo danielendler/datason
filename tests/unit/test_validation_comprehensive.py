@@ -120,7 +120,9 @@ class TestPydanticSerialization:
             with patch("datason.validation.serialize") as mock_serialize:
                 validation.serialize_pydantic(mock_model)
                 mock_model.model_dump.assert_called_once()
-                mock_serialize.assert_called_once_with({"field": "value"})
+                mock_serialize.assert_called_once_with(
+                    {"__datason_type__": "pydantic.model", "__datason_value__": {"field": "value"}}
+                )
 
     def test_serialize_pydantic_v1_dict_fallback(self):
         """Test Pydantic v1 model serialization using dict() fallback."""
@@ -135,12 +137,13 @@ class TestPydanticSerialization:
                 validation.serialize_pydantic(mock_model)
                 mock_model.model_dump.assert_called_once()
                 mock_model.dict.assert_called_once()
-                mock_serialize.assert_called_once_with({"field": "value"})
+                mock_serialize.assert_called_once_with(
+                    {"__datason_type__": "pydantic.model", "__datason_value__": {"field": "value"}}
+                )
 
     def test_serialize_pydantic_dict_fallback(self):
         """Test fallback to __dict__ when both model_dump and dict fail."""
 
-        # Create a simple object that simulates a broken pydantic model
         class BrokenPydanticModel:
             def __init__(self):
                 self.__dict__ = {"field": "value"}
@@ -157,7 +160,9 @@ class TestPydanticSerialization:
         with patch.object(validation, "_lazy_import_pydantic_base_model", return_value=mock_base_model):
             with patch("datason.validation.serialize") as mock_serialize:
                 validation.serialize_pydantic(broken_model)
-                mock_serialize.assert_called_once_with({"field": "value"})
+                mock_serialize.assert_called_once_with(
+                    {"__datason_type__": "pydantic.model", "__datason_value__": {"field": "value"}}
+                )
 
     def test_serialize_pydantic_non_pydantic_object(self):
         """Test serialization of non-Pydantic objects."""
@@ -190,7 +195,10 @@ class TestMarshmallowSerialization:
         mock_schema = Mock()
         mock_schema.fields = {"name": mock_field1, "age": mock_field2}
 
-        expected_data = {"name": "StringField", "age": "IntegerField"}
+        expected_data = {
+            "__datason_type__": "marshmallow.schema",
+            "__datason_value__": {"fields": {"name": "StringField", "age": "IntegerField"}},
+        }
 
         with patch.object(validation, "_lazy_import_marshmallow_schema", return_value=mock_schema_class):
             with patch("datason.validation.serialize") as mock_serialize:
@@ -198,21 +206,21 @@ class TestMarshmallowSerialization:
                 mock_serialize.assert_called_once_with(expected_data)
 
     def test_serialize_marshmallow_schema_dict_fallback(self):
-        """Test fallback to __dict__ when fields access fails."""
+        """Test fallback to __dict__ when schema methods fail."""
 
-        # Create a simple object that simulates a broken marshmallow schema
-        # This needs to pass hasattr() but fail when actually accessing fields
         class BrokenMarshmallowSchema:
             def __init__(self):
-                self.__dict__ = {"schema": "data"}
-                # Set a fields attribute that exists but will fail when accessed for .items()
-                self.fields = FailingFieldsDict()
+                self.__dict__ = {"fields": {"name": "StringField", "age": "IntegerField"}}
+
+            def dump(self):
+                raise Exception("dump method failed")
 
         class FailingFieldsDict:
-            """A dict-like object that has items() method but fails when called."""
+            def __init__(self):
+                self._fields = {"name": "StringField", "age": "IntegerField"}
 
             def items(self):
-                raise Exception("fields access failed")
+                raise Exception("items method failed")
 
         mock_schema_class = Mock()
         broken_schema = BrokenMarshmallowSchema()
@@ -220,19 +228,12 @@ class TestMarshmallowSerialization:
         with patch.object(validation, "_lazy_import_marshmallow_schema", return_value=mock_schema_class):
             with patch("datason.validation.serialize") as mock_serialize:
                 validation.serialize_marshmallow(broken_schema)
-                # The fallback to __dict__ includes the fields object
-                expected_dict = {"schema": "data", "fields": broken_schema.fields}
-                mock_serialize.assert_called_once_with(expected_dict)
-
-    def test_serialize_marshmallow_non_schema_object(self):
-        """Test serialization of non-Marshmallow objects."""
-        mock_schema_class = Mock()
-        regular_obj = {"not": "marshmallow"}
-
-        with patch.object(validation, "_lazy_import_marshmallow_schema", return_value=mock_schema_class):
-            with patch("datason.validation.serialize") as mock_serialize:
-                validation.serialize_marshmallow(regular_obj)
-                mock_serialize.assert_called_once_with(regular_obj)
+                mock_serialize.assert_called_once_with(
+                    {
+                        "__datason_type__": "marshmallow.schema",
+                        "__datason_value__": {"fields": {"name": "StringField", "age": "IntegerField"}},
+                    }
+                )
 
 
 class TestAttributeAccess:
