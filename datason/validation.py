@@ -62,7 +62,9 @@ def serialize_pydantic(obj: Any) -> Any:
                     data = obj.dict()  # Pydantic v1
                 except Exception:
                     data = obj.__dict__
-            return serialize(data)
+            # Create unified format for Pydantic models
+            unified_data = {"__datason_type__": "pydantic.model", "__datason_value__": data}
+            return serialize(unified_data)
 
     return serialize(obj)
 
@@ -91,9 +93,13 @@ def serialize_marshmallow(obj: Any) -> Any:
         if is_marshmallow_schema:
             try:
                 fields: Dict[str, Any] = {name: field.__class__.__name__ for name, field in obj.fields.items()}
-                return serialize(fields)
+                # Create unified format for Marshmallow schemas
+                unified_data = {"__datason_type__": "marshmallow.schema", "__datason_value__": {"fields": fields}}
+                return serialize(unified_data)
             except Exception:
-                return serialize(obj.__dict__)
+                # Create unified format even for fallback case
+                unified_data = {"__datason_type__": "marshmallow.schema", "__datason_value__": obj.__dict__}
+                return serialize(unified_data)
 
     return serialize(obj)
 

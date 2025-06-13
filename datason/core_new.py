@@ -1486,29 +1486,76 @@ def deserialize_chunked_file(
         ...     chunk_processor=process_chunk
         ... ))
     """
+    import gzip
+
     file_path = Path(file_path)
 
-    if format == "jsonl":
-        # JSON Lines format - one object per line
-        with file_path.open("r") as f:
-            for line in f:
-                line = line.strip()
-                if line:
-                    chunk = json.loads(line)
-                    if chunk_processor:
-                        chunk = chunk_processor(chunk)
-                    yield chunk
+    # Auto-detect gzip compression by checking magic number
+    is_gzipped = False
+    try:
+        with file_path.open("rb") as f:
+            magic = f.read(2)
+            is_gzipped = magic == b"\x1f\x8b"
+    except OSError:
+        is_gzipped = False
 
-    elif format == "json":
+    if format.lower() == "jsonl":
+        # JSON Lines format - one object per line
+        if is_gzipped:
+            with gzip.open(file_path, "rt", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if line:
+                        try:
+                            chunk = json.loads(line)
+                            if chunk_processor:
+                                chunk = chunk_processor(chunk)
+                            yield chunk
+                        except json.JSONDecodeError as e:
+                            warnings.warn(f"Invalid JSON line: {line[:100]}... Error: {e}", stacklevel=2)
+                            continue
+        else:
+            with file_path.open("r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if line:
+                        try:
+                            chunk = json.loads(line)
+                            if chunk_processor:
+                                chunk = chunk_processor(chunk)
+                            yield chunk
+                        except json.JSONDecodeError as e:
+                            warnings.warn(f"Invalid JSON line: {line[:100]}... Error: {e}", stacklevel=2)
+                            continue
+
+    elif format.lower() == "json":
         # JSON format with array
-        with file_path.open("r") as f:
-            data = json.load(f)
+        if is_gzipped:
+            with gzip.open(file_path, "rt", encoding="utf-8") as f:
+                data = json.load(f)
+        else:
+            with file_path.open("r", encoding="utf-8") as f:
+                data = json.load(f)
+
+        # Handle different data structures
+        if isinstance(data, list):
+            # Direct list of items
+            for chunk in data:
+                if chunk_processor:
+                    chunk = chunk_processor(chunk)
+                yield chunk
+        elif isinstance(data, dict):
             # Support both 'chunks' (from ChunkedSerializationResult) and 'data' (from StreamingSerializer)
             chunks = data.get("chunks", data.get("data", []))
             for chunk in chunks:
                 if chunk_processor:
                     chunk = chunk_processor(chunk)
                 yield chunk
+        else:
+            # Single item
+            if chunk_processor:
+                data = chunk_processor(data)
+            yield data
 
     else:
         raise ValueError(f"Unsupported format: {format}. Use 'jsonl' or 'json'")

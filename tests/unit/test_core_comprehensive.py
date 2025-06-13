@@ -9,7 +9,7 @@ import uuid
 from datetime import datetime
 from decimal import Decimal
 from pathlib import Path
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -622,25 +622,39 @@ class TestMLSerializationIntegration:
         # Test that we can detect ML serializer availability
         assert core._ml_serializer is not None or core._ml_serializer is None
 
-    @patch("datason.core._ml_serializer")
-    def test_serialize_with_ml_object_mock(self, mock_ml_serializer):
+    def test_serialize_with_ml_object_mock(self):
         """Test serialization with mocked ML serializer."""
+
         # Mock the unified handler's behavior
-        mock_ml_serializer.return_value = {
-            "__datason_type__": "test.model",
-            "__datason_value__": {"class_name": "TestMLModel", "params": {"param1": "value1"}},
-        }
+        def mock_ml_serializer(obj):
+            return {
+                "__datason_type__": "test.model",
+                "__datason_value__": {"class_name": "TestMLModel", "params": {"param1": "value1"}},
+            }
 
-        # Create a mock ML object
-        mock_ml_object = Mock()
-        mock_ml_object.__class__.__name__ = "TestMLModel"
-        mock_ml_object.get_params = Mock(return_value={"param1": "value1"})
+        # Create a mock ML object that doesn't trigger unittest.mock detection
+        class TestMLModel:
+            def __init__(self):
+                self.param1 = "value1"
 
-        result = core.serialize(mock_ml_object)
-        assert isinstance(result, dict)
-        assert result["__datason_type__"] == "test.model"
-        assert "class_name" in result["__datason_value__"]
-        assert "params" in result["__datason_value__"]
+            def get_params(self):
+                return {"param1": "value1"}
+
+        mock_ml_object = TestMLModel()
+
+        # Temporarily replace the ML serializer
+        original_ml_serializer = core._ml_serializer
+        core._ml_serializer = mock_ml_serializer
+
+        try:
+            result = core.serialize(mock_ml_object)
+            assert isinstance(result, dict)
+            assert result["__datason_type__"] == "test.model"
+            assert "class_name" in result["__datason_value__"]
+            assert "params" in result["__datason_value__"]
+        finally:
+            # Restore the original ML serializer
+            core._ml_serializer = original_ml_serializer
 
     def test_serialize_without_ml_serializer(self):
         """Test serialization when ML serializer is not available."""
@@ -651,16 +665,22 @@ class TestMLSerializationIntegration:
 
     def test_ml_serializer_error_handling(self):
         """Test error handling in ML serialization."""
-        # Create a mock ML object that will cause an error
-        mock_ml_object = Mock()
-        mock_ml_object.__class__.__name__ = "TestMLModel"
-        mock_ml_object.get_params = Mock(side_effect=Exception("Test error"))
+
+        # Create a real test object that will cause an error (not a Mock)
+        class TestMLModel:
+            def __init__(self):
+                self.param1 = "value1"
+
+            def get_params(self):
+                raise Exception("Test error")
+
+        test_ml_object = TestMLModel()
 
         with patch("datason.core._ml_serializer") as mock_ml_serializer:
             mock_ml_serializer.side_effect = Exception("Serialization failed")
 
             # Should fall back to dict serialization
-            result = core.serialize(mock_ml_object)
+            result = core.serialize(test_ml_object)
             assert isinstance(result, dict)
             assert "__datason_type__" not in result  # Should not have type metadata
 

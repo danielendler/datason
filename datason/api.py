@@ -282,12 +282,15 @@ def dump_secure(
     if redact_fields:
         fields.extend(redact_fields)
 
+    # Remove include_redaction_summary from kwargs if present to avoid duplicate
+    kwargs_clean = {k: v for k, v in kwargs.items() if k != "include_redaction_summary"}
+
     config = SerializationConfig(
         redact_patterns=patterns,
         redact_fields=fields,
         include_redaction_summary=True,
         max_depth=10000,  # High max_depth to avoid circular reference warnings
-        **kwargs,
+        **kwargs_clean,
     )
 
     # Directly call serialize, avoiding any wrappers that might add circular refs
