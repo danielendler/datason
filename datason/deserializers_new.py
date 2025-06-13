@@ -775,11 +775,15 @@ def _looks_like_split_format(obj: Dict[str, Any]) -> bool:
 
 def _reconstruct_dataframe(obj: Dict[str, Any]) -> "pd.DataFrame":
     """NEW: Reconstruct a DataFrame from a column-oriented dict."""
+    if pd is None:
+        return obj  # Return original dict if pandas not available
     return pd.DataFrame(obj)
 
 
 def _reconstruct_from_split(obj: Dict[str, Any]) -> "pd.DataFrame":
     """NEW: Reconstruct a DataFrame from split format."""
+    if pd is None:
+        return obj  # Return original dict if pandas not available
     return pd.DataFrame(data=obj["data"], index=obj["index"], columns=obj["columns"])
 
 
@@ -1870,9 +1874,9 @@ def _process_dict_optimized(obj: dict, config: Optional["SerializationConfig"], 
                     return series
 
         # Check for special formats (legacy - keep for compatibility)
-        if _looks_like_split_format(obj):
+        if pd is not None and _looks_like_split_format(obj):
             return _reconstruct_from_split(obj)
-        if _looks_like_dataframe_dict(obj):
+        if pd is not None and _looks_like_dataframe_dict(obj):
             return _reconstruct_dataframe(obj)
 
         # OPTIMIZATION: Use pooled dict for memory efficiency

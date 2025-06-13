@@ -1017,6 +1017,21 @@ def _serialize_full_path(
             )
             return f"<{obj_class_name} object>"
 
+        # Check if object is unprintable (str/repr methods raise exceptions)
+        # This should be done before __dict__ processing to handle unprintable objects correctly
+        try:
+            str(obj)  # Test if str() works
+        except Exception:
+            try:
+                repr(obj)  # Test if repr() works
+            except Exception:
+                # Both str() and repr() fail - this is an unprintable object
+                warnings.warn(
+                    f"Object {obj_class_name} is unprintable (str/repr raise exceptions). Using fallback representation.",
+                    stacklevel=3,
+                )
+                return f"<{obj_class_name} object>"
+
         try:
             # BUGFIX: Check for circular references in __dict__ before recursing
             # The __dict__ is a different object with different ID, so we need explicit checks

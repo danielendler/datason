@@ -106,13 +106,11 @@ def serialize_marshmallow(obj: Any) -> Any:
                         # Fallback to string representation
                         fields[name] = str(field)
 
-                # Create unified format for Marshmallow schemas
-                unified_data = {"__datason_type__": "marshmallow.schema", "__datason_value__": {"fields": fields}}
-                return serialize(unified_data)
+                # Return the plain fields data, not wrapped format
+                return serialize(fields)
             except Exception:
-                # Create unified format even for fallback case
-                unified_data = {"__datason_type__": "marshmallow.schema", "__datason_value__": obj.__dict__}
-                return serialize(unified_data)
+                # Fallback to __dict__ serialization
+                return serialize(obj.__dict__)
 
     return serialize(obj)
 

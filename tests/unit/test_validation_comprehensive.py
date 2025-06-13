@@ -189,10 +189,7 @@ class TestMarshmallowSerialization:
         mock_schema = Mock()
         mock_schema.fields = {"name": mock_field1, "age": mock_field2}
 
-        expected_data = {
-            "__datason_type__": "marshmallow.schema",
-            "__datason_value__": {"fields": {"name": "StringField", "age": "IntegerField"}},
-        }
+        expected_data = {"name": "StringField", "age": "IntegerField"}
 
         with patch.object(validation, "_lazy_import_marshmallow_schema", return_value=mock_schema_class):
             with patch("datason.validation.serialize") as mock_serialize:
@@ -222,12 +219,7 @@ class TestMarshmallowSerialization:
         with patch.object(validation, "_lazy_import_marshmallow_schema", return_value=mock_schema_class):
             with patch("datason.validation.serialize") as mock_serialize:
                 validation.serialize_marshmallow(broken_schema)
-                mock_serialize.assert_called_once_with(
-                    {
-                        "__datason_type__": "marshmallow.schema",
-                        "__datason_value__": {"fields": {"name": "StringField", "age": "IntegerField"}},
-                    }
-                )
+                mock_serialize.assert_called_once_with({"name": "StringField", "age": "IntegerField"})
 
 
 class TestAttributeAccess:
