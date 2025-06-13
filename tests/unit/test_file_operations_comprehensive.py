@@ -214,8 +214,30 @@ class TestCompressionSupport:
                         expected_data[key].tolist() if isinstance(expected_data[key], pd.Series) else expected_data[key]
                     )
                     assert loaded_list == expected_list
+                elif (
+                    HAS_NUMPY
+                    and isinstance(loaded_data[key], np.ndarray)
+                    and not isinstance(expected_data[key], np.ndarray)
+                ):
+                    # Handle case where loaded is numpy array but expected is not
+                    assert np.array_equal(loaded_data[key], np.array(expected_data[key]))
+                elif (
+                    HAS_NUMPY
+                    and not isinstance(loaded_data[key], np.ndarray)
+                    and isinstance(expected_data[key], np.ndarray)
+                ):
+                    # Handle case where expected is numpy array but loaded is not
+                    assert np.array_equal(np.array(loaded_data[key]), expected_data[key])
                 else:
-                    assert loaded_data[key] == expected_data[key]
+                    # For non-numpy arrays, use regular comparison
+                    try:
+                        assert loaded_data[key] == expected_data[key]
+                    except ValueError as e:
+                        if "ambiguous" in str(e):
+                            # This shouldn't happen with our checks above, but just in case
+                            assert np.array_equal(loaded_data[key], expected_data[key])
+                        else:
+                            raise
 
         # Compare DataFrame separately
         if "dataframe" in expected_data:
@@ -301,8 +323,30 @@ class TestCompressionSupport:
                             else expected_data[key]
                         )
                         assert loaded_list == expected_list
+                    elif (
+                        HAS_NUMPY
+                        and isinstance(loaded_data[key], np.ndarray)
+                        and not isinstance(expected_data[key], np.ndarray)
+                    ):
+                        # Handle case where loaded is numpy array but expected is not
+                        assert np.array_equal(loaded_data[key], np.array(expected_data[key]))
+                    elif (
+                        HAS_NUMPY
+                        and not isinstance(loaded_data[key], np.ndarray)
+                        and isinstance(expected_data[key], np.ndarray)
+                    ):
+                        # Handle case where expected is numpy array but loaded is not
+                        assert np.array_equal(np.array(loaded_data[key]), expected_data[key])
                     else:
-                        assert loaded_data[key] == expected_data[key]
+                        # For non-numpy arrays, use regular comparison
+                        try:
+                            assert loaded_data[key] == expected_data[key]
+                        except ValueError as e:
+                            if "ambiguous" in str(e):
+                                # This shouldn't happen with our checks above, but just in case
+                                assert np.array_equal(loaded_data[key], expected_data[key])
+                            else:
+                                raise
 
             # Compare DataFrame separately
             if "dataframe" in expected_data:
