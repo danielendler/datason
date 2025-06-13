@@ -380,9 +380,11 @@ class TestSecurityFeatures:
             current["next"] = {"level": i}
             current = current["next"]
 
-        # Should raise SecurityError when limit is exceeded
-        with pytest.raises(core.SecurityError, match="Maximum serialization depth"):
-            core.serialize(deep_data)
+        # Should return security error object when limit is exceeded
+        result = core.serialize(deep_data)
+        assert isinstance(result, dict)
+        assert result["__datason_type__"] == "security_error"
+        assert "Maximum depth" in result["__datason_value__"]
 
     def test_security_error_handling(self):
         """Test SecurityError exception handling."""
@@ -479,10 +481,10 @@ class TestHelperFunctions:
         result = core._process_string_optimized("short", 1000)
         assert result == "short"
 
-        # Long string
+        # Long string should raise SecurityError
         long_string = "x" * 2000
-        result = core._process_string_optimized(long_string, 1000)
-        assert isinstance(result, str)
+        with pytest.raises(core.SecurityError, match="String length"):
+            core._process_string_optimized(long_string, 1000)
 
     def test_uuid_to_string_optimized(self):
         """Test _uuid_to_string_optimized function."""
