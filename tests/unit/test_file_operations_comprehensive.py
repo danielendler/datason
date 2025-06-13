@@ -611,8 +611,13 @@ class TestAPIDiscovery:
 
         # Should include info about file operations
         assert isinstance(api_info, dict)
-        # Note: Exact structure depends on implementation
-        assert api_info["file_operations"]["formats"] == ["json", "jsonl"]
+        # Check that file operations feature is enabled
+        assert api_info["features"]["file_operations"] is True
+        # Check that file functions are listed
+        assert "file_functions" in api_info
+        assert isinstance(api_info["file_functions"], list)
+        assert "save_ml" in api_info["file_functions"]
+        assert "load_smart_file" in api_info["file_functions"]
 
 
 @pytest.mark.skipif(not HAS_NUMPY, reason="NumPy not available")
