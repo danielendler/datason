@@ -122,7 +122,8 @@ def dump(
         config.redact_patterns = config.redact_patterns or []
         config.redact_patterns.extend(
             [
-                r"\b\d{16}\b",  # Credit cards
+                r"\b\d{4}-\d{4}-\d{4}-\d{4}\b",  # Credit cards with dashes
+                r"\b\d{16}\b",  # Credit cards without dashes
                 r"\b\d{3}-\d{2}-\d{4}\b",  # SSN
                 r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b",  # Email
             ]
@@ -270,7 +271,8 @@ def dump_secure(
     if redact_pii:
         patterns.extend(
             [
-                r"\b\d{16}\b",  # Credit cards
+                r"\b\d{4}-\d{4}-\d{4}-\d{4}\b",  # Credit cards with dashes
+                r"\b\d{16}\b",  # Credit cards without dashes
                 r"\b\d{3}-\d{2}-\d{4}\b",  # SSN
                 r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b",  # Email
             ]
@@ -868,7 +870,8 @@ def save_secure(
     if redact_pii:
         patterns.extend(
             [
-                r"\b\d{16}\b",  # Credit cards
+                r"\b\d{4}-\d{4}-\d{4}-\d{4}\b",  # Credit cards with dashes
+                r"\b\d{16}\b",  # Credit cards without dashes
                 r"\b\d{3}-\d{2}-\d{4}\b",  # SSN
                 r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b",  # Email
             ]

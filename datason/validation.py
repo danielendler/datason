@@ -92,7 +92,21 @@ def serialize_marshmallow(obj: Any) -> Any:
 
         if is_marshmallow_schema:
             try:
-                fields: Dict[str, Any] = {name: field.__class__.__name__ for name, field in obj.fields.items()}
+                # Try to extract field types from field objects
+                fields: Dict[str, Any] = {}
+                for name, field in obj.fields.items():
+                    if hasattr(field, "__class__") and hasattr(field.__class__, "__name__"):
+                        # Check if this is a real field object (not a string)
+                        field_type = field.__class__.__name__
+                        if field_type != "str":  # Avoid converting string values to 'str'
+                            fields[name] = field_type
+                        else:
+                            # This is likely a string value, use it directly
+                            fields[name] = field
+                    else:
+                        # Fallback to string representation
+                        fields[name] = str(field)
+
                 # Create unified format for Marshmallow schemas
                 unified_data = {"__datason_type__": "marshmallow.schema", "__datason_value__": {"fields": fields}}
                 return serialize(unified_data)

@@ -1373,7 +1373,15 @@ class StreamingSerializer:
 
     def __enter__(self) -> "StreamingSerializer":
         """Enter context manager."""
-        self._file = self.file_path.open("w", buffering=self.buffer_size)
+        # Check if compression is needed based on file extension
+        if self.file_path.suffix == ".gz" or (
+            len(self.file_path.suffixes) > 1 and self.file_path.suffixes[-1] == ".gz"
+        ):
+            import gzip
+
+            self._file = gzip.open(self.file_path, "wt", encoding="utf-8")
+        else:
+            self._file = self.file_path.open("w", buffering=self.buffer_size)
 
         if self.format == "json":
             # Start JSON array
