@@ -1546,11 +1546,18 @@ def deserialize_chunked_file(
                 yield chunk
         elif isinstance(data, dict):
             # Support both 'chunks' (from ChunkedSerializationResult) and 'data' (from StreamingSerializer)
-            chunks = data.get("chunks", data.get("data", []))
-            for chunk in chunks:
+            chunks = data.get("chunks", data.get("data", None))
+            if chunks is not None:
+                # This is a chunked data structure
+                for chunk in chunks:
+                    if chunk_processor:
+                        chunk = chunk_processor(chunk)
+                    yield chunk
+            else:
+                # This is a regular dict - treat as single item
                 if chunk_processor:
-                    chunk = chunk_processor(chunk)
-                yield chunk
+                    data = chunk_processor(data)
+                yield data
         else:
             # Single item
             if chunk_processor:

@@ -67,7 +67,16 @@ class TestBasicFileOperations:
         # Load back
         loaded = list(datason.load_smart_file(json_path))
         assert len(loaded) == 1
-        assert loaded[0] == self.test_data
+
+        # Compare structure (ML serialization may convert lists to arrays)
+        loaded_data = loaded[0]
+        assert loaded_data["simple"] == self.test_data["simple"]
+        assert loaded_data["nested"] == self.test_data["nested"]
+        # Numbers may be converted to numpy array by ML serialization
+        if isinstance(loaded_data["numbers"], np.ndarray):
+            assert loaded_data["numbers"].tolist() == self.test_data["numbers"]
+        else:
+            assert loaded_data["numbers"] == self.test_data["numbers"]
 
     def test_save_load_jsonl_format(self):
         """Test saving and loading JSONL format."""
@@ -79,7 +88,16 @@ class TestBasicFileOperations:
         # Load back
         loaded = list(datason.load_smart_file(jsonl_path))
         assert len(loaded) == 1
-        assert loaded[0] == self.test_data
+
+        # Compare structure (ML serialization may convert lists to arrays)
+        loaded_data = loaded[0]
+        assert loaded_data["simple"] == self.test_data["simple"]
+        assert loaded_data["nested"] == self.test_data["nested"]
+        # Numbers may be converted to numpy array by ML serialization
+        if isinstance(loaded_data["numbers"], np.ndarray):
+            assert loaded_data["numbers"].tolist() == self.test_data["numbers"]
+        else:
+            assert loaded_data["numbers"] == self.test_data["numbers"]
 
     def test_save_list_json_vs_jsonl(self):
         """Test list data behavior in JSON vs JSONL."""
