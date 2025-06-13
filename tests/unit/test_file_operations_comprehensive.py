@@ -195,11 +195,16 @@ class TestCompressionSupport:
                 ):
                     assert np.array_equal(loaded_data[key], expected_data[key])
                 elif (
-                    HAS_PANDAS and isinstance(loaded_data[key], pd.Series) and isinstance(expected_data[key], pd.Series)
+                    HAS_PANDAS
+                    and pd is not None
+                    and isinstance(loaded_data[key], pd.Series)
+                    and isinstance(expected_data[key], pd.Series)
                 ):
                     pd.testing.assert_series_equal(loaded_data[key], expected_data[key])
-                elif HAS_PANDAS and (
-                    isinstance(loaded_data[key], pd.Series) or isinstance(expected_data[key], pd.Series)
+                elif (
+                    HAS_PANDAS
+                    and pd is not None
+                    and (isinstance(loaded_data[key], pd.Series) or isinstance(expected_data[key], pd.Series))
                 ):
                     # Convert both to lists for comparison if one is a Series
                     loaded_list = (
@@ -216,7 +221,12 @@ class TestCompressionSupport:
         if "dataframe" in expected_data:
             loaded_df = loaded_data["dataframe"]
             expected_df = expected_data["dataframe"]
-            if HAS_PANDAS and isinstance(loaded_df, pd.DataFrame) and isinstance(expected_df, pd.DataFrame):
+            if (
+                HAS_PANDAS
+                and pd is not None
+                and isinstance(loaded_df, pd.DataFrame)
+                and isinstance(expected_df, pd.DataFrame)
+            ):
                 pd.testing.assert_frame_equal(loaded_df, expected_df)
             else:
                 assert loaded_df == expected_df
@@ -271,12 +281,15 @@ class TestCompressionSupport:
                         assert np.array_equal(loaded_data[key], expected_data[key])
                     elif (
                         HAS_PANDAS
+                        and pd is not None
                         and isinstance(loaded_data[key], pd.Series)
                         and isinstance(expected_data[key], pd.Series)
                     ):
                         pd.testing.assert_series_equal(loaded_data[key], expected_data[key])
-                    elif HAS_PANDAS and (
-                        isinstance(loaded_data[key], pd.Series) or isinstance(expected_data[key], pd.Series)
+                    elif (
+                        HAS_PANDAS
+                        and pd is not None
+                        and (isinstance(loaded_data[key], pd.Series) or isinstance(expected_data[key], pd.Series))
                     ):
                         # Convert both to lists for comparison if one is a Series
                         loaded_list = (
@@ -295,7 +308,12 @@ class TestCompressionSupport:
             if "dataframe" in expected_data:
                 loaded_df = loaded_data["dataframe"]
                 expected_df = expected_data["dataframe"]
-                if HAS_PANDAS and isinstance(loaded_df, pd.DataFrame) and isinstance(expected_df, pd.DataFrame):
+                if (
+                    HAS_PANDAS
+                    and pd is not None
+                    and isinstance(loaded_df, pd.DataFrame)
+                    and isinstance(expected_df, pd.DataFrame)
+                ):
                     pd.testing.assert_frame_equal(loaded_df, expected_df)
                 else:
                     assert loaded_df == expected_df

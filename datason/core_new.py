@@ -396,7 +396,8 @@ def _serialize_core(
                 f"Circular reference detected at depth {_depth}. Replacing with None to prevent infinite loops.",
                 stacklevel=4,
             )
-            return None  # Handle circular reference by returning None
+            # Return proper circular reference metadata instead of None
+            return {"__datason_type__": "circular_reference", "__datason_value__": f"<{type(obj).__name__} object>"}
         _seen.add(obj_id)
 
     try:
