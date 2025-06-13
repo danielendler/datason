@@ -532,9 +532,12 @@ def serialize_sklearn_model(model: Any) -> Dict[str, Any]:
                 "fitted": hasattr(model, "n_features_in_") or hasattr(model, "feature_names_in_"),
             },
         }
-    except Exception as e:
-        warnings.warn(f"Could not serialize sklearn model: {e}", stacklevel=2)
-        return {"__datason_type__": "sklearn.model", "__datason_value__": {"error": str(e)}}
+    except Exception:
+        warnings.warn("Could not serialize sklearn model due to an internal error.", stacklevel=2)
+        return {
+            "__datason_type__": "sklearn.model",
+            "__datason_value__": {"error": "An internal error occurred during serialization."},
+        }
 
 
 def serialize_scipy_sparse(matrix: Any) -> Dict[str, Any]:
@@ -566,9 +569,12 @@ def serialize_scipy_sparse(matrix: Any) -> Dict[str, Any]:
                 "nnz": coo_matrix.nnz,
             },
         }
-    except Exception as e:
-        warnings.warn(f"Could not serialize scipy sparse matrix: {e}", stacklevel=2)
-        return {"__datason_type__": "scipy.sparse", "__datason_value__": {"error": str(e)}}
+    except Exception:
+        warnings.warn("Could not serialize scipy sparse matrix due to an internal error.", stacklevel=2)
+        return {
+            "__datason_type__": "scipy.sparse",
+            "__datason_value__": {"error": "An internal error occurred during serialization."},
+        }
 
 
 def serialize_pil_image(image: Any) -> Dict[str, Any]:
@@ -600,9 +606,12 @@ def serialize_pil_image(image: Any) -> Dict[str, Any]:
                 "data": img_str,
             },
         }
-    except Exception as e:
-        warnings.warn(f"Could not serialize PIL Image: {e}", stacklevel=2)
-        return {"__datason_type__": "PIL.Image", "__datason_value__": {"error": str(e)}}
+    except Exception:
+        warnings.warn("Could not serialize PIL Image due to an internal error.", stacklevel=2)
+        return {
+            "__datason_type__": "PIL.Image",
+            "__datason_value__": {"error": "An internal error occurred during serialization."},
+        }
 
 
 def serialize_huggingface_tokenizer(tokenizer: Any) -> Dict[str, Any]:
@@ -628,9 +637,12 @@ def serialize_huggingface_tokenizer(tokenizer: Any) -> Dict[str, Any]:
                 "name_or_path": getattr(tokenizer, "name_or_path", None),
             },
         }
-    except Exception as e:
-        warnings.warn(f"Could not serialize HuggingFace tokenizer: {e}", stacklevel=2)
-        return {"__datason_type__": "transformers.tokenizer", "__datason_value__": {"error": str(e)}}
+    except Exception:
+        warnings.warn("Could not serialize HuggingFace tokenizer due to an internal error.", stacklevel=2)
+        return {
+            "__datason_type__": "transformers.tokenizer",
+            "__datason_value__": {"error": "An internal error occurred during serialization."},
+        }
 
 
 def serialize_catboost_model(model: Any) -> Dict[str, Any]:
@@ -677,9 +689,12 @@ def serialize_catboost_model(model: Any) -> Dict[str, Any]:
                 "tree_count": getattr(model, "tree_count_", None),
             },
         }
-    except Exception as e:
-        warnings.warn(f"Could not serialize CatBoost model: {e}", stacklevel=2)
-        return {"__datason_type__": "catboost.model", "__datason_value__": {"error": str(e)}}
+    except Exception:
+        warnings.warn("Could not serialize CatBoost model due to an internal error.", stacklevel=2)
+        return {
+            "__datason_type__": "catboost.model",
+            "__datason_value__": {"error": "An internal error occurred during serialization."},
+        }
 
 
 def serialize_keras_model(model: Any) -> Dict[str, Any]:
@@ -713,9 +728,12 @@ def serialize_keras_model(model: Any) -> Dict[str, Any]:
                 "config_summary": str(config)[:500] if config else None,  # Truncate for safety
             },
         }
-    except Exception as e:
-        warnings.warn(f"Could not serialize Keras model: {e}", stacklevel=2)
-        return {"__datason_type__": "keras.model", "__datason_value__": {"error": str(e)}}
+    except Exception:
+        warnings.warn("Could not serialize Keras model due to an internal error.", stacklevel=2)
+        return {
+            "__datason_type__": "keras.model",
+            "__datason_value__": {"error": "An internal error occurred during serialization."},
+        }
 
 
 def serialize_optuna_study(study: Any) -> Dict[str, Any]:
@@ -758,9 +776,12 @@ def serialize_optuna_study(study: Any) -> Dict[str, Any]:
                 "best_params": best_params,
             },
         }
-    except Exception as e:
-        warnings.warn(f"Could not serialize Optuna study: {e}", stacklevel=2)
-        return {"__datason_type__": "optuna.study", "__datason_value__": {"error": str(e)}}
+    except Exception:
+        warnings.warn("Could not serialize Optuna study due to an internal error.", stacklevel=2)
+        return {
+            "__datason_type__": "optuna.study",
+            "__datason_value__": {"error": "An internal error occurred during serialization."},
+        }
 
 
 def serialize_plotly_figure(figure: Any) -> Dict[str, Any]:
@@ -789,9 +810,12 @@ def serialize_plotly_figure(figure: Any) -> Dict[str, Any]:
                 "frames": fig_dict.get("frames", []),
             },
         }
-    except Exception as e:
-        warnings.warn(f"Could not serialize Plotly figure: {e}", stacklevel=2)
-        return {"__datason_type__": "plotly.figure", "__datason_value__": {"error": str(e)}}
+    except Exception:
+        warnings.warn("Could not serialize Plotly figure due to an internal error.", stacklevel=2)
+        return {
+            "__datason_type__": "plotly.figure",
+            "__datason_value__": {"error": "An internal error occurred during serialization."},
+        }
 
 
 def serialize_polars_dataframe(dataframe: Any) -> Dict[str, Any]:
@@ -826,9 +850,12 @@ def serialize_polars_dataframe(dataframe: Any) -> Dict[str, Any]:
                 else {},
             },
         }
-    except Exception as e:
-        warnings.warn(f"Could not serialize Polars DataFrame: {e}", stacklevel=2)
-        return {"__datason_type__": "polars.dataframe", "__datason_value__": {"error": str(e)}}
+    except Exception:
+        warnings.warn("Could not serialize Polars DataFrame due to an internal error.", stacklevel=2)
+        return {
+            "__datason_type__": "polars.dataframe",
+            "__datason_value__": {"error": "An internal error occurred during serialization."},
+        }
 
 
 def detect_and_serialize_ml_object(obj: Any) -> Optional[Dict[str, Any]]:

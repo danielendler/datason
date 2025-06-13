@@ -1,6 +1,7 @@
 """Advanced Datason Serialization Features Demo
 
 This script demonstrates the enhanced features of datason including:
+- Simple & Direct API for common use cases
 - Configurable serialization options
 - Advanced type handling
 - ML/AI workflow optimizations
@@ -124,9 +125,61 @@ def create_sample_data():
     return data
 
 
+def demo_simple_direct_api():
+    """Demonstrate the simple & direct API - no configuration needed!"""
+    print("🚀 Simple & Direct API Demo")
+    print("=" * 50)
+
+    data = create_sample_data()
+
+    print("\n✨ Simple API - Just Pick the Right Function:")
+
+    # API-optimized serialization
+    print("\n1️⃣ dump_api() - Clean JSON for web APIs:")
+    api_result = datason.dump_api(data)
+    print("   Perfect for FastAPI/Flask responses")
+    print(f"   UUID format: {type(api_result.get('uuid', 'N/A'))}")
+    print("   Clean, predictable JSON structure")
+
+    # ML-optimized serialization
+    print("\n2️⃣ dump_ml() - Optimized for ML/AI objects:")
+    datason.dump_ml(data)  # Auto-handled ML objects
+    print("   Handles NumPy arrays, tensors, DataFrames")
+    print("   Preserves ML-specific data types")
+
+    # Fast serialization
+    print("\n3️⃣ dump_fast() - Performance optimized:")
+    datason.dump_fast(data)  # Performance optimized
+    print("   Minimal processing for speed")
+    print("   Best for large datasets")
+
+    # Secure serialization
+    sensitive_data = {
+        "user": "john_doe",
+        "email": "john@example.com",
+        "ssn": "123-45-6789",
+        "api_key": "sk_abc123xyz789",
+        "notes": "Regular customer",
+    }
+
+    print("\n4️⃣ dump_secure() - Automatic PII redaction:")
+    secure_result = datason.dump_secure(sensitive_data)
+    print(f"   Input: {sensitive_data}")
+    print(f"   Output: {secure_result}")
+    print("   ✅ Sensitive data automatically redacted!")
+
+    print("\n💡 Simple API Benefits:")
+    print("   • No configuration needed")
+    print("   • Intention-revealing function names")
+    print("   • Automatic optimizations")
+    print("   • Just pick the right function for your use case!")
+
+    return api_result
+
+
 def demo_basic_serialization():
     """Demonstrate basic serialization with different configurations."""
-    print("🔧 Basic Serialization Demo")
+    print("\n🔧 Traditional API with Configuration")
     print("=" * 50)
 
     data = create_sample_data()
@@ -376,14 +429,21 @@ def demo_performance_comparison():
 
 def main():
     """Run all demonstrations."""
-    print("🎯 Datason Advanced Features Demo")
-    print("=" * 60)
-    print("This demo showcases the enhanced serialization capabilities")
-    print("including configuration options, type handling, and presets.")
+    print("🎯 Datason Features Demo - Simple API & Advanced Configuration")
+    print("=" * 70)
+    print("This demo showcases the simple & direct API alongside advanced")
+    print("configuration options for specialized use cases.")
     print()
 
     try:
-        # Run all demos
+        # Simple API first - no configuration needed!
+        demo_simple_direct_api()
+
+        print("\n" + "=" * 70)
+        print("📚 Advanced Configuration Examples:")
+        print()
+
+        # Advanced configuration examples
         demo_basic_serialization()
         demo_date_formats()
         demo_nan_handling()
@@ -395,12 +455,16 @@ def main():
         demo_performance_comparison()
 
         print("\n✅ All demos completed successfully!")
-        print("\n💡 Tips for using datason:")
+        print("\n🚀 Quick Start Tips:")
+        print("  • Use dump_api() for web APIs (clean JSON)")
+        print("  • Use dump_ml() for ML/AI objects")
+        print("  • Use dump_secure() for sensitive data")
+        print("  • Use dump_fast() for performance")
+        print("\n⚙️ Advanced Configuration:")
         print("  • Use get_ml_config() for ML/AI workflows")
         print("  • Use get_api_config() for web API responses")
         print("  • Use get_performance_config() for large datasets")
-        print("  • Create custom configurations for specific needs")
-        print("  • Use serialize_with_config() for quick one-off configs")
+        print("  • Create custom configurations for specialized needs")
 
     except Exception as e:
         print(f"\n❌ Demo failed with error: {e}")

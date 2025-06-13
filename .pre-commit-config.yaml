@@ -57,7 +57,8 @@ repos:
         name: Sync documentation files to docs directory
         entry: python scripts/sync_docs.py
         language: python
-        files: ^(CONTRIBUTING|SECURITY|CHANGELOG)\.md$
+        files: >-
+          ^(CONTRIBUTING|SECURITY|CHANGELOG)\.md$|^docs/community/(CONTRIBUTING|SECURITY|CHANGELOG)\.md$
         pass_filenames: false
         always_run: false
 

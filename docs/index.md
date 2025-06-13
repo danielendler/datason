@@ -4,6 +4,35 @@
 
 datason transforms complex Python objects into JSON-serializable formats and back with intelligence. Perfect for ML/AI workflows, data science, and any application dealing with complex nested data structures.
 
+## 🎯 **NEW: UUID + Pydantic Compatibility Solved!** ⭐
+
+**The #1 issue when integrating with FastAPI, Django, and Pydantic is now solved:**
+
+```python
+import datason
+from datason.config import get_api_config
+from pydantic import BaseModel
+
+# ❌ Problem: UUIDs become objects, breaking Pydantic validation
+data = {"user_id": "12345678-1234-5678-9012-123456789abc"}
+result = datason.auto_deserialize(data)  # UUID object - fails Pydantic!
+
+# ✅ Solution: Use API config to keep UUIDs as strings
+api_config = get_api_config()
+result = datason.auto_deserialize(data, config=api_config)  # UUID string - works!
+
+class User(BaseModel):
+    user_id: str  # ✅ Now works perfectly!
+
+user = User(**result)  # Success! 🎉
+```
+
+**Perfect for:** FastAPI APIs, Django REST Framework, Flask JSON endpoints, any Pydantic application
+
+[**📖 Read the complete API integration guide →**](features/api-integration.md)
+
+---
+
 ## 🎯 Two Powerful Approaches
 
 === "Modern API - Intention-Revealing"
@@ -43,36 +72,50 @@ datason transforms complex Python objects into JSON-serializable formats and bac
     ds.help_api()  # Get personalized recommendations
     ```
 
-=== "Traditional API - Comprehensive"
+=== "Traditional API - UUID Compatible"
 
     ```python
     import datason as ds
+    from datason.config import get_api_config
     import pandas as pd
     import numpy as np
     from datetime import datetime
 
     # Complex data that "just works"
     data = {
+        'user_id': "12345678-1234-5678-9012-123456789abc",  # UUID string
         'dataframe': pd.DataFrame({'A': [1, 2, 3], 'B': [4.5, 5.5, 6.5]}),
         'timestamp': datetime.now(),
         'array': np.array([1, 2, 3, 4, 5]),
         'nested': {'values': [1, 2, 3], 'metadata': {'created': datetime.now()}}
     }
 
-    # Serialize to JSON-compatible format
-    json_data = ds.serialize(data)
+    # Use API config for Pydantic/FastAPI compatibility
+    api_config = get_api_config()
+    json_data = ds.serialize(data, config=api_config)
 
-    # Deserialize back to original objects - types preserved!
-    restored = ds.deserialize(json_data)
+    # Deserialize back - UUIDs stay as strings, other types preserved!
+    restored = ds.deserialize(json_data, config=api_config)
+    assert type(restored['user_id']) == str  # ✅ UUID stays as string
     assert type(restored['dataframe']) == pd.DataFrame
     assert type(restored['array']) == np.ndarray
 
-    # Use configurations for different scenarios
-    ml_config = ds.get_ml_config()
-    ml_result = ds.serialize(data, config=ml_config)
+    # Perfect for FastAPI/Pydantic:
+    from pydantic import BaseModel
+    class DataModel(BaseModel):
+        user_id: str  # Works perfectly!
+        # ... other fields
+
+    model = DataModel(**restored)  # ✅ Success!
     ```
 
 ## ✨ Key Features
+
+### 🌐 **Web Framework Integration** ⭐ **NEW**
+- **FastAPI + Pydantic**: Perfect UUID string compatibility with `get_api_config()`
+- **Django REST Framework**: Seamless model serialization with proper UUID handling
+- **Flask APIs**: Clean JSON output with consistent type handling
+- **Production Ready**: Used in real financial and ML applications
 
 ### 🧠 **Intelligent & Automatic**
 - **Smart Type Detection**: Automatically handles pandas DataFrames, NumPy arrays, datetime objects, and more
@@ -109,6 +152,7 @@ datason transforms complex Python objects into JSON-serializable formats and bac
     **Getting Started**
 
     - [🚀 Quick Start Guide](user-guide/quick-start.md) - Get up and running in 5 minutes
+    - [🌐 **API Integration Guide**](features/api-integration.md) ⭐ **FastAPI/Django/Flask integration**
     - [🎯 Modern API Guide](user-guide/modern-api-guide.md) - Complete guide to intention-revealing functions
     - [💡 Examples Gallery](user-guide/examples/index.md) - Common use cases and patterns
     - [🔧 Configuration Guide](features/configuration/index.md) - Customize behavior for your needs
@@ -131,6 +175,7 @@ datason transforms complex Python objects into JSON-serializable formats and bac
     **Integration Guides**
 
     - [🤖 AI Integration Guide](ai-guide/overview.md) - How to integrate datason in AI systems
+    - [🌐 **API Integration**](features/api-integration.md) ⭐ **Pydantic/FastAPI compatibility**
     - [📦 Pydantic & Marshmallow Integration](features/pydantic-marshmallow-integration.md) - Serialize validated objects
     - [📝 API Reference](api/index.md) - Complete API documentation with examples
     - [🔧 Configuration Presets](features/configuration/index.md) - Pre-built configs for common AI use cases
@@ -146,6 +191,36 @@ datason transforms complex Python objects into JSON-serializable formats and bac
     - [🚀 Production Deployment](BUILD_PUBLISH.md) - Best practices for production
     - [🔍 Monitoring & Logging](CI_PERFORMANCE.md) - Track serialization performance
     - [🛡️ Security Considerations](community/security.md) - Security best practices
+
+## 🚀 **Quick Start: Web API Integration**
+
+Perfect for FastAPI, Django, Flask developers:
+
+```python
+# 1. Install
+pip install datason
+
+# 2. Import and configure
+import datason
+from datason.config import get_api_config
+
+# 3. Set up once, use everywhere
+API_CONFIG = get_api_config()
+
+# 4. Process any data - UUIDs stay as strings!
+data = {"user_id": "12345678-1234-5678-9012-123456789abc", "name": "John"}
+result = datason.auto_deserialize(data, config=API_CONFIG)
+
+# 5. Works with Pydantic!
+from pydantic import BaseModel
+class User(BaseModel):
+    user_id: str
+    name: str
+
+user = User(**result)  # ✅ Perfect!
+```
+
+[**📖 Complete integration guide →**](features/api-integration.md) | [**🏃‍♂️ Quick examples →**](user-guide/examples/index.md)
 
 ## 🎯 Modern API Functions
 

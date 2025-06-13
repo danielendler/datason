@@ -73,15 +73,19 @@ Comprehensive data analysis and transformation tools with consistent security pr
 - **Pandas/NumPy Integration**: Enhanced DataFrame and array processing with limits
 - **Configurable Security**: Environment-specific configurations for different trust levels
 
+
 ### [ML/AI Integration](ml-ai/index.md)
 Native support for machine learning and scientific computing objects.
 
 - **PyTorch**: Tensors, models, parameters
-- **TensorFlow**: Tensors, variables, SavedModel metadata  
+- **TensorFlow**: Tensors, variables, SavedModel metadata
 - **Scikit-learn**: Fitted models, pipelines, transformers
 - **NumPy**: Arrays, scalars, dtypes
 - **JAX**: Arrays and computation graphs
 - **PIL/Pillow**: Images with format preservation
+
+### [Model Serving Integration](model-serving/index.md)
+Guides for BentoML, Ray Serve, Streamlit, Gradio, MLflow, and Seldon/KServe.
 
 ### [Pandas Integration](pandas/index.md)
 Deep integration with the pandas ecosystem for data science workflows.

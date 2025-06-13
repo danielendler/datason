@@ -1,15 +1,15 @@
-# 🚀 Modern API Overview
+# 🚀 Simple & Direct API
 
-The Modern API provides intention-revealing function names with progressive complexity disclosure, designed for clarity and ease of use.
+The modern datason API is **simple and direct** - just use the right function for your use case. No complex configuration needed!
 
 ## 🎯 Design Philosophy
 
-The Modern API follows these principles:
+The modern API is designed to be:
 
-1. **Intention-Revealing Names** - Function names clearly indicate what they do
-2. **Progressive Complexity** - Choose your level of sophistication  
-3. **Domain-Specific Optimization** - Built-in optimizations for specific use cases
-4. **Composable Options** - Combine features as needed
+1. **Simple & Direct** - One function call with automatic optimization
+2. **Intention-Revealing** - Function names tell you exactly what they do
+3. **No Configuration Required** - Built-in intelligent defaults
+4. **Progressive Loading Options** - Choose your success rate
 5. **100% Backward Compatible** - Works alongside the traditional API
 
 ## 📦 Function Categories
@@ -23,7 +23,7 @@ The Modern API follows these principles:
 - `dump_chunked()` - Memory-efficient for large data
 - `stream_dump()` - Direct file streaming
 
-### File Operations (Save/Load) 🆕 v0.9.1
+### File Operations (Save/Load) 🆕 v0.11.0
 - `save_ml()` / `save_secure()` / `save_api()` / `save_chunked()` - File saving variants
 - `load_smart_file()` / `load_perfect_file()` - File loading variants
 - **Dual Format Support**: JSON (.json) and JSONL (.jsonl) with auto-detection
@@ -40,20 +40,24 @@ The Modern API follows these principles:
 - `help_api()` - Interactive guidance
 - `get_api_info()` - API metadata and capabilities
 
-## 🔄 Progressive Complexity in Action
+## 🎯 Simple & Direct in Action
 
 ```python
 import datason as ds
 
-# Phase 1: Quick exploration
-data = ds.load_basic(json_string)  # Fast, good enough for exploration
+# Web APIs - automatic UUID handling, clean JSON
+api_data = ds.dump_api(response_data)  # UUIDs become strings automatically
 
-# Phase 2: Production reliability  
-data = ds.load_smart(json_string)  # Better accuracy for production
+# ML models - automatic framework detection
+ml_data = ds.dump_ml(model_data)      # Optimized for ML objects
 
-# Phase 3: Mission-critical accuracy
-template = {"name": str, "age": int, "scores": [float]}
-data = ds.load_perfect(json_string, template)  # 100% reliable
+# Security - automatic PII redaction
+safe_data = ds.dump_secure(user_data) # Redacts emails, SSNs, etc.
+
+# Choose your loading success rate
+basic_data = ds.load_basic(json_string)    # 60-70% success, fastest
+smart_data = ds.load_smart(json_string)    # 80-90% success, balanced
+perfect_data = ds.load_perfect(json_string, template)  # 100% success
 ```
 
 ## 🎨 Composable Design

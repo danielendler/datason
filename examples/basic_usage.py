@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Basic usage examples for datason.
 
-This script demonstrates the key features and capabilities of the datason package.
+This script demonstrates the simple & direct API of the datason package.
 """
 
 import json
@@ -12,9 +12,33 @@ from typing import Any, Dict
 import datason as ds
 
 
+def example_simple_api() -> None:
+    """Demonstrate the simple & direct API - no configuration needed!"""
+    print("=== Simple & Direct API ===")
+
+    # Basic data types
+    data = {
+        "string": "Hello, World!",
+        "integer": 42,
+        "float": 3.14159,
+        "boolean": True,
+        "null": None,
+        "list": [1, 2, 3, "four"],
+        "nested_dict": {"inner_key": "inner_value", "numbers": [1, 2, 3]},
+    }
+
+    # Simple API - just pick the right function for your use case
+    api_data = ds.dump_api(data)  # Perfect for web APIs
+    ds.dump_fast(data)  # Performance optimized (for demo)
+
+    print("API-optimized serialization (clean JSON):")
+    print(json.dumps(api_data, indent=2))
+    print()
+
+
 def example_basic_serialization() -> None:
     """Demonstrate basic serialization of common Python types."""
-    print("=== Basic Serialization ===")
+    print("=== Basic Serialization (Traditional API) ===")
 
     # Basic data types
     data = {
@@ -30,6 +54,50 @@ def example_basic_serialization() -> None:
     serialized = ds.serialize(data)
     print("Original data structure converted to JSON-ready format:")
     print(json.dumps(serialized, indent=2))
+    print()
+
+
+def example_uuid_api_compatibility() -> None:
+    """Demonstrate automatic UUID handling for APIs - no Pydantic errors!"""
+    print("=== UUID API Compatibility ===")
+
+    data = {
+        "request_id": uuid.uuid4(),
+        "user_id": uuid.uuid4(),
+        "created_at": datetime.now(),
+        "metadata": {"session": str(uuid.uuid4())},
+    }
+
+    # Simple API automatically handles UUIDs for web APIs
+    api_data = ds.dump_api(data)
+    print("UUIDs automatically become strings for APIs:")
+    print(json.dumps(api_data, indent=2))
+    print("✅ No more Pydantic validation errors!")
+    print()
+
+
+def example_progressive_loading() -> None:
+    """Demonstrate progressive loading - choose your success rate!"""
+    print("=== Progressive Loading ===")
+
+    json_data = {
+        "user_id": "12345",
+        "timestamp": "2023-12-01T10:30:00",
+        "data": [1, 2, 3, 4, 5],
+        "metadata": {"version": "1.0", "source": "api"},
+    }
+
+    print("Choose your loading success rate:")
+    print(f"Data to load: {json_data}")
+    print()
+
+    # 60-70% success, fastest
+    basic_result = ds.load_basic(json_data)
+    print(f"load_basic():   {basic_result} (60-70% success, fastest)")
+
+    # 80-90% success, balanced
+    smart_result = ds.load_smart(json_data)
+    print(f"load_smart():   {smart_result} (80-90% success, balanced)")
     print()
 
 
@@ -68,6 +136,28 @@ def example_edge_cases() -> None:
     serialized = ds.serialize(data)
     print("Edge cases handled gracefully:")
     print(json.dumps(serialized, indent=2))
+    print()
+
+
+def example_automatic_security() -> None:
+    """Demonstrate automatic security features."""
+    print("=== Automatic Security ===")
+
+    sensitive_data = {
+        "user": "john_doe",
+        "email": "john@example.com",
+        "ssn": "123-45-6789",
+        "password": "secret123",
+        "notes": "Customer since 2020",
+        "phone": "555-123-4567",
+    }
+
+    # Automatic PII redaction
+    secure_data = ds.dump_secure(sensitive_data)
+    print("Automatic PII redaction:")
+    print(f"Original: {sensitive_data}")
+    print(f"Secure:   {secure_data}")
+    print("✅ Emails, SSNs, passwords automatically redacted!")
     print()
 
 
@@ -211,11 +301,22 @@ def example_custom_objects() -> None:
 
 
 def main() -> None:
-    """Run all examples."""
-    print("datason Examples")
+    """Run all examples - showcasing the simple & direct API first!"""
+    print("datason Examples - Simple & Direct API")
     print("=" * 50)
     print()
 
+    # New Simple & Direct API examples first
+    example_simple_api()
+    example_uuid_api_compatibility()
+    example_progressive_loading()
+    example_automatic_security()
+
+    print("=" * 50)
+    print("Traditional API Examples:")
+    print()
+
+    # Traditional API examples
     example_basic_serialization()
     example_datetime_handling()
     example_edge_cases()
