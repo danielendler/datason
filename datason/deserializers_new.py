@@ -162,9 +162,12 @@ def deserialize(obj: Any, parse_dates: bool = True, parse_uuids: bool = True) ->
         # Try to parse as datetime if enabled
         if parse_dates and _looks_like_datetime(obj):
             try:
+                import sys
                 from datetime import datetime as datetime_class  # Fresh import
 
-                return datetime_class.fromisoformat(obj)  # Python 3.7+ handles 'Z' natively
+                # Handle 'Z' timezone suffix for Python < 3.11
+                date_str = obj.replace("Z", "+00:00") if obj.endswith("Z") and sys.version_info < (3, 11) else obj
+                return datetime_class.fromisoformat(date_str)
             except (ValueError, ImportError):
                 # Log parsing failure but continue with string
                 warnings.warn(
@@ -696,9 +699,12 @@ def _auto_detect_string_type(s: str, aggressive: bool = False, config: Optional[
     # Then try datetime detection
     if _looks_like_datetime(s):
         try:
+            import sys
             from datetime import datetime as datetime_class  # Fresh import
 
-            return datetime_class.fromisoformat(s)  # Python 3.7+ handles 'Z' natively
+            # Handle 'Z' timezone suffix for Python < 3.11
+            date_str = s.replace("Z", "+00:00") if s.endswith("Z") and sys.version_info < (3, 11) else s
+            return datetime_class.fromisoformat(date_str)
         except (ValueError, ImportError):
             pass
 
@@ -985,11 +991,11 @@ def parse_datetime_string(s: Any) -> Optional[datetime]:
 
     try:
         # Handle various common formats
-        # ISO format with Z
-        if s.endswith("Z"):
-            return datetime.fromisoformat(s)  # Python 3.7+ handles 'Z' natively
-        # Standard ISO format
-        return datetime.fromisoformat(s)
+        import sys
+
+        # Handle 'Z' timezone suffix for Python < 3.11
+        date_str = s.replace("Z", "+00:00") if s.endswith("Z") and sys.version_info < (3, 11) else s
+        return datetime.fromisoformat(date_str)
     except ValueError:
         try:
             # Try pandas parsing if available
@@ -1983,8 +1989,11 @@ def _deserialize_string_full(s: str, config: Optional["SerializationConfig"]) ->
             if not re.match(iso8601_pattern, s):
                 raise ValueError("Invalid ISO 8601 datetime format")
 
-            # Python 3.7+ natively handles 'Z' in fromisoformat, no replacement needed
-            parsed_datetime = datetime.fromisoformat(s)  # Now safe from CodeQL false positive
+            # Handle 'Z' timezone suffix for Python < 3.11
+            import sys
+
+            date_str = s.replace("Z", "+00:00") if s.endswith("Z") and sys.version_info < (3, 11) else s
+            parsed_datetime = datetime.fromisoformat(date_str)  # Now safe from CodeQL false positive
             # Cache successful parse
             if len(_PARSED_OBJECT_CACHE) < _PARSED_CACHE_SIZE_LIMIT:
                 _PARSED_OBJECT_CACHE[f"datetime:{s}"] = parsed_datetime
