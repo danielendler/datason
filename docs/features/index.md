@@ -37,7 +37,7 @@ Comprehensive support for temporal data with timezone awareness.
 - **Pandas Integration**: `pd.Timestamp`, `pd.NaT`, `pd.DatetimeIndex`
 - **Timezone Support**: Aware and naive datetime handling
 
-### [File Operations](file-operations.md) 🆕 v0.9.1
+### [File Operations](file-operations.md) 🆕 v0.11.0
 Complete JSON/JSONL file I/O integrated as first-class citizens in the modern API.
 
 - **Dual Format Support**: Both JSON (.json) and JSONL (.jsonl) with auto-detection
@@ -73,6 +73,13 @@ Comprehensive data analysis and transformation tools with consistent security pr
 - **Pandas/NumPy Integration**: Enhanced DataFrame and array processing with limits
 - **Configurable Security**: Environment-specific configurations for different trust levels
 
+### [Data Integrity & Verification](../integrity.md) 🆕 v0.10.0
+Cryptographic hashing and signature utilities for tamper detection.
+
+- **Canonicalization**: Deterministic JSON for stable hashing
+- **Hash & Verify**: Object and JSON hashing with algorithm validation
+- **Digital Signatures**: Ed25519 sign/verify support
+- **Redaction Integration**: Optional PII removal before hashing
 
 ### [ML/AI Integration](ml-ai/index.md)
 Native support for machine learning and scientific computing objects.

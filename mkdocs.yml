@@ -176,6 +176,7 @@ nav:
     - Specialized Features:
       - ML Integration: api/ml-integration.md
       - Data Privacy: api/data-privacy.md
+      - Integrity Functions: api/integrity.md
       - Type System: api/type-system.md
       - Utilities: api/utilities.md
     - Reference:
