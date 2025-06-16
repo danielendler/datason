@@ -14,7 +14,6 @@ from unittest.mock import MagicMock, patch
 from datason.core_new import (
     MAX_SERIALIZATION_DEPTH,
     MAX_STRING_LENGTH,
-    SecurityError,
     _get_cached_type_category,
     serialize,
 )
@@ -327,7 +326,7 @@ class TestSecurityLimits(unittest.TestCase):
     """Test security limits and protections."""
 
     def test_excessive_depth_raises_error(self):
-        """Test that excessive nesting depth raises SecurityError."""
+        """Test that excessive nesting depth returns security error."""
         # Create deeply nested structure that exceeds limit
         nested_data = {}
         current = nested_data
@@ -338,9 +337,11 @@ class TestSecurityLimits(unittest.TestCase):
             current = current["nested"]
         current["value"] = "deep"
 
-        # Should raise SecurityError
-        with self.assertRaises(SecurityError):
-            serialize(nested_data)
+        # Should return security error dict instead of raising exception
+        result = serialize(nested_data)
+        self.assertIsInstance(result, dict)
+        self.assertEqual(result.get("__datason_type__"), "security_error")
+        self.assertIn("depth", result.get("__datason_value__", "").lower())
 
     def test_large_string_warning(self):
         """Test that large strings generate appropriate warnings."""
