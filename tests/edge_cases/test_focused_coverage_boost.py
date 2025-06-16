@@ -75,7 +75,7 @@ class TestUncoveredLines(unittest.TestCase):
 
         # Temporarily remove the ML serializer import
         with patch(
-            "datason.core.detect_and_serialize_ml_object",
+            "datason.core_new.detect_and_serialize_ml_object",
             side_effect=ImportError("Not found"),
         ):
             result = serialize(obj)

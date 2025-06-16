@@ -157,7 +157,7 @@ class TestDeserializeToPandas:
 
     def test_deserialize_to_pandas_without_pandas(self):
         """Test pandas deserialization when pandas not available."""
-        with patch("datason.deserializers.pd", None):
+        with patch("datason.deserializers_new.pd", None):
             data = {"A": [1, 2, 3], "B": [4, 5, 6]}
             result = deserializers.deserialize_to_pandas(data)
             assert result == data
@@ -402,7 +402,7 @@ class TestTemplateDeserializerEdgeCases:
     def test_template_deserializer_with_missing_libraries(self):
         """Test TemplateDeserializer when required libraries are missing."""
         # Mock missing pandas
-        with patch("datason.deserializers.pd", None):
+        with patch("datason.deserializers_new.pd", None):
             template = {"data": [1, 2, 3]}  # Use list instead of DataFrame
             deserializer = deserializers.TemplateDeserializer(template)
             result = deserializer.deserialize({"data": [4, 5, 6]})

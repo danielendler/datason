@@ -161,7 +161,7 @@ class TestCacheMetrics:
 
         with cache_scope(CacheScope.PROCESS):
             # First call - should create cache entries
-            from datason.deserializers import deserialize_fast
+            from datason.deserializers_new import deserialize_fast
 
             deserialize_fast(data, config=config)
 
@@ -210,7 +210,7 @@ class TestCacheSizeLimits:
                 # Generate enough activity to hit the limit
                 for i in range(5):
                     data = {"date": f"2023-01-0{i + 1}T12:00:00"}
-                    from datason.deserializers import deserialize_fast
+                    from datason.deserializers_new import deserialize_fast
 
                     deserialize_fast(data, config=config)
 
@@ -234,7 +234,7 @@ class TestCacheSizeLimits:
                 # Generate activity
                 for i in range(5):
                     data = {"date": f"2023-01-0{i + 1}T12:00:00"}
-                    from datason.deserializers import deserialize_fast
+                    from datason.deserializers_new import deserialize_fast
 
                     deserialize_fast(data, config=config)
 
@@ -291,7 +291,7 @@ class TestCacheDisabled:
         data = {"date": "2023-01-01T12:00:00", "id": "12345678-1234-5678-9012-123456789abc", "number": 42, "flag": True}
 
         with cache_scope(CacheScope.DISABLED):
-            from datason.deserializers import deserialize_fast
+            from datason.deserializers_new import deserialize_fast
 
             result = deserialize_fast(data, config=config)
 
@@ -312,7 +312,7 @@ class TestCacheDisabled:
             times = []
             for _ in range(3):
                 start = time.time()
-                from datason.deserializers import deserialize_fast
+                from datason.deserializers_new import deserialize_fast
 
                 deserialize_fast(data, config=config)
                 end = time.time()

@@ -59,11 +59,11 @@ class TestCoreImportFallbacks(unittest.TestCase):
             __builtins__["__import__"] = mock_import
 
             # Force reimport of core module
-            if "datason.core" in sys.modules:
-                del sys.modules["datason.core"]
+            if "datason.core_new" in sys.modules:
+                del sys.modules["datason.core_new"]
 
             # Import should succeed even without ml_serializers
-            from datason.core import serialize as core_serialize
+            from datason.core_new import serialize as core_serialize
 
             # Test serialization still works
             result = core_serialize({"test": "value"})
@@ -86,7 +86,7 @@ class TestCoreImportFallbacks(unittest.TestCase):
         obj = CustomObject()
 
         # Patch the function to be None (simulating import failure)
-        with patch("datason.core.detect_and_serialize_ml_object", None):
+        with patch("datason.core_new.detect_and_serialize_ml_object", None):
             result = serialize(obj)
 
             # Should fall back to dict serialization
@@ -95,7 +95,7 @@ class TestCoreImportFallbacks(unittest.TestCase):
     def test_config_import_failure_fallback(self):
         """Test behavior when config imports are not available."""
         # Test lines 37-46 in core.py - config import fallback
-        with patch("datason.core._config_available", False):
+        with patch("datason.core_new._config_available", False):
             # Basic serialization should still work
             result = serialize({"test": "data"})
             self.assertEqual(result, {"test": "data"})
@@ -103,15 +103,15 @@ class TestCoreImportFallbacks(unittest.TestCase):
     def test_type_handlers_import_failure(self):
         """Test fallback functions when type handlers import fails."""
         # Test lines 42-46 in core.py - type handler dummy functions
-        from datason.core import normalize_numpy_types
+        from datason.core_new import normalize_numpy_types
 
         # Test dummy normalize_numpy_types function returns input unchanged
-        with patch("datason.core._config_available", False):
+        with patch("datason.core_new._config_available", False):
             test_obj = [1, 2, 3]
             self.assertEqual(normalize_numpy_types(test_obj), test_obj)
 
         # Test basic serialization still works when config unavailable
-        with patch("datason.core._config_available", False):
+        with patch("datason.core_new._config_available", False):
             result = serialize({"test": "data"})
             self.assertEqual(result, {"test": "data"})
 
@@ -246,7 +246,7 @@ class TestMLSerializerIntegrationEdgeCases(unittest.TestCase):
 
         # Temporarily patch to cause import error during serialization
         with patch(
-            "datason.core.detect_and_serialize_ml_object",
+            "datason.core_new.detect_and_serialize_ml_object",
             side_effect=ImportError("Module not found"),
         ):
             result = serialize(obj)
@@ -264,7 +264,7 @@ class TestMLSerializerIntegrationEdgeCases(unittest.TestCase):
         obj = UnknownMLObject()
 
         # Mock ML serializer to return None (object not recognized)
-        with patch("datason.core.detect_and_serialize_ml_object", return_value=None):
+        with patch("datason.core_new.detect_and_serialize_ml_object", return_value=None):
             result = serialize(obj)
 
             # Should fall back to dict serialization
@@ -277,7 +277,7 @@ class TestTypeCategoryEdgeCases(unittest.TestCase):
     def test_numpy_type_categorization_without_numpy(self):
         """Test numpy type categorization when numpy isn't available."""
         # Test lines 159-165 in core.py
-        with patch("datason.core.np", None):
+        with patch("datason.core_new.np", None):
             # Should categorize as 'other' when numpy unavailable
             class FakeNumpyType:
                 pass
@@ -288,7 +288,7 @@ class TestTypeCategoryEdgeCases(unittest.TestCase):
     def test_pandas_type_categorization_without_pandas(self):
         """Test pandas type categorization when pandas isn't available."""
         # Test lines 166-172 in core.py
-        with patch("datason.core.pd", None):
+        with patch("datason.core_new.pd", None):
             # Should categorize as 'other' when pandas unavailable
             class FakePandasType:
                 pass

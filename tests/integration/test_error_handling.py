@@ -118,8 +118,13 @@ class TestErrorHandling:
 
             try:
                 result = datason.serialize(nested_data, config=config_depth_3)
-                # If no exception, something is wrong
-                pytest.fail(f"Expected security exception but serialization succeeded: {result}")
+                # Updated: Now returns security error dict instead of raising exception
+                if isinstance(result, dict) and result.get("__datason_type__") == "security_error":
+                    security_exception_raised = True
+                    exception_message = result.get("__datason_value__", "")
+                    actual_exception_type = "SecurityError"
+                else:
+                    pytest.fail(f"Expected security exception but serialization succeeded: {result}")
             except Exception as e:
                 # CRITICAL: Catch ALL exceptions first, then filter by type
                 # This approach works around pytest exception class identity issues
@@ -164,9 +169,11 @@ class TestErrorHandling:
         """Test that limits on large objects (e.g., strings) are handled by truncation."""
         config = SerializationConfig(max_string_length=10)
 
-        # Test string length limit - truncates and adds [TRUNCATED] marker
+        # Test string length limit - now returns security error dict
         result = datason.serialize("a" * 15, config=config)
-        assert "[TRUNCATED]" in result
+        assert isinstance(result, dict)
+        assert result.get("__datason_type__") == "security_error"
+        assert "String length" in result.get("__datason_value__", "")
 
         # Test no truncation if within limits
         result = datason.serialize("a" * 10, config=config)

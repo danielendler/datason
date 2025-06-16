@@ -559,21 +559,16 @@ def _deserialize_with_type_metadata(obj: Dict[str, Any]) -> Any:
                             # Fall back to returning the dict
                             return value
 
-                    # Handle legacy pickle format
-                    elif isinstance(value, str):
-                        # Assume base64 encoded pickle
-                        import base64
-                        import pickle  # nosec B403
-
-                        pickle_data = base64.b64decode(value)
-                        return pickle.loads(pickle_data)  # nosec B301
-                    elif isinstance(value, dict) and "_pickle_data" in value:
-                        # Alternative pickle storage format
-                        import base64
-                        import pickle  # nosec B403
-
-                        pickle_data = base64.b64decode(value["_pickle_data"])
-                        return pickle.loads(pickle_data)  # nosec B301
+                    # Handle legacy pickle format - SECURITY WARNING ADDED
+                    elif isinstance(value, str) or isinstance(value, dict) and "_pickle_data" in value:
+                        # Issue security warning about disabled pickle deserialization
+                        warnings.warn(
+                            "Legacy pickle deserialization is disabled for security reasons. "
+                            "Pickle-serialized objects are unsafe to deserialize from untrusted sources.",
+                            stacklevel=2,
+                        )
+                        # Return the original value instead of unpickling
+                        return value
                 except (ImportError, Exception) as e:
                     warnings.warn(f"Could not reconstruct sklearn model: {e}", stacklevel=2)
 
@@ -910,21 +905,67 @@ def _restore_pandas_types(obj: Any) -> Any:
     return obj
 
 
+# Security functions
+def _contains_pickle_data(obj: Any) -> bool:
+    """Check if the object contains pickle-serialized data.
+
+    Args:
+        obj: Object to check for pickle data
+
+    Returns:
+        True if pickle data is detected, False otherwise
+    """
+    if isinstance(obj, dict):
+        # Check for type metadata with sklearn/ML objects that use pickle
+        if "__datason_type__" in obj:
+            obj_type = obj["__datason_type__"]
+            if isinstance(obj_type, str) and ("sklearn" in obj_type.lower() or "catboost" in obj_type.lower()):
+                value = obj.get("__datason_value__", "")
+                # Check if value is a string (base64 pickle) or has _pickle_data key
+                if isinstance(value, str) or (isinstance(value, dict) and "_pickle_data" in value):
+                    return True
+
+        # Recursively check nested dictionaries
+        for value in obj.values():
+            if _contains_pickle_data(value):
+                return True
+
+    elif isinstance(obj, list):
+        # Recursively check list items
+        for item in obj:
+            if _contains_pickle_data(item):
+                return True
+
+    return False
+
+
 # Convenience functions for common use cases
-def safe_deserialize(json_str: str, **kwargs: Any) -> Any:
+def safe_deserialize(json_str: str, allow_pickle: bool = False, **kwargs: Any) -> Any:
     """Safely deserialize a JSON string, handling parse errors gracefully.
 
     Args:
         json_str: JSON string to parse and deserialize
+        allow_pickle: Whether to allow deserialization of pickle-serialized objects
         **kwargs: Arguments passed to deserialize()
 
     Returns:
         Deserialized Python object, or the original string if parsing fails
+
+    Raises:
+        DeserializationSecurityError: If pickle data is detected and allow_pickle=False
     """
     import json
 
     try:
         parsed = json.loads(json_str)
+
+        # Security check for pickle data
+        if not allow_pickle and _contains_pickle_data(parsed):
+            raise DeserializationSecurityError(
+                "Detected pickle-serialized objects which are unsafe to deserialize. "
+                "Set allow_pickle=True to override this security check."
+            )
+
         return deserialize(parsed, **kwargs)
     except (json.JSONDecodeError, TypeError, ValueError):
         return json_str
@@ -1945,8 +1986,13 @@ def _deserialize_string_full(s: str, config: Optional["SerializationConfig"]) ->
             if len(_PARSED_OBJECT_CACHE) < _PARSED_CACHE_SIZE_LIMIT:
                 _PARSED_OBJECT_CACHE[f"datetime:{s}"] = None
 
-    # Try UUID parsing with optimized detection
-    if pattern_type == "uuid" or (pattern_type is None and _looks_like_uuid_optimized(s)):
+    # Try UUID parsing - always check for UUID format (36 chars with dashes at right positions)
+    if (
+        pattern_type == "uuid"
+        or (pattern_type is None and _looks_like_uuid_optimized(s))
+        or (len(s) == 36 and s.count("-") == 4)
+    ) and _looks_like_uuid_optimized(s):
+        # Extra robust UUID check - bypass cache issues by always testing UUID-like strings
         try:
             import uuid as uuid_module  # Fresh import to avoid state issues
 

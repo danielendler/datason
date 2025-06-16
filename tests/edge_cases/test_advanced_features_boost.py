@@ -14,7 +14,7 @@ import pytest
 try:
     from datason import serialize
     from datason.config import SerializationConfig
-    from datason.core import (
+    from datason.core_new import (
         _contains_potentially_exploitable_nested_list_structure,
         _contains_potentially_exploitable_nested_structure,
         _convert_dict_tuples_fast,
@@ -34,7 +34,7 @@ try:
         _uuid_to_string_optimized,
         deserialize_chunked_file,
     )
-    from datason.deserializers import (
+    from datason.deserializers_new import (
         _deserialize_string_full,
         _deserialize_with_type_metadata,
         _get_cached_parsed_object,

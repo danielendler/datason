@@ -74,10 +74,10 @@ def restore_ml_serializer(request):
 
     # Ensure ML serializer is properly available
     try:
-        import datason.core
+        import datason.core_new
         from datason.ml_serializers import detect_and_serialize_ml_object
 
-        datason.core._ml_serializer = detect_and_serialize_ml_object
+        datason.core_new._ml_serializer = detect_and_serialize_ml_object
     except Exception:
         # If ML serializer setup fails, continue anyway
         pass
