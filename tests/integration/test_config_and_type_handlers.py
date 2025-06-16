@@ -467,6 +467,10 @@ class TestUtilityFunctions:
         assert isinstance(normalize_numpy_types(np.int64(10)), int)
         assert isinstance(normalize_numpy_types(np.float32(3.14)), float)
         assert normalize_numpy_types(np.str_("test")) == "test"
+        assert normalize_numpy_types(np.bool_(True)) is True
+        assert normalize_numpy_types(np.bytes_(b"x")) == b"x"
+        assert normalize_numpy_types(np.float64(np.nan)) is None
+        assert normalize_numpy_types(np.float64(np.inf)) is None
 
     def test_get_object_info(self) -> None:
         """Test the get_object_info utility function."""
