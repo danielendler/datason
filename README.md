@@ -27,6 +27,7 @@ datason transforms complex Python objects into JSON-serializable formats and bac
 - 📈 **Progressive Loading**: Choose your success rate - `load_basic` (60-70%), `load_smart` (80-90%), `load_perfect` (100%)
 - 🏗️ **Production Ready**: Enterprise-grade ML serving with monitoring, A/B testing, and security
 - 📝 **Integrity Verification**: Hash, sign, and verify objects for compliance workflows
+- 📂 **File Operations**: Save and load JSON/JSONL files with compression support
 
 ## 🤖 ML Framework Support
 

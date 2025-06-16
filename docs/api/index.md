@@ -61,6 +61,7 @@ datason provides two complementary APIs designed for different use cases:
 ### Specialized Features
 - **[ML Integration](ml-integration.md)** - Machine learning library support
 - **[Data Privacy](data-privacy.md)** - Redaction engines and security features
+- **[Integrity Functions](integrity.md)** - Hashing and signature utilities
 - **[Type System](type-system.md)** - Advanced type handling and conversion
 - **[Utilities](utilities.md)** - Helper functions and data processing tools
 
