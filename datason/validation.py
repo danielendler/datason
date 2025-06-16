@@ -94,14 +94,13 @@ def serialize_marshmallow(obj: Any) -> Any:
                 # Try to extract field types from field objects
                 fields: Dict[str, Any] = {}
                 for name, field in obj.fields.items():
-                    if hasattr(field, "__class__") and hasattr(field.__class__, "__name__"):
-                        # Check if this is a real field object (not a string)
-                        field_type = field.__class__.__name__
-                        if field_type != "str":  # Avoid converting string values to 'str'
-                            fields[name] = field_type
-                        else:
-                            # This is likely a string value, use it directly
-                            fields[name] = field
+                    # Use proper type checking instead of unreliable string name comparison
+                    if isinstance(field, str):
+                        # This is actually a string value, use it directly
+                        fields[name] = field
+                    elif hasattr(field, "__class__") and hasattr(field.__class__, "__name__"):
+                        # This is a field object, get its type name
+                        fields[name] = field.__class__.__name__
                     else:
                         # Fallback to string representation
                         fields[name] = str(field)
