@@ -11,7 +11,7 @@ from uuid import uuid4
 import pytest
 
 import datason
-from datason.deserializers import (
+from datason.deserializers_new import (
     TemplateDeserializer,
     create_ml_round_trip_template,
     deserialize_with_template,

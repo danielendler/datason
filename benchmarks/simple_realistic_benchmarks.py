@@ -244,7 +244,7 @@ def test_deserialization_performance() -> None:
 
     # Test auto-detection
     print("\n🔍 Testing auto-detection...")
-    from datason.deserializers import auto_deserialize
+    from datason.deserializers_new import auto_deserialize
 
     def auto_func():
         return auto_deserialize(standard_serialized, aggressive=True)
@@ -262,7 +262,7 @@ def test_template_performance() -> None:
     print("TEMPLATE DESERIALIZATION TEST")
     print("=" * 60)
 
-    from datason.deserializers import TemplateDeserializer, infer_template_from_data
+    from datason.deserializers_new import TemplateDeserializer, infer_template_from_data
 
     # Create test data
     items = [

@@ -22,7 +22,7 @@ from datason import (
     get_ml_safe_classes,
 )
 from datason.config import get_ml_config
-from datason.core import SecurityError
+from datason.core_new import SecurityError
 
 
 # Test data fixtures

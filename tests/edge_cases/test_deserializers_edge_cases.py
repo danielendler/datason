@@ -17,7 +17,7 @@ import unittest
 from unittest.mock import patch
 
 import datason
-from datason.deserializers import deserialize_fast
+from datason.deserializers_new import deserialize_fast
 
 # Optional imports with fallbacks
 try:

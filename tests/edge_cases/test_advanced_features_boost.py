@@ -14,7 +14,7 @@ import pytest
 try:
     from datason import serialize
     from datason.config import SerializationConfig
-    from datason.core import (
+    from datason.core_new import (
         _contains_potentially_exploitable_nested_list_structure,
         _contains_potentially_exploitable_nested_structure,
         _convert_dict_tuples_fast,
@@ -34,7 +34,7 @@ try:
         _uuid_to_string_optimized,
         deserialize_chunked_file,
     )
-    from datason.deserializers import (
+    from datason.deserializers_new import (
         _deserialize_string_full,
         _deserialize_with_type_metadata,
         _get_cached_parsed_object,
@@ -226,13 +226,19 @@ class TestAdvancedCachingAndOptimization:
         # Test string processing optimization
         test_strings = [
             "short",
-            "a" * 1000,  # Long string
             "special\nchars\ttab",
         ]
 
         for test_string in test_strings:
             result = _process_string_optimized(test_string, 500)
             assert isinstance(result, str)
+
+        # Test long string that exceeds limit - now returns security error dict
+        long_string = "a" * 1000
+        result = _process_string_optimized(long_string, 500)
+        assert isinstance(result, dict)
+        assert result.get("__datason_type__") == "security_error"
+        assert "String length" in result.get("__datason_value__", "")
 
         # Test UUID to string optimization
         test_uuid = uuid.uuid4()

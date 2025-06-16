@@ -645,7 +645,7 @@ class TestLegacyTypeNameCompatibility:
         """Test that both 'optuna.Study' and 'optuna.study' work for deserialization."""
         import optuna
 
-        from datason.deserializers import _deserialize_with_type_metadata
+        from datason.deserializers_new import _deserialize_with_type_metadata
 
         # Test data with both type names
         test_cases = [
@@ -678,7 +678,7 @@ class TestLegacyTypeNameCompatibility:
         """Test that both 'plotly.graph_objects.Figure' and 'plotly.figure' work for deserialization."""
         import plotly.graph_objects as go
 
-        from datason.deserializers import _deserialize_with_type_metadata
+        from datason.deserializers_new import _deserialize_with_type_metadata
 
         # Create test data for both type names
         figure_data = {
@@ -712,7 +712,7 @@ class TestLegacyTypeNameCompatibility:
         """Test that both 'polars.DataFrame' and 'polars.dataframe' work for deserialization."""
         import polars as pl
 
-        from datason.deserializers import _deserialize_with_type_metadata
+        from datason.deserializers_new import _deserialize_with_type_metadata
 
         # Create test data for both type names
         dataframe_data = {"data": {"col1": [1, 2, 3], "col2": ["a", "b", "c"]}}
@@ -741,7 +741,7 @@ class TestLegacyTypeNameCompatibility:
 
     def test_comprehensive_exception_handling(self):
         """Test that improved exception handling works for various error types."""
-        from datason.deserializers import _deserialize_with_type_metadata
+        from datason.deserializers_new import _deserialize_with_type_metadata
 
         # Test cases that should trigger different types of exceptions
         # but should all be handled gracefully by the improved exception handling
@@ -791,7 +791,7 @@ class TestLegacyTypeNameCompatibility:
 
     def test_end_to_end_backward_compatibility(self):
         """Test end-to-end that objects serialized with old handlers can be deserialized with new ones."""
-        from datason.deserializers import _deserialize_with_type_metadata
+        from datason.deserializers_new import _deserialize_with_type_metadata
 
         # Simulate data that was serialized with the old handlers (using legacy type names)
         legacy_serialized_data = [

@@ -18,7 +18,7 @@ from pathlib import Path
 from typing import Any, ClassVar, Dict, Optional, Set, Union
 
 from .config import SerializationConfig, get_ml_config
-from .core import SecurityError, serialize
+from .core_new import SecurityError, serialize
 
 
 class PickleSecurityError(SecurityError):

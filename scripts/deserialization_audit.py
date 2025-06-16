@@ -96,7 +96,7 @@ except ImportError:
 try:
     import datason
     from datason.config import SerializationConfig
-    from datason.deserializers import deserialize_fast
+    from datason.deserializers_new import deserialize_fast
 except ImportError:
     print("❌ ERROR: datason not found. Please install datason first.")
     sys.exit(1)
@@ -141,7 +141,7 @@ class DeserializationAudit:
         """Test complete round-trip: serialize → JSON → deserialize."""
         try:
             # Clear caches to ensure clean state for each test (helps with test order dependencies)
-            from datason.deserializers import _clear_deserialization_caches
+            from datason.deserializers_new import _clear_deserialization_caches
 
             _clear_deserialization_caches()
 
@@ -182,7 +182,7 @@ class DeserializationAudit:
         """Test round-trip with auto-detection enabled (opt-in aggressive mode)."""
         try:
             # Clear caches to ensure clean state for each test
-            from datason.deserializers import _clear_deserialization_caches
+            from datason.deserializers_new import _clear_deserialization_caches
 
             _clear_deserialization_caches()
 
@@ -228,7 +228,7 @@ class DeserializationAudit:
         """Test round-trip with type metadata for perfect reconstruction."""
         try:
             # Clear caches to ensure clean state for each test (helps with test order dependencies)
-            from datason.deserializers import _clear_deserialization_caches
+            from datason.deserializers_new import _clear_deserialization_caches
 
             _clear_deserialization_caches()
 
@@ -274,7 +274,7 @@ class DeserializationAudit:
         """Test round-trip with user-specified template (should be 100% success)."""
         try:
             # Clear caches to ensure clean state for each test
-            from datason.deserializers import _clear_deserialization_caches, deserialize_with_template
+            from datason.deserializers_new import _clear_deserialization_caches, deserialize_with_template
 
             _clear_deserialization_caches()
 
@@ -317,7 +317,7 @@ class DeserializationAudit:
         """Test round-trip with heuristics only (best effort)."""
         try:
             # Clear caches to ensure clean state for each test
-            from datason.deserializers import _clear_deserialization_caches
+            from datason.deserializers_new import _clear_deserialization_caches
 
             _clear_deserialization_caches()
 

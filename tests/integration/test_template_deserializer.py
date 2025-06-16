@@ -19,7 +19,7 @@ import pytest
 
 import datason
 from datason.config import SerializationConfig
-from datason.deserializers import deserialize_fast, deserialize_with_template
+from datason.deserializers_new import deserialize_fast, deserialize_with_template
 
 # Optional dependencies
 try:

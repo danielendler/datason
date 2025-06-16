@@ -21,11 +21,11 @@ def restore_ml_serializer_after_edge_cases():
 
     # Force restore ML serializer after any potential patching
     try:
-        import datason.core
+        import datason.core_new
         from datason.ml_serializers import detect_and_serialize_ml_object
 
         # Explicitly restore the proper ML serializer function
-        datason.core._ml_serializer = detect_and_serialize_ml_object
+        datason.core_new._ml_serializer = detect_and_serialize_ml_object
 
         # Also clear any cached imports that might be stale
         try:
@@ -40,9 +40,9 @@ def restore_ml_serializer_after_edge_cases():
     except (ImportError, AttributeError):
         # If ML serializers are not available, set to None
         try:
-            import datason.core
+            import datason.core_new
 
-            datason.core._ml_serializer = None
+            datason.core_new._ml_serializer = None
         except ImportError:
             pass
 

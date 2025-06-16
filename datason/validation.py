@@ -1,7 +1,7 @@
 # Optional integration helpers for Pydantic and Marshmallow
 from typing import Any, Dict
 
-from .core import serialize
+from .core_new import serialize
 
 _LAZY_IMPORTS = {
     "BaseModel": None,
@@ -62,6 +62,7 @@ def serialize_pydantic(obj: Any) -> Any:
                     data = obj.dict()  # Pydantic v1
                 except Exception:
                     data = obj.__dict__
+            # Return the plain data, not wrapped format
             return serialize(data)
 
     return serialize(obj)
@@ -90,9 +91,24 @@ def serialize_marshmallow(obj: Any) -> Any:
 
         if is_marshmallow_schema:
             try:
-                fields: Dict[str, Any] = {name: field.__class__.__name__ for name, field in obj.fields.items()}
+                # Try to extract field types from field objects
+                fields: Dict[str, Any] = {}
+                for name, field in obj.fields.items():
+                    # Use proper type checking instead of unreliable string name comparison
+                    if isinstance(field, str):
+                        # This is actually a string value, use it directly
+                        fields[name] = field
+                    elif hasattr(field, "__class__") and hasattr(field.__class__, "__name__"):
+                        # This is a field object, get its type name
+                        fields[name] = field.__class__.__name__
+                    else:
+                        # Fallback to string representation
+                        fields[name] = str(field)
+
+                # Return the plain fields data, not wrapped format
                 return serialize(fields)
             except Exception:
+                # Fallback to __dict__ serialization
                 return serialize(obj.__dict__)
 
     return serialize(obj)

@@ -39,7 +39,7 @@ except ImportError:
 # Import datason
 import datason
 from datason.config import SerializationConfig
-from datason.deserializers import auto_deserialize, deserialize, deserialize_fast
+from datason.deserializers_new import auto_deserialize, deserialize, deserialize_fast
 
 
 class DeserializationBenchmark:

@@ -12,7 +12,8 @@ Key improvements:
 """
 
 import warnings
-from typing import Any, Dict, List, Optional
+from pathlib import Path
+from typing import Any, Dict, Iterator, List, Optional, Union
 
 from .config import (
     SerializationConfig,
@@ -21,8 +22,13 @@ from .config import (
     get_performance_config,
     get_strict_config,
 )
-from .core import serialize, serialize_chunked, stream_serialize
-from .deserializers import (
+from .core_new import (
+    deserialize_chunked_file,
+    serialize,
+    serialize_chunked,
+    stream_serialize,
+)
+from .deserializers_new import (
     deserialize,
     deserialize_fast,
     deserialize_with_template,
@@ -116,7 +122,8 @@ def dump(
         config.redact_patterns = config.redact_patterns or []
         config.redact_patterns.extend(
             [
-                r"\b\d{16}\b",  # Credit cards
+                r"\b\d{4}-\d{4}-\d{4}-\d{4}\b",  # Credit cards with dashes
+                r"\b\d{16}\b",  # Credit cards without dashes
                 r"\b\d{3}-\d{2}-\d{4}\b",  # SSN
                 r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b",  # Email
             ]
@@ -150,7 +157,15 @@ def dump_ml(obj: Any, **kwargs: Any) -> Any:
         >>> serialized = dump_ml(model)
         >>> # Optimized for ML round-trip fidelity
     """
-    config = get_ml_config()
+    # Create a copy of ML-optimized config to avoid modifying shared instances
+    base_config = get_ml_config()
+    from dataclasses import replace
+
+    config = replace(base_config, **kwargs)
+
+    # Directly call serialize - serializer handles circular references properly
+    from .core_new import serialize
+
     return serialize(obj, config=config)
 
 
@@ -172,7 +187,15 @@ def dump_api(obj: Any, **kwargs: Any) -> Any:
         >>> def get_data():
         >>>     return dump_api(complex_data_structure)
     """
-    config = get_api_config()
+    # Create a copy of API-optimized config to avoid modifying shared instances
+    base_config = get_api_config()
+    from dataclasses import replace
+
+    config = replace(base_config, **kwargs)
+
+    # Directly call serialize - serializer handles circular references properly
+    from .core_new import serialize
+
     return serialize(obj, config=config)
 
 
@@ -204,13 +227,15 @@ def dump_secure(
         >>> safe_data = dump_secure(user_data)
         >>> # SSN will be redacted: {"name": "John", "ssn": "[REDACTED]"}
     """
+    # Create secure config with redaction settings
     patterns = []
     fields = []
 
     if redact_pii:
         patterns.extend(
             [
-                r"\b\d{16}\b",  # Credit cards
+                r"\b\d{4}-\d{4}-\d{4}-\d{4}\b",  # Credit cards with dashes
+                r"\b\d{16}\b",  # Credit cards without dashes
                 r"\b\d{3}-\d{2}-\d{4}\b",  # SSN
                 r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b",  # Email
             ]
@@ -222,9 +247,19 @@ def dump_secure(
     if redact_fields:
         fields.extend(redact_fields)
 
+    # Remove include_redaction_summary from kwargs if present to avoid duplicate
+    kwargs_clean = {k: v for k, v in kwargs.items() if k != "include_redaction_summary"}
+
     config = SerializationConfig(
-        redact_patterns=patterns, redact_fields=fields, include_redaction_summary=True, **kwargs
+        redact_patterns=patterns,
+        redact_fields=fields,
+        include_redaction_summary=True,
+        # Keep normal max_depth to maintain security
+        **kwargs_clean,
     )
+
+    # Directly call serialize - serializer handles circular references properly
+    from .core_new import serialize
 
     return serialize(obj, config=config)
 
@@ -463,7 +498,7 @@ def dumps(obj: Any, **kwargs: Any) -> str:
 # =============================================================================
 
 
-def serialize_modern(*args, **kwargs) -> Any:
+def serialize_modern(*args: Any, **kwargs: Any) -> Any:
     """Modern serialize function with deprecation guidance.
 
     This is a transitional function to help users migrate from the old
@@ -480,7 +515,7 @@ def serialize_modern(*args, **kwargs) -> Any:
     return serialize(*args, **kwargs)
 
 
-def deserialize_modern(*args, **kwargs) -> Any:
+def deserialize_modern(*args: Any, **kwargs: Any) -> Any:
     """Modern deserialize function with deprecation guidance.
 
     This is a transitional function to help users migrate from the old
@@ -568,12 +603,40 @@ def help_api() -> Dict[str, Any]:
                 "use_case": "When metadata available",
             },
         },
+        "file_operations": {
+            "save_ml": {
+                "function": "save_ml()",
+                "use_case": "ML models/data to JSON/JSONL files",
+                "examples": [
+                    "save_ml(model, 'model.json')    # Single JSON object",
+                    "save_ml(model, 'model.jsonl')   # Multiple JSONL objects",
+                    "save_ml(model, 'model.txt', format='json')  # Explicit format",
+                ],
+            },
+            "save_secure": {
+                "function": "save_secure()",
+                "use_case": "Secure JSON/JSONL with redaction",
+                "examples": [
+                    "save_secure(data, 'secure.json', redact_pii=True)",
+                    "save_secure(data, 'secure.jsonl', redact_pii=True)",
+                ],
+            },
+            "load_file": {
+                "function": "load_smart_file()",
+                "use_case": "Smart loading from JSON/JSONL files",
+                "examples": [
+                    "list(load_smart_file('data.json'))",
+                    "list(load_smart_file('data.jsonl'))",
+                    "list(load_smart_file('data.txt', format='json'))",
+                ],
+            },
+        },
         "recommendations": [
-            "For ML workflows: dump_ml() + load_perfect() with template",
-            "For APIs: dump_api() + load_smart()",
-            "For sensitive data: dump_secure() + load_smart()",
+            "For ML workflows: save_ml() + load_perfect_file() with template",
+            "For APIs: save_api() + load_smart_file()",
+            "For sensitive data: save_secure() + load_smart_file()",
             "For exploration: dump() + load_basic()",
-            "For production: dump() + load_smart() or load_typed()",
+            "For production: save_ml() + load_smart_file()",
         ],
     }
 
@@ -593,9 +656,422 @@ def get_api_info() -> Dict[str, Any]:
             "domain_specific_convenience": True,
             "progressive_complexity": True,
             "backward_compatibility": True,
+            "file_operations": True,
         },
         "dump_functions": ["dump", "dump_ml", "dump_api", "dump_secure", "dump_fast", "dump_chunked", "stream_dump"],
         "load_functions": ["load_basic", "load_smart", "load_perfect", "load_typed"],
+        "file_functions": ["save_ml", "save_secure", "save_api", "load_smart_file", "load_perfect_file"],
         "convenience": ["loads", "dumps"],
         "help": ["help_api", "get_api_info"],
     }
+
+
+# =============================================================================
+# FILE I/O OPERATIONS - Modern API with JSONL Integration
+# =============================================================================
+
+
+def _detect_file_format(path: Union[str, Path], format: Optional[str] = None) -> str:
+    """Detect file format from extension or explicit parameter."""
+    if format:
+        return format
+
+    path_obj = Path(path)
+    suffixes = path_obj.suffixes
+
+    # Handle .json.gz, .jsonl.gz etc.
+    if suffixes and suffixes[-1] == ".gz" and len(suffixes) > 1:
+        ext = suffixes[-2]
+    elif suffixes:
+        ext = suffixes[-1]
+    else:
+        ext = ""
+
+    if ext in {".jsonl", ".ndjson"}:
+        return "jsonl"
+    elif ext == ".json":
+        return "json"
+    else:
+        # Default to jsonl for compatibility
+        return "jsonl"
+
+
+def _save_to_file(
+    serialized_data: Any,
+    path: Union[str, Path],
+    config: Optional[SerializationConfig] = None,
+    format: Optional[str] = None,
+) -> None:
+    """Core file writing utility supporting both JSON and JSONL formats."""
+    detected_format = _detect_file_format(path, format)
+
+    with stream_serialize(path, config=config, format=detected_format) as stream:
+        if isinstance(serialized_data, (list, tuple)):
+            for item in serialized_data:
+                stream.write(item)
+        else:
+            stream.write(serialized_data)
+
+
+def _load_from_file(
+    path: Union[str, Path], config: Optional[SerializationConfig] = None, format: Optional[str] = None
+) -> Iterator[Any]:
+    """Core file reading utility supporting both JSON and JSONL formats."""
+    detected_format = _detect_file_format(path, format)
+    return deserialize_chunked_file(path, format=detected_format)
+
+
+def save_ml(obj: Any, path: Union[str, Path], *, format: Optional[str] = None, **kwargs: Any) -> None:
+    """Save ML-optimized data to JSON or JSONL file.
+
+    Combines ML-specific serialization with file I/O, preserving
+    ML types like NumPy arrays, PyTorch tensors, etc.
+
+    Args:
+        obj: ML object or data to save
+        path: Output file path (.json for single object, .jsonl for multiple objects)
+        format: Explicit format ('json' or 'jsonl'), auto-detected from extension if None
+        **kwargs: Additional ML configuration options
+
+    Examples:
+        >>> import numpy as np
+        >>> data = [{"weights": np.array([1, 2, 3]), "epoch": 1}]
+        >>>
+        >>> # Save as JSONL (multiple objects, one per line)
+        >>> save_ml(data, "training.jsonl")
+        >>> save_ml(data, "training.json", format="jsonl")  # Force JSONL
+        >>>
+        >>> # Save as JSON (single array object)
+        >>> save_ml(data, "training.json")
+        >>> save_ml(data, "training.jsonl", format="json")  # Force JSON
+    """
+    import gzip
+    import json
+    from pathlib import Path
+
+    # Get ML-optimized config
+    config = get_ml_config()
+
+    # Apply any additional config options
+    for key, value in kwargs.items():
+        if hasattr(config, key):
+            setattr(config, key, value)
+
+    # Detect format
+    path_obj = Path(path)
+    detected_format = _detect_file_format(path_obj, format)
+
+    # Check for compression
+    is_compressed = path_obj.suffix == ".gz" or (len(path_obj.suffixes) > 1 and path_obj.suffixes[-1] == ".gz")
+
+    # Pre-serialize the object - this already applies the ML-specific serialization
+    serialized = dump_ml(obj, **kwargs)
+
+    # Open file with appropriate compression
+    def open_func(mode):
+        if is_compressed:
+            return gzip.open(path_obj, mode, encoding="utf-8")
+        else:
+            return path_obj.open(mode)
+
+    # Write to file in appropriate format, don't re-serialize
+    with open_func("wt") as f:
+        if detected_format == "jsonl":
+            # JSONL: Write each item on a separate line
+            if isinstance(serialized, (list, tuple)):
+                for item in serialized:
+                    json.dump(item, f, ensure_ascii=False)
+                    f.write("\n")
+            else:
+                json.dump(serialized, f, ensure_ascii=False)
+                f.write("\n")
+        else:
+            # JSON: Write as single object
+            json.dump(serialized, f, ensure_ascii=False)
+
+
+def save_secure(
+    obj: Any,
+    path: Union[str, Path],
+    *,
+    format: Optional[str] = None,
+    redact_pii: bool = True,
+    redact_fields: Optional[List[str]] = None,
+    redact_patterns: Optional[List[str]] = None,
+    **kwargs: Any,
+) -> None:
+    """Save data to JSON/JSONL file with security features.
+
+    Automatically redacts sensitive information before saving.
+
+    Args:
+        obj: Data to save securely
+        path: Output file path
+        format: Explicit format ('json' or 'jsonl'), auto-detected if None
+        redact_pii: Enable automatic PII pattern detection
+        redact_fields: Additional field names to redact
+        redact_patterns: Additional regex patterns to redact
+        **kwargs: Additional security options
+
+    Examples:
+        >>> user_data = [{"name": "John", "ssn": "123-45-6789"}]
+        >>>
+        >>> # Save as JSONL (auto-detected)
+        >>> save_secure(user_data, "users.jsonl", redact_pii=True)
+        >>>
+        >>> # Save as JSON (auto-detected)
+        >>> save_secure(user_data, "users.json", redact_pii=True)
+    """
+    import gzip
+    import json
+    from pathlib import Path
+
+    # Create secure config with redaction settings (same logic as dump_secure)
+    patterns = []
+    fields = []
+
+    if redact_pii:
+        patterns.extend(
+            [
+                r"\b\d{4}-\d{4}-\d{4}-\d{4}\b",  # Credit cards with dashes
+                r"\b\d{16}\b",  # Credit cards without dashes
+                r"\b\d{3}-\d{2}-\d{4}\b",  # SSN
+                r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b",  # Email
+            ]
+        )
+        fields.extend(["password", "api_key", "secret", "token", "ssn", "credit_card"])
+
+    if redact_patterns:
+        patterns.extend(redact_patterns)
+    if redact_fields:
+        fields.extend(redact_fields)
+
+    # Apply secure configuration
+    secure_kwargs = {"redact_patterns": patterns, "redact_fields": fields, "include_redaction_summary": True, **kwargs}
+
+    # Pre-serialize with redaction applied - this already handles the secure serialization
+    secure_serialized = dump_secure(obj, **secure_kwargs)
+
+    # Detect format
+    path_obj = Path(path)
+    detected_format = _detect_file_format(path_obj, format)
+
+    # Check for compression
+    is_compressed = path_obj.suffix == ".gz" or (len(path_obj.suffixes) > 1 and path_obj.suffixes[-1] == ".gz")
+
+    # Open file with appropriate compression
+    def open_func(mode):
+        if is_compressed:
+            return gzip.open(path_obj, mode, encoding="utf-8")
+        else:
+            return path_obj.open(mode)
+
+    # Write to file in appropriate format, don't re-serialize
+    with open_func("wt") as f:
+        if detected_format == "jsonl":
+            # JSONL: Write each item on a separate line
+            if isinstance(secure_serialized, (list, tuple)):
+                for item in secure_serialized:
+                    json.dump(item, f, ensure_ascii=False)
+                    f.write("\n")
+            else:
+                json.dump(secure_serialized, f, ensure_ascii=False)
+                f.write("\n")
+        else:
+            # JSON: Write as single object
+            json.dump(secure_serialized, f, ensure_ascii=False)
+
+
+def save_api(obj: Any, path: Union[str, Path], *, format: Optional[str] = None, **kwargs: Any) -> None:
+    """Save API-safe data to JSON/JSONL file.
+
+    Produces clean, predictable output suitable for API data exchange.
+
+    Args:
+        obj: Data to save for API use
+        path: Output file path
+        format: Explicit format ('json' or 'jsonl'), auto-detected if None
+        **kwargs: Additional API configuration options
+
+    Examples:
+        >>> api_data = [{"status": "success", "data": [1, 2, 3]}]
+        >>>
+        >>> # Save as single JSON object
+        >>> save_api(api_data, "responses.json")
+        >>>
+        >>> # Save as JSONL (one response per line)
+        >>> save_api(api_data, "responses.jsonl")
+    """
+    import gzip
+    import json
+    from pathlib import Path
+
+    # Get API-optimized config and serialize the data
+    api_serialized = dump_api(obj, **kwargs)
+
+    # Detect format
+    path_obj = Path(path)
+    detected_format = _detect_file_format(path_obj, format)
+
+    # Check for compression
+    is_compressed = path_obj.suffix == ".gz" or (len(path_obj.suffixes) > 1 and path_obj.suffixes[-1] == ".gz")
+
+    # Open file with appropriate compression
+    def open_func(mode):
+        if is_compressed:
+            return gzip.open(path_obj, mode, encoding="utf-8")
+        else:
+            return path_obj.open(mode)
+
+    # Write to file in appropriate format, don't re-serialize
+    with open_func("wt") as f:
+        if detected_format == "jsonl":
+            # JSONL: Write each item on a separate line
+            if isinstance(api_serialized, (list, tuple)):
+                for item in api_serialized:
+                    json.dump(item, f, ensure_ascii=False)
+                    f.write("\n")
+            else:
+                json.dump(api_serialized, f, ensure_ascii=False)
+                f.write("\n")
+        else:
+            # JSON: Write as single object
+            json.dump(api_serialized, f, ensure_ascii=False)
+
+
+def save_chunked(
+    obj: Any, path: Union[str, Path], *, chunk_size: int = 1000, format: Optional[str] = None, **kwargs: Any
+) -> None:
+    """Save large data to JSON/JSONL file using chunked serialization.
+
+    Memory-efficient saving for large datasets.
+
+    Args:
+        obj: Large dataset to save
+        path: Output file path
+        chunk_size: Size of each chunk
+        format: Explicit format ('json' or 'jsonl'), auto-detected if None
+        **kwargs: Additional chunking options
+
+    Example:
+        >>> large_dataset = list(range(100000))
+        >>> save_chunked(large_dataset, "large.jsonl", chunk_size=5000)
+        >>> save_chunked(large_dataset, "large.json", chunk_size=5000)  # JSON array format
+    """
+    detected_format = _detect_file_format(path, format)
+    chunked_result = dump_chunked(obj, chunk_size=chunk_size, **kwargs)
+    chunked_result.save_to_file(path, format=detected_format)
+
+
+def load_smart_file(path: Union[str, Path], *, format: Optional[str] = None, **kwargs: Any) -> Iterator[Any]:
+    """Load data from JSON/JSONL file using smart deserialization.
+
+    Good balance of accuracy and performance for most use cases.
+    Success rate: ~80-90% for complex objects.
+
+    Args:
+        path: Input file path
+        format: Explicit format ('json' or 'jsonl'), auto-detected if None
+        **kwargs: Additional deserialization options
+
+    Returns:
+        Iterator of deserialized objects
+
+    Examples:
+        >>> # Load from JSONL (yields each line)
+        >>> for item in load_smart_file("data.jsonl"):
+        ...     process(item)
+        >>>
+        >>> # Load from JSON (yields each item in array, or single item)
+        >>> for item in load_smart_file("data.json"):
+        ...     process(item)
+        >>>
+        >>> # Or load all at once
+        >>> data = list(load_smart_file("data.jsonl"))
+    """
+    config = SerializationConfig(auto_detect_types=True)
+    for raw_item in _load_from_file(path, config, format):
+        yield load_smart(raw_item, config, **kwargs)
+
+
+def load_perfect_file(
+    path: Union[str, Path], template: Any, *, format: Optional[str] = None, **kwargs: Any
+) -> Iterator[Any]:
+    """Load data from JSON/JSONL file using perfect template-based deserialization.
+
+    Uses template for 100% accurate reconstruction.
+    Success rate: 100% when template matches data.
+
+    Args:
+        path: Input file path
+        template: Template object showing expected structure/types
+        format: Explicit format ('json' or 'jsonl'), auto-detected if None
+        **kwargs: Additional template options
+
+    Returns:
+        Iterator of perfectly reconstructed objects
+
+    Examples:
+        >>> template = {"weights": np.array([0.0]), "epoch": 0}
+        >>>
+        >>> # Perfect loading from JSONL
+        >>> for item in load_perfect_file("training.jsonl", template):
+        ...     assert isinstance(item["weights"], np.ndarray)
+        >>>
+        >>> # Perfect loading from JSON
+        >>> for item in load_perfect_file("training.json", template):
+        ...     assert isinstance(item["weights"], np.ndarray)
+    """
+    for raw_item in _load_from_file(path, format=format):
+        yield load_perfect(raw_item, template, **kwargs)
+
+
+def load_basic_file(path: Union[str, Path], *, format: Optional[str] = None, **kwargs: Any) -> Iterator[Any]:
+    """Load data from JSON/JSONL file using basic deserialization.
+
+    Fast but with limited type fidelity - suitable for exploration.
+    Success rate: ~60-70% for complex objects.
+
+    Args:
+        path: Input file path
+        format: Explicit format ('json' or 'jsonl'), auto-detected if None
+        **kwargs: Additional options
+
+    Returns:
+        Iterator of deserialized objects
+
+    Example:
+        >>> for item in load_basic_file("simple.json"):
+        ...     print(item)  # Quick exploration
+    """
+    for raw_item in _load_from_file(path, format=format):
+        yield load_basic(raw_item, **kwargs)
+
+
+def stream_save_ml(path: Union[str, Path], *, format: Optional[str] = None, **kwargs: Any) -> Any:
+    """Create ML-optimized streaming serializer for JSON/JSONL files.
+
+    Memory-efficient ML data streaming with type preservation.
+
+    Args:
+        path: Output file path
+        format: Explicit format ('json' or 'jsonl'), auto-detected if None
+        **kwargs: ML serialization options
+
+    Returns:
+        StreamingSerializer configured for ML data
+
+    Examples:
+        >>> # Stream to JSONL (one object per line)
+        >>> with stream_save_ml("training.jsonl") as stream:
+        ...     for epoch_data in training_loop():
+        ...         stream.write(epoch_data)
+        >>>
+        >>> # Stream to JSON (array format)
+        >>> with stream_save_ml("training.json") as stream:
+        ...     for epoch_data in training_loop():
+        ...         stream.write(epoch_data)
+    """
+    config = get_ml_config()
+    detected_format = _detect_file_format(path, format)
+    return stream_serialize(path, config=config, format=detected_format, **kwargs)

@@ -28,7 +28,7 @@ except ImportError:
 
 # SECURITY: Import same constants as core.py for consistency
 try:
-    from .core import MAX_OBJECT_SIZE, MAX_SERIALIZATION_DEPTH, MAX_STRING_LENGTH
+    from .core_new import MAX_OBJECT_SIZE, MAX_SERIALIZATION_DEPTH, MAX_STRING_LENGTH
 except ImportError:
     # Fallback constants if core import fails - SECURITY FIX: Use secure values
     MAX_SERIALIZATION_DEPTH = 50
@@ -128,6 +128,14 @@ def deserialize(obj: Any, parse_dates: bool = True, parse_uuids: bool = True) ->
         >>> deserialize(data)
         {"date": datetime(2023, 1, 1, 12, 0), "id": UUID('12345678-1234-5678-9012-123456789abc')}
     """
+    # ==================================================================================
+    # IDEMPOTENCY CHECKS: Prevent double deserialization
+    # ==================================================================================
+
+    # IDEMPOTENCY CHECK 1: Check if object is already in final deserialized form
+    if _is_already_deserialized(obj):
+        return obj
+
     if obj is None:
         return None
 
@@ -154,9 +162,12 @@ def deserialize(obj: Any, parse_dates: bool = True, parse_uuids: bool = True) ->
         # Try to parse as datetime if enabled
         if parse_dates and _looks_like_datetime(obj):
             try:
+                import sys
                 from datetime import datetime as datetime_class  # Fresh import
 
-                return datetime_class.fromisoformat(obj.replace("Z", "+00:00"))
+                # Handle 'Z' timezone suffix for Python < 3.11
+                date_str = obj.replace("Z", "+00:00") if obj.endswith("Z") and sys.version_info < (3, 11) else obj
+                return datetime_class.fromisoformat(date_str)
             except (ValueError, ImportError):
                 # Log parsing failure but continue with string
                 warnings.warn(
@@ -188,7 +199,7 @@ def auto_deserialize(obj: Any, aggressive: bool = False, config: Optional["Seria
     Args:
         obj: JSON-compatible object to deserialize
         aggressive: Whether to use aggressive type detection (may have false positives)
-        config: Configuration object to control deserialization behavior (NEW)
+        config: Configuration object to control deserialization behavior
 
     Returns:
         Python object with auto-detected types restored
@@ -198,17 +209,23 @@ def auto_deserialize(obj: Any, aggressive: bool = False, config: Optional["Seria
         >>> auto_deserialize(data, aggressive=True)
         {"records": DataFrame(...)}  # May detect as DataFrame
 
-        >>> # NEW: API-compatible UUID handling
+        >>> # API-compatible UUID handling
         >>> from datason.config import get_api_config
         >>> auto_deserialize("12345678-1234-5678-9012-123456789abc", config=get_api_config())
         "12345678-1234-5678-9012-123456789abc"  # Stays as string
     """
+    # ==================================================================================
+    # IDEMPOTENCY CHECKS: Prevent double deserialization
+    # ==================================================================================
+
+    # IDEMPOTENCY CHECK 1: Check if object is already in final deserialized form
+    if _is_already_deserialized(obj):
+        return obj
+
     if obj is None:
         return None
 
     # Get default config if none provided
-    # Note: _config_available and get_default_config are defined at module level
-    # through conditional imports at the top of this file
     if config is None and _config_available:
         config = get_default_config()
 
@@ -287,11 +304,14 @@ def _deserialize_with_type_metadata(obj: Dict[str, Any]) -> Any:
 
     Supports both new format (__datason_type__) and legacy format (_type) with
     comprehensive ML framework support and robust error handling.
-
-    SECURITY WARNING: This function may deserialize pickle data for legacy sklearn models.
-    Pickle deserialization can execute arbitrary code if the data is untrusted.
-    Only use with data from trusted sources.
     """
+    # ==================================================================================
+    # IDEMPOTENCY CHECKS: Prevent double deserialization of type metadata
+    # ==================================================================================
+
+    # IDEMPOTENCY CHECK 1: If the object doesn't have type metadata, it might already be deserialized
+    if TYPE_METADATA_KEY not in obj and VALUE_METADATA_KEY not in obj and _is_already_deserialized(obj):
+        return obj
 
     # NEW TYPE METADATA FORMAT (priority 1)
     if TYPE_METADATA_KEY in obj and VALUE_METADATA_KEY in obj:
@@ -542,43 +562,16 @@ def _deserialize_with_type_metadata(obj: Dict[str, Any]) -> Any:
                             # Fall back to returning the dict
                             return value
 
-                    # Handle legacy pickle format (SECURITY: Pickle deserialization disabled)
-                    elif isinstance(value, str):
-                        # Legacy pickle data detected - try JSON first, disable pickle for security
-                        import base64
-                        import json
-
-                        try:
-                            # Try JSON format first (safe)
-                            json_data = base64.b64decode(value).decode("utf-8")
-                            return json.loads(json_data)
-                        except (json.JSONDecodeError, UnicodeDecodeError, ValueError):
-                            # Legacy pickle data detected - disabled for security
-                            warnings.warn(
-                                "Legacy pickle deserialization is disabled for security reasons. "
-                                "Please re-serialize your models using a safer format.",
-                                UserWarning,
-                                stacklevel=3,
-                            )
-                            return value  # Return original value as fallback
-                    elif isinstance(value, dict) and "_pickle_data" in value:
-                        # Alternative pickle storage format - try JSON first, disable pickle for security
-                        import base64
-                        import json
-
-                        try:
-                            # Try JSON format first (safe)
-                            json_data = base64.b64decode(value["_pickle_data"]).decode("utf-8")
-                            return json.loads(json_data)
-                        except (json.JSONDecodeError, UnicodeDecodeError, ValueError):
-                            # Legacy pickle data detected - disabled for security
-                            warnings.warn(
-                                "Legacy pickle deserialization is disabled for security reasons. "
-                                "Please re-serialize your models using a safer format.",
-                                UserWarning,
-                                stacklevel=3,
-                            )
-                            return value  # Return original value as fallback
+                    # Handle legacy pickle format - SECURITY WARNING ADDED
+                    elif isinstance(value, str) or isinstance(value, dict) and "_pickle_data" in value:
+                        # Issue security warning about disabled pickle deserialization
+                        warnings.warn(
+                            "Legacy pickle deserialization is disabled for security reasons. "
+                            "Pickle-serialized objects are unsafe to deserialize from untrusted sources.",
+                            stacklevel=2,
+                        )
+                        # Return the original value instead of unpickling
+                        return value
                 except (ImportError, Exception) as e:
                     warnings.warn(f"Could not reconstruct sklearn model: {e}", stacklevel=2)
 
@@ -687,25 +680,15 @@ def _deserialize_with_type_metadata(obj: Dict[str, Any]) -> Any:
 
 
 def _auto_detect_string_type(s: str, aggressive: bool = False, config: Optional["SerializationConfig"] = None) -> Any:
-    """NEW: Auto-detect the most likely type for a string value.
-
-    Args:
-        s: String to analyze
-        aggressive: Whether to use aggressive type detection
-        config: Configuration to control type conversion behavior
-    """
-    # Check configuration for UUID handling
-    should_parse_uuids = True
-    if config is not None:
-        # Use parse_uuids config if available
-        should_parse_uuids = getattr(config, "parse_uuids", True)
-        # Also check uuid_format preference
-        uuid_format = getattr(config, "uuid_format", "object")
-        if uuid_format == "string":
-            should_parse_uuids = False
-
+    """NEW: Auto-detect the most likely type for a string value."""
     # Always try UUID detection first (more specific pattern)
-    if should_parse_uuids and _looks_like_uuid(s):
+    if _looks_like_uuid(s):
+        # Check config to see if UUIDs should be preserved as strings (API compatibility)
+        if config and (
+            (hasattr(config, "uuid_format") and config.uuid_format == "string")
+            or (hasattr(config, "parse_uuids") and not config.parse_uuids)
+        ):
+            return s  # Keep as string for API compatibility
         try:
             import uuid as uuid_module  # Fresh import to avoid state issues
 
@@ -716,18 +699,13 @@ def _auto_detect_string_type(s: str, aggressive: bool = False, config: Optional[
     # Then try datetime detection
     if _looks_like_datetime(s):
         try:
-            import re
+            import sys
             from datetime import datetime as datetime_class  # Fresh import
 
-            # Validate ISO 8601 format BEFORE any operations to prevent CodeQL false positive
-            # This provides security by validating input format before processing
-            iso8601_pattern = r"^\d{4}-\d{2}-\d{2}(?:T| )\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?$"
-
-            if re.match(iso8601_pattern, s):
-                # Only perform operations AFTER validation
-                normalized_input = s.replace("Z", "+00:00")
-                return datetime_class.fromisoformat(normalized_input)  # Now safe from CodeQL false positive
-        except (ValueError, ImportError, re.error):
+            # Handle 'Z' timezone suffix for Python < 3.11
+            date_str = s.replace("Z", "+00:00") if s.endswith("Z") and sys.version_info < (3, 11) else s
+            return datetime_class.fromisoformat(date_str)
+        except (ValueError, ImportError):
             pass
 
     if not aggressive:
@@ -814,11 +792,15 @@ def _looks_like_split_format(obj: Dict[str, Any]) -> bool:
 
 def _reconstruct_dataframe(obj: Dict[str, Any]) -> "pd.DataFrame":
     """NEW: Reconstruct a DataFrame from a column-oriented dict."""
+    if pd is None:
+        return obj  # Return original dict if pandas not available
     return pd.DataFrame(obj)
 
 
 def _reconstruct_from_split(obj: Dict[str, Any]) -> "pd.DataFrame":
     """NEW: Reconstruct a DataFrame from split format."""
+    if pd is None:
+        return obj  # Return original dict if pandas not available
     return pd.DataFrame(data=obj["data"], index=obj["index"], columns=obj["columns"])
 
 
@@ -929,61 +911,70 @@ def _restore_pandas_types(obj: Any) -> Any:
     return obj
 
 
+# Security functions
+def _contains_pickle_data(obj: Any) -> bool:
+    """Check if the object contains pickle-serialized data.
+
+    Args:
+        obj: Object to check for pickle data
+
+    Returns:
+        True if pickle data is detected, False otherwise
+    """
+    if isinstance(obj, dict):
+        # Check for type metadata with sklearn/ML objects that use pickle
+        if "__datason_type__" in obj:
+            obj_type = obj["__datason_type__"]
+            if isinstance(obj_type, str) and ("sklearn" in obj_type.lower() or "catboost" in obj_type.lower()):
+                value = obj.get("__datason_value__", "")
+                # Check if value is a string (base64 pickle) or has _pickle_data key
+                if isinstance(value, str) or (isinstance(value, dict) and "_pickle_data" in value):
+                    return True
+
+        # Recursively check nested dictionaries
+        for value in obj.values():
+            if _contains_pickle_data(value):
+                return True
+
+    elif isinstance(obj, list):
+        # Recursively check list items
+        for item in obj:
+            if _contains_pickle_data(item):
+                return True
+
+    return False
+
+
 # Convenience functions for common use cases
 def safe_deserialize(json_str: str, allow_pickle: bool = False, **kwargs: Any) -> Any:
     """Safely deserialize a JSON string, handling parse errors gracefully.
 
     Args:
         json_str: JSON string to parse and deserialize
-        allow_pickle: Whether to allow unsafe pickle deserialization (default: False)
+        allow_pickle: Whether to allow deserialization of pickle-serialized objects
         **kwargs: Arguments passed to deserialize()
 
     Returns:
         Deserialized Python object, or the original string if parsing fails
 
-    Security Note:
-        When allow_pickle=False, this function will refuse to deserialize
-        legacy sklearn models that use pickle format, providing safer operation
-        at the cost of some backward compatibility.
+    Raises:
+        DeserializationSecurityError: If pickle data is detected and allow_pickle=False
     """
     import json
 
     try:
         parsed = json.loads(json_str)
 
-        # Add security configuration
+        # Security check for pickle data
         if not allow_pickle and _contains_pickle_data(parsed):
             raise DeserializationSecurityError(
-                "Data contains pickle-serialized objects which are unsafe to deserialize. "
-                "Set allow_pickle=True to override this security check, but only with trusted data."
+                "Detected pickle-serialized objects which are unsafe to deserialize. "
+                "Set allow_pickle=True to override this security check."
             )
 
         return deserialize(parsed, **kwargs)
     except (json.JSONDecodeError, TypeError, ValueError):
         return json_str
-
-
-def _contains_pickle_data(obj: Any) -> bool:
-    """Check if an object contains pickle-serialized data (recursive check)."""
-    if isinstance(obj, dict):
-        # Check for sklearn types with pickle data
-        if obj.get("__datason_type__", "").startswith("sklearn.") and (
-            isinstance(obj.get("__datason_value__"), str)
-            or (isinstance(obj.get("__datason_value__"), dict) and "_pickle_data" in obj.get("__datason_value__", {}))
-        ):
-            return True
-
-        # Recursively check all values
-        for value in obj.values():
-            if _contains_pickle_data(value):
-                return True
-    elif isinstance(obj, list):
-        # Recursively check all items
-        for item in obj:
-            if _contains_pickle_data(item):
-                return True
-
-    return False
 
 
 def parse_datetime_string(s: Any) -> Optional[datetime]:
@@ -1000,11 +991,11 @@ def parse_datetime_string(s: Any) -> Optional[datetime]:
 
     try:
         # Handle various common formats
-        # ISO format with Z
-        if s.endswith("Z"):
-            return datetime.fromisoformat(s.replace("Z", "+00:00"))
-        # Standard ISO format
-        return datetime.fromisoformat(s)
+        import sys
+
+        # Handle 'Z' timezone suffix for Python < 3.11
+        date_str = s.replace("Z", "+00:00") if s.endswith("Z") and sys.version_info < (3, 11) else s
+        return datetime.fromisoformat(date_str)
     except ValueError:
         try:
             # Try pandas parsing if available
@@ -1286,7 +1277,7 @@ class TemplateDeserializer:
     def _deserialize_datetime_with_template(self, obj: str, template: datetime) -> datetime:
         """Deserialize datetime string using template."""
         try:
-            return datetime.fromisoformat(obj.replace("Z", "+00:00"))
+            return datetime.fromisoformat(obj)  # Python 3.7+ handles 'Z' natively
         except ValueError:
             # Try other common formats with dateutil if available
             try:
@@ -1946,9 +1937,9 @@ def _process_dict_optimized(obj: dict, config: Optional["SerializationConfig"], 
                     return series
 
         # Check for special formats (legacy - keep for compatibility)
-        if _looks_like_split_format(obj):
+        if pd is not None and _looks_like_split_format(obj):
             return _reconstruct_from_split(obj)
-        if _looks_like_dataframe_dict(obj):
+        if pd is not None and _looks_like_dataframe_dict(obj):
             return _reconstruct_dataframe(obj)
 
         # OPTIMIZATION: Use pooled dict for memory efficiency
@@ -1991,18 +1982,34 @@ def _deserialize_string_full(s: str, config: Optional["SerializationConfig"]) ->
     # Try datetime parsing with optimized detection
     if pattern_type == "datetime" or (pattern_type is None and _looks_like_datetime_optimized(s)):
         try:
-            parsed_datetime = datetime.fromisoformat(s.replace("Z", "+00:00"))
+            # Validate ISO 8601 format for security
+            import re
+
+            iso8601_pattern = r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})?$"
+            if not re.match(iso8601_pattern, s):
+                raise ValueError("Invalid ISO 8601 datetime format")
+
+            # Handle 'Z' timezone suffix for Python < 3.11
+            import sys
+
+            date_str = s.replace("Z", "+00:00") if s.endswith("Z") and sys.version_info < (3, 11) else s
+            parsed_datetime = datetime.fromisoformat(date_str)  # Now safe from CodeQL false positive
             # Cache successful parse
             if len(_PARSED_OBJECT_CACHE) < _PARSED_CACHE_SIZE_LIMIT:
                 _PARSED_OBJECT_CACHE[f"datetime:{s}"] = parsed_datetime
             return parsed_datetime
-        except ValueError:
+        except (ValueError, ImportError, re.error):
             # Cache failure to avoid repeated parsing
             if len(_PARSED_OBJECT_CACHE) < _PARSED_CACHE_SIZE_LIMIT:
                 _PARSED_OBJECT_CACHE[f"datetime:{s}"] = None
 
-    # Try UUID parsing with optimized detection
-    if pattern_type == "uuid" or (pattern_type is None and _looks_like_uuid_optimized(s)):
+    # Try UUID parsing - always check for UUID format (36 chars with dashes at right positions)
+    if (
+        pattern_type == "uuid"
+        or (pattern_type is None and _looks_like_uuid_optimized(s))
+        or (len(s) == 36 and s.count("-") == 4)
+    ) and _looks_like_uuid_optimized(s):
+        # Extra robust UUID check - bypass cache issues by always testing UUID-like strings
         try:
             import uuid as uuid_module  # Fresh import to avoid state issues
 
@@ -2187,7 +2194,7 @@ def _get_cached_parsed_object(s: str, pattern_type: str) -> Any:
         elif pattern_type == "datetime":
             from datetime import datetime as datetime_class  # Fresh import
 
-            parsed_obj = datetime_class.fromisoformat(s.replace("Z", "+00:00"))
+            parsed_obj = datetime_class.fromisoformat(s)  # Python 3.7+ handles 'Z' natively
         elif pattern_type == "path":
             from pathlib import Path
 
@@ -2541,3 +2548,59 @@ def _try_series_detection(data: dict) -> Optional[Any]:
                     return None
 
     return None
+
+
+def _is_already_deserialized(obj: Any) -> bool:
+    """Check if an object is already in its final deserialized form.
+
+    This prevents double deserialization by detecting objects that have already
+    been processed and converted to their final Python types.
+
+    Args:
+        obj: Object to check
+
+    Returns:
+        True if object is already deserialized, False otherwise
+    """
+    # Check for complex Python objects that indicate deserialization has occurred
+    if isinstance(obj, (datetime, uuid.UUID, Decimal, Path, complex)):
+        return True
+
+    # Check for pandas objects (if available)
+    if pd is not None and isinstance(obj, (pd.DataFrame, pd.Series)):
+        return True
+
+    # Check for numpy objects (if available)
+    if np is not None and isinstance(obj, (np.ndarray, np.number)):
+        return True
+
+    # Check for sets and tuples (these are converted from lists during deserialization)
+    if isinstance(obj, (set, tuple)) and not isinstance(obj, str):
+        return True
+
+    # Check for ML framework objects (if available)
+    try:
+        import torch
+
+        if isinstance(obj, torch.Tensor):
+            return True
+    except ImportError:
+        pass
+
+    # For containers, check if they contain already deserialized objects
+    if isinstance(obj, dict):
+        # If dict contains type metadata, it's not yet deserialized
+        if TYPE_METADATA_KEY in obj and VALUE_METADATA_KEY in obj:
+            return False
+        # If dict contains complex objects, it's likely already deserialized
+        for value in obj.values():
+            if _is_already_deserialized(value):
+                return True
+    elif isinstance(obj, list):
+        # If list contains complex objects, it's likely already deserialized
+        for item in obj:
+            if _is_already_deserialized(item):
+                return True
+
+    # Basic types and strings are considered "neutral" - could be either state
+    return False
