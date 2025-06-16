@@ -226,13 +226,19 @@ class TestAdvancedCachingAndOptimization:
         # Test string processing optimization
         test_strings = [
             "short",
-            "a" * 1000,  # Long string
             "special\nchars\ttab",
         ]
 
         for test_string in test_strings:
             result = _process_string_optimized(test_string, 500)
             assert isinstance(result, str)
+
+        # Test long string that exceeds limit - now returns security error dict
+        long_string = "a" * 1000
+        result = _process_string_optimized(long_string, 500)
+        assert isinstance(result, dict)
+        assert result.get("__datason_type__") == "security_error"
+        assert "String length" in result.get("__datason_value__", "")
 
         # Test UUID to string optimization
         test_uuid = uuid.uuid4()
