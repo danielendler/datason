@@ -164,7 +164,7 @@ def deserialize(obj: Any, parse_dates: bool = True, parse_uuids: bool = True) ->
             try:
                 from datetime import datetime as datetime_class  # Fresh import
 
-                return datetime_class.fromisoformat(obj.replace("Z", "+00:00"))
+                return datetime_class.fromisoformat(obj)  # Python 3.7+ handles 'Z' natively
             except (ValueError, ImportError):
                 # Log parsing failure but continue with string
                 warnings.warn(
@@ -698,7 +698,7 @@ def _auto_detect_string_type(s: str, aggressive: bool = False, config: Optional[
         try:
             from datetime import datetime as datetime_class  # Fresh import
 
-            return datetime_class.fromisoformat(s.replace("Z", "+00:00"))
+            return datetime_class.fromisoformat(s)  # Python 3.7+ handles 'Z' natively
         except (ValueError, ImportError):
             pass
 
@@ -987,7 +987,7 @@ def parse_datetime_string(s: Any) -> Optional[datetime]:
         # Handle various common formats
         # ISO format with Z
         if s.endswith("Z"):
-            return datetime.fromisoformat(s.replace("Z", "+00:00"))
+            return datetime.fromisoformat(s)  # Python 3.7+ handles 'Z' natively
         # Standard ISO format
         return datetime.fromisoformat(s)
     except ValueError:
@@ -1271,7 +1271,7 @@ class TemplateDeserializer:
     def _deserialize_datetime_with_template(self, obj: str, template: datetime) -> datetime:
         """Deserialize datetime string using template."""
         try:
-            return datetime.fromisoformat(obj.replace("Z", "+00:00"))
+            return datetime.fromisoformat(obj)  # Python 3.7+ handles 'Z' natively
         except ValueError:
             # Try other common formats with dateutil if available
             try:
@@ -1980,11 +1980,11 @@ def _deserialize_string_full(s: str, config: Optional["SerializationConfig"]) ->
             import re
 
             iso8601_pattern = r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})?$"
-            normalized_input = s.replace("Z", "+00:00")
             if not re.match(iso8601_pattern, s):
                 raise ValueError("Invalid ISO 8601 datetime format")
 
-            parsed_datetime = datetime.fromisoformat(normalized_input)  # Now safe from CodeQL false positive
+            # Python 3.7+ natively handles 'Z' in fromisoformat, no replacement needed
+            parsed_datetime = datetime.fromisoformat(s)  # Now safe from CodeQL false positive
             # Cache successful parse
             if len(_PARSED_OBJECT_CACHE) < _PARSED_CACHE_SIZE_LIMIT:
                 _PARSED_OBJECT_CACHE[f"datetime:{s}"] = parsed_datetime
@@ -2185,7 +2185,7 @@ def _get_cached_parsed_object(s: str, pattern_type: str) -> Any:
         elif pattern_type == "datetime":
             from datetime import datetime as datetime_class  # Fresh import
 
-            parsed_obj = datetime_class.fromisoformat(s.replace("Z", "+00:00"))
+            parsed_obj = datetime_class.fromisoformat(s)  # Python 3.7+ handles 'Z' natively
         elif pattern_type == "path":
             from pathlib import Path
 
