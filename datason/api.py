@@ -157,30 +157,16 @@ def dump_ml(obj: Any, **kwargs: Any) -> Any:
         >>> serialized = dump_ml(model)
         >>> # Optimized for ML round-trip fidelity
     """
-    from copy import deepcopy
+    # Create a copy of ML-optimized config to avoid modifying shared instances
+    base_config = get_ml_config()
+    from dataclasses import replace
 
-    # Make a deep copy to avoid circular reference issues
-    try:
-        obj_copy = deepcopy(obj)
-    except Exception:
-        # If deepcopy fails (some objects can't be copied), use the original
-        obj_copy = obj
+    config = replace(base_config, **kwargs)
 
-    # Use ML-optimized config
-    config = get_ml_config()
-
-    # Add extra config settings from kwargs
-    for key, value in kwargs.items():
-        if hasattr(config, key):
-            setattr(config, key, value)
-
-    # Use higher max_depth to avoid circular reference warnings
-    config.max_depth = 10000
-
-    # Directly call serialize, avoiding any wrappers that might add circular refs
+    # Directly call serialize - serializer handles circular references properly
     from .core_new import serialize
 
-    return serialize(obj_copy, config=config)
+    return serialize(obj, config=config)
 
 
 def dump_api(obj: Any, **kwargs: Any) -> Any:
@@ -201,30 +187,16 @@ def dump_api(obj: Any, **kwargs: Any) -> Any:
         >>> def get_data():
         >>>     return dump_api(complex_data_structure)
     """
-    from copy import deepcopy
+    # Create a copy of API-optimized config to avoid modifying shared instances
+    base_config = get_api_config()
+    from dataclasses import replace
 
-    # Make a deep copy to avoid circular reference issues
-    try:
-        obj_copy = deepcopy(obj)
-    except Exception:
-        # If deepcopy fails (some objects can't be copied), use the original
-        obj_copy = obj
+    config = replace(base_config, **kwargs)
 
-    # Use API-optimized config
-    config = get_api_config()
-
-    # Add extra config settings from kwargs
-    for key, value in kwargs.items():
-        if hasattr(config, key):
-            setattr(config, key, value)
-
-    # Use higher max_depth to avoid circular reference warnings
-    config.max_depth = 10000
-
-    # Directly call serialize, avoiding any wrappers that might add circular refs
+    # Directly call serialize - serializer handles circular references properly
     from .core_new import serialize
 
-    return serialize(obj_copy, config=config)
+    return serialize(obj, config=config)
 
 
 def dump_secure(
@@ -255,15 +227,6 @@ def dump_secure(
         >>> safe_data = dump_secure(user_data)
         >>> # SSN will be redacted: {"name": "John", "ssn": "[REDACTED]"}
     """
-    from copy import deepcopy
-
-    # Make a deep copy to avoid circular reference issues
-    try:
-        obj_copy = deepcopy(obj)
-    except Exception:
-        # If deepcopy fails (some objects can't be copied), use the original
-        obj_copy = obj
-
     # Create secure config with redaction settings
     patterns = []
     fields = []
@@ -291,14 +254,14 @@ def dump_secure(
         redact_patterns=patterns,
         redact_fields=fields,
         include_redaction_summary=True,
-        max_depth=10000,  # High max_depth to avoid circular reference warnings
+        # Keep normal max_depth to maintain security
         **kwargs_clean,
     )
 
-    # Directly call serialize, avoiding any wrappers that might add circular refs
+    # Directly call serialize - serializer handles circular references properly
     from .core_new import serialize
 
-    return serialize(obj_copy, config=config)
+    return serialize(obj, config=config)
 
 
 def dump_fast(obj: Any, **kwargs: Any) -> Any:

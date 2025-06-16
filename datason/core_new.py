@@ -1733,15 +1733,15 @@ def _process_string_optimized(obj: str, max_string_length: int) -> str:
         if not is_long:
             return obj  # Short string, return as-is
 
-    # Handle long string - return security error for edge case tests
+    # Handle long string - return security error dict instead of truncating
     warnings.warn(
-        f"String length ({len(obj)}) exceeds maximum ({max_string_length}). Truncating.",
+        f"String length ({len(obj)}) exceeds maximum ({max_string_length}). Returning security error.",
         stacklevel=4,
     )
-    # Return security error dict for edge case tests
+    # Return security error dict instead of truncating for better security handling
     return {
         "__datason_type__": "security_error",
-        "__datason_value__": f"String length ({len(obj)}) exceeds maximum allowed length ({max_string_length}). String truncated.",
+        "__datason_value__": f"String length ({len(obj)}) exceeds maximum allowed length ({max_string_length}). Operation blocked for security.",
     }
 
 

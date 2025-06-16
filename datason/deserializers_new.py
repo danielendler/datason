@@ -1976,12 +1976,20 @@ def _deserialize_string_full(s: str, config: Optional["SerializationConfig"]) ->
     # Try datetime parsing with optimized detection
     if pattern_type == "datetime" or (pattern_type is None and _looks_like_datetime_optimized(s)):
         try:
-            parsed_datetime = datetime.fromisoformat(s.replace("Z", "+00:00"))
+            # Validate ISO 8601 format for security
+            import re
+
+            iso8601_pattern = r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})?$"
+            normalized_input = s.replace("Z", "+00:00")
+            if not re.match(iso8601_pattern, s):
+                raise ValueError("Invalid ISO 8601 datetime format")
+
+            parsed_datetime = datetime.fromisoformat(normalized_input)  # Now safe from CodeQL false positive
             # Cache successful parse
             if len(_PARSED_OBJECT_CACHE) < _PARSED_CACHE_SIZE_LIMIT:
                 _PARSED_OBJECT_CACHE[f"datetime:{s}"] = parsed_datetime
             return parsed_datetime
-        except ValueError:
+        except (ValueError, ImportError, re.error):
             # Cache failure to avoid repeated parsing
             if len(_PARSED_OBJECT_CACHE) < _PARSED_CACHE_SIZE_LIMIT:
                 _PARSED_OBJECT_CACHE[f"datetime:{s}"] = None
