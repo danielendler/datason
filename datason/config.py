@@ -298,7 +298,7 @@ def cache_scope(scope: CacheScope) -> Generator[None, None, None]:
     """
     # Clear existing caches when entering different scope
     try:
-        from . import deserializers
+        from . import deserializers_new as deserializers
 
         if hasattr(deserializers, "clear_caches"):
             deserializers.clear_caches()

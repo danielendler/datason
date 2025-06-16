@@ -15,7 +15,7 @@ from unittest.mock import Mock, patch
 import pytest
 
 # Import the deserializers module for testing
-import datason.deserializers as deserializers
+import datason.deserializers_new as deserializers
 from datason.config import SerializationConfig
 
 

@@ -15,7 +15,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 # SECURITY: Import same constants as core.py for consistency
 try:
-    from .core import MAX_OBJECT_SIZE, MAX_SERIALIZATION_DEPTH, MAX_STRING_LENGTH
+    from .core_new import MAX_OBJECT_SIZE, MAX_SERIALIZATION_DEPTH, MAX_STRING_LENGTH
 except ImportError:
     # Fallback constants if core import fails - SECURITY FIX: Use secure values
     MAX_SERIALIZATION_DEPTH = 50

@@ -56,7 +56,7 @@ from .api import (
     suppress_deprecation_warnings,
 )
 from .converters import safe_float, safe_int
-from .core import (
+from .core_new import (
     ChunkedSerializationResult,
     SecurityError,
     StreamingSerializer,
@@ -75,7 +75,7 @@ from .datetime_utils import (
     ensure_timestamp,
     serialize_datetimes,
 )
-from .deserializers import (
+from .deserializers_new import (
     TemplateDeserializationError,
     TemplateDeserializer,
     auto_deserialize,

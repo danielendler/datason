@@ -14,7 +14,7 @@ from unittest.mock import patch
 import pytest
 
 # Import the core module for testing
-import datason.core as core
+import datason.core_new as core
 from datason.config import SerializationConfig
 
 
@@ -381,7 +381,7 @@ class TestSecurityFeatures:
             current = current["next"]
 
         # Should raise SecurityError when limit is exceeded
-        with pytest.raises(core.SecurityError, match="Maximum serialization depth"):
+        with pytest.raises(core.SecurityError, match="Maximum depth"):
             core.serialize(deep_data)
 
     def test_security_error_handling(self):

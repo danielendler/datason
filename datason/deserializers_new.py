@@ -28,7 +28,7 @@ except ImportError:
 
 # SECURITY: Import same constants as core.py for consistency
 try:
-    from .core import MAX_OBJECT_SIZE, MAX_SERIALIZATION_DEPTH, MAX_STRING_LENGTH
+    from .core_new import MAX_OBJECT_SIZE, MAX_SERIALIZATION_DEPTH, MAX_STRING_LENGTH
 except ImportError:
     # Fallback constants if core import fails - SECURITY FIX: Use secure values
     MAX_SERIALIZATION_DEPTH = 50
@@ -187,7 +187,7 @@ def deserialize(obj: Any, parse_dates: bool = True, parse_uuids: bool = True) ->
     return obj
 
 
-def auto_deserialize(obj: Any, aggressive: bool = False) -> Any:
+def auto_deserialize(obj: Any, aggressive: bool = False, config: Optional["SerializationConfig"] = None) -> Any:
     """NEW: Intelligent auto-detection deserialization with heuristics.
 
     Uses pattern recognition and heuristics to automatically detect and restore
@@ -196,6 +196,7 @@ def auto_deserialize(obj: Any, aggressive: bool = False) -> Any:
     Args:
         obj: JSON-compatible object to deserialize
         aggressive: Whether to use aggressive type detection (may have false positives)
+        config: Configuration object to control deserialization behavior
 
     Returns:
         Python object with auto-detected types restored
@@ -204,6 +205,11 @@ def auto_deserialize(obj: Any, aggressive: bool = False) -> Any:
         >>> data = {"records": [{"a": 1, "b": 2}, {"a": 3, "b": 4}]}
         >>> auto_deserialize(data, aggressive=True)
         {"records": DataFrame(...)}  # May detect as DataFrame
+
+        >>> # API-compatible UUID handling
+        >>> from datason.config import get_api_config
+        >>> auto_deserialize("12345678-1234-5678-9012-123456789abc", config=get_api_config())
+        "12345678-1234-5678-9012-123456789abc"  # Stays as string
     """
     # ==================================================================================
     # IDEMPOTENCY CHECKS: Prevent double deserialization
@@ -216,6 +222,10 @@ def auto_deserialize(obj: Any, aggressive: bool = False) -> Any:
     if obj is None:
         return None
 
+    # Get default config if none provided
+    if config is None and _config_available:
+        config = get_default_config()
+
     # Handle type metadata first
     if isinstance(obj, dict) and TYPE_METADATA_KEY in obj:
         return _deserialize_with_type_metadata(obj)
@@ -226,11 +236,11 @@ def auto_deserialize(obj: Any, aggressive: bool = False) -> Any:
 
     # Handle strings with auto-detection
     if isinstance(obj, str):
-        return _auto_detect_string_type(obj, aggressive)
+        return _auto_detect_string_type(obj, aggressive, config)
 
     # Handle lists with auto-detection
     if isinstance(obj, list):
-        deserialized_list = [auto_deserialize(item, aggressive) for item in obj]
+        deserialized_list = [auto_deserialize(item, aggressive, config) for item in obj]
 
         if aggressive and pd is not None and _looks_like_series_data(deserialized_list):
             # Try to detect if this should be a pandas Series or DataFrame
@@ -258,7 +268,7 @@ def auto_deserialize(obj: Any, aggressive: bool = False) -> Any:
                 pass
 
         # Standard dictionary deserialization
-        return {k: auto_deserialize(v, aggressive) for k, v in obj.items()}
+        return {k: auto_deserialize(v, aggressive, config) for k, v in obj.items()}
 
     return obj
 
@@ -671,10 +681,16 @@ def _deserialize_with_type_metadata(obj: Dict[str, Any]) -> Any:
     return obj
 
 
-def _auto_detect_string_type(s: str, aggressive: bool = False) -> Any:
+def _auto_detect_string_type(s: str, aggressive: bool = False, config: Optional["SerializationConfig"] = None) -> Any:
     """NEW: Auto-detect the most likely type for a string value."""
     # Always try UUID detection first (more specific pattern)
     if _looks_like_uuid(s):
+        # Check config to see if UUIDs should be preserved as strings (API compatibility)
+        if config and (
+            (hasattr(config, "uuid_format") and config.uuid_format == "string")
+            or (hasattr(config, "parse_uuids") and not config.parse_uuids)
+        ):
+            return s  # Keep as string for API compatibility
         try:
             import uuid as uuid_module  # Fresh import to avoid state issues
 

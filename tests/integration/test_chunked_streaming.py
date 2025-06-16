@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 
 import datason
-from datason.core import (
+from datason.core_new import (
     ChunkedSerializationResult,
     StreamingSerializer,
     deserialize_chunked_file,

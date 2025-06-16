@@ -35,7 +35,7 @@ except ImportError:
 
 # Import datason modules after dependency checks
 from datason.converters import safe_float, safe_int
-from datason.core import (
+from datason.core_new import (
     _is_already_serialized_dict,
     _is_json_serializable_basic_type,
     serialize,
@@ -47,7 +47,7 @@ from datason.datetime_utils import (
     ensure_timestamp,
     serialize_datetimes,
 )
-from datason.deserializers import (
+from datason.deserializers_new import (
     deserialize,
     deserialize_to_pandas,
     parse_datetime_string,

@@ -11,7 +11,7 @@ import hashlib
 import json
 from typing import Any
 
-from .core import serialize
+from .core_new import serialize
 
 # Allowed secure hash algorithms (cryptographically strong)
 ALLOWED_HASH_ALGORITHMS = {"sha256", "sha3_256", "sha3_512", "sha512"}

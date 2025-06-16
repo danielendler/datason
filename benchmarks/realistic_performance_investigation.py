@@ -50,7 +50,7 @@ except ImportError:
 # Datason imports
 import datason
 from datason import SerializationConfig
-from datason.deserializers import auto_deserialize, infer_template_from_data
+from datason.deserializers_new import auto_deserialize, infer_template_from_data
 
 # Optional import for deep profiling
 try:

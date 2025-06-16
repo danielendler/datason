@@ -1,7 +1,7 @@
 # Optional integration helpers for Pydantic and Marshmallow
 from typing import Any, Dict
 
-from .core import serialize
+from .core_new import serialize
 
 _LAZY_IMPORTS = {
     "BaseModel": None,

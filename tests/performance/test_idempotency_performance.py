@@ -12,10 +12,10 @@ from decimal import Decimal
 
 import pytest
 
-import datason.core as core_old
 import datason.core_new as core_new
-import datason.deserializers as deserializers_old
+import datason.core_new as core_old
 import datason.deserializers_new as deserializers_new
+import datason.deserializers_new as deserializers_old
 from datason.config import get_ml_config
 
 

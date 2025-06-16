@@ -11,7 +11,7 @@ import unittest
 import warnings
 from unittest.mock import MagicMock, patch
 
-from datason.core import (
+from datason.core_new import (
     MAX_SERIALIZATION_DEPTH,
     MAX_STRING_LENGTH,
     SecurityError,

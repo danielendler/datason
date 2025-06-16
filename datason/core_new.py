@@ -314,11 +314,7 @@ def serialize(
             pass
 
     # Proceed with normal serialization
-    try:
-        return _serialize_core(obj, config, _depth, _seen, _type_handler)
-    except SecurityError as e:
-        # Convert security errors to security error objects instead of raising
-        return {"__datason_type__": "security_error", "__datason_value__": str(e)}
+    return _serialize_core(obj, config, _depth, _seen, _type_handler)
 
 
 def _serialize_core(
@@ -477,9 +473,6 @@ def _serialize_core(
             for k, v in obj.items():
                 # SECURITY: EVERY recursive call MUST increment depth (verified safe)
                 serialized_value = serialize(v, config, _depth + 1, _seen, _type_handler)
-                # Check if the result is a security error object and bubble it up
-                if isinstance(serialized_value, dict) and serialized_value.get("__datason_type__") == "security_error":
-                    raise SecurityError(serialized_value["__datason_value__"])
                 result[k] = serialized_value
 
             # Sort keys if configured
@@ -523,9 +516,6 @@ def _serialize_core(
             for item in obj:
                 # SECURITY: EVERY recursive call MUST increment depth (verified safe)
                 serialized_value = serialize(item, config, _depth + 1, _seen, _type_handler)
-                # Check if the result is a security error object and bubble it up
-                if isinstance(serialized_value, dict) and serialized_value.get("__datason_type__") == "security_error":
-                    raise SecurityError(serialized_value["__datason_value__"])
                 result_list.append(serialized_value)
 
             # Handle type metadata for tuples
@@ -1702,13 +1692,13 @@ def _process_string_optimized(obj: str, max_string_length: int) -> str:
         if not is_long:
             return obj  # Short string, return as-is
 
-    # Handle long string - raise security error
+    # Handle long string - truncate it
     warnings.warn(
         f"String length ({len(obj)}) exceeds maximum ({max_string_length}). Truncating.",
         stacklevel=4,
     )
-    # Raise security error for large strings
-    raise SecurityError(f"String length ({len(obj)}) exceeds maximum ({max_string_length}). Truncating.")
+    # Truncate the string instead of raising an error
+    return obj[:max_string_length] + "...[TRUNCATED]"
 
 
 def _uuid_to_string_optimized(obj: uuid.UUID) -> str:

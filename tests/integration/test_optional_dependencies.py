@@ -25,7 +25,7 @@ except ImportError:
     HAS_PANDAS = False
 
 import datason as ds
-from datason.core import serialize
+from datason.core_new import serialize
 
 
 @pytest.mark.skipif(not HAS_NUMPY, reason="numpy not available")
