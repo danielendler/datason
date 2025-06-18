@@ -24,9 +24,11 @@ from .config import (
 )
 from .core_new import (
     deserialize_chunked_file,
-    serialize,
     serialize_chunked,
     stream_serialize,
+)
+from .core_new import (
+    serialize as _serialize_core,
 )
 from .deserializers_new import (
     deserialize,
@@ -49,11 +51,167 @@ def suppress_deprecation_warnings(suppress: bool = True) -> None:
 
 
 # =============================================================================
-# MODERN DUMP API - Clear intent, composable utilities
+# JSON-COMPATIBLE CORE FUNCTIONS - Simple and standard
 # =============================================================================
 
 
-def dump(
+def dump(obj: Any, fp, **kwargs: Any) -> None:
+    """Enhanced file serialization (DataSON's smart default).
+
+    This saves enhanced DataSON serialized data to a file using save_ml().
+    For stdlib json.dump() compatibility, use datason.json.dump() or dump_json().
+
+    Args:
+        obj: Object to serialize
+        fp: File-like object or file path to write to
+        **kwargs: DataSON configuration options
+
+    Returns:
+        None (writes to file)
+
+    Example:
+        >>> with open('data.json', 'w') as f:
+        ...     dump(data, f)  # Enhanced serialization with smart features
+
+        >>> # For JSON compatibility:
+        >>> import datason.json as json
+        >>> with open('data.json', 'w') as f:
+        ...     json.dump(data, f)  # Exact json.dump() behavior
+    """
+    # Use enhanced file saving (supports both file objects and paths)
+    if hasattr(fp, "write"):
+        # File-like object: serialize to enhanced format and write
+        import json
+
+        serialized = _serialize_core(obj, **kwargs)
+        json.dump(serialized, fp)
+    else:
+        # File path: use save_ml for enhanced features
+        save_ml(obj, fp, **kwargs)
+
+
+def dump_json(
+    obj: Any,
+    fp,
+    *,
+    skipkeys: bool = False,
+    ensure_ascii: bool = True,
+    check_circular: bool = True,
+    allow_nan: bool = True,
+    cls=None,
+    indent=None,
+    separators=None,
+    default=None,
+    sort_keys: bool = False,
+    **kwargs: Any,
+) -> None:
+    """Write object to file as JSON with stdlib json.dump compatibility.
+
+    This function provides the exact behavior of json.dump() when you need
+    stdlib compatibility. For enhanced features, use dump() instead.
+
+    Args:
+        obj: Object to serialize
+        fp: File-like object to write to
+        **kwargs: Standard json.dump() parameters plus DataSON options
+
+    Returns:
+        None (writes to file)
+
+    Example:
+        >>> with open('data.json', 'w') as f:
+        ...     dump_json(data, f)
+        >>> with open('data.json', 'w') as f:
+        ...     dump_json(data, f, indent=2, sort_keys=True)
+    """
+    import json
+
+    # Build JSON parameters from explicit arguments
+    json_params = {
+        "skipkeys": skipkeys,
+        "ensure_ascii": ensure_ascii,
+        "check_circular": check_circular,
+        "allow_nan": allow_nan,
+        "cls": cls,
+        "indent": indent,
+        "separators": separators,
+        "default": default,
+        "sort_keys": sort_keys,
+    }
+
+    # Use core DataSON serialization with DataSON-specific parameters
+    serialized = _serialize_core(obj, **kwargs)
+
+    # Write to file using standard json.dump with formatting options
+    json.dump(serialized, fp, **json_params)
+
+
+def load(fp, **kwargs: Any) -> Any:
+    """Enhanced file deserialization (DataSON's smart default).
+
+    This provides smart deserialization with datetime parsing, type reconstruction,
+    and other DataSON enhancements. For stdlib json.load() compatibility,
+    use datason.json.load() or load_json().
+
+    Args:
+        fp: File-like object or file path to read from
+        **kwargs: DataSON configuration options
+
+    Returns:
+        Deserialized Python object with enhanced type handling
+
+    Example:
+        >>> with open('data.json', 'r') as f:
+        ...     data = load(f)  # Smart parsing with datetime handling
+
+        >>> # For JSON compatibility:
+        >>> import datason.json as json
+        >>> with open('data.json', 'r') as f:
+        ...     data = json.load(f)  # Exact json.load() behavior
+    """
+    # Use enhanced deserialization
+    if hasattr(fp, "read"):
+        # File-like object: read with smart parsing
+        import json
+
+        data = json.load(fp)
+        return load_smart(data, **kwargs)
+    else:
+        # File path: use enhanced file loading
+        results = list(load_smart_file(fp, **kwargs))
+        return results[0] if len(results) == 1 else results
+
+
+def load_json(fp, **kwargs: Any) -> Any:
+    """Read object from JSON file with stdlib json.load compatibility.
+
+    This function provides the exact behavior of json.load() when you need
+    stdlib compatibility. For enhanced features, use load() instead.
+
+    Args:
+        fp: File-like object to read from
+        **kwargs: Standard json.load() parameters (passed through)
+
+    Returns:
+        Deserialized Python object (same as json.load())
+
+    Example:
+        >>> with open('data.json', 'r') as f:
+        ...     data = load_json(f)  # Works exactly like json.load(f)
+    """
+    import json
+
+    # For JSON compatibility, just use standard json.load()
+    # This ensures identical behavior to the json module
+    return json.load(fp, **kwargs)
+
+
+# =============================================================================
+# ENHANCED SERIALIZATION - Explicit intent, composable utilities
+# =============================================================================
+
+
+def serialize(
     obj: Any,
     *,
     secure: bool = False,
@@ -65,10 +223,10 @@ def dump(
     config: Optional[SerializationConfig] = None,
     **kwargs: Any,
 ) -> Any:
-    """Modern unified dump function with clear options.
+    """Enhanced serialization with clear options (returns dict).
 
-    This is the main entry point for serialization with intention-revealing
-    parameters instead of requiring deep config knowledge.
+    This is the main entry point for enhanced serialization with intention-revealing
+    parameters. For JSON-compatible file writing, use dump() instead.
 
     Args:
         obj: Object to serialize
@@ -82,20 +240,20 @@ def dump(
         **kwargs: Additional configuration options
 
     Returns:
-        Serialized object
+        Serialized dict (use dump() for JSON file writing)
 
     Examples:
-        >>> # Basic usage
-        >>> dump(data)
+        >>> # Basic usage (returns dict)
+        >>> result = serialize(data)
 
         >>> # ML-optimized
-        >>> dump(model, ml_mode=True)
+        >>> result = serialize(model, ml_mode=True)
 
         >>> # Secure serialization
-        >>> dump(sensitive_data, secure=True)
+        >>> result = serialize(sensitive_data, secure=True)
 
         >>> # Chunked for large data
-        >>> dump(big_data, chunked=True, chunk_size=5000)
+        >>> result = serialize(big_data, chunked=True, chunk_size=5000)
     """
     # Handle mutually exclusive modes
     mode_count = sum([ml_mode, api_mode, fast_mode])
@@ -136,7 +294,10 @@ def dump(
     if chunked:
         return serialize_chunked(obj, chunk_size=chunk_size, config=config)
 
-    return serialize(obj, config=config)
+    # Import to avoid circular import issue
+    from .core_new import serialize as core_serialize
+
+    return core_serialize(obj, config=config)
 
 
 def dump_ml(obj: Any, **kwargs: Any) -> Any:
@@ -452,45 +613,138 @@ def load_typed(data: Any, config: Optional[SerializationConfig] = None, **kwargs
 
 
 def loads(s: str, **kwargs: Any) -> Any:
-    """Load from JSON string (json.loads compatible name).
+    """Enhanced JSON string deserialization (DataSON's smart default).
+
+    This provides smart deserialization with datetime parsing, type reconstruction,
+    and other DataSON enhancements. For stdlib json.loads() compatibility,
+    use datason.json.loads() or loads_json().
 
     Args:
         s: JSON string to deserialize
-        **kwargs: Additional deserialization options
+        **kwargs: DataSON configuration options
 
     Returns:
-        Deserialized Python object
+        Deserialized Python object with enhanced type handling
 
     Example:
-        >>> json_str = '{"key": "value"}'
-        >>> result = loads(json_str)
+        >>> json_str = '{"timestamp": "2024-01-01T00:00:00Z", "data": [1, 2, 3]}'
+        >>> result = loads(json_str)  # Smart parsing with datetime handling
+
+        >>> # For JSON compatibility:
+        >>> import datason.json as json
+        >>> result = json.loads(json_str)  # Exact json.loads() behavior
     """
     import json
 
+    # Parse with standard json, then enhance with smart processing
     data = json.loads(s)
-    # For json.loads compatibility, use load_basic instead of load_smart
-    # to avoid auto-detection which can create NumPy arrays
-    return load_basic(data, **kwargs)
+    return load_smart(data, **kwargs)
 
 
-def dumps(obj: Any, **kwargs: Any) -> str:
-    """Dump to JSON string (json.dumps compatible name).
+def loads_json(s: str, **kwargs: Any) -> Any:
+    """Load from JSON string with stdlib json.loads compatibility.
+
+    This function provides the exact behavior of json.loads() when you need
+    stdlib compatibility. For enhanced features, use loads() instead.
+
+    Args:
+        s: JSON string to deserialize
+        **kwargs: Standard json.loads() parameters (passed through)
+
+    Returns:
+        Deserialized Python object (same as json.loads())
+
+    Example:
+        >>> json_str = '{"key": "value"}'
+        >>> result = loads_json(json_str)  # Works exactly like json.loads(json_str)
+    """
+    import json
+
+    # For JSON compatibility, just use standard json.loads()
+    # This ensures identical behavior to the json module
+    return json.loads(s, **kwargs)
+
+
+def dumps(obj: Any, **kwargs: Any) -> Any:
+    """Enhanced serialization returning dict (DataSON's smart default).
+
+    This is DataSON's enhanced API that returns a dict with smart type handling,
+    datetime parsing, ML support, and other advanced features.
+
+    For JSON string output or stdlib compatibility, use datason.json.dumps() or dumps_json().
+
+    Args:
+        obj: Object to serialize
+        **kwargs: DataSON configuration options
+
+    Returns:
+        Serialized dict with enhanced type handling
+
+    Examples:
+        >>> obj = {"timestamp": datetime.now(), "data": [1, 2, 3]}
+        >>> result = dumps(obj)  # Returns dict with smart datetime handling
+
+        >>> # For JSON string compatibility:
+        >>> import datason.json as json
+        >>> json_str = json.dumps(obj)  # Returns JSON string
+    """
+    # Use enhanced serialization with smart defaults
+    return serialize(obj, **kwargs)
+
+
+def dumps_json(
+    obj: Any,
+    *,
+    skipkeys: bool = False,
+    ensure_ascii: bool = True,
+    check_circular: bool = True,
+    allow_nan: bool = True,
+    cls=None,
+    indent=None,
+    separators=None,
+    default=None,
+    sort_keys: bool = False,
+    **kwargs: Any,
+) -> str:
+    """Convert object to JSON string with stdlib json.dumps compatibility.
+
+    This function provides the exact behavior of json.dumps() when you need
+    a JSON string output. For enhanced dict output, use dumps() instead.
 
     Args:
         obj: Object to serialize to JSON string
-        **kwargs: Additional serialization options
+        **kwargs: Standard json.dumps() parameters plus DataSON options
 
     Returns:
         JSON string representation
 
     Example:
         >>> obj = {"key": "value"}
-        >>> json_str = dumps(obj)
+        >>> json_str = dumps_json(obj)
+        >>> json_str = dumps_json(obj, indent=2, sort_keys=True)
     """
     import json
 
-    serialized = dump(obj, **kwargs)
-    return json.dumps(serialized)
+    # Build JSON parameters from explicit arguments
+    json_params = {
+        "skipkeys": skipkeys,
+        "ensure_ascii": ensure_ascii,
+        "check_circular": check_circular,
+        "allow_nan": allow_nan,
+        "cls": cls,
+        "indent": indent,
+        "separators": separators,
+        "default": default,
+        "sort_keys": sort_keys,
+    }
+
+    # Use core serialization with DataSON-specific parameters
+    from .core_new import serialize as core_serialize
+
+    serialized = core_serialize(obj, **kwargs)
+
+    # Convert to JSON string using standard json.dumps with formatting options
+    return json.dumps(serialized, **json_params)
 
 
 # =============================================================================

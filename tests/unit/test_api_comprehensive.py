@@ -44,7 +44,7 @@ class TestDumpFunction:
             from datetime import datetime
 
             input_data = {"timestamp": datetime.now(), "data": "test"}
-            result = api.dump(input_data)
+            result = api.dumps(input_data)
 
             # serialize should be called at least once
             assert mock_serialize.called
@@ -62,13 +62,12 @@ class TestDumpFunction:
             from datetime import datetime
 
             input_data = {"timestamp": datetime.now(), "data": "test"}
-            api.dump(input_data, config=config)
+            api.dumps(input_data, config=config)
 
             # serialize is called recursively, so we just check that it was called with a config
             assert mock_serialize.called
-            # Verify that the config was passed to at least one call
-            # The config is the second positional argument in the serialize function
-            config_passed = any(len(call[0]) > 1 and call[0][1] == config for call in mock_serialize.call_args_list)
+            # Verify that the config was passed to at least one call as a keyword argument
+            config_passed = any(call[1].get("config") == config for call in mock_serialize.call_args_list)
             assert config_passed
 
     def test_dump_ml_mode(self):
@@ -84,14 +83,12 @@ class TestDumpFunction:
             from datetime import datetime
 
             input_data = {"timestamp": datetime.now(), "data": "test"}
-            api.dump(input_data, ml_mode=True)
+            api.dumps(input_data, ml_mode=True)
 
             mock_get_ml_config.assert_called_once()
             # serialize is called recursively, so we just check that it was called with the config
             assert mock_serialize.called
-            config_passed = any(
-                len(call[0]) > 1 and call[0][1] == mock_config for call in mock_serialize.call_args_list
-            )
+            config_passed = any(call[1].get("config") == mock_config for call in mock_serialize.call_args_list)
             assert config_passed
 
     def test_dump_api_mode(self):
@@ -107,14 +104,12 @@ class TestDumpFunction:
             from datetime import datetime
 
             input_data = {"timestamp": datetime.now(), "data": "test"}
-            api.dump(input_data, api_mode=True)
+            api.dumps(input_data, api_mode=True)
 
             mock_get_api_config.assert_called_once()
             # serialize is called recursively, so we just check that it was called with the config
             assert mock_serialize.called
-            config_passed = any(
-                len(call[0]) > 1 and call[0][1] == mock_config for call in mock_serialize.call_args_list
-            )
+            config_passed = any(call[1].get("config") == mock_config for call in mock_serialize.call_args_list)
             assert config_passed
 
     def test_dump_fast_mode(self):
@@ -130,29 +125,27 @@ class TestDumpFunction:
             from datetime import datetime
 
             input_data = {"timestamp": datetime.now(), "data": "test"}
-            api.dump(input_data, fast_mode=True)
+            api.dumps(input_data, fast_mode=True)
 
             mock_get_performance_config.assert_called_once()
             # serialize is called recursively, so we just check that it was called with the config
             assert mock_serialize.called
-            config_passed = any(
-                len(call[0]) > 1 and call[0][1] == mock_config for call in mock_serialize.call_args_list
-            )
+            config_passed = any(call[1].get("config") == mock_config for call in mock_serialize.call_args_list)
             assert config_passed
 
     def test_dump_multiple_modes_error(self):
         """Test error when multiple modes are enabled."""
         with pytest.raises(ValueError, match="Only one mode can be enabled"):
-            api.dump({"input": "data"}, ml_mode=True, api_mode=True)
+            api.dumps({"input": "data"}, ml_mode=True, api_mode=True)
 
         with pytest.raises(ValueError, match="Only one mode can be enabled"):
-            api.dump({"input": "data"}, ml_mode=True, fast_mode=True)
+            api.dumps({"input": "data"}, ml_mode=True, fast_mode=True)
 
         with pytest.raises(ValueError, match="Only one mode can be enabled"):
-            api.dump({"input": "data"}, api_mode=True, fast_mode=True)
+            api.dumps({"input": "data"}, api_mode=True, fast_mode=True)
 
         with pytest.raises(ValueError, match="Only one mode can be enabled"):
-            api.dump({"input": "data"}, ml_mode=True, api_mode=True, fast_mode=True)
+            api.dumps({"input": "data"}, ml_mode=True, api_mode=True, fast_mode=True)
 
     def test_dump_secure_mode(self):
         """Test dump with secure mode enabled."""
@@ -163,15 +156,16 @@ class TestDumpFunction:
             from datetime import datetime
 
             input_data = {"timestamp": datetime.now(), "email": "sensitive@email.com"}
-            api.dump(input_data, secure=True)
+            api.dumps(input_data, secure=True)
 
             # Verify serialize was called
             assert mock_serialize.called
 
-            # Verify config has security settings - config is the second positional argument
+            # Verify config has security settings - config is passed as keyword argument
             call_args = mock_serialize.call_args
-            config = call_args[0][1]  # Second positional argument
+            config = call_args[1].get("config")  # Keyword argument
 
+            assert config is not None
             assert config.redact_patterns is not None
             assert any("@" in pattern for pattern in config.redact_patterns)
             assert config.redact_fields is not None
@@ -183,7 +177,7 @@ class TestDumpFunction:
         with patch("datason.api.serialize_chunked") as mock_serialize_chunked:
             mock_serialize_chunked.return_value = {"chunks": ["data"]}
 
-            result = api.dump({"input": "data"}, chunked=True, chunk_size=500)
+            result = api.dumps({"input": "data"}, chunked=True, chunk_size=500)
 
             mock_serialize_chunked.assert_called_once_with({"input": "data"}, chunk_size=500, config=None)
             assert result == {"chunks": ["data"]}
@@ -195,7 +189,7 @@ class TestDumpFunction:
 
             # Test that kwargs are passed but don't necessarily create valid config
             try:
-                api.dump({"input": "data"}, custom_option=True, another_option="value")
+                api.dumps({"input": "data"}, custom_option=True, another_option="value")
             except TypeError:
                 # This is expected behavior - invalid kwargs should raise TypeError
                 pass
@@ -286,9 +280,7 @@ class TestDumpVariants:
             mock_get_performance_config.assert_called_once()
             assert mock_serialize.called
             # Verify config passing by checking call arguments
-            config_passed = any(
-                len(call[0]) > 1 and call[0][1] == mock_config for call in mock_serialize.call_args_list
-            )
+            config_passed = any(call[1].get("config") == mock_config for call in mock_serialize.call_args_list)
             assert config_passed
             # Result will be the mock return value applied to each field
             assert isinstance(result, dict)
@@ -421,24 +413,24 @@ class TestConvenienceFunctions:
         """Test loads function."""
         json_string = '{"key": "value"}'
 
-        with patch("datason.api.load_basic") as mock_load_basic:
-            mock_load_basic.return_value = {"loaded": "data"}
+        with patch("datason.api.load_smart") as mock_load_smart:
+            mock_load_smart.return_value = {"loaded": "data"}
 
             result = api.loads(json_string)
 
-            mock_load_basic.assert_called_once_with({"key": "value"})
+            mock_load_smart.assert_called_once_with({"key": "value"})
             assert result == {"loaded": "data"}
 
     def test_loads_with_kwargs(self):
         """Test loads with additional kwargs."""
         json_string = '{"key": "value"}'
 
-        with patch("datason.api.load_basic") as mock_load_basic:
-            mock_load_basic.return_value = {"loaded": "data"}
+        with patch("datason.api.load_smart") as mock_load_smart:
+            mock_load_smart.return_value = {"loaded": "data"}
 
             api.loads(json_string, parse_dates=True)
 
-            mock_load_basic.assert_called_once_with({"key": "value"}, parse_dates=True)
+            mock_load_smart.assert_called_once_with({"key": "value"}, parse_dates=True)
 
     def test_loads_invalid_json(self):
         """Test loads with invalid JSON."""
@@ -451,24 +443,24 @@ class TestConvenienceFunctions:
         """Test dumps function."""
         input_obj = {"key": "value"}
 
-        with patch("datason.api.dump") as mock_dump:
-            mock_dump.return_value = {"serialized": "data"}
+        with patch("datason.api.serialize") as mock_serialize:
+            mock_serialize.return_value = {"serialized": "data"}
 
             result = api.dumps(input_obj)
 
-            mock_dump.assert_called_once_with(input_obj)
-            assert result == '{"serialized": "data"}'
+            mock_serialize.assert_called_once_with(input_obj)
+            assert result == {"serialized": "data"}
 
     def test_dumps_with_kwargs(self):
         """Test dumps with additional kwargs."""
         input_obj = {"key": "value"}
 
-        with patch("datason.api.dump") as mock_dump:
-            mock_dump.return_value = {"serialized": "data"}
+        with patch("datason.api.serialize") as mock_serialize:
+            mock_serialize.return_value = {"serialized": "data"}
 
             api.dumps(input_obj, secure=True, ml_mode=False)
 
-            mock_dump.assert_called_once_with(input_obj, secure=True, ml_mode=False)
+            mock_serialize.assert_called_once_with(input_obj, secure=True, ml_mode=False)
 
 
 class TestMigrationHelpers:
@@ -638,10 +630,10 @@ class TestEdgeCases:
     """Test edge cases and error conditions."""
 
     def test_dump_with_none_input(self):
-        """Test dump function with None input."""
+        """Test dumps function with None input."""
         # None has an optimization path that returns None directly
         # So we test that the function handles None correctly
-        result = api.dump(None)
+        result = api.dumps(None)
         assert result is None
 
     def test_dump_secure_with_none_redact_fields(self):
@@ -674,7 +666,7 @@ class TestEdgeCases:
 
             # Test that invalid kwargs cause TypeError
             with pytest.raises(TypeError):
-                api.dump(
+                api.dumps(
                     {"input": "data"},
                     custom_bool=True,
                     custom_str="value",
@@ -719,11 +711,11 @@ class TestIntegrationScenarios:
             assert api_response == {"api_response": "data"}
 
         # Convert to JSON string
-        with patch("datason.api.dump") as mock_dump:
-            mock_dump.return_value = {"json_ready": "data"}
+        with patch("datason.api.dumps") as mock_dumps:
+            mock_dumps.return_value = {"json_ready": "data"}
 
             json_str = api.dumps(api_data)
-            assert json_str == '{"json_ready": "data"}'
+            assert json_str == {"json_ready": "data"}
 
     def test_secure_workflow_simulation(self):
         """Test a complete secure data workflow."""

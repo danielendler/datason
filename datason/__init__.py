@@ -27,26 +27,31 @@ if sys.version_info < (3, 9):
         stacklevel=2,
     )
 
-# NEW: Modern API (Phase 3) - Intention-revealing names and composable utilities
+# NEW: Modern API (Phase 3) - Enhanced defaults with JSON compatibility
 from .api import (
-    dump,
+    dump,  # Enhanced default (returns dict, smart features)
     dump_api,
     dump_chunked,
     dump_fast,
+    dump_json,  # JSON compatibility (exact stdlib behavior)
     dump_ml,
     dump_secure,
-    dumps,
+    dumps,  # Enhanced default (returns dict, smart features)
+    dumps_json,  # JSON compatibility (returns string, exact stdlib behavior)
     get_api_info,
     help_api,
+    load,  # Enhanced default (smart parsing, datetime support)
     load_basic,
     # NEW: File I/O operations integrated with modern API
     load_basic_file,
+    load_json,  # JSON compatibility (exact stdlib behavior)
     load_perfect,
     load_perfect_file,
     load_smart,
     load_smart_file,
     load_typed,
-    loads,
+    loads,  # Enhanced default (smart parsing, datetime support)
+    loads_json,  # JSON compatibility (exact stdlib behavior)
     save_api,
     save_chunked,
     save_ml,
@@ -55,6 +60,8 @@ from .api import (
     stream_save_ml,
     suppress_deprecation_warnings,
 )
+
+# Note: serialize function from api.py not imported as it's not used in __init__.py
 from .converters import safe_float, safe_int
 from .core_new import (
     ChunkedSerializationResult,
@@ -62,9 +69,11 @@ from .core_new import (
     StreamingSerializer,
     deserialize_chunked_file,
     estimate_memory_usage,
-    serialize,
     serialize_chunked,
     stream_serialize,
+)
+from .core_new import (
+    serialize as _serialize_core,  # Make core serialize less visible
 )
 from .data_utils import convert_string_method_votes
 
@@ -207,8 +216,17 @@ __description__ = "Python serialization of complex data types for JSON with conf
 
 __all__ = [  # noqa: RUF022
     "SecurityError",
-    # Core serialization
-    "serialize",
+    # Enhanced DataSON API (default recommended usage)
+    "dump",  # Enhanced file writing with smart features
+    "dumps",  # Enhanced serialization returning dict
+    "load",  # Enhanced file reading with smart parsing
+    "loads",  # Enhanced string parsing with smart features
+    "serialize",  # Enhanced serialization (returns dict)
+    # JSON Compatibility API (for stdlib replacement)
+    "dump_json",  # Exact json.dump() behavior
+    "dumps_json",  # Exact json.dumps() behavior (returns string)
+    "load_json",  # Exact json.load() behavior
+    "loads_json",  # Exact json.loads() behavior
     # NEW: Chunked processing and streaming (v0.4.0)
     "serialize_chunked",
     "ChunkedSerializationResult",
@@ -411,7 +429,7 @@ def serialize_with_config(obj: Any, **kwargs: Any) -> Any:
         >>> datason.serialize_with_config(data, date_format='unix', sort_keys=True)
     """
     if not _config_available:
-        return serialize(obj)
+        return _serialize_core(obj)
 
     # Convert string options to enums
     if "date_format" in kwargs and isinstance(kwargs["date_format"], str):
@@ -424,12 +442,42 @@ def serialize_with_config(obj: Any, **kwargs: Any) -> Any:
         kwargs["dataframe_orient"] = DataFrameOrient(kwargs["dataframe_orient"])
 
     config = SerializationConfig(**kwargs)
-    return serialize(obj, config=config)
+    return _serialize_core(obj, config=config)
+
+
+# Backward compatibility: Provide serialize() function with deprecation warning
+def serialize(obj: Any, config=None, **kwargs: Any) -> Any:
+    """Serialize an object (DEPRECATED - use dump/dumps instead).
+
+    DEPRECATION WARNING: Direct use of serialize() is discouraged.
+    Use the clearer API functions instead:
+    - dump(obj, file) - write to file (like json.dump)
+    - dumps(obj) - convert to string (like json.dumps)
+    - serialize_enhanced(obj, **options) - enhanced serialization with clear options
+
+    Args:
+        obj: Object to serialize
+        config: Optional configuration
+        **kwargs: Additional options
+
+    Returns:
+        Serialized object
+    """
+    import warnings
+
+    warnings.warn(
+        "serialize() is deprecated. Use dump/dumps for JSON compatibility or "
+        "serialize_enhanced() for advanced features. Direct serialize() will be "
+        "removed in a future version.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    return _serialize_core(obj, config, **kwargs)
 
 
 # Add convenience functions to __all__ if config is available
 if _config_available:
-    __all__.extend(["configure", "serialize_with_config"])
+    __all__.extend(["configure", "serialize_with_config", "serialize"])
 
 # Add redaction exports if available (v0.5.5)
 try:
