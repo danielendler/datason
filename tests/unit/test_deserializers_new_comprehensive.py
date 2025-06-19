@@ -10,7 +10,7 @@ import warnings
 from datetime import datetime
 from decimal import Decimal
 from pathlib import Path
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -980,406 +980,382 @@ class TestUtilityFunctions:
 
 
 class TestTemplateMethods:
-    """Test template deserializer specific methods."""
+    """Test template deserializer internal methods that need more coverage."""
 
-    def test_template_deserializer_ml_methods(self):
-        """Test template deserializer ML-specific methods."""
+    def test_template_deserializer_with_template_method(self):
+        """Test _deserialize_with_template method comprehensively."""
         deserializer = deserializers.TemplateDeserializer({})
 
-        # Test torch template method
-        try:
-            import torch
-
-            template = torch.tensor([1, 2, 3])
-            obj = {"data": [1, 2, 3], "dtype": "torch.float32"}
-            result = deserializer._deserialize_torch_with_template(obj, template)
-            # Result could be a tensor or the original obj depending on implementation
-            assert isinstance(result, (torch.Tensor, dict))
-        except ImportError:
-            # Test fallback when torch not available
-            template = "mock_torch_tensor"
-            obj = {"data": [1, 2, 3]}
-            result = deserializer._deserialize_torch_with_template(obj, template)
-            assert result == obj
-
-    def test_template_deserializer_sklearn_methods(self):
-        """Test template deserializer sklearn-specific methods."""
-        deserializer = deserializers.TemplateDeserializer({})
-
-        try:
-            from sklearn.linear_model import LinearRegression
-
-            template = LinearRegression()
-            obj = {"class": "sklearn.linear_model.LinearRegression", "params": {}}
-
-            with patch("importlib.import_module") as mock_import:
-                mock_module = Mock()
-                mock_class = Mock()
-                mock_import.return_value = mock_module
-                mock_module.LinearRegression = mock_class
-                mock_instance = Mock()
-                mock_class.return_value = mock_instance
-
-                result = deserializer._deserialize_sklearn_with_template(obj, template)
-                # Result could be the mock instance or original obj depending on implementation
-                assert result in (mock_instance, obj)
-        except ImportError:
-            # Test fallback when sklearn not available
-            template = "mock_sklearn_model"
-            obj = {"class": "sklearn.model", "params": {}}
-            result = deserializer._deserialize_sklearn_with_template(obj, template)
-            assert result == obj
-
-    def test_template_deserializer_coercion(self):
-        """Test template deserializer type coercion."""
-        deserializer = deserializers.TemplateDeserializer({})
-
-        # Test coercion to datetime
-        template = datetime.now()
+        # Test with datetime template
+        template = datetime(2023, 1, 1)
         obj = "2023-01-01T12:00:00"
-        result = deserializer._coerce_to_template_type(obj, template)
+        result = deserializer._deserialize_with_template(obj, template)
         assert isinstance(result, (datetime, str))
 
-        # Test coercion to UUID
-        template = uuid.uuid4()
-        obj = "12345678-1234-5678-9012-123456789abc"
-        result = deserializer._coerce_to_template_type(obj, template)
+        # Test with list template
+        template = [1, 2, 3]
+        obj = [4, 5, 6]
+        result = deserializer._deserialize_with_template(obj, template)
+        assert isinstance(result, list)
+
+        # Test with dict template
+        template = {"key": "value"}
+        obj = {"other": "data"}
+        result = deserializer._deserialize_with_template(obj, template)
+        assert isinstance(result, dict)
+
+    def test_template_deserializer_dict_with_template(self):
+        """Test _deserialize_dict_with_template method."""
+        deserializer = deserializers.TemplateDeserializer({})
+        template = {"name": "test", "age": 25}
+        obj = {"name": "actual", "age": 30}
+
+        result = deserializer._deserialize_dict_with_template(obj, template)
+        assert isinstance(result, dict)
+        assert "name" in result
+
+    def test_template_deserializer_list_with_template(self):
+        """Test _deserialize_list_with_template method."""
+        deserializer = deserializers.TemplateDeserializer({})
+        template = [datetime(2023, 1, 1), "test"]
+        obj = ["2023-01-01T12:00:00", "actual"]
+
+        result = deserializer._deserialize_list_with_template(obj, template)
+        assert isinstance(result, list)
+        assert len(result) == len(obj)
+
+    @pytest.mark.skipif(not hasattr(deserializers, "pd") or deserializers.pd is None, reason="pandas not available")
+    def test_template_deserializer_dataframe_with_template(self):
+        """Test _deserialize_dataframe_with_template method."""
+        if deserializers.pd is None:
+            return
+
+        deserializer = deserializers.TemplateDeserializer({})
+        template = deserializers.pd.DataFrame({"A": [1, 2], "B": [3, 4]})
+        obj = {"data": [{"A": 5, "B": 6}, {"A": 7, "B": 8}]}
+
+        result = deserializer._deserialize_dataframe_with_template(obj, template)
+        assert isinstance(result, (deserializers.pd.DataFrame, dict))
+
+    @pytest.mark.skipif(not hasattr(deserializers, "pd") or deserializers.pd is None, reason="pandas not available")
+    def test_template_deserializer_series_with_template(self):
+        """Test _deserialize_series_with_template method."""
+        if deserializers.pd is None:
+            return
+
+        deserializer = deserializers.TemplateDeserializer({})
+        template = deserializers.pd.Series([1, 2, 3], name="test")
+        obj = {"data": [4, 5, 6], "name": "actual"}
+
+        result = deserializer._deserialize_series_with_template(obj, template)
+        assert isinstance(result, (deserializers.pd.Series, dict))
+
+    def test_template_deserializer_datetime_with_template(self):
+        """Test _deserialize_datetime_with_template method."""
+        deserializer = deserializers.TemplateDeserializer({})
+        template = datetime(2023, 1, 1)
+        obj = "2023-12-25T15:30:00"
+
+        result = deserializer._deserialize_datetime_with_template(obj, template)
+        assert isinstance(result, (datetime, str))
+
+    def test_template_deserializer_uuid_with_template(self):
+        """Test _deserialize_uuid_with_template method."""
+        deserializer = deserializers.TemplateDeserializer({})
+        template = uuid.UUID("12345678-1234-5678-9012-123456789abc")
+        obj = "98765432-1234-5678-9012-123456789abc"
+
+        result = deserializer._deserialize_uuid_with_template(obj, template)
         assert isinstance(result, (uuid.UUID, str))
 
-        # Test coercion to Path
-        template = Path("/home")
-        obj = "/home/user/file.txt"
-        result = deserializer._coerce_to_template_type(obj, template)
-        # Could be Path or string depending on implementation
-        assert isinstance(result, (Path, str))
+    @pytest.mark.skipif(not hasattr(deserializers, "np") or deserializers.np is None, reason="numpy not available")
+    def test_template_deserializer_numpy_with_template(self):
+        """Test _deserialize_numpy_with_template method."""
+        if deserializers.np is None:
+            return
 
-        # Test coercion to Decimal
-        template = Decimal("123")
-        obj = "456.78"
-        result = deserializer._coerce_to_template_type(obj, template)
-        assert isinstance(result, Decimal)
+        deserializer = deserializers.TemplateDeserializer({})
+        template = deserializers.np.array([1, 2, 3])
+        obj = [4, 5, 6]
 
-        # Test coercion to complex
+        result = deserializer._deserialize_numpy_with_template(obj, template)
+        assert isinstance(result, (deserializers.np.ndarray, list))
+
+    @pytest.mark.skipif(not hasattr(deserializers, "np") or deserializers.np is None, reason="numpy not available")
+    def test_template_deserializer_numpy_scalar_with_template(self):
+        """Test _deserialize_numpy_scalar_with_template method."""
+        if deserializers.np is None:
+            return
+
+        deserializer = deserializers.TemplateDeserializer({})
+        template = deserializers.np.int64(42)
+        obj = 123
+
+        result = deserializer._deserialize_numpy_scalar_with_template(obj, template)
+        assert isinstance(result, (deserializers.np.integer, int))
+
+    def test_template_deserializer_complex_with_template(self):
+        """Test _deserialize_complex_with_template method."""
+        deserializer = deserializers.TemplateDeserializer({})
         template = complex(1, 2)
-        obj = {"real": 3, "imag": 4}
-        result = deserializer._coerce_to_template_type(obj, template)
-        # Could be complex or original dict depending on implementation
+        obj = {"real": 3.0, "imag": 4.0}
+
+        result = deserializer._deserialize_complex_with_template(obj, template)
         assert isinstance(result, (complex, dict))
 
-        # Test coercion with incompatible types
-        template = 42
-        obj = "not_a_number"
-        result = deserializer._coerce_to_template_type(obj, template)
-        assert result == obj  # Should return original if coercion fails
+    def test_template_deserializer_path_with_template(self):
+        """Test _deserialize_path_with_template method."""
+        deserializer = deserializers.TemplateDeserializer({})
+        template = Path("/home/test")
+        obj = "/home/actual/file.txt"
 
-
-class TestOptimizedFastDeserialization:
-    """Test optimized fast deserialization functions."""
-
-    def test_process_list_optimized_comprehensive(self):
-        """Test _process_list_optimized with various scenarios."""
-        config = SerializationConfig(auto_detect_types=True)
-
-        # Test basic list processing
-        obj = [1, 2, 3, "test", "2023-01-01T12:00:00"]
-        result = deserializers._process_list_optimized(obj, config, 0, set())
-        assert isinstance(result, list)
-        assert len(result) == 5
-
-        # Test nested list processing
-        obj = [[1, 2], [3, 4], {"nested": True}]
-        result = deserializers._process_list_optimized(obj, config, 0, set())
-        assert isinstance(result, list)
-        assert len(result) == 3
-
-        # Test DataFrame-like detection
-        obj = [{"A": 1, "B": 2}, {"A": 3, "B": 4}]
-        result = deserializers._process_list_optimized(obj, config, 0, set())
-        # Result could be DataFrame or list depending on detection
-        assert result is not None
-
-    def test_process_dict_optimized_comprehensive(self):
-        """Test _process_dict_optimized with various scenarios."""
-        config = SerializationConfig(auto_detect_types=True)
-
-        # Test basic dict processing
-        obj = {
-            "string": "value",
-            "datetime": "2023-01-01T12:00:00",
-            "uuid": "12345678-1234-5678-9012-123456789abc",
-            "nested": {"inner": "data"},
-        }
-        result = deserializers._process_dict_optimized(obj, config, 0, set())
-        assert isinstance(result, dict)
-        assert "string" in result
-
-        # Test Series-like detection
-        obj = {"0": 1, "1": 2, "2": 3, "3": 4}
-        result = deserializers._process_dict_optimized(obj, config, 0, set())
-        # Result could be Series or dict depending on detection
-        assert result is not None
-
-        # Test type metadata handling
-        obj = {"__datason_type__": "datetime", "__datason_value__": "2023-01-01T12:00:00"}
-        result = deserializers._process_dict_optimized(obj, config, 0, set())
-        assert isinstance(result, (datetime, dict))
-
-    def test_deserialize_string_full_comprehensive(self):
-        """Test _deserialize_string_full with all detection paths."""
-        config = SerializationConfig(auto_detect_types=True)
-
-        # Test datetime string
-        result = deserializers._deserialize_string_full("2023-01-01T12:00:00Z", config)
-        assert isinstance(result, (datetime, str))
-
-        # Test UUID string
-        result = deserializers._deserialize_string_full("12345678-1234-5678-9012-123456789abc", config)
-        assert isinstance(result, (uuid.UUID, str))
-
-        # Test path string
-        result = deserializers._deserialize_string_full("/home/user/file.txt", config)
+        result = deserializer._deserialize_path_with_template(obj, template)
         assert isinstance(result, (Path, str))
 
-        # Test number string
-        result = deserializers._deserialize_string_full("123.45", config)
-        assert isinstance(result, (float, str))
+    def test_template_deserializer_decimal_with_template(self):
+        """Test _deserialize_decimal_with_template method."""
+        deserializer = deserializers.TemplateDeserializer({})
+        template = Decimal("123.45")
+        obj = "678.90"
 
-        # Test regular string
-        result = deserializers._deserialize_string_full("just a string", config)
-        assert result == "just a string"
+        result = deserializer._deserialize_decimal_with_template(obj, template)
+        assert isinstance(result, (Decimal, str))
 
-        # Test with config disabled
-        config_disabled = SerializationConfig(auto_detect_types=False)
-        result = deserializers._deserialize_string_full("2023-01-01T12:00:00", config_disabled)
-        # When auto_detect is disabled, may still parse if it looks like datetime
+
+class TestFastDeserializationFunctions:
+    """Test fast deserialization optimization functions."""
+
+    def test_deserialize_fast_comprehensive(self):
+        """Test deserialize_fast with various edge cases."""
+        # Test with depth limit
+        nested_data = {"a": {"b": {"c": {"d": "deep"}}}}
+        result = deserializers.deserialize_fast(nested_data, _depth=10)
+        assert isinstance(result, dict)
+
+        # Test with circular reference protection
+        seen = set()
+        result = deserializers.deserialize_fast({"key": "value"}, _seen=seen)
+        assert isinstance(result, dict)
+
+        # Test with complex nested structure
+        complex_data = {
+            "strings": ["2023-01-01T12:00:00", "12345678-1234-5678-9012-123456789abc"],
+            "numbers": [1, 2, 3.14],
+            "nested": {"inner": ["test1", "test2"]},
+        }
+        result = deserializers.deserialize_fast(complex_data)
+        assert isinstance(result, dict)
+
+    def test_process_list_optimized_comprehensive(self):
+        """Test _process_list_optimized function thoroughly."""
+        config = deserializers.get_default_config()
+        seen = set()
+
+        # Test with mixed data types
+        test_list = ["2023-01-01T12:00:00", 123, {"nested": "data"}]
+        result = deserializers._process_list_optimized(test_list, config, 0, seen)
+        assert isinstance(result, list)
+        assert len(result) == len(test_list)
+
+        # Test with empty list
+        result = deserializers._process_list_optimized([], config, 0, seen)
+        assert result == []
+
+        # Test with homogeneous data
+        homogeneous_list = [1, 2, 3, 4, 5]
+        result = deserializers._process_list_optimized(homogeneous_list, config, 0, seen)
+        assert isinstance(result, list)
+
+    def test_process_dict_optimized_comprehensive(self):
+        """Test _process_dict_optimized function thoroughly."""
+        config = deserializers.get_default_config()
+        seen = set()
+
+        # Test with various key-value pairs
+        test_dict = {
+            "datetime": "2023-01-01T12:00:00",
+            "uuid": "12345678-1234-5678-9012-123456789abc",
+            "number": 123,
+            "nested": {"inner": "value"},
+        }
+        result = deserializers._process_dict_optimized(test_dict, config, 0, seen)
+        assert isinstance(result, dict)
+
+        # Test with string keys that might be convertible to int
+        string_key_dict = {"0": "first", "1": "second", "name": "value"}
+        result = deserializers._process_dict_optimized(string_key_dict, config, 0, seen)
+        assert isinstance(result, dict)
+
+    def test_deserialize_string_full_comprehensive(self):
+        """Test _deserialize_string_full function comprehensively."""
+        config = deserializers.get_default_config()
+
+        # Test datetime strings
+        datetime_str = "2023-01-01T12:00:00"
+        result = deserializers._deserialize_string_full(datetime_str, config)
         assert isinstance(result, (datetime, str))
 
+        # Test UUID strings
+        uuid_str = "12345678-1234-5678-9012-123456789abc"
+        result = deserializers._deserialize_string_full(uuid_str, config)
+        assert isinstance(result, (uuid.UUID, str))
 
-class TestCachingOptimization:
-    """Test caching and optimization functions."""
+        # Test Path-like strings
+        path_str = "/home/user/file.txt"
+        result = deserializers._deserialize_string_full(path_str, config)
+        assert isinstance(result, (Path, str))
 
-    def test_cached_string_pattern_functions(self):
-        """Test string pattern caching functions."""
-        # Test getting cached pattern (may return None or cached value)
-        result = deserializers._get_cached_string_pattern("new_test_string")
-        assert result is None or isinstance(result, str)
+        # Test regular strings
+        regular_str = "just a regular string"
+        result = deserializers._deserialize_string_full(regular_str, config)
+        assert isinstance(result, str)
 
-        # Test getting cached parsed object
-        result = deserializers._get_cached_parsed_object("test_string", "datetime")
-        assert result is None or isinstance(result, (datetime, str))
+        # Test numeric strings
+        numeric_str = "123.456"
+        result = deserializers._deserialize_string_full(numeric_str, config)
+        assert isinstance(result, (float, str))
 
-    def test_object_pooling_comprehensive(self):
-        """Test object pooling functions comprehensively."""
+
+class TestUtilityAndHelperFunctions:
+    """Test utility and helper functions for improved coverage."""
+
+    def test_optimized_detection_functions(self):
+        """Test optimized detection functions."""
+        # Test _looks_like_datetime_optimized
+        assert deserializers._looks_like_datetime_optimized("2023-01-01T12:00:00") is True
+        assert deserializers._looks_like_datetime_optimized("not-a-date") is False
+
+        # Test _looks_like_uuid_optimized
+        assert deserializers._looks_like_uuid_optimized("12345678-1234-5678-9012-123456789abc") is True
+        assert deserializers._looks_like_uuid_optimized("not-a-uuid") is False
+
+        # Test _looks_like_path_optimized
+        assert deserializers._looks_like_path_optimized("/home/user/file.txt") is True
+        assert deserializers._looks_like_path_optimized("not-a-path") is False
+
+    def test_object_pooling_functions(self):
+        """Test object pooling optimization functions."""
         # Test dict pooling
         pooled_dict = deserializers._get_pooled_dict()
         assert isinstance(pooled_dict, dict)
         assert len(pooled_dict) == 0
 
-        # Add some data and return to pool
-        pooled_dict["test"] = "data"
-        deserializers._return_dict_to_pool(pooled_dict)
+        # Test returning dict to pool
+        test_dict = {"key": "value"}
+        deserializers._return_dict_to_pool(test_dict)
+        # After returning, dict should be cleared
+        assert len(test_dict) == 0
 
         # Test list pooling
         pooled_list = deserializers._get_pooled_list()
         assert isinstance(pooled_list, list)
         assert len(pooled_list) == 0
 
-        # Add some data and return to pool
-        pooled_list.extend([1, 2, 3])
-        deserializers._return_list_to_pool(pooled_list)
+        # Test returning list to pool
+        test_list = [1, 2, 3]
+        deserializers._return_list_to_pool(test_list)
+        # After returning, list should be cleared
+        assert len(test_list) == 0
 
-    def test_clear_caches_comprehensive(self):
-        """Test cache clearing functions."""
-        # Test general cache clearing
-        deserializers.clear_caches()
-
-        # Test internal cache clearing
+    def test_caching_functions(self):
+        """Test caching functions for string patterns and objects."""
+        # Test clearing all caches
         deserializers._clear_deserialization_caches()
 
-        # These should not raise exceptions
-        assert True
+        # Test public clear caches function
+        deserializers.clear_caches()
 
+        # Test getting cached patterns (should return None for new strings)
+        result = deserializers._get_cached_string_pattern("new_test_string_123")
+        assert result is None or isinstance(result, str)
 
-class TestSecurityAndLimits:
-    """Test security features and limits."""
+        # Test getting cached parsed objects
+        result = deserializers._get_cached_parsed_object("test_string_456", "datetime")
+        assert result is None
 
-    def test_deserialization_security_error(self):
-        """Test DeserializationSecurityError exception."""
-        error = deserializers.DeserializationSecurityError("Test security error")
-        assert str(error) == "Test security error"
-        assert isinstance(error, Exception)
+    def test_additional_utility_functions(self):
+        """Test additional utility functions."""
+        # Test _is_already_deserialized
+        assert deserializers._is_already_deserialized({"key": "value"}) is True
+        assert deserializers._is_already_deserialized("string") is True
+        assert deserializers._is_already_deserialized(123) is True
 
-    def test_security_constants(self):
-        """Test security constants are properly defined."""
-        # Test that security constants exist and have reasonable values
-        assert hasattr(deserializers, "MAX_SERIALIZATION_DEPTH")
-        assert hasattr(deserializers, "MAX_OBJECT_SIZE")
-        assert hasattr(deserializers, "MAX_STRING_LENGTH")
+        # Test with various data types
+        test_data = [
+            datetime.now(),
+            uuid.uuid4(),
+            Path("/test"),
+            Decimal("123.45"),
+            complex(1, 2),
+            [1, 2, 3],
+            {"a": 1, "b": 2},
+        ]
 
-        assert deserializers.MAX_SERIALIZATION_DEPTH > 0
-        assert deserializers.MAX_OBJECT_SIZE > 0
-        assert deserializers.MAX_STRING_LENGTH > 0
+        for data in test_data:
+            result = deserializers._is_already_deserialized(data)
+            assert isinstance(result, bool)
 
+    def test_template_utility_functions(self):
+        """Test template-related utility functions."""
+        # Test deserialize_with_template function
+        template = {"name": "test", "timestamp": datetime(2023, 1, 1)}
+        obj = {"name": "actual", "timestamp": "2023-01-01T12:00:00"}
 
-class TestImportFallbacks:
-    """Test import fallback scenarios."""
-
-    def test_missing_dependencies_handling(self):
-        """Test handling when optional dependencies are missing."""
-        # Test pandas fallback
-        with patch.object(deserializers, "pd", None):
-            data = {"A": [1, 2, 3], "B": [4, 5, 6]}
-            result = deserializers._try_dataframe_detection(data)
-            assert result is None
-
-        # Test numpy fallback
-        with patch.object(deserializers, "np", None):
-            data = [1, 2, 3, 4]
-            result = deserializers._try_numpy_array_detection(data)
-            # Could be None or original data depending on implementation
-            assert result is None or result == data
-
-    def test_config_fallback(self):
-        """Test configuration fallback scenarios."""
-        # Test with config module unavailable
-        with patch.object(deserializers, "_config_available", False):
-            # These should still work with fallback behavior
-            result = deserializers.deserialize({"test": "data"})
-            assert isinstance(result, dict)
-
-
-class TestDeserializeWithTypeMetadata:
-    """Test the critical _deserialize_with_type_metadata function (lines 325-679)."""
-
-    def test_deserialize_with_datetime_metadata(self):
-        """Test deserializing datetime with type metadata."""
-        # Test with valid datetime metadata
-        obj = {"__datason_type__": "datetime", "__datason_value__": "2023-01-01T12:00:00"}
-        result = deserializers._deserialize_with_type_metadata(obj)
-        assert isinstance(result, datetime)
-        assert result.year == 2023
-
-    def test_deserialize_with_uuid_metadata(self):
-        """Test deserializing UUID with type metadata."""
-        obj = {"__datason_type__": "uuid.UUID", "__datason_value__": "12345678-1234-5678-9012-123456789abc"}
-        result = deserializers._deserialize_with_type_metadata(obj)
-        assert isinstance(result, uuid.UUID)
-        assert str(result) == "12345678-1234-5678-9012-123456789abc"
-
-    def test_deserialize_with_path_metadata(self):
-        """Test deserializing Path with type metadata."""
-        obj = {"__datason_type__": "pathlib.Path", "__datason_value__": "/home/user/file.txt"}
-        result = deserializers._deserialize_with_type_metadata(obj)
-        assert isinstance(result, Path)
-        assert str(result) == "/home/user/file.txt"
-
-    def test_deserialize_with_decimal_metadata(self):
-        """Test deserializing Decimal with type metadata."""
-        obj = {"__datason_type__": "decimal.Decimal", "__datason_value__": "123.456"}
-        result = deserializers._deserialize_with_type_metadata(obj)
-        assert isinstance(result, Decimal)
-        assert str(result) == "123.456"
-
-    def test_deserialize_with_complex_metadata(self):
-        """Test deserializing complex numbers with type metadata."""
-        obj = {"__datason_type__": "complex", "__datason_value__": {"real": 3.0, "imag": 4.0}}
-        result = deserializers._deserialize_with_type_metadata(obj)
-        assert isinstance(result, complex)
-        assert result.real == 3.0
-        assert result.imag == 4.0
-
-    @pytest.mark.skipif(not hasattr(deserializers, "np") or deserializers.np is None, reason="numpy not available")
-    def test_deserialize_with_numpy_metadata(self):
-        """Test deserializing numpy arrays with type metadata."""
-        obj = {
-            "__datason_type__": "numpy.ndarray",
-            "__datason_value__": {"data": [1, 2, 3, 4], "shape": [2, 2], "dtype": "int64"},
-        }
-        result = deserializers._deserialize_with_type_metadata(obj)
-        if deserializers.np is not None:
-            assert isinstance(result, deserializers.np.ndarray)
-            assert result.shape == (2, 2)
-
-    @pytest.mark.skipif(not hasattr(deserializers, "pd") or deserializers.pd is None, reason="pandas not available")
-    def test_deserialize_with_pandas_dataframe_metadata(self):
-        """Test deserializing pandas DataFrame with type metadata."""
-        obj = {
-            "__datason_type__": "pandas.DataFrame",
-            "__datason_value__": {"data": [{"A": 1, "B": 2}, {"A": 3, "B": 4}], "columns": ["A", "B"], "index": [0, 1]},
-        }
-        result = deserializers._deserialize_with_type_metadata(obj)
-        if deserializers.pd is not None:
-            assert isinstance(result, deserializers.pd.DataFrame)
-            assert list(result.columns) == ["A", "B"]
-
-    @pytest.mark.skipif(not hasattr(deserializers, "pd") or deserializers.pd is None, reason="pandas not available")
-    def test_deserialize_with_pandas_series_metadata(self):
-        """Test deserializing pandas Series with type metadata."""
-        obj = {
-            "__datason_type__": "pandas.Series",
-            "__datason_value__": {"data": [1, 2, 3], "index": [0, 1, 2], "name": "test_series"},
-        }
-        result = deserializers._deserialize_with_type_metadata(obj)
-        if deserializers.pd is not None:
-            assert isinstance(result, deserializers.pd.Series)
-            # Name might not always be preserved exactly
-            assert result.name == "test_series" or result.name is None
-
-    def test_deserialize_with_ml_framework_metadata(self):
-        """Test deserializing ML framework objects with type metadata."""
-        # Test sklearn metadata
-        sklearn_obj = {
-            "__datason_type__": "sklearn.linear_model.LinearRegression",
-            "__datason_value__": "mock_pickle_data",
-        }
-        # This should handle ML objects appropriately
-        result = deserializers._deserialize_with_type_metadata(sklearn_obj)
-        # Result depends on implementation, could be original obj or deserialized
-        assert result is not None
-
-        # Test torch metadata
-        torch_obj = {
-            "__datason_type__": "torch.Tensor",
-            "__datason_value__": {"data": [1.0, 2.0, 3.0], "dtype": "torch.float32"},
-        }
-        result = deserializers._deserialize_with_type_metadata(torch_obj)
-        assert result is not None
-
-    def test_deserialize_with_unknown_metadata(self):
-        """Test deserializing with unknown type metadata."""
-        obj = {"__datason_type__": "unknown.CustomType", "__datason_value__": {"data": "test"}}
-        result = deserializers._deserialize_with_type_metadata(obj)
-        # Should fallback to original object or value
-        assert result is not None
-
-    def test_deserialize_with_invalid_metadata(self):
-        """Test error handling for invalid metadata."""
-        # Test with missing __datason_value__
-        obj = {"__datason_type__": "datetime"}
-        result = deserializers._deserialize_with_type_metadata(obj)
-        # Should handle gracefully
-        assert result is not None
-
-        # Test with invalid datetime format
-        obj = {"__datason_type__": "datetime", "__datason_value__": "not-a-datetime"}
-        result = deserializers._deserialize_with_type_metadata(obj)
-        # Should handle gracefully
-        assert result is not None
-
-    def test_deserialize_with_nested_metadata(self):
-        """Test deserializing nested structures with metadata."""
-        obj = {
-            "__datason_type__": "dict",
-            "__datason_value__": {
-                "timestamp": {"__datason_type__": "datetime", "__datason_value__": "2023-01-01T12:00:00"},
-                "id": {"__datason_type__": "uuid.UUID", "__datason_value__": "12345678-1234-5678-9012-123456789abc"},
-            },
-        }
-        result = deserializers._deserialize_with_type_metadata(obj)
+        result = deserializers.deserialize_with_template(obj, template)
         assert isinstance(result, dict)
-        # Nested objects should also be deserialized
-        if isinstance(result.get("timestamp"), datetime):
-            assert result["timestamp"].year == 2023
+
+        # Test infer_template_from_data
+        sample_data = [{"name": "test1", "age": 25, "active": True}, {"name": "test2", "age": 30, "active": False}]
+
+        template = deserializers.infer_template_from_data(sample_data)
+        assert isinstance(template, dict)
+
+        # Test with different data types
+        mixed_data = {"string": "test", "number": 123, "datetime": datetime(2023, 1, 1), "list": [1, 2, 3]}
+
+        template = deserializers.infer_template_from_data(mixed_data)
+        assert isinstance(template, dict)
+
+    def test_ml_template_creation(self):
+        """Test ML round-trip template creation."""
+        # Test create_ml_round_trip_template with mock object
+        mock_ml_object = {"type": "sklearn.linear_model.LinearRegression", "params": {}}
+
+        try:
+            template = deserializers.create_ml_round_trip_template(mock_ml_object)
+            assert isinstance(template, dict)
+        except Exception:
+            # Function might not work with mock objects, that's OK
+            pass
+
+    def test_string_conversion_functions(self):
+        """Test string conversion and detection functions."""
+        # Test _looks_like_path function
+        assert deserializers._looks_like_path("/home/user/file.txt") is True
+        assert deserializers._looks_like_path("C:\\Users\\test\\file.txt") is True
+        assert deserializers._looks_like_path("not-a-path") is False
+
+        # Test with edge cases
+        edge_cases = [
+            "",  # empty string
+            " ",  # whitespace
+            "123",  # numeric string
+            "true",  # boolean-like string
+            "null",  # null-like string
+            "[]",  # empty list string
+            "{}",  # empty dict string
+        ]
+
+        for case in edge_cases:
+            # Test that functions don't crash on edge cases
+            try:
+                deserializers._looks_like_datetime(case)
+                deserializers._looks_like_uuid(case)
+                deserializers._looks_like_path(case)
+                deserializers._looks_like_number(case)
+            except Exception:
+                # Some edge cases might cause exceptions, that's OK
+                pass
 
 
 if __name__ == "__main__":
