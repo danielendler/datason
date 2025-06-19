@@ -1992,8 +1992,56 @@ def _deserialize_string_full(s: str, config: Optional["SerializationConfig"]) ->
             # Handle 'Z' timezone suffix for Python < 3.11
             import sys
 
-            date_str = s.replace("Z", "+00:00") if s.endswith("Z") and sys.version_info < (3, 11) else s
-            parsed_datetime = datetime.fromisoformat(date_str)  # Now safe from CodeQL false positive
+            # Always replace Z with +00:00 for maximum compatibility
+            date_str = s.replace("Z", "+00:00") if s.endswith("Z") else s
+
+            # For Python < 3.11, we need more robust parsing
+            if sys.version_info < (3, 11):
+                # Use more compatible parsing approach for older Python versions
+                try:
+                    parsed_datetime = datetime.fromisoformat(date_str)
+                except ValueError:
+                    # Fallback: try parsing with strptime for older Python compatibility
+                    if "+" in date_str or "-" in date_str[-6:]:
+                        # Has timezone info
+                        try:
+                            from datetime import timedelta, timezone
+
+                            # Extract timezone offset
+                            if "+" in date_str:
+                                dt_part, tz_part = date_str.rsplit("+", 1)
+                                tz_sign = 1
+                            else:
+                                dt_part, tz_part = date_str.rsplit("-", 1)
+                                tz_sign = -1
+
+                            # Parse main datetime part
+                            if "." in dt_part:
+                                dt = datetime.strptime(dt_part, "%Y-%m-%dT%H:%M:%S.%f")
+                            else:
+                                dt = datetime.strptime(dt_part, "%Y-%m-%dT%H:%M:%S")
+
+                            # Parse timezone offset
+                            if tz_part == "00:00" or tz_part == "0000":
+                                tz = timezone.utc
+                            else:
+                                hours, minutes = tz_part.split(":") if ":" in tz_part else (tz_part[:2], tz_part[2:])
+                                offset = timedelta(hours=int(hours), minutes=int(minutes)) * tz_sign
+                                tz = timezone(offset)
+
+                            parsed_datetime = dt.replace(tzinfo=tz)
+                        except (ValueError, IndexError) as err:
+                            raise ValueError("Failed to parse datetime with timezone") from err
+                    else:
+                        # No timezone info
+                        if "." in date_str:
+                            parsed_datetime = datetime.strptime(date_str, "%Y-%m-%dT%H:%M:%S.%f")
+                        else:
+                            parsed_datetime = datetime.strptime(date_str, "%Y-%m-%dT%H:%M:%S")
+            else:
+                # Python 3.11+ can handle it directly
+                parsed_datetime = datetime.fromisoformat(date_str)
+
             # Cache successful parse
             if len(_PARSED_OBJECT_CACHE) < _PARSED_CACHE_SIZE_LIMIT:
                 _PARSED_OBJECT_CACHE[f"datetime:{s}"] = parsed_datetime
