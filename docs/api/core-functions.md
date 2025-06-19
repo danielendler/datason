@@ -1,10 +1,50 @@
 # 📋 Core Functions
 
-The main serialization and deserialization functions that form the core of datason's traditional API.
+The main serialization and deserialization functions including the **perfect JSON module replacement** and traditional comprehensive APIs.
 
-## 🎯 Overview
+## 🔄 **JSON Module Drop-in Replacement**
 
-The core functions provide comprehensive, configuration-based serialization with maximum control and flexibility.
+**Zero migration effort** - use datason exactly like Python's `json` module with optional enhanced features.
+
+### JSON Compatibility API
+
+```python
+# Perfect drop-in replacement for Python's json module
+import datason.json as json
+
+# Exact same behavior as stdlib json
+data = json.loads('{"timestamp": "2024-01-01T00:00:00Z", "value": 42}')
+# Returns: {'timestamp': '2024-01-01T00:00:00Z', 'value': 42}
+
+output = json.dumps({"key": "value"}, indent=2, sort_keys=True)
+# All json.dumps() parameters work exactly the same
+```
+
+### Enhanced API with Smart Defaults
+
+```python
+# Enhanced features with same simple API
+import datason
+
+# Smart datetime parsing automatically enabled
+data = datason.loads('{"timestamp": "2024-01-01T00:00:00Z", "value": 42}')
+# Returns: {'timestamp': datetime.datetime(2024, 1, 1, 0, 0, tzinfo=timezone.utc), 'value': 42}
+
+# Enhanced serialization with dict output
+result = datason.dumps({"timestamp": datetime.now(), "data": [1, 2, 3]})
+# Returns: dict (not string) with smart type handling
+```
+
+| Function | Purpose | Output Type | Enhanced Features |
+|----------|---------|-------------|-------------------|
+| `datason.loads()` | JSON string parsing | dict | ✅ Smart datetime parsing |
+| `datason.dumps()` | Object serialization | dict | ✅ Enhanced type handling |
+| `datason.loads_json()` | JSON compatibility | dict | ❌ Exact stdlib behavior |
+| `datason.dumps_json()` | JSON string output | str | ❌ Exact stdlib behavior |
+
+## 🎯 Traditional API Overview
+
+The traditional core functions provide comprehensive, configuration-based serialization with maximum control and flexibility.
 
 | Function | Purpose | Best For |
 |----------|---------|----------|

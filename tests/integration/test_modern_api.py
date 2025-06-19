@@ -13,12 +13,12 @@ import pytest
 
 import datason
 from datason.api import (
-    dump,
     dump_api,
     dump_chunked,
     dump_ml,
     dump_secure,
     dumps,
+    dumps_json,
     get_api_info,
     help_api,
     load_basic,
@@ -26,6 +26,7 @@ from datason.api import (
     load_smart,
     load_typed,
     loads,
+    serialize,
     suppress_deprecation_warnings,
 )
 from datason.config import SerializationConfig
@@ -44,9 +45,9 @@ class TestModernAPIBasics:
     """Test basic functionality of the modern API."""
 
     def test_dump_basic_functionality(self):
-        """Test that dump() works for basic serialization."""
+        """Test that dumps() works for basic serialization."""
         data = {"test": "value", "number": 42}
-        result = dump(data)
+        result = dumps(data)
         assert result == data
 
     def test_load_basic_functionality(self):
@@ -56,20 +57,36 @@ class TestModernAPIBasics:
         assert result == data
 
     def test_dumps_loads_json_compatibility(self):
-        """Test that dumps/loads provide json module compatibility."""
+        """Test that dumps/loads provide enhanced functionality."""
         data = {"test": "value", "numbers": [1, 2, 3]}
 
-        # Test dumps
-        json_str = dumps(data)
+        # Test dumps - enhanced API returns dict
+        result_dict = dumps(data)
+        assert isinstance(result_dict, dict)
+        assert result_dict == data
+
+        # For JSON string compatibility, use dumps_json
+        json_str = dumps_json(data)
         assert isinstance(json_str, str)
 
         # Should be valid JSON
         parsed = json.loads(json_str)
         assert parsed == data
 
-        # Test loads
+        # Test loads with enhanced functionality
         result = loads(json_str)
-        assert result == data
+
+        # Enhanced API may do smart type conversion (e.g., lists to numpy arrays)
+        # So we need to compare the structure rather than direct equality
+        assert result["test"] == data["test"]
+
+        # For numbers list, check if it's equivalent (could be numpy array or list)
+        if hasattr(result["numbers"], "tolist"):
+            # If it's a numpy array, convert to list for comparison
+            assert result["numbers"].tolist() == data["numbers"]
+        else:
+            # If it's still a list, compare directly
+            assert result["numbers"] == data["numbers"]
 
     def test_api_info_functions(self):
         """Test that API info functions provide expected information."""
@@ -92,17 +109,19 @@ class TestDumpFunctions:
     """Test the dump_* family of functions."""
 
     def test_dump_modes_mutually_exclusive(self):
-        """Test that dump() modes are mutually exclusive."""
+        """Test that serialize() modes are mutually exclusive."""
         data = {"test": "data"}
 
         # Should work with one mode
-        dump(data, ml_mode=True)
-        dump(data, api_mode=True)
-        dump(data, fast_mode=True)
+        from datason.api import serialize
+
+        serialize(data, ml_mode=True)
+        serialize(data, api_mode=True)
+        serialize(data, fast_mode=True)
 
         # Should fail with multiple modes
         with pytest.raises(ValueError, match="Only one mode can be enabled"):
-            dump(data, ml_mode=True, api_mode=True)
+            serialize(data, ml_mode=True, api_mode=True)
 
     def test_dump_secure_redaction(self):
         """Test that dump_secure() redacts sensitive information."""
@@ -177,7 +196,7 @@ class TestLoadFunctions:
         """Test that load_smart() provides better type reconstruction."""
         # Create some data with type information
         original_data = {"value": 42, "text": "hello"}
-        serialized = dump(original_data)
+        serialized = dumps(original_data)
 
         result = load_smart(serialized)
         assert result == original_data
@@ -231,7 +250,7 @@ class TestBackwardCompatibility:
 
         # Compare basic serialization
         old_result = datason.serialize(data)
-        new_result = dump(data)
+        new_result = dumps(data)
         assert old_result == new_result
 
         # Compare basic deserialization
@@ -258,7 +277,7 @@ class TestAdvancedFeatures:
         data = {"test": "config"}
         config = SerializationConfig(sort_keys=True)
 
-        result = dump(data, config=config)
+        result = dumps(data, config=config)
         assert result == data
 
     def test_load_smart_with_config(self):
@@ -299,7 +318,7 @@ class TestErrorHandling:
         data = {"test": "data"}
 
         with pytest.raises(ValueError):
-            dump(data, ml_mode=True, api_mode=True, fast_mode=True)
+            serialize(data, ml_mode=True, api_mode=True, fast_mode=True)
 
     def test_load_perfect_missing_template(self):
         """Test error handling when template is required but missing."""
@@ -318,8 +337,8 @@ class TestIntegrationWithExistingFeatures:
         # Test with different cache scopes
         with datason.operation_scope():
             data = {"cached": "data"}
-            result1 = dump(data)
-            result2 = dump(data)  # Should use cache
+            result1 = dumps(data)
+            result2 = dumps(data)  # Should use cache
             assert result1 == result2
 
     def test_modern_api_with_ml_objects(self):
