@@ -1978,8 +1978,13 @@ def _deserialize_string_full(s: str, config: Optional["SerializationConfig"]) ->
         if cached_result is not None:
             return cached_result
         elif cached_result is None and f"{pattern_type}:{s}" in _PARSED_OBJECT_CACHE:
-            # Cached failure - return as string without retrying
-            return s
+            # Cached failure - but bypass for auto_detect datetime parsing
+            if pattern_type == "datetime" and auto_detect and _looks_like_datetime_optimized(s):
+                # Skip cached failure and retry parsing when auto_detect is enabled
+                pass
+            else:
+                # Return as string without retrying for non-datetime or non-auto-detect cases
+                return s
 
     # OPTIMIZATION: For uncached or unknown patterns, use optimized detection
     # This path handles cache misses and new patterns
