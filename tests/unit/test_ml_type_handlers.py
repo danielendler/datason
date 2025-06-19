@@ -932,24 +932,28 @@ class TestRegistrationFunction:
         registry = get_type_registry()
         registry.clear_handlers()
 
-        # Register handlers
-        register_all_ml_handlers()
+        try:
+            # Register handlers
+            register_all_ml_handlers()
 
-        # Check that handlers were registered
-        type_names = registry.get_registered_types()
+            # Check that handlers were registered
+            type_names = registry.get_registered_types()
 
-        expected_types = [
-            "catboost.model",
-            "keras.model",
-            "optuna.Study",
-            "plotly.graph_objects.Figure",
-            "polars.DataFrame",
-            "torch.Tensor",
-            "sklearn.base.BaseEstimator",
-        ]
+            expected_types = [
+                "catboost.model",
+                "keras.model",
+                "optuna.Study",
+                "plotly.graph_objects.Figure",
+                "polars.DataFrame",
+                "torch.Tensor",
+                "sklearn.base.BaseEstimator",
+            ]
 
-        for expected_type in expected_types:
-            assert expected_type in type_names
+            for expected_type in expected_types:
+                assert expected_type in type_names
+        finally:
+            # Always ensure handlers are re-registered after test to avoid affecting other tests
+            register_all_ml_handlers()
 
 
 class TestIntegrationScenarios:
