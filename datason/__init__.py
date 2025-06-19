@@ -446,7 +446,7 @@ def serialize_with_config(obj: Any, **kwargs: Any) -> Any:
 
 
 # Backward compatibility: Provide serialize() function with deprecation warning
-def serialize(obj: Any, config=None, **kwargs: Any) -> Any:
+def serialize(obj: Any, config: Any = None, **kwargs: Any) -> Any:
     """Serialize an object (DEPRECATED - use dump/dumps instead).
 
     DEPRECATION WARNING: Direct use of serialize() is discouraged.

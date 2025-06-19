@@ -55,7 +55,7 @@ def suppress_deprecation_warnings(suppress: bool = True) -> None:
 # =============================================================================
 
 
-def dump(obj: Any, fp, **kwargs: Any) -> None:
+def dump(obj: Any, fp: Any, **kwargs: Any) -> None:
     """Enhanced file serialization (DataSON's smart default).
 
     This saves enhanced DataSON serialized data to a file using save_ml().
@@ -92,7 +92,7 @@ def dump(obj: Any, fp, **kwargs: Any) -> None:
 
 def dump_json(
     obj: Any,
-    fp,
+    fp: Any,
     *,
     skipkeys: bool = False,
     ensure_ascii: bool = True,
@@ -146,7 +146,7 @@ def dump_json(
     json.dump(serialized, fp, **json_params)
 
 
-def load(fp, **kwargs: Any) -> Any:
+def load(fp: Any, **kwargs: Any) -> Any:
     """Enhanced file deserialization (DataSON's smart default).
 
     This provides smart deserialization with datetime parsing, type reconstruction,
@@ -182,7 +182,7 @@ def load(fp, **kwargs: Any) -> Any:
         return results[0] if len(results) == 1 else results
 
 
-def load_json(fp, **kwargs: Any) -> Any:
+def load_json(fp: Any, **kwargs: Any) -> Any:
     """Read object from JSON file with stdlib json.load compatibility.
 
     This function provides the exact behavior of json.load() when you need
