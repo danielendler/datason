@@ -1961,10 +1961,14 @@ def _process_dict_optimized(obj: dict, config: Optional["SerializationConfig"], 
 def _deserialize_string_full(s: str, config: Optional["SerializationConfig"]) -> Any:
     """Full string processing with all type detection and aggressive caching."""
 
+    # Check if auto-detection is enabled for forced parsing
+    auto_detect = (config and getattr(config, "auto_detect_types", False)) or False
+
     # OPTIMIZATION: Use cached pattern detection first
     pattern_type = _get_cached_string_pattern(s)
 
-    if pattern_type == "plain":
+    # If auto_detect is enabled, bypass cache for datetime-like strings to ensure parsing
+    if pattern_type == "plain" and not (auto_detect and _looks_like_datetime_optimized(s)):
         return s  # Already determined to be plain string
 
     # For typed patterns, try cached parsed objects first
@@ -1979,8 +1983,12 @@ def _deserialize_string_full(s: str, config: Optional["SerializationConfig"]) ->
     # OPTIMIZATION: For uncached or unknown patterns, use optimized detection
     # This path handles cache misses and new patterns
 
-    # Try datetime parsing with optimized detection
-    if pattern_type == "datetime" or (pattern_type is None and _looks_like_datetime_optimized(s)):
+    # Try datetime parsing with optimized detection OR when auto_detect is enabled
+    if (
+        pattern_type == "datetime"
+        or (pattern_type is None and _looks_like_datetime_optimized(s))
+        or (auto_detect and _looks_like_datetime_optimized(s))
+    ):
         try:
             # Validate ISO 8601 format for security
             import re
