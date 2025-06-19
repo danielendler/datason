@@ -1967,8 +1967,9 @@ def _deserialize_string_full(s: str, config: Optional["SerializationConfig"]) ->
     # OPTIMIZATION: Use cached pattern detection first
     pattern_type = _get_cached_string_pattern(s)
 
-    # If auto_detect is enabled, bypass cache for datetime-like strings to ensure parsing
-    if pattern_type == "plain" and not (auto_detect and _looks_like_datetime_optimized(s)):
+    # If pattern_type is plain, only return early if auto_detect is disabled OR it doesn't look like datetime
+    # This ensures we bypass the cache when auto_detect is enabled for datetime-like strings
+    if pattern_type == "plain" and (not auto_detect or not _looks_like_datetime_optimized(s)):
         return s  # Already determined to be plain string
 
     # For typed patterns, try cached parsed objects first
