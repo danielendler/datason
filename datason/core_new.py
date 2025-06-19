@@ -886,19 +886,6 @@ def _serialize_full_path(
             dt = obj.to_pydatetime()
             return serialize(dt, config, _depth + 1, _seen, _type_handler)
 
-    # For all other types (fallback path)
-    # Try ML serializer if available
-    if _ml_serializer:
-        try:
-            ml_result = _ml_serializer(obj)
-            if ml_result is not None:
-                # NOTE: Legacy '_type' format conversion removed in v0.8.0
-                # ML serializers should now output '__datason_type__' format directly
-                return ml_result
-        except Exception:
-            # If ML serializer fails, continue with fallback
-            pass  # nosec B110
-
     # Handle complex numbers (before __dict__ handling)
     if isinstance(obj, complex):
         # Check if TypeHandler wants to handle this type
@@ -1025,6 +1012,19 @@ def _serialize_full_path(
             from .validation import serialize_marshmallow
 
             return serialize_marshmallow(obj)
+
+    # Try ML serializer if available (MOVED HERE: after built-in types to avoid performance regression)
+    # This prevents decimals, complex numbers, etc. from going through expensive ML detection
+    if _ml_serializer:
+        try:
+            ml_result = _ml_serializer(obj)
+            if ml_result is not None:
+                # NOTE: Legacy '_type' format conversion removed in v0.8.0
+                # ML serializers should now output '__datason_type__' format directly
+                return ml_result
+        except Exception:
+            # If ML serializer fails, continue with fallback
+            pass  # nosec B110
 
     # Handle objects with __dict__ (custom classes)
     if hasattr(obj, "__dict__"):
