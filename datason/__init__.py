@@ -145,6 +145,14 @@ try:
 except ImportError:
     _ml_available = False
 
+# ML Type Handlers (new unified architecture) - Import to trigger auto-registration
+try:
+    from . import ml_type_handlers  # noqa: F401  # Import to trigger handler registration
+
+    _ml_type_handlers_available = True
+except ImportError:
+    _ml_type_handlers_available = False
+
 # Pickle Bridge (new in v0.3.0) - Zero dependencies, always available
 try:
     import importlib
