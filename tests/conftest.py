@@ -91,6 +91,14 @@ def _clear_all_datason_state():
             except ImportError:
                 pass
 
+        # Ensure ML type handlers are properly registered
+        try:
+            from datason.ml_type_handlers import register_all_ml_handlers
+
+            register_all_ml_handlers()
+        except ImportError:
+            pass
+
     except ImportError:
         # datason not available, nothing to clear
         pass

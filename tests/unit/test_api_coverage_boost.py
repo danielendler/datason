@@ -164,3 +164,32 @@ class TestConfigurationMethods:
 
         # Test case sensitive - uppercase defaults to jsonl
         assert api_module._detect_file_format("DATA.JSON") == "jsonl"  # Case sensitive, defaults to jsonl
+
+    def test_get_version_and_info(self):
+        """Test get_version and get_info functions from datason.__init__."""
+        import datason
+
+        # Test get_version function
+        version = datason.get_version()
+        assert isinstance(version, str)
+        assert len(version) > 0
+
+        # Test get_info function
+        info = datason.get_info()
+        assert isinstance(info, dict)
+        assert "version" in info
+        assert "author" in info
+        assert "email" in info
+        assert "description" in info
+        assert "config_available" in info
+        assert "cache_system" in info
+
+        # Verify the version matches
+        assert info["version"] == version
+
+        # Verify config_available is boolean
+        assert isinstance(info["config_available"], bool)
+
+        # Verify cache_system is a string
+        assert isinstance(info["cache_system"], str)
+        assert info["cache_system"] in ["configurable", "legacy"]
