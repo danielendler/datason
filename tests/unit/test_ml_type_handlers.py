@@ -28,6 +28,77 @@ from datason.ml_type_handlers import (
 )
 
 
+# Helper functions to check if modules are available without raising exceptions
+def _has_catboost():
+    """Check if CatBoost is available."""
+    try:
+        import catboost  # noqa: F401
+
+        return True
+    except ImportError:
+        return False
+
+
+def _has_keras():
+    """Check if Keras is available."""
+    try:
+        import keras  # noqa: F401
+
+        return True
+    except ImportError:
+        return False
+
+
+def _has_optuna():
+    """Check if Optuna is available."""
+    try:
+        import optuna  # noqa: F401
+
+        return True
+    except ImportError:
+        return False
+
+
+def _has_plotly():
+    """Check if Plotly is available."""
+    try:
+        import plotly  # noqa: F401
+
+        return True
+    except ImportError:
+        return False
+
+
+def _has_polars():
+    """Check if Polars is available."""
+    try:
+        import polars  # noqa: F401
+
+        return True
+    except ImportError:
+        return False
+
+
+def _has_torch():
+    """Check if PyTorch is available."""
+    try:
+        import torch  # noqa: F401
+
+        return True
+    except ImportError:
+        return False
+
+
+def _has_sklearn():
+    """Check if scikit-learn is available."""
+    try:
+        import sklearn  # noqa: F401
+
+        return True
+    except ImportError:
+        return False
+
+
 class TestCatBoostTypeHandler:
     """Test the CatBoostTypeHandler class."""
 
@@ -65,9 +136,7 @@ class TestCatBoostTypeHandler:
         with patch.object(self.handler, "_lazy_import_catboost", side_effect=RuntimeError):
             assert self.handler.can_handle(Mock()) is False
 
-    @pytest.mark.skipif(
-        not pytest.importorskip("catboost", reason="CatBoost not available"), reason="CatBoost required for this test"
-    )
+    @pytest.mark.skipif(not _has_catboost(), reason="CatBoost required for this test")
     def test_can_handle_real_catboost_classifier(self):
         """Test can_handle with real CatBoost classifier."""
         import catboost
@@ -75,9 +144,7 @@ class TestCatBoostTypeHandler:
         model = catboost.CatBoostClassifier(verbose=False)
         assert self.handler.can_handle(model) is True
 
-    @pytest.mark.skipif(
-        not pytest.importorskip("catboost", reason="CatBoost not available"), reason="CatBoost required for this test"
-    )
+    @pytest.mark.skipif(not _has_catboost(), reason="CatBoost required for this test")
     def test_can_handle_real_catboost_regressor(self):
         """Test can_handle with real CatBoost regressor."""
         import catboost
@@ -91,9 +158,7 @@ class TestCatBoostTypeHandler:
         assert self.handler.can_handle(123) is False
         assert self.handler.can_handle({}) is False
 
-    @pytest.mark.skipif(
-        not pytest.importorskip("catboost", reason="CatBoost not available"), reason="CatBoost required for this test"
-    )
+    @pytest.mark.skipif(not _has_catboost(), reason="CatBoost required for this test")
     def test_serialize_real_catboost_model(self):
         """Test serialization of real CatBoost model."""
         import catboost
@@ -123,9 +188,7 @@ class TestCatBoostTypeHandler:
             assert "Failed to serialize CatBoost model" in str(w[0].message)
             assert result == {"__datason_type__": "dict", "__datason_value__": {}}
 
-    @pytest.mark.skipif(
-        not pytest.importorskip("catboost", reason="CatBoost not available"), reason="CatBoost required for this test"
-    )
+    @pytest.mark.skipif(not _has_catboost(), reason="CatBoost required for this test")
     def test_round_trip_serialization(self):
         """Test round-trip serialization/deserialization."""
         import catboost
@@ -196,9 +259,7 @@ class TestKerasTypeHandler:
         with patch.object(self.handler, "_lazy_import_keras", side_effect=RuntimeError):
             assert self.handler.can_handle(Mock()) is False
 
-    @pytest.mark.skipif(
-        not pytest.importorskip("keras", reason="Keras not available"), reason="Keras required for this test"
-    )
+    @pytest.mark.skipif(not _has_keras(), reason="Keras required for this test")
     def test_can_handle_real_keras_model(self):
         """Test can_handle with real Keras model."""
         import keras
@@ -224,9 +285,7 @@ class TestKerasTypeHandler:
             assert self.handler.can_handle("not a model") is False
             assert self.handler.can_handle(123) is False
 
-    @pytest.mark.skipif(
-        not pytest.importorskip("keras", reason="Keras not available"), reason="Keras required for this test"
-    )
+    @pytest.mark.skipif(not _has_keras(), reason="Keras required for this test")
     def test_serialize_real_keras_model(self):
         """Test serialization of real Keras model."""
         import keras
@@ -264,9 +323,7 @@ class TestKerasTypeHandler:
             assert "Failed to serialize Keras model" in str(w[0].message)
             assert result == {"__datason_type__": "dict", "__datason_value__": {}}
 
-    @pytest.mark.skipif(
-        not pytest.importorskip("keras", reason="Keras not available"), reason="Keras required for this test"
-    )
+    @pytest.mark.skipif(not _has_keras(), reason="Keras required for this test")
     def test_deserialize_real_keras_model(self):
         """Test deserialization to create real Keras model."""
         data = {"__datason_type__": "keras.model", "__datason_value__": {"model_type": "Sequential"}}
@@ -326,9 +383,7 @@ class TestOptunaTypeHandler:
             result = self.handler._lazy_import_optuna()
             assert result is None
 
-    @pytest.mark.skipif(
-        not pytest.importorskip("optuna", reason="Optuna not available"), reason="Optuna required for this test"
-    )
+    @pytest.mark.skipif(not _has_optuna(), reason="Optuna required for this test")
     def test_can_handle_real_optuna_study(self):
         """Test can_handle with real Optuna study."""
         import optuna
@@ -346,9 +401,7 @@ class TestOptunaTypeHandler:
         with patch.object(self.handler, "_lazy_import_optuna", side_effect=RuntimeError):
             assert self.handler.can_handle(Mock()) is False
 
-    @pytest.mark.skipif(
-        not pytest.importorskip("optuna", reason="Optuna not available"), reason="Optuna required for this test"
-    )
+    @pytest.mark.skipif(not _has_optuna(), reason="Optuna required for this test")
     def test_serialize_real_optuna_study(self):
         """Test serialization of real Optuna study."""
         import optuna
@@ -379,9 +432,7 @@ class TestOptunaTypeHandler:
             assert "Failed to serialize Optuna study" in str(w[0].message)
             assert result == {"__datason_type__": "dict", "__datason_value__": {}}
 
-    @pytest.mark.skipif(
-        not pytest.importorskip("optuna", reason="Optuna not available"), reason="Optuna required for this test"
-    )
+    @pytest.mark.skipif(not _has_optuna(), reason="Optuna required for this test")
     def test_deserialize_real_optuna_study(self):
         """Test deserialization to create real Optuna study."""
         data = {
@@ -445,9 +496,7 @@ class TestPlotlyTypeHandler:
             result = self.handler._lazy_import_plotly()
             assert result is None
 
-    @pytest.mark.skipif(
-        not pytest.importorskip("plotly", reason="Plotly not available"), reason="Plotly required for this test"
-    )
+    @pytest.mark.skipif(not _has_plotly(), reason="Plotly required for this test")
     def test_can_handle_real_plotly_figure(self):
         """Test can_handle with real Plotly figure."""
         import plotly.graph_objects as go
@@ -465,9 +514,7 @@ class TestPlotlyTypeHandler:
         with patch.object(self.handler, "_lazy_import_plotly", side_effect=RuntimeError):
             assert self.handler.can_handle(Mock()) is False
 
-    @pytest.mark.skipif(
-        not pytest.importorskip("plotly", reason="Plotly not available"), reason="Plotly required for this test"
-    )
+    @pytest.mark.skipif(not _has_plotly(), reason="Plotly required for this test")
     def test_serialize_real_plotly_figure(self):
         """Test serialization of real Plotly figure."""
         import plotly.graph_objects as go
@@ -493,9 +540,7 @@ class TestPlotlyTypeHandler:
             assert "Failed to serialize Plotly figure" in str(w[0].message)
             assert result == {"__datason_type__": "dict", "__datason_value__": {}}
 
-    @pytest.mark.skipif(
-        not pytest.importorskip("plotly", reason="Plotly not available"), reason="Plotly required for this test"
-    )
+    @pytest.mark.skipif(not _has_plotly(), reason="Plotly required for this test")
     def test_deserialize_real_plotly_figure(self):
         """Test deserialization to create real Plotly figure."""
         import plotly.graph_objects as go
@@ -558,9 +603,7 @@ class TestPolarsTypeHandler:
             result = self.handler._lazy_import_polars()
             assert result is None
 
-    @pytest.mark.skipif(
-        not pytest.importorskip("polars", reason="Polars not available"), reason="Polars required for this test"
-    )
+    @pytest.mark.skipif(not _has_polars(), reason="Polars required for this test")
     def test_can_handle_real_polars_dataframe(self):
         """Test can_handle with real Polars DataFrame."""
         import polars as pl
@@ -568,9 +611,7 @@ class TestPolarsTypeHandler:
         df = pl.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
         assert self.handler.can_handle(df) is True
 
-    @pytest.mark.skipif(
-        not pytest.importorskip("polars", reason="Polars not available"), reason="Polars required for this test"
-    )
+    @pytest.mark.skipif(not _has_polars(), reason="Polars required for this test")
     def test_can_handle_real_polars_lazyframe(self):
         """Test can_handle with real Polars LazyFrame."""
         import polars as pl
@@ -584,9 +625,7 @@ class TestPolarsTypeHandler:
         with patch.object(self.handler, "_lazy_import_polars", return_value=None):
             assert self.handler.can_handle(Mock()) is False
 
-    @pytest.mark.skipif(
-        not pytest.importorskip("polars", reason="Polars not available"), reason="Polars required for this test"
-    )
+    @pytest.mark.skipif(not _has_polars(), reason="Polars required for this test")
     def test_serialize_real_polars_dataframe(self):
         """Test serialization of real Polars DataFrame."""
         import polars as pl
@@ -616,9 +655,7 @@ class TestPolarsTypeHandler:
             assert "Failed to serialize Polars DataFrame" in str(w[0].message)
             assert result == {"__datason_type__": "dict", "__datason_value__": {}}
 
-    @pytest.mark.skipif(
-        not pytest.importorskip("polars", reason="Polars not available"), reason="Polars required for this test"
-    )
+    @pytest.mark.skipif(not _has_polars(), reason="Polars required for this test")
     def test_round_trip_serialization(self):
         """Test round-trip serialization/deserialization."""
         import polars as pl
@@ -688,9 +725,7 @@ class TestPyTorchTypeHandler:
             result = self.handler._lazy_import_torch()
             assert result is None
 
-    @pytest.mark.skipif(
-        not pytest.importorskip("torch", reason="PyTorch not available"), reason="PyTorch required for this test"
-    )
+    @pytest.mark.skipif(not _has_torch(), reason="PyTorch required for this test")
     def test_can_handle_real_torch_tensor(self):
         """Test can_handle with real PyTorch tensor."""
         import torch
@@ -703,9 +738,7 @@ class TestPyTorchTypeHandler:
         with patch.object(self.handler, "_lazy_import_torch", return_value=None):
             assert self.handler.can_handle(Mock()) is False
 
-    @pytest.mark.skipif(
-        not pytest.importorskip("torch", reason="PyTorch not available"), reason="PyTorch required for this test"
-    )
+    @pytest.mark.skipif(not _has_torch(), reason="PyTorch required for this test")
     def test_serialize_real_torch_tensor(self):
         """Test serialization of real PyTorch tensor."""
         import torch
@@ -722,9 +755,7 @@ class TestPyTorchTypeHandler:
         assert "dtype" in value
         assert value["shape"] == [2, 2]
 
-    @pytest.mark.skipif(
-        not pytest.importorskip("torch", reason="PyTorch not available"), reason="PyTorch required for this test"
-    )
+    @pytest.mark.skipif(not _has_torch(), reason="PyTorch required for this test")
     def test_serialize_torch_tensor_with_grad(self):
         """Test serialization of PyTorch tensor with gradients."""
         import torch
@@ -749,9 +780,7 @@ class TestPyTorchTypeHandler:
             assert "Failed to serialize PyTorch tensor" in str(w[0].message)
             assert result == {"__datason_type__": "dict", "__datason_value__": {}}
 
-    @pytest.mark.skipif(
-        not pytest.importorskip("torch", reason="PyTorch not available"), reason="PyTorch required for this test"
-    )
+    @pytest.mark.skipif(not _has_torch(), reason="PyTorch required for this test")
     def test_round_trip_serialization(self):
         """Test round-trip serialization/deserialization."""
         import torch
@@ -808,10 +837,7 @@ class TestSklearnTypeHandler:
             result = self.handler._lazy_import_sklearn()
             assert result is None
 
-    @pytest.mark.skipif(
-        not pytest.importorskip("sklearn", reason="scikit-learn not available"),
-        reason="scikit-learn required for this test",
-    )
+    @pytest.mark.skipif(not _has_sklearn(), reason="scikit-learn required for this test")
     def test_can_handle_real_sklearn_model(self):
         """Test can_handle with real scikit-learn model."""
         from sklearn.linear_model import LinearRegression
@@ -840,10 +866,7 @@ class TestSklearnTypeHandler:
 
         assert self.handler.can_handle(mock_obj) is False
 
-    @pytest.mark.skipif(
-        not pytest.importorskip("sklearn", reason="scikit-learn not available"),
-        reason="scikit-learn required for this test",
-    )
+    @pytest.mark.skipif(not _has_sklearn(), reason="scikit-learn required for this test")
     def test_serialize_real_sklearn_model(self):
         """Test serialization of real scikit-learn model."""
         from sklearn.linear_model import LinearRegression
@@ -875,10 +898,7 @@ class TestSklearnTypeHandler:
             assert "Failed to serialize scikit-learn model" in str(w[0].message)
             assert result == {"__datason_type__": "dict", "__datason_value__": {}}
 
-    @pytest.mark.skipif(
-        not pytest.importorskip("sklearn", reason="scikit-learn not available"),
-        reason="scikit-learn required for this test",
-    )
+    @pytest.mark.skipif(not _has_sklearn(), reason="scikit-learn required for this test")
     def test_round_trip_serialization(self):
         """Test round-trip serialization/deserialization."""
         from sklearn.linear_model import LinearRegression
@@ -959,10 +979,7 @@ class TestRegistrationFunction:
 class TestIntegrationScenarios:
     """Test integration scenarios with real ML objects."""
 
-    @pytest.mark.skipif(
-        not pytest.importorskip("sklearn", reason="scikit-learn not available"),
-        reason="scikit-learn required for this test",
-    )
+    @pytest.mark.skipif(not _has_sklearn(), reason="scikit-learn required for this test")
     def test_sklearn_integration_with_fitted_model(self):
         """Test sklearn handler with fitted model."""
         import numpy as np
@@ -988,9 +1005,7 @@ class TestIntegrationScenarios:
         deserialized = handler.deserialize(serialized)
         assert isinstance(deserialized, LinearRegression)
 
-    @pytest.mark.skipif(
-        not pytest.importorskip("torch", reason="PyTorch not available"), reason="PyTorch required for this test"
-    )
+    @pytest.mark.skipif(not _has_torch(), reason="PyTorch required for this test")
     def test_torch_integration_with_complex_tensor(self):
         """Test PyTorch handler with complex tensor."""
         import torch
