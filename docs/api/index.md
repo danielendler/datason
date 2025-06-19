@@ -1,10 +1,47 @@
 # 📋 API Reference
 
-Complete API documentation for datason with two powerful approaches to data serialization.
+Complete API documentation for datason - the **perfect drop-in replacement** for Python's JSON module with enhanced features.
 
-## 🚀 Two Powerful Approaches
+## 🎯 **JSON Module Drop-in Replacement**
 
-datason provides two complementary APIs designed for different use cases:
+**Zero migration effort** - datason works exactly like Python's `json` module with optional enhanced features:
+
+=== "JSON Compatibility Mode"
+
+    **Perfect drop-in replacement for Python's json module**
+
+    ```python
+    # Your existing code works unchanged
+    import datason.json as json
+
+    # Exact same API as stdlib json
+    data = json.loads('{"timestamp": "2024-01-01T00:00:00Z"}')
+    # Returns: {'timestamp': '2024-01-01T00:00:00Z'}  # String (exact json behavior)
+
+    json_string = json.dumps({"key": "value"}, indent=2)
+    # All json.dumps() parameters work exactly the same
+    ```
+
+=== "Enhanced Mode (Smart Defaults)"
+
+    **Same API with intelligent enhancements automatically enabled**
+
+    ```python
+    # Just import datason for enhanced features
+    import datason
+
+    # Smart datetime parsing automatically enabled
+    data = datason.loads('{"timestamp": "2024-01-01T00:00:00Z"}')
+    # Returns: {'timestamp': datetime.datetime(2024, 1, 1, 0, 0, tzinfo=timezone.utc)}
+
+    # Enhanced dict output for chaining and inspection
+    result = datason.dumps({"timestamp": datetime.now()})
+    # Returns: dict with enhanced type handling
+    ```
+
+## 🚀 Advanced APIs
+
+For specialized use cases, datason provides advanced APIs with progressive complexity:
 
 === "Modern API (Recommended)"
 
@@ -46,6 +83,9 @@ datason provides two complementary APIs designed for different use cases:
 
 ## 📖 API Documentation Sections
 
+### JSON Module Replacement
+- **[JSON Drop-in Replacement](json-replacement.md)** - ⭐ Perfect compatibility with Python's json module plus enhanced features
+
 ### Modern API Functions
 - **[Modern API Overview](modern-api.md)** - Intention-revealing functions with progressive complexity
 - **[Serialization Functions](modern-serialization.md)** - dump(), dump_ml(), dump_api(), dump_secure(), etc.
@@ -72,33 +112,42 @@ datason provides two complementary APIs designed for different use cases:
 
 ## 🎯 Quick Start Examples
 
-### JSON Module Drop-in Replacement
+### 🔄 Perfect JSON Module Replacement
 
 ```python
-import datason as ds
+# Option 1: Perfect compatibility (zero risk migration)
+import datason.json as json
 
-# Like json.dumps() but with type intelligence
-data = {"timestamp": datetime.now(), "array": np.array([1, 2, 3])}
-json_string = ds.dumps(data)
+# Works exactly like Python's json module
+data = json.loads('{"timestamp": "2024-01-01T00:00:00Z"}')
+output = json.dumps({"key": "value"}, indent=2)
 
-# Like json.loads() but with type restoration  
-restored = ds.loads(json_string)
-print(type(restored["timestamp"]))  # <class 'datetime.datetime'>
-print(type(restored["array"]))      # <class 'numpy.ndarray'>
+# Option 2: Enhanced features (smart datetime parsing)
+import datason
+
+# Same API, automatic enhancements
+data = datason.loads('{"timestamp": "2024-01-01T00:00:00Z"}')
+# Returns: {'timestamp': datetime.datetime(2024, 1, 1, 0, 0, tzinfo=timezone.utc)}
+
+output = datason.dumps({"timestamp": datetime.now()})
+# Returns: dict with enhanced type handling
 ```
 
-### Progressive Complexity Example
+### 🚀 Advanced Features (When You Need Them)
 
 ```python
 import datason as ds
 
-# Start simple, add complexity as needed
-data = ds.load_basic(json_data)      # Fast exploration
-data = ds.load_smart(json_data)      # Production use
-data = ds.load_perfect(json_data)    # Critical accuracy
+# ML-optimized serialization
+ml_data = ds.dump_ml({"model": pytorch_model, "data": numpy_arrays})
 
-# Or combine features
-secure_ml_data = ds.dump_secure(model_data, ml_mode=True)
+# Security-focused with PII redaction
+secure_data = ds.dump_secure({"name": "Alice", "email": "alice@email.com"})
+
+# Progressive loading accuracy
+basic_data = ds.load_basic(json_data)      # 60-70% accuracy, fast
+smart_data = ds.load_smart(json_data)      # 80-90% accuracy, balanced  
+perfect_data = ds.load_perfect(json_data)  # 100% accuracy, comprehensive
 ```
 
 ## 🔗 Getting Started

@@ -5,6 +5,99 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.1] - 2025-06-19
+
+### 🎯 **MAJOR: Drop-in JSON Library Replacement with Enhanced Features**
+- **🔄 Perfect JSON Compatibility**: DataSON now provides a complete drop-in replacement for Python's standard `json` module
+- **🚀 Enhanced API Strategy**: Dual API approach offering both enhanced features and perfect stdlib compatibility
+- **⚡ Smart Datetime Parsing**: Automatic datetime string parsing with cross-version compatibility (Python 3.8-3.11+)
+- **🛠️ Zero Migration Effort**: Existing JSON code works immediately with enhanced functionality
+
+#### **NEW: Dual API Architecture** 🆕
+**Enhanced Main API** (datason.loads/dumps) - Smart defaults with advanced features:
+- **Smart datetime parsing**: Automatic conversion of ISO 8601 strings to datetime objects
+- **Enhanced dict output**: `dumps()` returns dict for chainability and inspection
+- **ML type support**: NumPy arrays, pandas DataFrames, PyTorch tensors preserved
+- **Advanced features**: Auto-detection, type reconstruction, metadata preservation
+
+**JSON Compatibility API** (datason.json module) - Perfect stdlib replacement:
+```python
+# Drop-in replacement - works exactly like json module
+import datason.json as json
+result = json.loads('{"timestamp": "2024-01-01T00:00:00Z"}')
+# Returns: {'timestamp': '2024-01-01T00:00:00Z'}  # Exact json.loads() behavior
+
+# Enhanced features when you want them
+import datason
+result = datason.loads('{"timestamp": "2024-01-01T00:00:00Z"}')
+# Returns: {'timestamp': datetime.datetime(2024, 1, 1, 0, 0, tzinfo=timezone.utc)}
+```
+
+#### **NEW: Cross-Version Datetime Compatibility** 🕒
+- **Python 3.8-3.11+ Support**: Robust datetime parsing across all supported Python versions
+- **Enhanced fromisoformat Fallback**: Custom parsing logic for Python < 3.11 edge cases
+- **Cache Bypass Logic**: Smart cache management that retries parsing when auto-detection is enabled
+- **Timezone Handling**: Proper UTC timezone parsing for 'Z' suffix compatibility
+
+#### **NEW: API Migration Helpers** 🔄
+- **Zero Breaking Changes**: All existing explicit functions preserved (`dump_ml`, `load_smart`, etc.)
+- **Deprecation Guidance**: Helpful warnings guide users to modern API equivalents
+- **Backward Compatibility**: Legacy `serialize()` function maintains compatibility
+- **Migration Documentation**: Clear upgrade paths for enhanced functionality
+
+### Added
+- **`datason.json` module**: Complete drop-in replacement for Python's json module
+- **Enhanced `loads()`**: JSON string parsing with smart datetime detection and type reconstruction
+- **Enhanced `dumps()`**: Object serialization returning dict with advanced type handling
+- **`loads_json()`**: Explicit JSON compatibility function for stdlib behavior
+- **`dumps_json()`**: JSON string output with all standard json.dumps() parameters
+- **Cross-version datetime parsing**: Robust ISO 8601 parsing for Python 3.8-3.11+
+
+### Enhanced
+- **API Strategy**: Clear separation between enhanced features and JSON compatibility
+- **Datetime Parsing**: Bulletproof parsing with fallback logic for older Python versions
+- **Cache Management**: Smart cache bypass logic for auto-detection scenarios
+- **Error Handling**: Proper exception handling with graceful fallbacks
+- **Documentation**: Comprehensive examples showing both API approaches
+
+### Fixed
+- **Python 3.8-3.10 Compatibility**: Fixed datetime parsing failures on older Python versions
+- **Cache Bypass Logic**: Corrected double-negative logic preventing datetime parsing
+- **Cached Failure Handling**: Fixed issue where cached parsing failures blocked retry attempts
+- **Auto-detection**: Proper bypass of cached failures when `auto_detect_types=True`
+
+### Technical Details
+- **Dual API Architecture**: Enhanced main API + JSON compatibility module approach
+- **Cache Optimization**: Smart caching with auto-detection bypass for datetime strings
+- **Cross-Version Support**: Robust datetime.fromisoformat() handling with custom fallbacks
+- **Zero Performance Impact**: Enhanced features only activate when explicitly requested
+- **Perfect Compatibility**: JSON module behavior exactly replicated in datason.json
+
+### Breaking Changes
+**None** - This is a purely additive enhancement that maintains full backward compatibility.
+
+### Migration Guide
+```python
+# Existing code works unchanged
+import datason
+result = datason.loads('{"key": "value"}')  # Now with smart datetime parsing
+
+# For explicit JSON compatibility
+import datason.json as json  # Perfect drop-in replacement
+result = json.loads('{"key": "value"}')  # Exact json.loads() behavior
+
+# Enhanced features when you want them
+result = datason.loads('{"timestamp": "2024-01-01T00:00:00Z"}')
+# Automatic datetime parsing with enhanced type handling
+```
+
+### Use Cases
+- **Legacy Code Migration**: Drop-in replacement for json module with zero changes required
+- **Enhanced Data Processing**: Automatic datetime parsing for APIs and data pipelines
+- **ML Workflows**: Smart type detection for scientific computing and machine learning
+- **Cross-Version Compatibility**: Consistent behavior across Python 3.8-3.11+
+- **Progressive Enhancement**: Start with JSON compatibility, add enhanced features as needed
+
 ## [0.11.0] - 2025-06-16
 
 ### 🗃️ **MAJOR: File Operations as First-Class Citizens**

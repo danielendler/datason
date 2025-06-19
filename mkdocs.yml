@@ -134,6 +134,7 @@ nav:
   # Features Section (using existing feature docs)
   - Features:
     - Overview: features/index.md
+    - File Operations: features/file-operations.md
     - API Integration: features/api-integration.md
     - Core Serialization: features/core/index.md
     - Configuration: features/configuration/index.md
@@ -163,6 +164,7 @@ nav:
   # API Reference Section
   - API Reference:
     - Overview: api/index.md
+    - JSON Module Replacement: api/json-replacement.md
     - Modern API Functions:
       - Overview: api/modern-api.md
       - Serialization Functions: api/modern-serialization.md
@@ -214,6 +216,7 @@ nav:
     - Plugin Testing: PLUGIN_TESTING.md
     - GitHub Pages Setup: GITHUB_PAGES_SETUP.md
     - Dependabot Guide: DEPENDABOT_GUIDE.md
+    - Idempotency Implementation Plan: idempotency-implementation-plan.md
 
     - Documentation Fix Summary: DOCUMENTATION_FIX_SUMMARY.md
     - Documentation Restructure Summary: DOCUMENTATION_RESTRUCTURE_SUMMARY.md
