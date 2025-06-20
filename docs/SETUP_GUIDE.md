@@ -1,268 +1,162 @@
-# DataSON PR Performance Integration - Complete Setup Guide
+# DataSON External Benchmark Integration - Setup Guide
 
-## 🚀 **Quick Start: Choose Your Path**
+## 🎯 **Overview**
 
-You now have **two workflow options** for PR performance testing:
+This guide sets up automated PR performance testing using the **external `datason-benchmarks` repository**. Every DataSON PR will trigger comprehensive benchmarks in your separate benchmark repository.
 
-### **Option A: Local Benchmarks (Recommended for Immediate Use)**
-✅ **Ready to use immediately**  
-✅ Uses your existing benchmark infrastructure  
-✅ No external dependencies  
-✅ Works with current codebase  
-
-**File**: `.github/workflows/pr-performance-check-local.yml`
-
-### **Option B: External Benchmark Repository**
-⏳ Requires external `datason-benchmarks` repository setup  
-⏳ Needs `BENCHMARK_REPO_TOKEN` configuration  
-⏳ More complex but follows the original integration guide  
-
-**File**: `.github/workflows/pr-performance-check.yml`
+**Architecture**: DataSON PR → Build Wheel → Trigger External Repo → Run Benchmarks → Post Results
 
 ---
 
-## 📋 **Complete Setup Steps**
+## 🔑 **Step 1: Create GitHub Token**
 
-### **Step 1: Choose and Enable Workflow**
-
-**For Local Benchmarks (Recommended):**
-```bash
-# The local workflow is ready to use immediately
-# No additional setup required for basic functionality
-```
-
-**For External Repository (Advanced):**
-1. Set up `BENCHMARK_REPO_TOKEN` (see Step 2 below)
-2. Create or configure access to `datason-benchmarks` repository
-
-### **Step 2: Repository Token Setup (Only for External Repository)**
-
-#### **Create Personal Access Token**
+### **Create Personal Access Token**
 1. Go to: https://github.com/settings/tokens
-2. Click **"Generate new token"** → **"Generate new token (classic)"**
+2. Click **"Generate new token (classic)"**
 3. Configure:
    ```
    Token Name: DataSON Benchmark Integration
-   Expiration: 90 days (or per your policy)
+   Expiration: 90 days
 
    Required Scopes:
-   ☑️ repo (Full control of private repositories)
+   ☑️ repo (Full control of repositories)
    ☑️ workflow (Update GitHub Action workflows)
-   ☑️ write:packages (if needed for artifacts)
    ```
 4. Click **"Generate token"** and **copy immediately**
 
-#### **Add Repository Secret**
-**Option A: GitHub Web Interface**
+### **Add Repository Secret**
 1. Go to: https://github.com/danielendler/datason/settings/secrets/actions
 2. Click **"New repository secret"**
 3. Name: `BENCHMARK_REPO_TOKEN`
 4. Value: [Your token from above]
 5. Click **"Add secret"**
 
-**Option B: GitHub CLI** (if you have the token)
+---
+
+## 🏗️ **Step 2: Set Up External Repository**
+
+### **Create `datason-benchmarks` Repository**
+1. Create repository: https://github.com/new
+2. Repository name: `datason-benchmarks`
+3. Set as **Public** or **Private** (your choice)
+4. Initialize with README
+
+### **Add Required Files**
+Follow the detailed setup in: [External Benchmark Setup Guide](EXTERNAL_BENCHMARK_SETUP.md)
+
+**Key files needed:**
+- `.github/workflows/datason-pr-integration.yml` (main workflow)
+- `scripts/pr_optimized_benchmark.py` (benchmark script)
+- `requirements.txt` (dependencies)
+
+---
+
+## 🧪 **Step 3: Test Integration**
+
+### **Create Test PR**
 ```bash
-echo 'YOUR_TOKEN_HERE' | gh secret set BENCHMARK_REPO_TOKEN
+# 1. Create test branch
+git checkout -b test/external-benchmark
+echo "# Test external benchmark integration" >> README.md
+git add README.md && git commit -m "test: trigger external benchmark"
+git push -u origin test/external-benchmark
+
+# 2. Create PR
+gh pr create --title "Test: External Benchmark" --body "Testing external benchmark integration"
 ```
 
-### **Step 3: Test the Integration**
+### **Monitor Workflows**
+1. **DataSON workflow**: https://github.com/danielendler/datason/actions
+   - Should build wheel and trigger external repository
+2. **Benchmark workflow**: https://github.com/danielendler/datason-benchmarks/actions
+   - Should download wheel, run benchmarks, and post results
 
-#### **Test Local Workflow**
-1. **Create a test branch:**
-   ```bash
-   git checkout -b test/benchmark-integration
-   ```
-
-2. **Make a small change** (to trigger the workflow):
-   ```bash
-   echo "# Test change" >> README.md
-   git add README.md
-   git commit -m "test: trigger benchmark workflow"
-   git push -u origin test/benchmark-integration
-   ```
-
-3. **Create a test PR:**
-   ```bash
-   gh pr create --title "Test: Benchmark Integration" --body "Testing the PR performance benchmark workflow"
-   ```
-
-4. **Monitor the workflow:**
-   - Go to: https://github.com/danielendler/datason/actions
-   - Look for the "🚀 DataSON PR Performance Benchmark (Local)" workflow
-   - Check that it completes successfully
-   - Verify PR comment is posted with performance analysis
-
-#### **Expected Results**
-✅ Workflow builds DataSON wheel from PR  
-✅ Runs comprehensive benchmarks  
-✅ Posts detailed PR comment with results  
-✅ Uploads performance artifacts  
-
-### **Step 4: Customize Performance Thresholds**
-
-Edit the workflow files to adjust thresholds:
-
-```yaml
-# In either workflow file, find and modify:
-# Currently set to always pass (REGRESSION_DETECTED=false)
-# You can enhance this with actual comparison logic
-
-# Example customization in the regression detection step:
-- name: 🔍 Performance regression detection
-  run: |
-    # Add your custom performance comparison logic here
-    # Example: compare execution times, memory usage, etc.
-
-    # Set REGRESSION_DETECTED=true if issues found
-    if [ "performance_degraded" = "true" ]; then
-      echo "REGRESSION_DETECTED=true" >> $GITHUB_ENV
-    else
-      echo "REGRESSION_DETECTED=false" >> $GITHUB_ENV
-    fi
-```
+### **Expected Results**
+✅ DataSON builds wheel artifact  
+✅ External repository receives trigger  
+✅ Benchmarks run successfully  
+✅ Results posted back to DataSON PR  
+✅ Artifacts uploaded for analysis  
 
 ---
 
-## 🔧 **Advanced Configuration**
+## 🔧 **Step 4: Customize Benchmarks**
 
-### **Custom Benchmark Parameters**
+### **Benchmark Types**
+The workflow supports different benchmark types:
+- **`pr_optimized`** (default): Fast, PR-focused tests
+- **`quick`**: Basic performance validation
+- **`competitive`**: Full comparison with other libraries
 
-Modify the benchmark execution in the workflow:
-
-```yaml
-# In pr-performance-check-local.yml, customize:
-- name: 🚀 Run comprehensive benchmarks
-  run: |
-    cd benchmarks
-
-    # Add custom parameters to benchmark scripts
-    python comprehensive_performance_suite.py --iterations 10 --warm-up 3
-    python realistic_performance_investigation.py --quick --output-format json
-    python simple_realistic_benchmarks.py --competitive-mode
-```
-
-### **Custom PR Comment Templates**
-
-Enhance the PR comment generation:
-
-```yaml
-# Add custom metrics to PR comments
-echo "### 🎯 Custom Metrics" >> results/pr_analysis/pr_performance_comment.md
-echo "- Memory Usage: [Add your metric]" >> results/pr_analysis/pr_performance_comment.md
-echo "- CPU Performance: [Add your metric]" >> results/pr_analysis/pr_performance_comment.md
-```
-
-### **Baseline Management**
-
-Set up performance baselines:
-
+### **Manual Trigger**
+You can manually trigger benchmarks:
 ```bash
-# In your repository, create a baseline after a stable release
-cd benchmarks
-python comprehensive_performance_suite.py
-cp results/latest_comprehensive.json results/baseline_performance.json
-git add results/baseline_performance.json
-git commit -m "feat: establish performance baseline for v2.x"
+# Via GitHub CLI
+gh workflow run pr-performance-check.yml -f pr_number=123 -f benchmark_type=competitive
+
+# Or via GitHub web interface:
+# Go to Actions → PR Performance Benchmark → Run workflow
 ```
 
 ---
 
-## 🎯 **Testing Checklist**
+## 🎯 **Success Checklist**
 
-### **Pre-Test Setup**
-- [ ] Choose workflow option (local vs external)
-- [ ] If external: Set up `BENCHMARK_REPO_TOKEN`
-- [ ] If external: Verify access to benchmark repository
-- [ ] Ensure all benchmark dependencies are available
-
-### **Test Execution**
-- [ ] Create test branch and PR
-- [ ] Verify workflow triggers on PR creation
-- [ ] Check workflow completes without errors
-- [ ] Confirm PR comment is posted with results
-- [ ] Download and verify artifacts are created
-
-### **Post-Test Validation**
-- [ ] Review benchmark results for accuracy
-- [ ] Test performance regression detection (if implemented)
-- [ ] Verify workflow works on different PR types
-- [ ] Test manual workflow dispatch (if needed)
+- [ ] `BENCHMARK_REPO_TOKEN` secret created and added
+- [ ] `datason-benchmarks` repository created
+- [ ] Required workflow files added to external repository
+- [ ] Test PR created and workflows triggered successfully
+- [ ] Benchmark results posted back to DataSON PR
+- [ ] Artifacts uploaded and accessible
 
 ---
 
-## 📊 **Monitoring and Maintenance**
+## 🆘 **Troubleshooting**
 
-### **Workflow Health Checks**
-- **Weekly**: Review workflow execution times and success rates
-- **Monthly**: Update benchmark thresholds based on performance trends
-- **Per Release**: Update performance baselines for major versions
+### **Common Issues**
 
-### **Performance Baseline Updates**
-```bash
-# After major releases or performance improvements
-cd benchmarks
-python comprehensive_performance_suite.py
-# Review results and update baseline if appropriate
-cp results/latest_comprehensive.json results/baseline_performance.json
-git add results/baseline_performance.json
-git commit -m "feat: update performance baseline for v2.x.x"
-```
+**❌ "Permission denied"**
+- Verify token has correct permissions (`repo` + `workflow`)
+- Check token hasn't expired
+- Ensure token has access to both repositories
 
-### **Troubleshooting Common Issues**
+**❌ "Workflow file not found"**
+- Ensure file is exactly: `.github/workflows/datason-pr-integration.yml`
+- Check it's on the `main` branch of `datason-benchmarks`
 
-**❌ Workflow fails to trigger**
-- Check file paths in workflow triggers
-- Verify branch protection rules don't block workflows
-- Ensure GitHub Actions are enabled in repository settings
+**❌ "Artifact download failed"**
+- Verify artifact retention (7+ days)
+- Check cross-repository artifact permissions
 
-**❌ Benchmark scripts fail**
-- Check `benchmarks/requirements-benchmarking.txt` dependencies
-- Verify Python version compatibility (workflow uses 3.11)
-- Review benchmark script parameters and paths
-
-**❌ PR comments not posted**
-- Check `pull-requests: write` permission in workflow
-- Verify GitHub token permissions
-- Look for rate limiting in workflow logs
-
-**❌ Artifacts not uploaded**
-- Check artifact paths in workflow
-- Verify artifact names are unique
-- Ensure results directories are created
+### **Debug Steps**
+1. Check DataSON workflow logs for trigger success
+2. Check external repository workflow logs for execution details
+3. Verify all required inputs are passed correctly
+4. Test with manual workflow dispatch first
 
 ---
 
-## 🚀 **Next Steps After Setup**
+## 📊 **Monitoring**
 
-1. **Monitor First Few PRs**: Watch how the workflow performs with real PRs
-2. **Enhance Regression Detection**: Add more sophisticated performance comparison logic  
-3. **Customize Thresholds**: Set appropriate performance regression thresholds
-4. **Create Documentation**: Document performance expectations for contributors
-5. **Integration with Other Tools**: Consider integrating with monitoring dashboards
+### **Regular Maintenance**
+- **Weekly**: Review workflow success rates
+- **Monthly**: Update benchmark thresholds
+- **Per Release**: Update performance baselines
 
----
-
-## 📈 **Success Metrics**
-
-After successful setup, you should see:
-
-✅ **Automated performance testing** on every PR  
-✅ **Consistent benchmark execution** times (15-20 minutes)  
-✅ **Detailed PR comments** with actionable insights  
-✅ **Performance artifact generation** for deep analysis  
-✅ **Early detection** of performance regressions  
-✅ **Improved confidence** in performance changes  
-
-The local benchmark workflow is **ready to use immediately** and provides comprehensive performance testing using your existing benchmark infrastructure!
+### **Performance Tracking**
+The external repository will maintain:
+- Performance history and trends
+- Regression detection baselines
+- Competitive analysis results
 
 ---
 
-## 🆘 **Support**
+## 🚀 **You're Ready!**
 
-If you encounter issues:
-1. **Check workflow logs** in GitHub Actions tab
-2. **Review benchmark script outputs** in artifacts
-3. **Test benchmark scripts locally** in the `benchmarks/` directory
-4. **Verify dependencies** are properly installed
+This setup provides:
+✅ **Automated performance testing** on every DataSON PR  
+✅ **Clean separation** between code and benchmarks  
+✅ **Professional reporting** with detailed analysis  
+✅ **Scalable architecture** for benchmark expansion  
 
-The integration is designed to be **robust and self-contained**, providing immediate value with minimal setup overhead.
+For detailed external repository setup, see: [External Benchmark Setup Guide](EXTERNAL_BENCHMARK_SETUP.md)

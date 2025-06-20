@@ -10,6 +10,10 @@ on:
       - 'setup.py'
   workflow_dispatch:
     inputs:
+      pr_number:
+        description: 'PR number (for manual runs)'
+        required: true
+        type: string
       benchmark_type:
         description: 'Benchmark type to run'
         required: false
@@ -61,7 +65,14 @@ jobs:
         WHEEL_NAME=$(basename "$WHEEL_FILE")
 
         echo "wheel-file=$WHEEL_NAME" >> $GITHUB_OUTPUT
-        echo "artifact-name=datason-pr-${{ github.event.number }}-${{ github.sha }}" >> $GITHUB_OUTPUT
+        # Handle both pull_request and workflow_dispatch triggers
+        if [ "${{ github.event_name }}" = "pull_request" ]; then
+          PR_NUM="${{ github.event.number }}"
+        else
+          PR_NUM="${{ github.event.inputs.pr_number }}"
+        fi
+
+        echo "artifact-name=datason-pr-${PR_NUM}-${{ github.sha }}" >> $GITHUB_OUTPUT
 
         echo "✅ Built wheel: $WHEEL_NAME"
         ls -la dist/
@@ -111,12 +122,11 @@ jobs:
               workflow_id: 'datason-pr-integration.yml',
               ref: 'main',
               inputs: {
-                pr_number: '${{ github.event.number }}',
+                pr_number: '${{ github.event_name == 'pull_request' && github.event.number || github.event.inputs.pr_number }}',
                 commit_sha: '${{ github.sha }}',
                 artifact_name: '${{ needs.build-datason.outputs.artifact-name }}',
                 datason_repo: '${{ github.repository }}',
-                benchmark_type: '${{ github.event.inputs.benchmark_type || 'pr_optimized' }}',
-                wheel_file: '${{ needs.build-datason.outputs.wheel-file }}'
+                benchmark_type: '${{ github.event.inputs.benchmark_type || 'pr_optimized' }}'
               }
             });
 
