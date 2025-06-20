@@ -1,36 +1,35 @@
 #!/bin/bash
 # Test execution script for datason with organized test categories
+# Note: Major performance benchmarking is handled by external datason-benchmarks repo
 
 case "$1" in
     "fast")
-        echo "🏃‍♂️ Running Fast Core Tests..."
-        python -m pytest tests/core --maxfail=5 --tb=short
+        echo "🏃‍♂️ Running Fast Unit Tests..."
+        python -m pytest tests/unit --maxfail=5 --tb=short
         ;;
     "full")
-        echo "🔄 Running Full Test Suite (excluding benchmarks)..."
-        python -m pytest tests/core tests/features tests/integration
+        echo "🔄 Running Full Test Suite..."
+        python -m pytest tests/unit tests/integration tests/edge_cases
         ;;
-    "benchmarks")
-        echo "📊 Running Benchmark Tests..."
-        python -m pytest tests/benchmarks --benchmark-only
-        ;;
-    "coverage")
-        echo "📈 Running Coverage Boost Tests..."
-        python -m pytest tests/coverage
+    "performance")
+        echo "📊 Running Local Performance Tests..."
+        python -m pytest tests/performance/
         ;;
     "all")
         echo "🚀 Running All Tests..."
-        python -m pytest tests/ tests/benchmarks --benchmark-skip
+        python -m pytest tests/
         ;;
     *)
-        echo "Usage: $0 {fast|full|benchmarks|coverage|all}"
+        echo "Usage: $0 {fast|full|performance|all}"
         echo ""
         echo "Test Categories:"
-        echo "  fast       - Fast core tests (~7-10 seconds)"
-        echo "  full       - All tests except benchmarks (~30-60 seconds)"
-        echo "  benchmarks - Performance benchmark tests (~60-120 seconds)"
-        echo "  coverage   - Coverage boost tests"
-        echo "  all        - Complete test suite"
+        echo "  fast        - Fast unit tests (~20-30 seconds)"
+        echo "  full        - All tests except performance (~45-60 seconds)"
+        echo "  performance - Local performance tests (~5-10 seconds)"
+        echo "  all         - Complete local test suite (~60-90 seconds)"
+        echo ""
+        echo "📊 Major performance benchmarking is handled by external datason-benchmarks repo"
+        echo "   and runs automatically on PRs via .github/workflows/pr-performance-check.yml"
         exit 1
         ;;
 esac

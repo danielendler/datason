@@ -1,8 +1,10 @@
 # datason Performance Benchmarks
 
+> **📊 Note**: This document contains historical performance measurements for reference. Current performance benchmarking is now handled by the external [datason-benchmarks](https://github.com/danielendler/datason-benchmarks) repository, which runs automatically on every PR.
+
 ## Overview
 
-This document contains **real performance measurements** for datason v0.7.0, obtained through systematic benchmarking rather than estimates. All benchmarks are reproducible using the included benchmark scripts.
+This document contains **real performance measurements** for datason v0.7.0, obtained through systematic benchmarking rather than estimates. All benchmarks were reproducible using the benchmark scripts that have been moved to the external repository.
 
 ## Benchmark Environment
 
@@ -520,24 +522,15 @@ The Pickle Bridge complements datason's existing performance profile:
 ### Benchmark Reproducibility
 
 ```bash
-# Run Pickle Bridge benchmarks
-cd datason/benchmarks
-
-# Quick validation
-python pickle_bridge_benchmark.py --test-flow minimal --iterations 3
-
-# ML-focused testing
-python pickle_bridge_benchmark.py --test-flow ml --iterations 5
-
-# Complete analysis (requires jsonpickle, dill)
-pip install jsonpickle dill
-python pickle_bridge_benchmark.py --test-flow full --iterations 5
+# Benchmark scripts are now in the external datason-benchmarks repository
+# Performance testing runs automatically on PRs via GitHub Actions
+# For manual benchmarking, see: https://github.com/danielendler/datason-benchmarks
 ```
 
 ## Methodology
 
 ### Benchmark Scripts
-All measurements come from two complementary benchmark suites:
+All measurements came from two complementary benchmark suites (now in external repository):
 
 1. **`benchmark_real_performance.py`**: Core performance baselines
 2. **`enhanced_benchmark_suite.py`**: Configuration system impact analysis
@@ -607,23 +600,23 @@ for 1000 repeated UUID strings on a typical laptop:
 Run with:
 
 ```bash
-python benchmarks/cache_scope_benchmark.py
+# Cache scope benchmarks are now in the external datason-benchmarks repository
+# See: https://github.com/danielendler/datason-benchmarks
 ```
 
 ## Running Benchmarks
 
 ```bash
-# Run baseline performance benchmarks
-python benchmarks/benchmark_real_performance.py
+# Performance benchmarking is now handled by external datason-benchmarks repository
+# Runs automatically on every PR via .github/workflows/pr-performance-check.yml
 
-# Run configuration performance analysis
-python benchmarks/enhanced_benchmark_suite.py
+# For manual benchmarking:
+# 1. Visit: https://github.com/danielendler/datason-benchmarks
+# 2. Clone the repository
+# 3. Follow the setup instructions
 
-# Run Pickle Bridge benchmarks (NEW in v0.3.0)
-python benchmarks/pickle_bridge_benchmark.py --test-flow full
-
-# Run specific performance tests
-pytest tests/test_performance.py -v
+# Run local performance tests (minimal)
+python -m pytest tests/performance/ -v
 ```
 
 ## Interpreting Results

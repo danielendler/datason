@@ -2,49 +2,41 @@
 
 This document describes the reorganized test structure for optimal development workflow and CI performance.
 
+> **📊 Performance Benchmarking**: Major performance benchmarking is now handled by the external [datason-benchmarks](https://github.com/danielendler/datason-benchmarks) repository, which runs automatically on every PR via `.github/workflows/pr-performance-check.yml`.
+
 ## 🏗️ Test Structure
 
 The test suite is organized into logical categories for better performance and maintainability:
 
 ```
 tests/
-├── core/           # Fast core functionality tests (~7-10 seconds)
-│   ├── test_core.py                    # Basic serialization
-│   ├── test_security.py                # Security features  
-│   ├── test_circular_references.py     # Circular reference handling
-│   ├── test_edge_cases.py              # Edge cases and error handling
-│   ├── test_converters.py              # Type converters
-│   ├── test_deserializers.py           # Deserialization functionality
-│   └── test_dataframe_orientation_regression.py
+├── unit/           # Unit tests for individual modules (~30-45 seconds)
+│   ├── test_api_*.py                   # API module tests
+│   ├── test_core_*.py                  # Core functionality tests
+│   ├── test_datetime_*.py              # DateTime utilities tests
+│   ├── test_deserializers_*.py         # Deserialization tests
+│   ├── test_utils_*.py                 # Utility function tests
+│   └── test_*_comprehensive.py         # Comprehensive module tests
 │
-├── features/       # Feature-specific tests (~10-20 seconds)
-│   ├── test_ml_serializers.py          # ML library integrations
-│   ├── test_chunked_streaming.py       # Streaming/chunking features
+├── integration/    # Integration tests (~15-25 seconds)
 │   ├── test_auto_detection_and_metadata.py  # Auto-detection
-│   └── test_template_deserialization.py     # Template deserialization
+│   ├── test_chunked_streaming.py       # Streaming/chunking features
+│   ├── test_ml_serializers.py          # ML library integrations
+│   ├── test_modern_api.py              # Modern API integration
+│   ├── test_pickle_bridge.py           # Pickle bridge functionality
+│   └── test_template_deserializer.py   # Template deserialization
 │
-├── integration/    # Integration tests (~5-15 seconds)
-│   ├── test_config_and_type_handlers.py     # Configuration integration
-│   ├── test_optional_dependencies.py        # Dependency integrations
-│   └── test_pickle_bridge.py                # Pickle bridge functionality
+├── edge_cases/     # Edge case tests (~10-15 seconds)
+│   ├── test_core_edge_cases.py         # Core edge cases
+│   ├── test_datetime_coverage_boost.py # DateTime edge cases
+│   ├── test_integrity_and_security.py  # Security edge cases
+│   └── test_uuid_edge_cases.py         # UUID edge cases
 │
-├── coverage/       # Coverage boost tests (~10-30 seconds)
-│   ├── test_coverage_boost.py               # General coverage boosting
-│   ├── test_core_coverage_boost.py          # Core module coverage
-│   ├── test_datetime_coverage_boost.py      # DateTime utils coverage
-│   ├── test_focused_coverage_boost.py       # Targeted coverage
-│   ├── test_init_coverage_boost.py          # __init__.py coverage
-│   ├── test_ml_serializers_coverage_boost.py # ML serializers coverage
-│   └── test_targeted_coverage_boost.py      # Additional targeted tests
-│
-├── benchmarks/     # Performance benchmark tests (~60-120 seconds)
-│   ├── test_benchmarks.py                   # Core performance benchmarks
-│   ├── test_chunked_streaming_benchmarks.py # Streaming performance
-│   ├── test_template_deserialization_benchmarks.py # Template performance
-│   └── test_performance.py                  # General performance tests
+├── performance/    # Specific performance tests (kept locally)
+│   └── test_idempotency_performance.py # Idempotency performance tests
 │
 ├── conftest.py     # Shared test configuration
-└── __init__.py     # Test package marker
+└── README.md       # This documentation
 ```
 
 ## 🚀 Quick Start
@@ -78,20 +70,20 @@ python -m pytest tests/coverage
 
 ### Performance Testing
 ```bash
-# Run benchmark tests for performance analysis (~60-120 seconds)
-./scripts/run_tests.sh benchmarks
+# Run local performance tests for specific functionality
+python -m pytest tests/performance/
 
-# Or using pytest directly:
-python -m pytest tests/benchmarks --benchmark-only
+# Note: Main performance benchmarking is now handled by the external
+# datason-benchmarks repository via automated PR performance checks
 ```
 
 ### Complete Testing
 ```bash
-# Run everything including benchmarks
+# Run all local tests (unit, integration, edge cases, performance)
 ./scripts/run_tests.sh all
 
 # Or using pytest directly:
-python -m pytest tests/ tests/benchmarks --benchmark-skip
+python -m pytest tests/
 ```
 
 ## 📊 Performance Improvements
@@ -103,8 +95,8 @@ The reorganized structure provides significant performance improvements:
 | **Fast Core** | 137 tests | ~7-10 seconds | Development, quick validation |
 | **Full Suite** | ~400 tests | ~30-60 seconds | Pre-commit, CI main |
 | **Coverage** | ~200 tests | ~10-30 seconds | Coverage improvement |
-| **Benchmarks** | ~90 tests | ~60-120 seconds | Performance analysis |
-| **Complete** | ~540 tests | ~90-150 seconds | Release validation |
+| **Performance** | ~5 tests | ~5-10 seconds | Local performance validation |
+| **Complete** | ~450 tests | ~60-90 seconds | Release validation |
 
 **Previous:** All tests took ~103 seconds  
 **Now:** Fast tests take ~7 seconds (93% faster!)
@@ -117,7 +109,7 @@ Tests are categorized using pytest markers:
 - `@pytest.mark.features` - Feature-specific tests  
 - `@pytest.mark.integration` - Integration scenarios
 - `@pytest.mark.coverage` - Coverage boost tests
-- `@pytest.mark.benchmark` - Performance benchmarks
+- `@pytest.mark.performance` - Local performance tests
 - `@pytest.mark.slow` - Long-running tests (excluded from fast runs)
 
 ### Dependency Markers
@@ -132,11 +124,11 @@ The test configuration is optimized in `pyproject.toml`:
 
 ```toml
 [tool.pytest.ini_options]
-# Exclude benchmarks by default for faster testing
-addopts = ["-m", "not benchmark"]
+# Optimized for faster testing
+addopts = ["-v", "--tb=short"]
 
 # Test search paths
-testpaths = ["tests/core", "tests/features", "tests/integration", "tests/coverage"]
+testpaths = ["tests/unit", "tests/integration", "tests/edge_cases", "tests/performance"]
 ```
 
 ## 🚦 CI/CD Integration
@@ -150,18 +142,17 @@ testpaths = ["tests/core", "tests/features", "tests/integration", "tests/coverag
 
 # Full tests for pull requests
 - name: Run Full Tests
-  run: python -m pytest tests/core tests/features tests/integration
+  run: python -m pytest tests/unit tests/integration tests/edge_cases
 
-# Benchmarks for performance monitoring (optional)
-- name: Run Benchmarks
-  run: python -m pytest tests/benchmarks --benchmark-only
+# Performance benchmarks now handled by external datason-benchmarks repo
+# Triggered automatically on PRs via .github/workflows/pr-performance-check.yml
 ```
 
 ### Local Development Workflow
 
 1. **During Development:** `./scripts/run_tests.sh fast`
 2. **Before Commit:** `./scripts/run_tests.sh full`  
-3. **Performance Check:** `./scripts/run_tests.sh benchmarks`
+3. **Performance Check:** Handled automatically by external datason-benchmarks
 4. **Coverage Check:** `./scripts/run_tests.sh coverage`
 
 ## 🎯 Best Practices
@@ -172,14 +163,14 @@ testpaths = ["tests/core", "tests/features", "tests/integration", "tests/coverag
 2. **New features** → `tests/features/`
 3. **Integration scenarios** → `tests/integration/`
 4. **Coverage gaps** → `tests/coverage/`
-5. **Performance tests** → `tests/benchmarks/`
+5. **Performance tests** → `tests/performance/` (minimal local tests only)
 
 ### Test Performance Guidelines
 
 - Core tests should complete in < 10 seconds total
 - Individual test functions should be < 100ms
 - Use `@pytest.mark.slow` for tests > 500ms
-- Benchmark tests can be longer but should be in `tests/benchmarks/`
+- Major performance benchmarking is handled by external datason-benchmarks repo
 
 ### Markers Usage
 
@@ -197,9 +188,9 @@ def test_dataframe_feature():
     """Feature test requiring pandas."""
     pass
 
-@pytest.mark.benchmark
-def test_performance(benchmark):
-    """Performance benchmark test."""
+@pytest.mark.performance
+def test_local_performance():
+    """Local performance validation test."""
     pass
 ```
 
@@ -220,18 +211,19 @@ python -m pytest --collect-only
 find tests/ -name "test_*.py" | wc -l
 ```
 
-**Benchmark tests not running:**
+**Performance benchmarking:**
 ```bash
-# Install benchmark plugin
-pip install pytest-benchmark
+# Major benchmarks now run automatically via external datason-benchmarks repo
+# Check PR comments for performance analysis results
 ```
 
 ### Performance Issues
 
 If tests are still slow:
-1. Check for benchmark tests in non-benchmark directories
+1. Check for slow tests in non-performance directories
 2. Look for tests with expensive setup/teardown  
 3. Use `--durations=10` to identify slow tests
+4. Major performance analysis is now handled by external datason-benchmarks
 4. Consider moving slow tests to appropriate directories
 
 ## 📈 Coverage Reporting
