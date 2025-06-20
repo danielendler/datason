@@ -354,7 +354,26 @@ class TestImportValidation:
 
     def test_module_metadata_consistency(self):
         """Test that module metadata is consistent."""
-        assert datason.__version__ == "0.11.1"
+        # Get version from pyproject.toml to make test robust across versions
+        import re
+        from pathlib import Path
+
+        project_root = Path(__file__).parent.parent.parent
+        pyproject_path = project_root / "pyproject.toml"
+
+        # Read version from pyproject.toml using regex (Python 3.8 compatible)
+        with open(pyproject_path, encoding="utf-8") as f:
+            content = f.read()
+
+        version_match = re.search(r'version = "([^"]+)"', content)
+        if not version_match:
+            pytest.fail("Could not find version in pyproject.toml")
+
+        expected_version = version_match.group(1)
+
+        assert datason.__version__ == expected_version, (
+            f"Version mismatch: expected {expected_version}, got {datason.__version__}"
+        )
         assert datason.__author__ == "datason Contributors"
         assert datason.__license__ == "MIT"
         assert "serialization" in datason.__description__.lower()
