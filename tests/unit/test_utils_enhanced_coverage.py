@@ -136,7 +136,7 @@ class TestDeepCompareEdgeCases:
         result = utils.deep_compare(list1, list2)
 
         assert not result["are_equal"]
-        assert any("Length difference" in diff for diff in result["differences"])
+        assert any("Length mismatch" in diff for diff in result["differences"])
 
     def test_string_length_warnings(self):
         """Test string length warnings - line 312-319."""
