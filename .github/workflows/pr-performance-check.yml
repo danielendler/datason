@@ -1,0 +1,323 @@
+name: 🚀 DataSON PR Performance Benchmark
+
+on:
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'src/**'
+      - 'datason/**'
+      - 'pyproject.toml'
+      - 'setup.py'
+  workflow_dispatch:
+    inputs:
+      benchmark_type:
+        description: 'Benchmark type to run'
+        required: false
+        default: 'pr_optimized'
+        type: choice
+        options:
+        - pr_optimized
+        - quick
+        - competitive
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  build-datason:
+    name: 📦 Build DataSON Package
+    runs-on: ubuntu-latest
+
+    outputs:
+      artifact-name: ${{ steps.build.outputs.artifact-name }}
+      wheel-file: ${{ steps.build.outputs.wheel-file }}
+
+    steps:
+    - name: 📥 Checkout DataSON PR
+      uses: actions/checkout@v4
+
+    - name: 🐍 Set up Python 3.11
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
+
+    - name: 📦 Install build dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install build wheel setuptools
+
+    - name: 🔨 Build DataSON wheel
+      id: build
+      run: |
+        # Clean any previous builds
+        rm -rf dist/ build/ *.egg-info/
+
+        # Build wheel
+        python -m build --wheel
+
+        # Get wheel filename
+        WHEEL_FILE=$(ls dist/*.whl | head -n1)
+        WHEEL_NAME=$(basename "$WHEEL_FILE")
+
+        echo "wheel-file=$WHEEL_NAME" >> $GITHUB_OUTPUT
+        echo "artifact-name=datason-pr-${{ github.event.number }}-${{ github.sha }}" >> $GITHUB_OUTPUT
+
+        echo "✅ Built wheel: $WHEEL_NAME"
+        ls -la dist/
+
+    - name: 📤 Upload DataSON wheel
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ steps.build.outputs.artifact-name }}
+        path: dist/*.whl
+        retention-days: 7
+
+    - name: 🧪 Quick smoke test
+      run: |
+        # Install the wheel we just built
+        pip install dist/*.whl
+
+        # Basic smoke test
+        python -c "
+        import datason
+        print(f'DataSON {datason.__version__} installed successfully')
+
+        # Test basic functionality
+        test_data = {'test': 'value', 'number': 42}
+        serialized = datason.serialize(test_data)
+        deserialized = datason.deserialize(serialized)
+        assert deserialized == test_data
+        print('✅ Basic serialization test passed')
+        "
+
+  benchmark-pr:
+    name: 📊 Run PR Benchmarks
+    runs-on: ubuntu-latest
+    needs: build-datason
+    timeout-minutes: 15
+
+    steps:
+    - name: 📥 Checkout benchmark repository
+      uses: actions/checkout@v4
+      with:
+        repository: ${{ env.BENCHMARK_REPO || 'datason/datason-benchmarks' }}
+        path: benchmarks
+
+    - name: 🐍 Set up Python 3.11
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
+
+    - name: 💾 Cache benchmark dependencies
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/pip
+        key: pr-benchmark-${{ runner.os }}-py3.11-${{ hashFiles('benchmarks/requirements.txt') }}
+        restore-keys: |
+          pr-benchmark-${{ runner.os }}-py3.11-
+
+    - name: 📦 Install benchmark dependencies
+      run: |
+        cd benchmarks
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+        # Install competitor libraries for comparison
+        pip install orjson ujson msgpack jsonpickle pandas numpy
+
+    - name: 📥 Download DataSON PR artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: ${{ needs.build-datason.outputs.artifact-name }}
+        path: datason-pr-wheel/
+
+    - name: 🔧 Install DataSON from PR
+      run: |
+        # Install the PR version of DataSON
+        pip install datason-pr-wheel/*.whl
+
+        # Verify installation
+        python -c "
+        import datason
+        print(f'📦 DataSON {datason.__version__} from PR installed')
+        print(f'📍 Location: {datason.__file__}')
+        "
+
+    - name: 🚀 Run optimized PR benchmark
+      run: |
+        cd benchmarks
+
+        # Create results directory
+        mkdir -p data/results docs/results
+
+        # Run PR-optimized benchmark suite
+        echo "🎯 Running PR-optimized benchmark suite..."
+        python scripts/pr_optimized_benchmark.py
+
+        # Also run quick competitive for context
+        echo "📊 Running quick competitive benchmark for context..."
+        python scripts/run_benchmarks.py --quick --generate-report
+
+      env:
+        GITHUB_SHA: ${{ github.sha }}
+        GITHUB_REF: ${{ github.ref }}
+        GITHUB_RUN_ID: ${{ github.run_id }}
+        PR_NUMBER: ${{ github.event.number }}
+
+    - name: 📈 Generate Phase 4 enhanced report
+      run: |
+        cd benchmarks
+
+        # Generate Phase 4 enhanced report for PR
+        echo "🎨 Generating Phase 4 enhanced PR report..."
+        python scripts/phase4_enhanced_reports.py \
+          --input data/results/latest_quick.json \
+          --output docs/results/pr_${{ github.event.number }}_enhanced.html \
+          --title "PR #${{ github.event.number }} Performance Analysis" \
+          --pr-mode
+
+    - name: 🔍 Advanced regression detection
+      run: |
+        cd benchmarks
+
+        # Run regression detection against baseline
+        echo "🔍 Running advanced regression detection..."
+
+        if [ -f data/results/baseline.json ]; then
+          python scripts/regression_detector.py \
+            data/results/latest_quick.json \
+            --baseline data/results/baseline.json \
+            --pr-comment pr_regression_analysis.md \
+            --fail-threshold 0.30 \
+            --warn-threshold 0.15 \
+            --pr-number ${{ github.event.number }}
+
+          REGRESSION_EXIT_CODE=$?
+          echo "REGRESSION_DETECTED=$([ $REGRESSION_EXIT_CODE -ne 0 ] && echo 'true' || echo 'false')" >> $GITHUB_ENV
+        else
+          echo "📝 No baseline found - this will establish the baseline"
+          echo "REGRESSION_DETECTED=false" >> $GITHUB_ENV
+
+          # Create baseline establishment message
+          echo "# Performance Baseline Establishment" > pr_regression_analysis.md
+          echo "" >> pr_regression_analysis.md
+          echo "This is the first benchmark run or no previous baseline was found." >> pr_regression_analysis.md
+          echo "Future PRs will be compared against this performance baseline." >> pr_regression_analysis.md
+          echo "" >> pr_regression_analysis.md
+          echo "The benchmark completed successfully and will serve as the baseline for:" >> pr_regression_analysis.md
+          echo "- Serialization performance comparisons" >> pr_regression_analysis.md
+          echo "- Feature compatibility validation" >> pr_regression_analysis.md
+          echo "- Regression detection in future PRs" >> pr_regression_analysis.md
+        fi
+
+    - name: 💬 Generate enhanced PR comment
+      run: |
+        cd benchmarks
+
+        echo "📝 Generating comprehensive PR comment..."
+
+        # Create comprehensive PR comment header
+        echo "# 🚀 PR Performance Analysis" > pr_performance_comment.md
+        echo "" >> pr_performance_comment.md
+        echo "**Automated Performance Check** for PR #${{ github.event.number }}" >> pr_performance_comment.md
+        echo "**Commit**: ${{ github.sha }}" >> pr_performance_comment.md
+        echo "**DataSON Version**: Built from this PR" >> pr_performance_comment.md
+        echo "" >> pr_performance_comment.md
+        echo "## 📊 Performance Summary" >> pr_performance_comment.md
+        echo "" >> pr_performance_comment.md
+
+        # Add regression analysis if available
+        if [ -f pr_regression_analysis.md ]; then
+          cat pr_regression_analysis.md >> pr_performance_comment.md
+          echo "" >> pr_performance_comment.md
+        fi
+
+        # Add enhanced report section
+        echo "## 📈 Enhanced Interactive Report" >> pr_performance_comment.md
+        echo "" >> pr_performance_comment.md
+        echo "A comprehensive Phase 4 enhanced report has been generated with:" >> pr_performance_comment.md
+        echo "- 📊 Performance tables with smart unit formatting" >> pr_performance_comment.md
+        echo "- 🔍 ML framework compatibility analysis" >> pr_performance_comment.md
+        echo "- 🛡️ Security features effectiveness metrics" >> pr_performance_comment.md
+        echo "- 💡 Domain-specific optimization recommendations" >> pr_performance_comment.md
+        echo "" >> pr_performance_comment.md
+        echo "**Download the \`pr-performance-analysis\` artifact** to view the full interactive HTML report." >> pr_performance_comment.md
+        echo "" >> pr_performance_comment.md
+        echo "## 🎯 Benchmark Coverage" >> pr_performance_comment.md
+        echo "" >> pr_performance_comment.md
+        echo "This PR was tested against our **optimized dataset suite** based on Phase 1-4 learnings:" >> pr_performance_comment.md
+        echo "" >> pr_performance_comment.md
+        echo "| Dataset | Domain | Focus Area | Status |" >> pr_performance_comment.md
+        echo "|---------|--------|------------|--------|" >> pr_performance_comment.md
+        echo "| Web API Response | \`web_api\` | Common serialization patterns | ✅ Tested |" >> pr_performance_comment.md
+        echo "| ML Training Data | \`machine_learning\` | Complex objects + NumPy | ✅ Tested |" >> pr_performance_comment.md
+        echo "| Financial Transaction | \`finance\` | Precision decimals/datetime | ✅ Tested |" >> pr_performance_comment.md
+        echo "| Mixed Types Challenge | \`type_testing\` | Edge case handling | ✅ Tested |" >> pr_performance_comment.md
+        echo "| Security PII Test | \`security\` | PII detection/redaction | ✅ Tested |" >> pr_performance_comment.md
+        echo "" >> pr_performance_comment.md
+
+        # Add performance status
+        if [ "$REGRESSION_DETECTED" = "true" ]; then
+          echo "## ⚠️ Performance Alert" >> pr_performance_comment.md
+          echo "" >> pr_performance_comment.md
+          echo "**Potential performance regression detected.** Please review the detailed analysis above." >> pr_performance_comment.md
+        else
+          echo "## ✅ Performance Status" >> pr_performance_comment.md
+          echo "" >> pr_performance_comment.md
+          echo "No significant performance regressions detected. This PR maintains or improves performance." >> pr_performance_comment.md
+        fi
+
+        echo "" >> pr_performance_comment.md
+        echo "---" >> pr_performance_comment.md
+        echo "*This comment was automatically generated by the DataSON benchmark suite*" >> pr_performance_comment.md
+
+    - name: 💬 Post PR comment
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+
+          try {
+            const comment = fs.readFileSync('benchmarks/pr_performance_comment.md', 'utf8');
+
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+            console.log('✅ Posted performance analysis comment to PR');
+          } catch (error) {
+            console.error('❌ Failed to post PR comment:', error);
+          }
+
+    - name: 📤 Upload comprehensive artifacts
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: pr-performance-analysis-${{ github.event.number }}
+        path: |
+          benchmarks/data/results/pr_optimized_*.json
+          benchmarks/data/results/latest_quick.json
+          benchmarks/docs/results/pr_${{ github.event.number }}_enhanced.html
+          benchmarks/pr_regression_analysis.md
+          benchmarks/pr_performance_comment.md
+        retention-days: 30
+
+    - name: ❌ Fail on critical regression
+      if: env.REGRESSION_DETECTED == 'true'
+      run: |
+        echo "❌ Critical performance regression detected!"
+        echo "This PR introduces performance issues that exceed the acceptable threshold."
+        echo "Please review the regression analysis and optimize the changes."
+        exit 1
+
+    - name: ✅ Performance check complete
+      if: env.REGRESSION_DETECTED != 'true'
+      run: |
+        echo "✅ Performance check passed"
+        echo "📊 No critical regressions detected"
+        echo "🚀 This PR is ready for review from a performance perspective"
