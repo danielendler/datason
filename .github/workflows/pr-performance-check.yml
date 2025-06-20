@@ -4,10 +4,10 @@ on:
   pull_request:
     branches: [ main ]
     paths:
-      - 'src/**'
       - 'datason/**'
       - 'pyproject.toml'
       - 'setup.py'
+      - '*.py'
   workflow_dispatch:
     inputs:
       pr_number:
