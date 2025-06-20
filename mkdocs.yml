@@ -210,6 +210,7 @@ nav:
     - Tooling Guide: TOOLING_GUIDE.md
     - CI/CD Pipeline: CI_PIPELINE_GUIDE.md
     - CI Performance: CI_PERFORMANCE.md
+    - External Benchmark Setup: EXTERNAL_BENCHMARK_SETUP.md
     - Testing & Integration: TESTING_INTEGRATION_IMPROVEMENTS.md
     - Build & Publish: BUILD_PUBLISH.md
     - Release Management: RELEASE_MANAGEMENT.md
