@@ -26,10 +26,21 @@ This guide sets up automated PR performance testing using the **external `dataso
 4. Click **"Generate token"** and **copy immediately**
 
 ### **Add Repository Secret**
+
+**⚠️ Important**: Add the token to **BOTH** repositories:
+
+**DataSON Repository:**
 1. Go to: https://github.com/danielendler/datason/settings/secrets/actions
 2. Click **"New repository secret"**
 3. Name: `BENCHMARK_REPO_TOKEN`
 4. Value: [Your token from above]
+5. Click **"Add secret"**
+
+**datason-benchmarks Repository:**
+1. Go to: https://github.com/danielendler/datason-benchmarks/settings/secrets/actions
+2. Click **"New repository secret"**
+3. Name: `BENCHMARK_REPO_TOKEN`
+4. Value: [Same token from above]
 5. Click **"Add secret"**
 
 ---

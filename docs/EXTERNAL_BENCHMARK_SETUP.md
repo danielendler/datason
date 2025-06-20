@@ -30,11 +30,23 @@ If fine-grained isn't available, use the classic token with:
 - ✅ **repo** (Full control of repositories)
 - ✅ **workflow** (Update GitHub Actions)
 
-### **Add to DataSON Repository**
+### **Add to BOTH Repositories**
+
+**⚠️ Critical**: The token must be added to **both** repositories:
+
 ```bash
-# Set secret in DataSON repo
+# Add to DataSON repository
+cd /path/to/datason
+echo 'YOUR_TOKEN_HERE' | gh secret set BENCHMARK_REPO_TOKEN
+
+# Add to datason-benchmarks repository  
+cd /path/to/datason-benchmarks
 echo 'YOUR_TOKEN_HERE' | gh secret set BENCHMARK_REPO_TOKEN
 ```
+
+**Or via GitHub Web Interface:**
+1. **DataSON**: https://github.com/danielendler/datason/settings/secrets/actions
+2. **datason-benchmarks**: https://github.com/danielendler/datason-benchmarks/settings/secrets/actions
 
 ---
 
