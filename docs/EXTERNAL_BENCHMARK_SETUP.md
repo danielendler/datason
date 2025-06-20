@@ -19,7 +19,7 @@ Set up the external `datason-benchmarks` repository for automated PR performance
    Repositories: danielendler/datason + danielendler/datason-benchmarks
 
    Permissions:
-   ✅ Actions: Write (trigger workflows)
+   ✅ Actions: Write (trigger workflows + download artifacts)
    ✅ Contents: Read (access code)  
    ✅ Metadata: Read (repo info)
    ✅ Pull requests: Write (post comments)
@@ -81,18 +81,97 @@ jobs:
         pip install -r requirements.txt
         pip install orjson ujson msgpack pandas numpy
 
-    - name: Download DataSON wheel
-      uses: actions/download-artifact@v4
+    - name: Download DataSON wheel from external repository
+      uses: actions/github-script@v7
       with:
-        name: ${{ github.event.inputs.artifact_name }}
-        path: wheel/
         github-token: ${{ secrets.GITHUB_TOKEN }}
-        repository: ${{ github.event.inputs.datason_repo }}
+        script: |
+          const fs = require('fs');
 
-    - name: Install DataSON from PR
+          // Parse repository info
+          const [owner, repo] = '${{ github.event.inputs.datason_repo }}'.split('/');
+          const artifactName = '${{ github.event.inputs.artifact_name }}';
+          const commitSha = '${{ github.event.inputs.commit_sha }}';
+
+          console.log(`🔍 Searching for artifact: ${artifactName}`);
+          console.log(`📦 Repository: ${owner}/${repo}`);
+          console.log(`🔗 Commit: ${commitSha}`);
+
+          // Get workflow runs for the commit
+          const runsResponse = await github.rest.actions.listWorkflowRunsForRepo({
+            owner: owner,
+            repo: repo,
+            head_sha: commitSha,
+            status: 'completed',
+            per_page: 20
+          });
+
+          console.log(`Found ${runsResponse.data.workflow_runs.length} completed runs`);
+
+          // Find the artifact from the most recent successful run
+          let artifactId = null;
+          for (const run of runsResponse.data.workflow_runs) {
+            if (run.conclusion === 'success') {
+              console.log(`🔍 Checking run ${run.id} (${run.name})`);
+
+              try {
+                const artifactsResponse = await github.rest.actions.listWorkflowRunArtifacts({
+                  owner: owner,
+                  repo: repo,
+                  run_id: run.id
+                });
+
+                const artifact = artifactsResponse.data.artifacts.find(a => a.name === artifactName);
+                if (artifact && !artifact.expired) {
+                  console.log(`✅ Found artifact: ${artifact.name} (${artifact.size_in_bytes} bytes)`);
+                  artifactId = artifact.id;
+                  break;
+                }
+              } catch (error) {
+                console.log(`⚠️ Could not access artifacts for run ${run.id}: ${error.message}`);
+              }
+            }
+          }
+
+          if (!artifactId) {
+            throw new Error(`❌ Could not find artifact '${artifactName}' for commit ${commitSha}`);
+          }
+
+          // Download the artifact
+          console.log('📥 Downloading artifact...');
+          const download = await github.rest.actions.downloadArtifact({
+            owner: owner,
+            repo: repo,
+            artifact_id: artifactId,
+            archive_format: 'zip'
+          });
+
+          // Save the artifact
+          fs.mkdirSync('wheel', { recursive: true });
+          fs.writeFileSync('wheel/artifact.zip', Buffer.from(download.data));
+
+          console.log('✅ Artifact downloaded successfully');
+
+    - name: Extract and install DataSON wheel
       run: |
-        pip install wheel/*.whl
-        python -c "import datason; print(f'✅ DataSON {datason.__version__}')"
+        cd wheel
+        unzip -q artifact.zip
+        ls -la
+        echo "📦 Extracted files:"
+        find . -name "*.whl" -type f
+
+        # Install the wheel
+        WHEEL_FILE=$(find . -name "*.whl" -type f | head -n1)
+        if [ -z "$WHEEL_FILE" ]; then
+          echo "❌ No wheel file found in artifact"
+          exit 1
+        fi
+
+        echo "🔧 Installing: $WHEEL_FILE"
+        pip install "$WHEEL_FILE"
+
+        # Verify installation
+        python -c "import datason; print(f'✅ DataSON {datason.__version__} installed successfully')"
 
     - name: Run benchmarks
       run: |
@@ -221,7 +300,7 @@ gh pr create --title "Test Benchmark" --body "Testing external benchmark integra
 
 **❌ "Permission denied"** → Check token permissions and expiration  
 **❌ "Workflow not found"** → Ensure file is exactly `datason-pr-integration.yml` on main branch  
-**❌ "Artifact download failed"** → Verify cross-repo artifact permissions  
+**❌ "Artifact download failed"** → Check token permissions and artifact retention (7+ days)  
 
 ---
 

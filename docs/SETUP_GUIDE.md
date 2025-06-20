@@ -21,6 +21,7 @@ This guide sets up automated PR performance testing using the **external `dataso
    Required Scopes:
    ☑️ repo (Full control of repositories)
    ☑️ workflow (Update GitHub Action workflows)
+   ☑️ actions:read (Download artifacts from workflows)
    ```
 4. Click **"Generate token"** and **copy immediately**
 
