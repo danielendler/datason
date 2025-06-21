@@ -86,7 +86,7 @@ filterwarnings = [ "error", "default::UserWarning", "ignore::DeprecationWarning"
 
 [tool.coverage.run]
 source = [ "datason",]
-omit = [ "*/tests/*", "*/test_*.py", "benchmarks/*", "scripts/*", "examples/*",]
+omit = [ "*/tests/*", "*/test_*.py", "scripts/*", "examples/*",]
 branch = true
 
 [tool.coverage.report]
@@ -106,4 +106,4 @@ directory = "htmlcov"
 packages = [ "datason",]
 
 [tool.hatch.build.targets.sdist]
-exclude = [ "/.git", "/.github", "/.mypy_cache", "/.pytest_cache", "/.ruff_cache", "/venv", "/htmlcov", "/.coverage", "/coverage.xml", "/dist", "/build", "*.egg-info", "__pycache__", "/benchmarks", "/examples", "/tests", "/.pre-commit-config.yaml",]
+exclude = [ "/.git", "/.github", "/.mypy_cache", "/.pytest_cache", "/.ruff_cache", "/venv", "/htmlcov", "/.coverage", "/coverage.xml", "/dist", "/build", "*.egg-info", "__pycache__", "/examples", "/tests", "/.pre-commit-config.yaml",]

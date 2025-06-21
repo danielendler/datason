@@ -353,12 +353,12 @@ jobs:
     - name: 🎨 Run Ruff linter
       run: |
         echo "🔍 Running Ruff linter..."
-        ruff check datason/ tests/ examples/ benchmarks/ scripts/ --output-format=github
+        ruff check datason/ tests/ examples/ scripts/ --output-format=github
 
     - name: 🎨 Run Ruff formatter check
       run: |
         echo "🎨 Checking code formatting..."
-        ruff format --check datason/ tests/ examples/ benchmarks/ scripts/
+        ruff format --check datason/ tests/ examples/ scripts/
 
     - name: 🔍 Type check with mypy
       run: |
@@ -376,7 +376,7 @@ jobs:
         echo "## 🔍 Code Quality & Security Report" >> $GITHUB_STEP_SUMMARY
 
         echo "### 🎨 Ruff Linting" >> $GITHUB_STEP_SUMMARY
-        if ruff check datason/ tests/ examples/ benchmarks/ scripts/ --output-format=text > ruff-results.txt 2>&1; then
+        if ruff check datason/ tests/ examples/ scripts/ --output-format=concise > ruff-results.txt 2>&1; then
           echo "✅ **Linting**: All checks passed" >> $GITHUB_STEP_SUMMARY
         else
           echo "❌ **Linting**: Issues found" >> $GITHUB_STEP_SUMMARY
@@ -389,7 +389,7 @@ jobs:
         fi
 
         echo "### 🎨 Code Formatting" >> $GITHUB_STEP_SUMMARY
-        if ruff format --check --diff datason/ tests/ examples/ benchmarks/ scripts/ > format-results.txt 2>&1; then
+        if ruff format --check --diff datason/ tests/ examples/ scripts/ > format-results.txt 2>&1; then
           echo "✅ **Formatting**: All files properly formatted" >> $GITHUB_STEP_SUMMARY
         else
           echo "❌ **Formatting**: Issues found" >> $GITHUB_STEP_SUMMARY
