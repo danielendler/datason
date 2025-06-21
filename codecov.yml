@@ -53,7 +53,7 @@ ignore:
   - "*_test.py"
   # Examples and benchmarks
   - "examples/"
-  - "benchmarks/"
+
   # Scripts and tooling
   - "scripts/"
   # Build artifacts
