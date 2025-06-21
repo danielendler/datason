@@ -376,7 +376,7 @@ jobs:
         echo "## 🔍 Code Quality & Security Report" >> $GITHUB_STEP_SUMMARY
 
         echo "### 🎨 Ruff Linting" >> $GITHUB_STEP_SUMMARY
-        if ruff check datason/ tests/ examples/ scripts/ --output-format=text > ruff-results.txt 2>&1; then
+        if ruff check datason/ tests/ examples/ scripts/ --output-format=concise > ruff-results.txt 2>&1; then
           echo "✅ **Linting**: All checks passed" >> $GITHUB_STEP_SUMMARY
         else
           echo "❌ **Linting**: Issues found" >> $GITHUB_STEP_SUMMARY
