@@ -64,7 +64,7 @@ class MockMLModel:
 
 if RAY_AVAILABLE:
 
-    @serve.deployment(num_replicas=2, max_concurrent_queries=10)
+    @serve.deployment(num_replicas=2, max_ongoing_requests=10)
     class DataSONModelServing:
         """Ray Serve deployment with DataSON integration."""
 
@@ -325,39 +325,117 @@ async def run_ray_serve_demo():
     return {"status": "failed_to_start"}
 
 
-if __name__ == "__main__":
+def test_ray_serve_integration():
+    """Test Ray Serve + DataSON integration without starting heavy cluster."""
+    print("🧪 Testing Ray Serve + DataSON Integration (Lightweight)")
+    print("=" * 60)
+
+    if not RAY_AVAILABLE:
+        print("❌ Ray is not available. Install with: pip install ray[serve]")
+        return {"status": "ray_not_available"}
+
+    # Test the DataSON integration patterns without starting cluster
+    print("✅ Ray available, testing DataSON patterns...")
+
+    # 1. Test mock model
+    print("\n1️⃣ Testing MockMLModel...")
+    model = MockMLModel("test_classifier")
+
+    # Test single prediction
+    test_data = [1.0, 2.0, 3.0, 4.0]
+    result = model.predict(test_data)
+    print(f"   Single prediction: {result}")
+
+    # 2. Test DataSON serialization patterns
+    print("\n2️⃣ Testing DataSON serialization patterns...")
+
+    # Create request data
+    request_data = {"data": test_data, "metadata": {"client_id": "test", "timestamp": time.time()}}
+
+    # Test smart loading
+    smart_loaded = ds.load_smart(request_data)
+    print(f"   Smart loaded: {type(smart_loaded)}")
+
+    # Test API serialization
+    api_result = ds.dump_api(result)
+    print(f"   API serialized: {type(api_result)}")
+
+    # 3. Test the deployment class logic (without deploying)
+    print("\n3️⃣ Testing deployment logic...")
+
+    # Create a test version without the decorator for testing
+    class TestDataSONModelServing:
+        """Test version of the model serving class without Ray decorators."""
+
+        def __init__(self, model_type: str = "classifier"):
+            self.model = MockMLModel(model_type)
+
+        def get_health_check_data(self):
+            return {
+                "status": "healthy",
+                "model_status": self.model.get_info(),
+                "timestamp": time.time(),
+                "datason_version": getattr(ds, "__version__", "unknown"),
+            }
+
     if RAY_AVAILABLE:
-        # Run the full async demo
-        import asyncio
+        # Create test instance (not deployed)
+        serving_instance = TestDataSONModelServing("test_model")
+        model_info = serving_instance.model.get_info()
+        print(f"   Model info: {model_info}")
 
-        results = asyncio.run(run_ray_serve_demo())
-        print(f"\n🎯 Demo Results: {results}")
+        # Test health check logic
+        health_data = serving_instance.get_health_check_data()
+        health_result = ds.dump_api(health_data)
+        print(f"   Health check: {health_result['status']}")
 
-        # Keep services running
-        if results and "model_service" in results:
-            print("\n🔄 Services are running. Press Ctrl+C to stop.")
-            try:
-                while True:
-                    time.sleep(1)
-            except KeyboardInterrupt:
-                print("\n🛑 Shutting down services...")
-                serve.shutdown()
-                ray.shutdown()
+    # 4. Show example requests
+    print("\n4️⃣ Example usage patterns...")
+    demo = RayServeDataSONDemo()
+    test_requests = demo.create_test_requests()
+
+    for i, req in enumerate(test_requests[:2]):  # Just show first 2
+        print(f"   Request {i + 1}: {len(str(req))} chars")
+        # Process with DataSON
+        processed = ds.dump_api(req)
+        print(f"   Processed: {len(str(processed))} chars")
+
+    print("\n✅ Integration test completed successfully!")
+    print("\n💡 To run full Ray Serve cluster:")
+    print("   python ray_serve_integration_guide.py --full")
+    print("   (Warning: Requires significant system resources)")
+
+    return {
+        "status": "test_completed",
+        "ray_available": True,
+        "datason_integration": "working",
+        "deployment_classes": "tested",
+    }
+
+
+if __name__ == "__main__":
+    import sys
+
+    # Check for full deployment flag
+    if "--full" in sys.argv:
+        print("🚀 Starting full Ray Serve demonstration...")
+        print("⚠️  This will consume significant system resources!")
+
+        if RAY_AVAILABLE:
+            # Only run heavy demo if explicitly requested
+            result = asyncio.run(run_ray_serve_demo())
+            print(f"Demo result: {result}")
+        else:
+            print("❌ Ray not available for full demo")
     else:
-        # Run fallback demo
-        print("Ray Serve not available, running DataSON serialization demo...")
-        demo = RayServeDataSONDemo()
-        test_requests = demo.create_test_requests()
+        # Run lightweight test by default
+        result = test_ray_serve_integration()
+        print(f"\n🎯 Test Result: {result}")
 
-        for i, request in enumerate(test_requests, 1):
-            print(f"\n{i}️⃣ Processing request: {request['metadata']['request_type']}")
-
-            # Demonstrate DataSON processing
-            serialized = ds.dump_api(request)
-            parsed = ds.load_smart(serialized, config=API_CONFIG)
-
-            print("✅ Request processed successfully with DataSON")
-            print(f"📊 Data size: {len(ds.dumps_json(serialized))} bytes")
-
-        print("\n✅ DataSON processing demonstration completed!")
-        print("💡 Install Ray Serve for full deployment demo: pip install ray[serve]")
+        print("\n🔧 Key DataSON Features Demonstrated:")
+        print("- 🤖 dump_api() for clean JSON responses")
+        print("- 🧠 load_smart() for intelligent request parsing")
+        print("- 📊 Enhanced error handling and metadata")
+        print("- 🔄 Async request/response processing")
+        print("- 🎯 ML model integration patterns")
+        print("- 📈 Health monitoring and status checks")

@@ -1,36 +1,87 @@
 #!/usr/bin/env python3
 """
-BentoML Integration with DataSON
+🚀 BentoML + DataSON Integration Guide
+=====================================
 
-A comprehensive example showing how to integrate DataSON with BentoML for
-ML model serving, API creation, and production deployment.
+Comprehensive example showcasing BentoML model serving with DataSON for:
+- JSON endpoint with intelligent parsing
+- NumPy array processing with ML serialization
+- Text processing with smart data handling
+- Health checks and monitoring
+- Production deployment patterns
 
-Features:
-- Modern DataSON API (dump_api, load_smart, dump_ml)
-- BentoML service creation with DataSON serialization
-- Input/output validation and transformation
-- Model serving patterns
-- Production deployment examples
+Key DataSON features:
+- dump_api() for clean JSON responses
+- load_smart() for intelligent request parsing
+- dump_ml() for ML-optimized serialization
+- dumps_secure() for PII-safe logging
+
+Installation:
+    pip install bentoml datason scikit-learn numpy
+
+Usage:
+    python bentoml_integration_guide.py
+    bentoml serve datason_service:svc --reload
 """
 
 import time
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 try:
     import bentoml
-    from bentoml.io import JSON, NumpyNdarray, Text
+    import numpy as np
+    from pydantic import BaseModel
 
     BENTOML_AVAILABLE = True
 except ImportError:
     BENTOML_AVAILABLE = False
     bentoml = None
 
-import numpy as np
+import os
+import sys
 
-import datason as ds
-from datason.config import get_api_config
+# Add parent directory to path to import datason
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../.."))
 
-API_CONFIG = get_api_config()
+try:
+    import datason as ds
+except ImportError:
+    print("❌ DataSON not available. Please install from the parent directory.")
+    sys.exit(1)
+
+import json
+import logging
+from datetime import datetime, timezone
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+
+# Pydantic models for request/response
+class PredictionRequest(BaseModel):
+    data: List[List[float]]
+    metadata: Optional[Dict[str, Any]] = None
+
+
+class PredictionResponse(BaseModel):
+    model_config = {"protected_namespaces": ()}
+
+    predictions: List[float]
+    model_info: Dict[str, Any]
+    processing_time: float
+    timestamp: str
+
+
+class TextRequest(BaseModel):
+    text: str
+    options: Optional[Dict[str, Any]] = None
+
+
+class TextResponse(BaseModel):
+    processed_text: str
+    analysis: Dict[str, Any]
+    timestamp: str
 
 
 # Mock ML model for demonstration
@@ -93,153 +144,181 @@ if BENTOML_AVAILABLE:
     model = DataSONMLModel("production_classifier")
 
     # Create BentoML service with DataSON integration
-    svc = bentoml.Service("datason_ml_service", runners=[])
+    svc = bentoml.Service("datason_ml_service")
 
-    @svc.api(input=JSON(), output=JSON())
-    def predict_json(input_data: dict) -> dict:
-        """JSON prediction endpoint with DataSON processing."""
+    @bentoml.api
+    def predict_json(request: PredictionRequest) -> PredictionResponse:
+        """JSON endpoint with DataSON intelligent parsing."""
+        start_time = datetime.now()
+
         try:
-            # Input data is already parsed by BentoML, process directly
-            parsed_input = input_data
+            print(f"📥 Received prediction request with {len(request.data)} samples")
 
-            # Extract features
-            if "features" in parsed_input:
-                features = parsed_input["features"]
-                metadata = parsed_input.get("metadata", {})
-            else:
-                features = parsed_input
-                metadata = {}
+            # Use DataSON for enhanced data processing
+            enhanced_data = ds.load_smart(json.dumps(request.data))
 
-            # Make prediction
-            result = (
-                model.predict_batch(features)
-                if (features and isinstance(features[0], list))
-                else model.predict_single(features)
+            # Mock ML prediction (replace with your model)
+            predictions = model.predict_batch(enhanced_data)
+
+            # Create response with DataSON API serialization
+            model_info = {
+                "model_type": "mock_regressor",
+                "version": "1.0.0",
+                "input_shape": np.array(request.data).shape,
+                "datason_features": ["smart_parsing", "type_inference"],
+            }
+
+            # Use dump_api for clean response data
+            clean_model_info = ds.dump_api(model_info)
+
+            processing_time = (datetime.now() - start_time).total_seconds()
+
+            response = PredictionResponse(
+                predictions=predictions["predictions"],
+                model_info=clean_model_info,
+                processing_time=processing_time,
+                timestamp=datetime.now(timezone.utc).isoformat(),
             )
 
-            # Enhance result with request metadata
-            enhanced_result = {
-                "prediction_result": result,
-                "request_metadata": metadata,
-                "processing_info": {"endpoint": "predict_json", "datason_processed": True, "timestamp": time.time()},
-            }
-
-            # Use DataSON's API serialization for clean output
-            return ds.dump_api(enhanced_result)
+            print(f"✅ Prediction completed in {processing_time:.3f}s")
+            return response
 
         except Exception as e:
-            error_response = {"error": str(e), "status": "prediction_failed", "timestamp": time.time()}
-            return ds.dump_api(error_response)
+            logger.error(f"❌ Prediction error: {e}")
+            # Return error response
+            return PredictionResponse(
+                predictions=[],
+                model_info={"error": str(e)},
+                processing_time=(datetime.now() - start_time).total_seconds(),
+                timestamp=datetime.now(timezone.utc).isoformat(),
+            )
 
-    @svc.api(input=NumpyNdarray(), output=JSON())
-    def predict_numpy(input_array: np.ndarray) -> dict:
-        """NumPy array prediction endpoint with DataSON output."""
+    @bentoml.api
+    def predict_numpy(json_input: Dict[str, Any]) -> Dict[str, Any]:
+        """NumPy endpoint with ML-optimized serialization."""
+        start_time = datetime.now()
+
         try:
-            # Convert numpy array to list for processing
-            if input_array.ndim == 1:
-                features = input_array.tolist()
-                result = model.predict_single(features)
-            else:
-                features = input_array.tolist()
-                result = model.predict_batch(features)
+            print("📊 Processing NumPy array prediction...")
 
-            # Enhanced response with numpy metadata
-            response = {
-                "prediction_result": result,
-                "input_info": {"shape": input_array.shape, "dtype": str(input_array.dtype), "size": input_array.size},
-                "processing_info": {"endpoint": "predict_numpy", "input_type": "numpy_array", "timestamp": time.time()},
-            }
+            # Extract NumPy array from request
+            if "array" not in json_input:
+                raise ValueError("Missing 'array' field in request")
 
-            return ds.dump_api(response)
+            # Use DataSON for intelligent array parsing
+            array_data = ds.load_smart(json.dumps(json_input["array"]))
+            np_array = np.array(array_data)
 
-        except Exception as e:
-            return ds.dump_api({"error": str(e), "status": "numpy_prediction_failed"})
+            print(f"📐 Array shape: {np_array.shape}")
 
-    @svc.api(input=Text(), output=JSON())
-    def predict_text(input_text: str) -> dict:
-        """Text-based prediction endpoint with DataSON parsing."""
-        try:
-            # Parse text input using DataSON (could be JSON string)
-            try:
-                parsed_data = ds.loads(input_text)
-            except Exception:
-                # If not JSON, treat as comma-separated values
-                features = [float(x.strip()) for x in input_text.split(",")]
-                parsed_data = {"features": features}
+            # Mock ML processing
+            processed_array = np_array * 2 + 1  # Simple transformation
+            predictions = np.sum(processed_array, axis=-1)
 
-            # Process the parsed data directly
-            processed_input = parsed_data
-
-            # Make prediction
-            features = processed_input.get("features", processed_input)
-            result = model.predict_single(features)
-
-            response = {
-                "prediction_result": result,
-                "input_info": {
-                    "original_text": input_text,
-                    "parsed_features": features,
-                    "input_length": len(input_text),
+            # Prepare ML response with DataSON
+            ml_response = {
+                "predictions": predictions.tolist(),
+                "input_stats": {
+                    "shape": np_array.shape,
+                    "mean": float(np.mean(np_array)),
+                    "std": float(np.std(np_array)),
+                    "min": float(np.min(np_array)),
+                    "max": float(np.max(np_array)),
                 },
                 "processing_info": {
-                    "endpoint": "predict_text",
-                    "parsing_method": "datason_smart",
-                    "timestamp": time.time(),
+                    "operation": "linear_transformation",
+                    "formula": "2x + 1",
+                    "processing_time": (datetime.now() - start_time).total_seconds(),
+                },
+                "metadata": {
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "datason_version": getattr(ds, "__version__", "unknown"),
                 },
             }
 
-            return ds.dump_api(response)
+            # Use dump_ml for ML-optimized response
+            return ds.dump_ml(ml_response)
 
         except Exception as e:
-            return ds.dump_api({"error": str(e), "status": "text_prediction_failed", "input_text": input_text})
+            logger.error(f"❌ NumPy processing error: {e}")
+            return {
+                "error": str(e),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "processing_time": (datetime.now() - start_time).total_seconds(),
+            }
 
-    @svc.api(input=JSON(), output=JSON())
-    def model_info(input_data: dict) -> dict:
-        """Model information endpoint with DataSON formatting."""
+    @bentoml.api
+    def process_text(request: TextRequest) -> TextResponse:
+        """Text processing endpoint with smart data handling."""
+        start_time = datetime.now()
+
         try:
-            # Get comprehensive model info
-            info = model.get_model_info()
+            print(f"📝 Processing text: {request.text[:50]}...")
 
-            # Add service information
-            service_info = {
-                "service_name": "datason_ml_service",
-                "available_endpoints": ["predict_json", "predict_numpy", "predict_text", "model_info", "health_check"],
-                "datason_features": ["smart_loading", "api_serialization", "type_handling", "error_recovery"],
-                "created_at": time.time(),
+            # Use DataSON for enhanced text processing
+            {
+                "original_text": request.text,
+                "options": request.options or {},
+                "processing_timestamp": datetime.now(timezone.utc).isoformat(),
             }
 
-            response = {
-                "model_info": info,
-                "service_info": service_info,
-                "request_metadata": input_data,
+            # Enhanced text processing
+            processed_text = request.text.upper()  # Simple transformation
+
+            # Text analysis
+            analysis = {
+                "character_count": len(request.text),
+                "word_count": len(request.text.split()),
+                "contains_numbers": any(char.isdigit() for char in request.text),
+                "contains_special_chars": not request.text.isalnum(),
+                "processing_options": request.options or {},
             }
 
-            return ds.dump_api(response)
+            # Use DataSON for comprehensive analysis
+            enhanced_analysis = ds.dump_api(analysis)
+
+            response = TextResponse(
+                processed_text=processed_text,
+                analysis=enhanced_analysis,
+                timestamp=datetime.now(timezone.utc).isoformat(),
+            )
+
+            processing_time = (datetime.now() - start_time).total_seconds()
+            print(f"✅ Text processing completed in {processing_time:.3f}s")
+
+            return response
 
         except Exception as e:
-            return ds.dump_api({"error": str(e), "status": "info_request_failed"})
+            logger.error(f"❌ Text processing error: {e}")
+            return TextResponse(
+                processed_text="", analysis={"error": str(e)}, timestamp=datetime.now(timezone.utc).isoformat()
+            )
 
-    @svc.api(input=JSON(), output=JSON())
-    def health_check(input_data: dict = None) -> dict:
-        """Health check endpoint with DataSON diagnostics."""
-        health_info = {
+    @bentoml.api
+    def health_check(json_input: Dict[str, Any]) -> Dict[str, Any]:
+        """Health check endpoint with comprehensive system status."""
+        print("🏥 Health check requested...")
+
+        # System health information
+        health_data = {
             "status": "healthy",
-            "model_status": "ready",
-            "model_info": model.get_model_info(),
-            "service_metrics": {
-                "uptime": time.time() - model.trained_at,
-                "memory_usage": "normal",  # Could integrate actual metrics
-                "last_prediction": "recent",
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "service_info": {"name": "datason_ml_service", "version": "1.0.0", "datason_integration": True},
+            "system_stats": {
+                "uptime": "unknown",  # Would be calculated in real deployment
+                "memory_usage": "unknown",  # Would use psutil in real deployment
+                "active_requests": 0,
             },
-            "datason_info": {
-                "version": getattr(ds, "__version__", "unknown"),
-                "api_config_loaded": API_CONFIG is not None,
-                "features_enabled": ["smart_loading", "api_serialization", "ml_optimization"],
+            "datason_features": {
+                "smart_parsing": True,
+                "ml_optimization": True,
+                "api_serialization": True,
+                "secure_redaction": True,
             },
-            "timestamp": time.time(),
         }
 
-        return ds.dump_api(health_info)
+        # Use DataSON for comprehensive health response
+        return ds.dump_api(health_data)
 
 
 class BentoMLDataSONDemo:
@@ -404,6 +483,81 @@ def run_bentoml_demo():
     return {"status": "service_ready", "endpoints": 5}
 
 
+def demonstrate_client_usage():
+    """Demonstrate how to interact with the BentoML + DataSON service."""
+    print("\n🧪 Client Usage Examples")
+    print("=" * 30)
+
+    # Example requests
+    examples = {
+        "json_prediction": {
+            "data": [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]],
+            "metadata": {"source": "demo", "version": "1.0"},
+        },
+        "numpy_prediction": {"array": [[1, 2], [3, 4], [5, 6]]},
+        "text_processing": {
+            "text": "Hello DataSON + BentoML Integration!",
+            "options": {"uppercase": True, "analyze": True},
+        },
+    }
+
+    print("📋 Example requests:")
+    for endpoint, data in examples.items():
+        print(f"\n{endpoint}:")
+        # Use DataSON for clean example formatting
+        api_data = ds.dump_api(data)
+        formatted = ds.dumps(api_data)
+        print(formatted)
+
+    print("\n🌐 cURL Examples:")
+    print("curl -X POST http://localhost:3000/predict_json \\")
+    print("  -H 'Content-Type: application/json' \\")
+    print('  -d \'{"data": [[1.0, 2.0]], "metadata": {"source": "curl"}}\'')
+
+    print("\ncurl -X POST http://localhost:3000/health_check \\")
+    print("  -H 'Content-Type: application/json' \\")
+    print("  -d '{}'")
+
+
+def create_deployment_config():
+    """Generate deployment configuration files."""
+    print("\n🚀 Creating deployment configurations...")
+
+    # BentoML configuration
+    bentofile_config = {
+        "service": "datason_service:svc",
+        "labels": {"owner": "datason-team", "stage": "demo"},
+        "include": ["*.py", "requirements.txt"],
+        "python": {
+            "packages": ["datason", "bentoml>=1.4.0", "numpy>=1.21.0", "scikit-learn>=1.0.0", "pydantic>=2.0.0"]
+        },
+        "docker": {"distro": "debian", "python_version": "3.11"},
+    }
+
+    # Use DataSON for clean YAML-like output
+    config_json = ds.dumps(ds.dump_api(bentofile_config))
+
+    print("📄 bentofile.yaml content:")
+    print(config_json)
+
+    # Production deployment example
+    deployment_info = {
+        "deployment_commands": [
+            "bentoml build",
+            "bentoml containerize datason_ml_service:latest",
+            "docker run -p 3000:3000 datason_ml_service:latest",
+        ],
+        "kubernetes_deployment": {
+            "replicas": 3,
+            "resources": {"requests": {"cpu": "500m", "memory": "1Gi"}, "limits": {"cpu": "2000m", "memory": "4Gi"}},
+        },
+        "monitoring": {"metrics": ["request_count", "response_time", "error_rate"], "health_check": "/health_check"},
+    }
+
+    print("\n🏗️  Deployment Configuration:")
+    print(ds.dumps(ds.dump_api(deployment_info)))
+
+
 if __name__ == "__main__":
     # Run the comprehensive demo
     results = run_bentoml_demo()
@@ -413,10 +567,16 @@ if __name__ == "__main__":
     if BENTOML_AVAILABLE:
         print("\n💡 Next Steps:")
         print("1. Save this file as 'bentoml_datason_service.py'")
-        print("2. Run: bentoml serve bentoml_datason_service:svc")
+        print("2. Run: bentoml serve datason_service:svc")
         print("3. Visit: http://localhost:3000 for the Swagger UI")
         print("4. Test the endpoints with the sample requests above")
     else:
         print("\n💡 To run the full demo:")
         print("pip install bentoml numpy")
         print("python bentoml_integration_guide.py")
+
+    # Demonstrate client usage
+    demonstrate_client_usage()
+
+    # Create deployment configurations
+    create_deployment_config()

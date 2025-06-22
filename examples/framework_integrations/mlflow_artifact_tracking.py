@@ -87,7 +87,7 @@ class MLflowDataSONExperiment:
                 "model_config": {
                     "algorithm": "RandomForestClassifier",
                     "hyperparameters": params,
-                    "feature_importance": dict(enumerate(model.feature_importances_)),
+                    "feature_importance": {str(i): float(imp) for i, imp in enumerate(model.feature_importances_)},
                 },
                 "performance": {
                     "accuracy": accuracy,
@@ -97,19 +97,19 @@ class MLflowDataSONExperiment:
                 "data_info": {
                     "train_shape": X_train.shape,
                     "test_shape": X_test.shape,
-                    "class_distribution": dict(zip(*np.unique(y, return_counts=True))),
+                    "class_distribution": {str(k): int(v) for k, v in zip(*np.unique(y, return_counts=True))},
                 },
             }
 
             # 7. Save experiment metadata using DataSON's ML-optimized serialization
             print("💾 Saving experiment metadata with DataSON...")
             with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
-                # Use dump_ml for optimized ML data serialization
-                serialized_data = ds.dump_ml(experiment_data)
-                # Convert to JSON for file writing (modern API returns objects)
+                # Use dump_ml for optimized ML data serialization then serialize to JSON
+                ml_data = ds.dump_ml(experiment_data)
                 import json
 
-                json.dump(serialized_data, f, indent=2)
+                json_string = json.dumps(ml_data, indent=2)
+                f.write(json_string)
                 temp_path = f.name
 
             # Log the DataSON artifact
@@ -127,11 +127,11 @@ class MLflowDataSONExperiment:
 
             # Save model metadata using DataSON
             with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
-                serialized_metadata = ds.dump_api(model_metadata)  # Use dump_api for clean JSON
-                # Convert to JSON for file writing (modern API returns objects)
+                api_data = ds.dump_api(model_metadata)  # Use dump_api for clean data
                 import json
 
-                json.dump(serialized_metadata, f, indent=2)
+                json_string = json.dumps(api_data, indent=2)
+                f.write(json_string)
                 temp_metadata_path = f.name
 
             # Log both the sklearn model and DataSON metadata
@@ -164,14 +164,16 @@ class MLflowDataSONExperiment:
 
         # Use DataSON for intelligent comparison serialization
         print("🔍 Generating experiment comparison...")
-        serialized_comparison = ds.dump_ml(comparison_data)
+        ds.dump_ml(comparison_data)
 
         # Save comparison results
         with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
-            # Write comparison data using standard JSON (serialized_comparison is already DataSON processed)
+            # Write comparison data using DataSON's ML serialization
+            ml_data = ds.dump_ml(comparison_data)
             import json
 
-            json.dump(serialized_comparison, f, indent=2)
+            json_string = json.dumps(ml_data, indent=2)
+            f.write(json_string)
             temp_path = f.name
 
         print(f"💾 Comparison saved to: {temp_path}")
@@ -276,12 +278,13 @@ if __name__ == "__main__":
             mlflow.log_metric("accuracy", mock_results["accuracy"])
 
             # Save comprehensive results with DataSON
-            serialized = ds.dump_ml(mock_results)
             with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
-                # Write ML data using standard JSON (serialized is already DataSON processed)
+                # Write ML data using DataSON's ML serialization
+                ml_data = ds.dump_ml(mock_results)
                 import json
 
-                json.dump(serialized, f, indent=2)
+                json_string = json.dumps(ml_data, indent=2)
+                f.write(json_string)
                 temp_path = f.name
 
             mlflow.log_artifact(temp_path, "results")
