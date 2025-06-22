@@ -292,8 +292,8 @@ def create_streamlit_app():
                 if uploaded_file:
                     try:
                         if uploaded_file.type == "application/json":
-                            data = json.load(uploaded_file)
-                            features = ds.load_smart(data, config=API_CONFIG)
+                            content = uploaded_file.read().decode()
+                            features = ds.load_smart(content, config=API_CONFIG)
                             if isinstance(features, dict) and "features" in features:
                                 features = features["features"]
                         else:  # CSV
@@ -358,8 +358,8 @@ def create_streamlit_app():
 
                     try:
                         if uploaded_file.type == "application/json":
-                            data = json.load(uploaded_file)
-                            processed = ds.load_smart(data, config=API_CONFIG)
+                            content = uploaded_file.read().decode()
+                            processed = ds.load_smart(content, config=API_CONFIG)
                         else:
                             # Handle other formats
                             content = uploaded_file.read().decode()

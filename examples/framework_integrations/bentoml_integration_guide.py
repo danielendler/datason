@@ -99,8 +99,8 @@ if BENTOML_AVAILABLE:
     def predict_json(input_data: dict) -> dict:
         """JSON prediction endpoint with DataSON processing."""
         try:
-            # Use DataSON's smart loading for input validation and parsing
-            parsed_input = ds.load_smart(input_data, config=API_CONFIG)
+            # Input data is already parsed by BentoML, process directly
+            parsed_input = input_data
 
             # Extract features
             if "features" in parsed_input:
@@ -111,7 +111,11 @@ if BENTOML_AVAILABLE:
                 metadata = {}
 
             # Make prediction
-            result = model.predict_batch(features) if isinstance(features[0], list) else model.predict_single(features)
+            result = (
+                model.predict_batch(features)
+                if (features and isinstance(features[0], list))
+                else model.predict_single(features)
+            )
 
             # Enhance result with request metadata
             enhanced_result = {
@@ -163,8 +167,8 @@ if BENTOML_AVAILABLE:
                 features = [float(x.strip()) for x in input_text.split(",")]
                 parsed_data = {"features": features}
 
-            # Process with smart loading
-            processed_input = ds.load_smart(parsed_data, config=API_CONFIG)
+            # Process the parsed data directly
+            processed_input = parsed_data
 
             # Make prediction
             features = processed_input.get("features", processed_input)
@@ -207,7 +211,7 @@ if BENTOML_AVAILABLE:
             response = {
                 "model_info": info,
                 "service_info": service_info,
-                "request_metadata": ds.load_smart(input_data, config=API_CONFIG),
+                "request_metadata": input_data,
             }
 
             return ds.dump_api(response)
@@ -310,7 +314,7 @@ class BentoMLDataSONDemo:
 
             # Show size and parsing
             json_str = ds.dumps_json(serialized, indent=2)
-            parsed_back = ds.load_smart(serialized, config=API_CONFIG)
+            parsed_back = serialized  # Already parsed
 
             print(f"  Size: {len(json_str)} bytes")
             print(f"  Parsed successfully: {parsed_back['model_results']['predictions'][:3]}...")
@@ -344,11 +348,11 @@ def run_bentoml_demo():
                 print(f"  Request size: {len(ds.dumps_json(serialized_request))} bytes")
 
                 # Parse and process
-                parsed_request = ds.load_smart(serialized_request, config=API_CONFIG)
+                parsed_request = serialized_request  # Already parsed
                 features = parsed_request.get("features", [])
 
                 # Mock prediction
-                if isinstance(features[0], list):
+                if features and isinstance(features[0], list):
                     result = demo.model.predict_batch(features)
                 else:
                     result = demo.model.predict_single(features)

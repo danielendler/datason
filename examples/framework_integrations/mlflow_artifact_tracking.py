@@ -106,7 +106,8 @@ class MLflowDataSONExperiment:
             with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
                 # Use dump_ml for optimized ML data serialization
                 serialized_data = ds.dump_ml(experiment_data)
-                ds.dumps_json(serialized_data, f, indent=2)
+                json_string = ds.dumps_json(serialized_data, indent=2)
+                f.write(json_string)
                 temp_path = f.name
 
             # Log the DataSON artifact
@@ -125,7 +126,8 @@ class MLflowDataSONExperiment:
             # Save model metadata using DataSON
             with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
                 serialized_metadata = ds.dump_api(model_metadata)  # Use dump_api for clean JSON
-                ds.dumps_json(serialized_metadata, f, indent=2)
+                json_string = ds.dumps_json(serialized_metadata, indent=2)
+                f.write(json_string)
                 temp_metadata_path = f.name
 
             # Log both the sklearn model and DataSON metadata
@@ -140,7 +142,9 @@ class MLflowDataSONExperiment:
 
     def compare_experiments(self, run_ids: List[str]) -> Dict[str, Any]:
         """Compare multiple experiment runs using DataSON."""
-        comparison_data = {"comparison_timestamp": ds.datetime_utils.get_current_timestamp(), "runs": {}}
+        from datetime import datetime, timezone
+
+        comparison_data = {"comparison_timestamp": datetime.now(timezone.utc).isoformat(), "runs": {}}
 
         for run_id in run_ids:
             run = mlflow.get_run(run_id)
@@ -160,7 +164,8 @@ class MLflowDataSONExperiment:
 
         # Save comparison results
         with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
-            ds.dumps_json(serialized_comparison, f, indent=2)
+            json_string = ds.dumps_json(serialized_comparison, indent=2)
+            f.write(json_string)
             temp_path = f.name
 
         print(f"💾 Comparison saved to: {temp_path}")
@@ -183,7 +188,7 @@ class MLflowDataSONExperiment:
                     with open(json_file) as f:
                         content = f.read()
 
-                    parsed_data = ds.load_smart(ds.loads_json(content))
+                    parsed_data = ds.load_smart(content)
                     artifacts[json_file.stem] = parsed_data
                     print(f"✅ Loaded artifact: {json_file.name}")
 
@@ -267,7 +272,8 @@ if __name__ == "__main__":
             # Save comprehensive results with DataSON
             serialized = ds.dump_ml(mock_results)
             with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
-                ds.dumps_json(serialized, f, indent=2)
+                json_string = ds.dumps_json(serialized, indent=2)
+                f.write(json_string)
                 temp_path = f.name
 
             mlflow.log_artifact(temp_path, "results")
