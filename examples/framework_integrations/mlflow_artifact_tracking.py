@@ -106,8 +106,10 @@ class MLflowDataSONExperiment:
             with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
                 # Use dump_ml for optimized ML data serialization
                 serialized_data = ds.dump_ml(experiment_data)
-                json_string = ds.dumps_json(serialized_data, indent=2)
-                f.write(json_string)
+                # Convert to JSON for file writing (modern API returns objects)
+                import json
+
+                json.dump(serialized_data, f, indent=2)
                 temp_path = f.name
 
             # Log the DataSON artifact
@@ -126,8 +128,10 @@ class MLflowDataSONExperiment:
             # Save model metadata using DataSON
             with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
                 serialized_metadata = ds.dump_api(model_metadata)  # Use dump_api for clean JSON
-                json_string = ds.dumps_json(serialized_metadata, indent=2)
-                f.write(json_string)
+                # Convert to JSON for file writing (modern API returns objects)
+                import json
+
+                json.dump(serialized_metadata, f, indent=2)
                 temp_metadata_path = f.name
 
             # Log both the sklearn model and DataSON metadata
@@ -164,8 +168,10 @@ class MLflowDataSONExperiment:
 
         # Save comparison results
         with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
-            json_string = ds.dumps_json(serialized_comparison, indent=2)
-            f.write(json_string)
+            # Write comparison data using standard JSON (serialized_comparison is already DataSON processed)
+            import json
+
+            json.dump(serialized_comparison, f, indent=2)
             temp_path = f.name
 
         print(f"💾 Comparison saved to: {temp_path}")
@@ -272,8 +278,10 @@ if __name__ == "__main__":
             # Save comprehensive results with DataSON
             serialized = ds.dump_ml(mock_results)
             with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
-                json_string = ds.dumps_json(serialized, indent=2)
-                f.write(json_string)
+                # Write ML data using standard JSON (serialized is already DataSON processed)
+                import json
+
+                json.dump(serialized, f, indent=2)
                 temp_path = f.name
 
             mlflow.log_artifact(temp_path, "results")
