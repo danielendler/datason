@@ -27,9 +27,7 @@ from .core_new import (
     serialize_chunked,
     stream_serialize,
 )
-from .core_new import (
-    serialize as _serialize_core,
-)
+from .core_new import serialize as core_serialize
 from .deserializers_new import (
     deserialize,
     deserialize_fast,
@@ -84,7 +82,7 @@ def dump(obj: Any, fp: Any, **kwargs: Any) -> None:
         # File-like object: use DataSON's native JSON writing
         import json
 
-        serialized = _serialize_core(obj, **kwargs)
+        serialized = core_serialize(obj, **kwargs)
         # Write JSON directly without double processing
         json.dump(serialized, fp)
     else:
@@ -142,7 +140,7 @@ def dump_json(
     }
 
     # Use core DataSON serialization with DataSON-specific parameters
-    serialized = _serialize_core(obj, **kwargs)
+    serialized = core_serialize(obj, **kwargs)
 
     # Write to file using standard json.dump with formatting options
     json.dump(serialized, fp, **json_params)
@@ -298,7 +296,7 @@ def serialize(
         return serialize_chunked(obj, chunk_size=chunk_size, config=config)
 
     # Use the existing imported serialize function to avoid circular imports
-    return _serialize_core(obj, config=config)
+    return core_serialize(obj, config=config)
 
 
 def dump_ml(obj: Any, **kwargs: Any) -> Any:
@@ -326,9 +324,9 @@ def dump_ml(obj: Any, **kwargs: Any) -> Any:
     config = replace(base_config, **kwargs)
 
     # Directly call serialize - serializer handles circular references properly
-    # Use _serialize_core to avoid circular imports
+    # Use serialize to avoid circular imports
 
-    return _serialize_core(obj, config=config)
+    return core_serialize(obj, config=config)
 
 
 def dump_api(obj: Any, **kwargs: Any) -> Any:
@@ -356,9 +354,9 @@ def dump_api(obj: Any, **kwargs: Any) -> Any:
     config = replace(base_config, **kwargs)
 
     # Directly call serialize - serializer handles circular references properly
-    # Use _serialize_core to avoid circular imports
+    # Use serialize to avoid circular imports
 
-    return _serialize_core(obj, config=config)
+    return core_serialize(obj, config=config)
 
 
 def dump_secure(
@@ -421,9 +419,9 @@ def dump_secure(
     )
 
     # Directly call serialize - serializer handles circular references properly
-    # Use _serialize_core to avoid circular imports
+    # Use serialize to avoid circular imports
 
-    return _serialize_core(obj, config=config)
+    return core_serialize(obj, config=config)
 
 
 def dump_fast(obj: Any, **kwargs: Any) -> Any:
@@ -445,7 +443,7 @@ def dump_fast(obj: Any, **kwargs: Any) -> Any:
         >>> result = dump_fast(large_dataset)
     """
     config = get_performance_config()
-    return _serialize_core(obj, config=config)
+    return core_serialize(obj, config=config)
 
 
 def dump_chunked(obj: Any, *, chunk_size: int = 1000, **kwargs: Any) -> Any:

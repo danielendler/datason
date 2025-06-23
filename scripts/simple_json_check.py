@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Simple script to find inappropriate json imports in DataSON codebase."""
 
+import argparse
 import re
 import sys
 from pathlib import Path
@@ -49,18 +50,34 @@ def check_file(file_path: Path) -> bool:
 
 
 def main() -> int:
-    """Check all Python files for inappropriate json imports."""
-    print("🔍 Checking for inappropriate stdlib json imports...\n")
+    """Check Python files for inappropriate json imports."""
+    parser = argparse.ArgumentParser(description="Check for inappropriate stdlib json imports")
+    parser.add_argument(
+        "--staged-only", action="store_true", help="Only check files passed as arguments (for pre-commit)"
+    )
+    parser.add_argument("files", nargs="*", help="Files to check (for pre-commit)")
+
+    args = parser.parse_args()
+
+    if args.staged_only and args.files:
+        # Pre-commit mode: only check specified files
+        files_to_check = [Path(f) for f in args.files if f.endswith(".py")]
+        print(f"🔍 Checking {len(files_to_check)} staged Python files for inappropriate stdlib json imports...\n")
+    else:
+        # Full mode: check all files
+        files_to_check = []
+        for py_file in Path(".").rglob("*.py"):
+            if ".git/" in str(py_file) or "venv/" in str(py_file):
+                continue
+            files_to_check.append(py_file)
+        print("🔍 Checking for inappropriate stdlib json imports...\n")
 
     failed = False
     core_issues = []
     other_issues = []
 
-    # Find all Python files
-    for py_file in Path(".").rglob("*.py"):
-        if ".git/" in str(py_file) or "venv/" in str(py_file):
-            continue
-
+    # Check the determined files
+    for py_file in files_to_check:
         file_str = str(py_file)
 
         # Skip if checking would cause issues
@@ -93,10 +110,16 @@ def main() -> int:
             print(f"   ... and {len(other_issues) - 10} more")
 
     if failed:
-        print("\n❌ FAIL: Core library uses stdlib json inappropriately")
+        if args.staged_only:
+            print("\n❌ FAIL: Staged files contain inappropriate stdlib json usage")
+        else:
+            print("\n❌ FAIL: Core library uses stdlib json inappropriately")
         return 1
     else:
-        print("\n✅ PASS: No inappropriate json usage in core library")
+        if args.staged_only:
+            print("\n✅ PASS: No inappropriate json usage in staged files")
+        else:
+            print("\n✅ PASS: No inappropriate json usage in core library")
         return 0
 
 
