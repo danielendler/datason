@@ -66,8 +66,8 @@ class TestDumpFunction:
 
             # serialize is called recursively, so we just check that it was called with a config
             assert mock_serialize.called
-            # Verify that the config was passed to at least one call as a positional argument (2nd position)
-            config_passed = any(len(call[0]) >= 2 and call[0][1] == config for call in mock_serialize.call_args_list)
+            # Verify that the config was passed to at least one call as a keyword argument (for dumps())
+            config_passed = any(call[1].get("config") == config for call in mock_serialize.call_args_list)
             assert config_passed
 
     def test_dump_ml_mode(self):
@@ -88,9 +88,8 @@ class TestDumpFunction:
             mock_get_ml_config.assert_called_once()
             # serialize is called recursively, so we just check that it was called with the config
             assert mock_serialize.called
-            config_passed = any(
-                len(call[0]) >= 2 and call[0][1] == mock_config for call in mock_serialize.call_args_list
-            )
+            # Verify that the config was passed to at least one call as a keyword argument (for dumps())
+            config_passed = any(call[1].get("config") == mock_config for call in mock_serialize.call_args_list)
             assert config_passed
 
     def test_dump_api_mode(self):
@@ -111,9 +110,8 @@ class TestDumpFunction:
             mock_get_api_config.assert_called_once()
             # serialize is called recursively, so we just check that it was called with the config
             assert mock_serialize.called
-            config_passed = any(
-                len(call[0]) >= 2 and call[0][1] == mock_config for call in mock_serialize.call_args_list
-            )
+            # Verify that the config was passed to at least one call as a keyword argument (for dumps())
+            config_passed = any(call[1].get("config") == mock_config for call in mock_serialize.call_args_list)
             assert config_passed
 
     def test_dump_fast_mode(self):
@@ -134,9 +132,8 @@ class TestDumpFunction:
             mock_get_performance_config.assert_called_once()
             # serialize is called recursively, so we just check that it was called with the config
             assert mock_serialize.called
-            config_passed = any(
-                len(call[0]) >= 2 and call[0][1] == mock_config for call in mock_serialize.call_args_list
-            )
+            # Verify that the config was passed to at least one call as a keyword argument (for dumps())
+            config_passed = any(call[1].get("config") == mock_config for call in mock_serialize.call_args_list)
             assert config_passed
 
     def test_dump_multiple_modes_error(self):
@@ -293,10 +290,8 @@ class TestDumpVariants:
 
             mock_get_performance_config.assert_called_once()
             assert mock_serialize.called
-            # Verify config passing by checking call arguments
-            config_passed = any(
-                len(call[0]) >= 2 and call[0][1] == mock_config for call in mock_serialize.call_args_list
-            )
+            # Verify config passing by checking call arguments (keyword argument for dump_fast)
+            config_passed = any(call[1].get("config") == mock_config for call in mock_serialize.call_args_list)
             assert config_passed
             # Result will be the mock return value applied to each field
             assert isinstance(result, dict)
