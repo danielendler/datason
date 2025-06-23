@@ -76,18 +76,16 @@ if RAY_AVAILABLE:
         async def __call__(self, request) -> Dict[str, Any]:
             """Handle incoming requests with DataSON serialization."""
             try:
-                # Parse request using DataSON's smart loading
+                # Parse request - already returns parsed dict
                 raw_data = await request.json()
 
-                # Use load_smart for intelligent data parsing
-                parsed_data = ds.load_smart(raw_data, config=API_CONFIG)
-
-                # Extract the actual data payload
-                if isinstance(parsed_data, dict) and "data" in parsed_data:
-                    input_data = parsed_data["data"]
-                    metadata = parsed_data.get("metadata", {})
+                # Since raw_data is already parsed, we don't need load_smart for parsing
+                # We can use it for enhanced processing if we need type detection
+                if isinstance(raw_data, dict) and "data" in raw_data:
+                    input_data = raw_data["data"]
+                    metadata = raw_data.get("metadata", {})
                 else:
-                    input_data = parsed_data
+                    input_data = raw_data
                     metadata = {}
 
                 # Make prediction
@@ -128,11 +126,10 @@ if RAY_AVAILABLE:
             """Handle batch predictions."""
             try:
                 raw_data = await request.json()
-                parsed_data = ds.load_smart(raw_data, config=API_CONFIG)
 
-                # Extract batch data
-                batch_data = parsed_data.get("batch_data", [])
-                batch_metadata = parsed_data.get("metadata", {})
+                # Extract batch data directly since raw_data is already parsed
+                batch_data = raw_data.get("batch_data", [])
+                batch_metadata = raw_data.get("metadata", {})
 
                 if not batch_data:
                     return ds.dump_api({"error": "No batch data provided"})
@@ -169,11 +166,12 @@ if RAY_AVAILABLE:
             self.request_count += 1
 
             try:
-                # Parse incoming request
+                # Parse incoming request - already returns parsed dict
                 raw_data = await request.json()
 
-                # Transform using DataSON (e.g., for data cleaning, validation)
-                transformed_data = ds.load_smart(raw_data, config=API_CONFIG)
+                # For demonstration, convert to JSON string first if we want to use load_smart
+                json_string = ds.dumps_json(raw_data)
+                transformed_data = ds.load_smart(json_string, config=API_CONFIG)
 
                 # Add proxy metadata
                 proxy_enhanced = {
@@ -284,10 +282,15 @@ async def run_ray_serve_demo():
             # Serialize with DataSON API mode
             serialized = ds.dump_api(request)
             print("📤 Serialized Request:")
-            print(ds.dumps_json(serialized, indent=2)[:200] + "...")
+            serialized_str = ds.dumps_json(serialized, indent=2)
+            if len(serialized_str) > 200:
+                print(serialized_str[:200] + "...")
+            else:
+                print(serialized_str)
 
-            # Parse back with smart loading
-            parsed = ds.load_smart(serialized, config=API_CONFIG)
+            # Parse back with smart loading (convert to JSON string first)
+            json_string = ds.dumps_json(serialized)
+            parsed = ds.load_smart(json_string, config=API_CONFIG)
             print("📥 Parsed Back Successfully:", parsed["metadata"]["request_type"])
 
         return {"status": "demo_completed_without_ray"}
@@ -352,8 +355,9 @@ def test_ray_serve_integration():
     # Create request data
     request_data = {"data": test_data, "metadata": {"client_id": "test", "timestamp": time.time()}}
 
-    # Test smart loading
-    smart_loaded = ds.load_smart(request_data)
+    # Test smart loading (convert dict to JSON string first for proper load_smart usage)
+    json_string = ds.dumps_json(request_data)
+    smart_loaded = ds.load_smart(json_string)
     print(f"   Smart loaded: {type(smart_loaded)}")
 
     # Test API serialization

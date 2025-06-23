@@ -503,12 +503,18 @@ def run_k8s_ml_serving_demo():
     # Generate Seldon deployment
     print("\n📋 Seldon Core Deployment YAML:")
     seldon_yaml = demo.create_seldon_deployment_yaml()
-    print(seldon_yaml[:500] + "..." if len(seldon_yaml) > 500 else seldon_yaml)
+    if len(seldon_yaml) > 500:
+        print(seldon_yaml[:500] + "...")
+    else:
+        print(seldon_yaml)
 
     # Generate KServe service
     print("\n📋 KServe InferenceService YAML:")
     kserve_yaml = demo.create_kserve_service_yaml()
-    print(kserve_yaml[:500] + "..." if len(kserve_yaml) > 500 else kserve_yaml)
+    if len(kserve_yaml) > 500:
+        print(kserve_yaml[:500] + "...")
+    else:
+        print(kserve_yaml)
 
     print("\n3️⃣ Sample API Requests:")
     sample_requests = demo.create_sample_requests()
@@ -536,7 +542,8 @@ def run_k8s_ml_serving_demo():
         print(f"\n🔄 Processing {platform}:")
 
         # Parse request with DataSON
-        parsed_request = ds.load_smart(request_data, config=API_CONFIG)
+        json_string = ds.dumps_json(request_data)
+        parsed_request = ds.load_smart(json_string, config=API_CONFIG)
 
         # Extract features
         if "data" in parsed_request and "ndarray" in parsed_request["data"]:
