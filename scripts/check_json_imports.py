@@ -56,10 +56,14 @@ class JsonImportAnalyzer(ast.NodeVisitor):
 
     def visit_Call(self, node: ast.Call) -> None:
         """Check for json function calls."""
-        if isinstance(node.func, ast.Attribute) and isinstance(node.func.value, ast.Name) and node.func.value.id == "json":
-                self.json_usage.append(
-                    {"line": node.lineno, "function": node.func.attr, "context": self._get_context(node)}
-                )
+        if (
+            isinstance(node.func, ast.Attribute)
+            and isinstance(node.func.value, ast.Name)
+            and node.func.value.id == "json"
+        ):
+            self.json_usage.append(
+                {"line": node.lineno, "function": node.func.attr, "context": self._get_context(node)}
+            )
         self.generic_visit(node)
 
     def _get_context(self, node: ast.AST) -> str:
