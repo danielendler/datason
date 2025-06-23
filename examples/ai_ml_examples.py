@@ -16,12 +16,13 @@ Examples include:
 Run: python examples/ai_ml_examples.py
 """
 
-import json
+# Removed json import - using DataSON's native functions instead
 from datetime import datetime
 
 import numpy as np
 
 import datason
+import datason as ds
 
 
 # Example 1: Simple ML API - No Configuration Needed!
@@ -50,7 +51,7 @@ def simple_ml_serialization():
     # Simple ML API - automatic optimization for ML data!
     ml_serialized = datason.dump_ml(training_results)
     print("✅ ML-optimized serialization with dump_ml():")
-    print(json.dumps(ml_serialized, indent=2))
+    print(ds.dumps_json(ml_serialized, indent=2))
     print("🎯 NumPy arrays automatically handled!")
     return ml_serialized
 
@@ -79,7 +80,7 @@ def serialize_training_results():
     # Traditional API
     serialized = datason.serialize(training_results)
     print("\nTraditional API Training Results JSON:")
-    print(json.dumps(serialized, indent=2))
+    print(ds.dumps_json(serialized, indent=2))
     return serialized
 
 
@@ -116,7 +117,7 @@ def serialize_data_pipeline():
 
     serialized = datason.serialize(pipeline_state)
     print("\nData Pipeline State JSON:")
-    print(json.dumps(serialized, indent=2))
+    print(ds.dumps_json(serialized, indent=2))
     return serialized
 
 
@@ -170,7 +171,7 @@ def serialize_model_comparison():
 
     serialized = datason.serialize(model_comparison)
     print("\nModel Comparison JSON:")
-    print(json.dumps(serialized, indent=2))
+    print(ds.dumps_json(serialized, indent=2))
     return serialized
 
 
@@ -200,7 +201,7 @@ def simple_api_prediction_response():
     # Perfect for API responses - clean JSON, no type metadata
     api_response = datason.dump_api(prediction_response)
     print("✅ Clean API response with dump_api():")
-    print(json.dumps(api_response, indent=2))
+    print(ds.dumps_json(api_response, indent=2))
     print("🎯 Perfect for FastAPI/Flask responses!")
     return api_response
 
@@ -248,7 +249,7 @@ def serialize_prediction_response():
 
     serialized = datason.serialize(prediction_response)
     print("\nTraditional Prediction Response JSON:")
-    print(json.dumps(serialized, indent=2))
+    print(ds.dumps_json(serialized, indent=2))
     return serialized
 
 
@@ -295,7 +296,7 @@ def serialize_forecasting_results():
 
     serialized = datason.serialize(forecasting_results)
     print("\nForecasting Results JSON:")
-    print(json.dumps(serialized, indent=2))
+    print(ds.dumps_json(serialized, indent=2))
     return serialized
 
 
@@ -379,7 +380,7 @@ def serialize_experiment_tracking():
 
     serialized = datason.serialize(experiment_data)
     print("\nExperiment Tracking JSON:")
-    print(json.dumps(serialized, indent=2))
+    print(ds.dumps_json(serialized, indent=2))
     return serialized
 
 

@@ -10,7 +10,8 @@ This script demonstrates the enhanced features of datason including:
 """
 
 import decimal
-import json
+
+# import json
 import uuid
 from collections import namedtuple
 from datetime import datetime, timezone
@@ -20,6 +21,7 @@ from typing import Any, Dict
 
 # Import datason with new features
 import datason
+import datason as ds
 from datason.config import (
     DataFrameOrient,
     DateFormat,
@@ -262,7 +264,9 @@ def demo_dataframe_orientations():
         config = SerializationConfig(dataframe_orient=orient)
         result = datason.serialize(df, config=config)
         print(f"\n📋 {description}:")
-        print(json.dumps(result, indent=2)[:200] + "..." if len(str(result)) > 200 else json.dumps(result, indent=2))
+        print(
+            ds.dumps_json(result, indent=2)[:200] + "..." if len(str(result)) > 200 else ds.dumps_json(result, indent=2)
+        )
 
 
 def demo_type_coercion():
@@ -352,13 +356,13 @@ def demo_custom_serializers():
     # Serialize without custom handler
     print("🔸 Default serialization:")
     default_result = datason.serialize(person)
-    print(json.dumps(default_result, indent=2))
+    print(ds.dumps_json(default_result, indent=2))
 
     # Serialize with custom handler
     print("\n🔸 Custom serializer:")
     config = SerializationConfig(custom_serializers={Person: serialize_person})
     custom_result = datason.serialize(person, config=config)
-    print(json.dumps(custom_result, indent=2))
+    print(ds.dumps_json(custom_result, indent=2))
 
 
 def demo_convenience_functions():

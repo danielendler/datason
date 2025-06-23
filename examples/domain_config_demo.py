@@ -14,11 +14,13 @@ The core presets (ml, api, strict, performance) are still available for common s
 """
 
 import datetime
-import json
+
+# import json
 import time
 from decimal import Decimal
 
 import datason
+import datason as ds
 from datason.config import DataFrameOrient, DateFormat, NanHandling, OutputType, SerializationConfig, TypeCoercion
 
 # Optional imports for more comprehensive demonstrations
@@ -74,7 +76,7 @@ def demonstrate_financial_config():
     print(f"Cash position: {result['portfolio']['cash']}")
 
     # Show JSON compatibility
-    json_str = json.dumps(result, ensure_ascii=True)
+    json_str = ds.dumps_json(result, ensure_ascii=True)
     print(f"\nJSON size: {len(json_str)} characters")
     print("✓ Safe for financial system integration with ASCII encoding")
 
@@ -284,7 +286,7 @@ def demonstrate_logging_config():
     print(f"Tags preserved: {result['tags']}")
 
     # Verify JSON safety
-    json_str = json.dumps(result, ensure_ascii=True)
+    json_str = ds.dumps_json(result, ensure_ascii=True)
     print(f"JSON serializable: {len(json_str)} chars")
     print("✓ Safe for production logging systems with proper truncation")
 
@@ -322,7 +324,7 @@ def demonstrate_performance_comparison():
         end_time = time.perf_counter()
 
         # Measure output size
-        json_str = json.dumps(result, default=str)
+        json_str = ds.dumps_json(result, default=str)
 
         # Key features
         features = []

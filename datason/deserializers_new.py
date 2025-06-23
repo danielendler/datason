@@ -963,6 +963,8 @@ def safe_deserialize(json_str: str, allow_pickle: bool = False, **kwargs: Any) -
     import json
 
     try:
+        # NOTE: Using stdlib json.loads here is legitimate for security validation:
+        # We need to parse the JSON first to check for pickle data before DataSON processing
         parsed = json.loads(json_str)
 
         # Security check for pickle data

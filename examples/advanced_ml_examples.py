@@ -3,9 +3,10 @@
 This example demonstrates datason's capabilities with major ML/AI libraries
 including PyTorch, TensorFlow, scikit-learn, scipy, and others. Shows both
 serialization and deserialization in realistic ML workflows.
+
+Shows proper DataSON usage patterns without stdlib json dependencies.
 """
 
-import json
 import uuid
 from datetime import datetime
 
@@ -37,7 +38,7 @@ def simple_pytorch_workflow():
         # Simple ML API - automatic PyTorch handling!
         ml_serialized = ds.dump_ml(pytorch_results)
         print("✅ ML-optimized serialization with dump_ml():")
-        print(json.dumps(ml_serialized, indent=2))
+        print(ds.dumps_json(ml_serialized, indent=2))
         print("🎯 PyTorch tensors automatically converted!")
         return ml_serialized
 
@@ -92,10 +93,9 @@ def demonstrate_pytorch_workflow() -> None:
         print(f"  Loss value preserved: {serialized['metrics']['loss']}")
         print()
 
-        # Full round trip through JSON
-        json_str = json.dumps(serialized, indent=2)
-        parsed = json.loads(json_str)
-        deserialized = ds.deserialize(parsed)
+        # Full round trip through JSON string
+        json_str = ds.dumps_json(serialized, indent=2)
+        deserialized = ds.loads(json_str)
 
         print("✅ Round-trip completed")
         print(f"  Experiment ID restored: {type(deserialized['experiment_id']).__name__}")
@@ -178,9 +178,9 @@ def demonstrate_sklearn_pipeline() -> None:
         print()
 
         # Round trip
-        json_str = json.dumps(serialized, indent=2)
-        parsed = json.loads(json_str)
-        deserialized = ds.deserialize(parsed)
+        json_str = ds.dumps_json(serialized, indent=2)
+        # JSON string created, now deserialize directly
+        deserialized = ds.loads(json_str)
 
         print("✅ Round-trip completed")
         print(f"  Experiment ID: {type(deserialized['experiment_id']).__name__}")
@@ -262,9 +262,9 @@ def demonstrate_computer_vision_workflow() -> None:
         print()
 
         # Round trip
-        json_str = json.dumps(serialized, indent=2)
-        parsed = json.loads(json_str)
-        deserialized = ds.deserialize(parsed)
+        json_str = ds.dumps_json(serialized, indent=2)
+        # JSON string created, now deserialize directly
+        deserialized = ds.loads(json_str)
 
         print("✅ Round-trip completed")
         print(f"  Experiment ID: {type(deserialized['experiment_id']).__name__}")
@@ -338,9 +338,9 @@ def demonstrate_time_series_analysis() -> None:
         print()
 
         # Round trip
-        json_str = json.dumps(serialized, indent=2)
-        parsed = json.loads(json_str)
-        deserialized = ds.deserialize(parsed)
+        json_str = ds.dumps_json(serialized, indent=2)
+        # JSON string created, now deserialize directly
+        deserialized = ds.loads(json_str)
 
         print("✅ Round-trip completed")
         print(f"  Analysis ID: {type(deserialized['analysis_id']).__name__}")
@@ -454,9 +454,9 @@ def demonstrate_nlp_workflow() -> None:
         print()
 
         # Round trip
-        json_str = json.dumps(serialized, indent=2)
-        parsed = json.loads(json_str)
-        deserialized = ds.deserialize(parsed)
+        json_str = ds.dumps_json(serialized, indent=2)
+        # JSON string created, now deserialize directly
+        deserialized = ds.loads(json_str)
 
         print("✅ Round-trip completed")
         print(f"  Experiment ID: {type(deserialized['experiment_id']).__name__}")
@@ -554,9 +554,9 @@ def demonstrate_experiment_tracking() -> None:
         print()
 
         # Round trip
-        json_str = json.dumps(serialized, indent=2)
-        parsed = json.loads(json_str)
-        deserialized = ds.deserialize(parsed)
+        json_str = ds.dumps_json(serialized, indent=2)
+        # JSON string created, now deserialize directly
+        deserialized = ds.loads(json_str)
 
         print("✅ Round-trip completed")
         print(f"  Session ID: {type(deserialized['tracking_session_id']).__name__}")
