@@ -58,12 +58,13 @@ def suppress_deprecation_warnings(suppress: bool = True) -> None:
 def dump(obj: Any, fp: Any, **kwargs: Any) -> None:
     """Enhanced file serialization (DataSON's smart default).
 
-    This saves enhanced DataSON serialized data to a file using save_ml().
-    For stdlib json.dump() compatibility, use datason.json.dump() or dump_json().
+    This is DataSON's smart file writer with datetime handling, type preservation,
+    and enhanced ML support. For stdlib json.dump() compatibility,
+    use datason.json.dump() or dump_json().
 
     Args:
-        obj: Object to serialize
         fp: File-like object or file path to write to
+        obj: Object to serialize
         **kwargs: DataSON configuration options
 
     Returns:
@@ -71,7 +72,7 @@ def dump(obj: Any, fp: Any, **kwargs: Any) -> None:
 
     Example:
         >>> with open('data.json', 'w') as f:
-        ...     dump(data, f)  # Enhanced serialization with smart features
+        ...     dump(data, f)  # Smart serialization with datetime handling
 
         >>> # For JSON compatibility:
         >>> import datason.json as json
@@ -80,10 +81,11 @@ def dump(obj: Any, fp: Any, **kwargs: Any) -> None:
     """
     # Use enhanced file saving (supports both file objects and paths)
     if hasattr(fp, "write"):
-        # File-like object: serialize to enhanced format and write
+        # File-like object: use DataSON's native JSON writing
         import json
 
         serialized = _serialize_core(obj, **kwargs)
+        # Write JSON directly without double processing
         json.dump(serialized, fp)
     else:
         # File path: use save_ml for enhanced features
@@ -171,11 +173,12 @@ def load(fp: Any, **kwargs: Any) -> Any:
     """
     # Use enhanced deserialization
     if hasattr(fp, "read"):
-        # File-like object: read with smart parsing
-        import json
-
-        data = json.load(fp)
-        return load_smart(data, **kwargs)
+        # File-like object: use DataSON's native deserialization
+        # Read the content and parse with DataSON directly
+        content = fp.read()
+        if isinstance(content, bytes):
+            content = content.decode("utf-8")
+        return loads(content, **kwargs)
     else:
         # File path: use enhanced file loading
         results = list(load_smart_file(fp, **kwargs))
@@ -294,10 +297,8 @@ def serialize(
     if chunked:
         return serialize_chunked(obj, chunk_size=chunk_size, config=config)
 
-    # Import to avoid circular import issue
-    from .core_new import serialize as core_serialize
-
-    return core_serialize(obj, config=config)
+    # Use the existing imported serialize function to avoid circular imports
+    return _serialize_core(obj, config=config)
 
 
 def dump_ml(obj: Any, **kwargs: Any) -> Any:
@@ -325,9 +326,9 @@ def dump_ml(obj: Any, **kwargs: Any) -> Any:
     config = replace(base_config, **kwargs)
 
     # Directly call serialize - serializer handles circular references properly
-    from .core_new import serialize
+    # Use _serialize_core to avoid circular imports
 
-    return serialize(obj, config=config)
+    return _serialize_core(obj, config=config)
 
 
 def dump_api(obj: Any, **kwargs: Any) -> Any:
@@ -355,9 +356,9 @@ def dump_api(obj: Any, **kwargs: Any) -> Any:
     config = replace(base_config, **kwargs)
 
     # Directly call serialize - serializer handles circular references properly
-    from .core_new import serialize
+    # Use _serialize_core to avoid circular imports
 
-    return serialize(obj, config=config)
+    return _serialize_core(obj, config=config)
 
 
 def dump_secure(
@@ -420,9 +421,9 @@ def dump_secure(
     )
 
     # Directly call serialize - serializer handles circular references properly
-    from .core_new import serialize
+    # Use _serialize_core to avoid circular imports
 
-    return serialize(obj, config=config)
+    return _serialize_core(obj, config=config)
 
 
 def dump_fast(obj: Any, **kwargs: Any) -> Any:
@@ -444,7 +445,7 @@ def dump_fast(obj: Any, **kwargs: Any) -> Any:
         >>> result = dump_fast(large_dataset)
     """
     config = get_performance_config()
-    return serialize(obj, config=config)
+    return _serialize_core(obj, config=config)
 
 
 def dump_chunked(obj: Any, *, chunk_size: int = 1000, **kwargs: Any) -> Any:
@@ -634,6 +635,9 @@ def loads(s: str, **kwargs: Any) -> Any:
         >>> import datason.json as json
         >>> result = json.loads(json_str)  # Exact json.loads() behavior
     """
+    # Use DataSON's native string parsing to avoid double processing
+    # This is still a legitimate case where we need json.loads first
+    # because load_smart expects already-parsed data, not JSON strings
     import json
 
     # Parse with standard json, then enhance with smart processing
