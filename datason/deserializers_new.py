@@ -964,17 +964,25 @@ def safe_deserialize(json_str: str, allow_pickle: bool = False, **kwargs: Any) -
         DeserializationSecurityError: If pickle data is detected and allow_pickle=False
     """
     try:
+        # First check for pickle data in the raw JSON string before processing
+        if not allow_pickle:
+            # Parse with stdlib json first to check for pickle data
+            import json as stdlib_json
+
+            raw_parsed = stdlib_json.loads(json_str)
+            if _contains_pickle_data(raw_parsed):
+                raise DeserializationSecurityError(
+                    "Detected pickle-serialized objects which are unsafe to deserialize. "
+                    "Set allow_pickle=True to override this security check."
+                )
+
         # Parse JSON using DataSON's loads_json
         parsed = loads_json(json_str)
 
-        # Security check for pickle data
-        if not allow_pickle and _contains_pickle_data(parsed):
-            raise DeserializationSecurityError(
-                "Detected pickle-serialized objects which are unsafe to deserialize. "
-                "Set allow_pickle=True to override this security check."
-            )
-
         return deserialize(parsed, **kwargs)
+    except DeserializationSecurityError:
+        # Re-raise security errors - these should not be caught
+        raise
     except (ValueError, TypeError):  # Standard Python errors
         return json_str  # Return original string on error
     except Exception:  # Catch any JSON parsing errors including DataSON's JSONDecodeError
@@ -1214,6 +1222,24 @@ class TemplateDeserializer:
         """Deserialize DataFrame using template structure and dtypes."""
         if pd is None:
             raise ImportError("pandas is required for DataFrame template deserialization")
+
+        # If object is already a DataFrame, just ensure it matches template structure
+        if isinstance(obj, pd.DataFrame):
+            # Apply template column types
+            for col in template.columns:
+                if col in obj.columns:
+                    try:
+                        target_dtype = template[col].dtype
+                        obj[col] = obj[col].astype(target_dtype)
+                    except Exception:
+                        # Type conversion failed, keep original
+                        warnings.warn(
+                            f"Failed to convert column '{col}' to template dtype {target_dtype}", stacklevel=3
+                        )
+
+            # Ensure column order matches template
+            obj = obj.reindex(columns=template.columns, fill_value=None)
+            return obj
 
         # Handle different serialization formats
         if isinstance(obj, list):

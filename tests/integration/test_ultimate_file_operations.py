@@ -17,6 +17,7 @@ This is the "stress test of stress tests" for datason! 🚀
 
 import tempfile
 import uuid
+import warnings
 from datetime import datetime
 from decimal import Decimal
 from pathlib import Path
@@ -329,14 +330,17 @@ class TestUltimateFileOperations:
 
         datason.save_ml(ml_data, ml_path)
 
-        # 2. Load back and verify
-        loaded_ml = list(datason.load_smart_file(ml_path))
-        loaded_sensitive = list(datason.load_smart_file(secure_path))
+        # 2. Load back and verify using stream_load for large files
+        # Use stream_load to avoid ResourceWarnings for large files
+        with datason.stream_load(ml_path) as stream:
+            loaded_ml = list(stream)
+        with datason.stream_load(secure_path) as stream:
+            loaded_sensitive = list(stream)
 
         # Should load as single objects (not multiple like JSONL)
         assert len(loaded_ml) == 1
         # Note: save_secure creates a structure with 'data' and 'redaction_summary' keys
-        # The load_smart_file function may be extracting the data keys separately
+        # The stream_load function may be extracting the data keys separately
         # For now, we'll check that we got some data back
         assert len(loaded_sensitive) >= 1
 
@@ -621,7 +625,11 @@ def test_ultimate_stress_test():
 
             # 3. Load back with perfect reconstruction
             # (Skip template for now since it's complex to define)
-            loaded_mega = list(datason.load_smart_file(mega_path))
+            # Use load_smart_file for secure files since they have special structure
+            # Suppress ResourceWarning about large files since this is expected
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", ResourceWarning)
+                loaded_mega = list(datason.load_smart_file(mega_path))
             assert len(loaded_mega) == 1
 
             result = loaded_mega[0]

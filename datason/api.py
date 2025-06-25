@@ -16,15 +16,21 @@ import warnings
 from pathlib import Path
 from typing import Any, Dict, Iterator, List, Optional, Union
 
-from datason.config import SerializationConfig, get_strict_config
+from datason.config import (
+    DataFrameOrient,
+    DateFormat,
+    NanHandling,
+    SerializationConfig,
+    TypeCoercion,
+    get_strict_config,
+)
 from datason.core_new import (
     StreamingSerializer,
+    serialize_chunked,
+    stream_serialize,
 )
 from datason.core_new import (
     serialize as core_serialize,
-)
-from datason.core_new import (
-    serialize_chunked as stream_serialize,
 )
 from datason.deserializers_new import (
     StreamingDeserializer,
@@ -210,13 +216,17 @@ def load(fp: Any, **kwargs: Any) -> Any:
         # File-like object: check size and warn if large
         _warn_large_file(fp)
 
-        # For file-like objects, use DataSON's load_json() for compatibility
-        # with streaming support if available in the underlying implementation
+        # For file-like objects, use DataSON's smart loading for enhanced features
         if hasattr(fp, "seek"):
             try:
                 # Reset file pointer to start in case it was read before
                 fp.seek(0)
-                return load_json(fp, **kwargs)
+                # Use DataSON's JSON compatibility layer first, then enhance with smart processing
+                from .json import loads as loads_json
+
+                content = fp.read()
+                data = loads_json(content)
+                return load_smart(data, **kwargs)
             except JSONDecodeError as e:
                 raise ValueError(f"Failed to parse file: {e}") from e
         else:
@@ -224,10 +234,11 @@ def load(fp: Any, **kwargs: Any) -> Any:
             content = fp.read()
             if isinstance(content, bytes):
                 content = content.decode("utf-8")
-            # Use DataSON's loads_json for stdlib compatibility
+            # Use DataSON's loads_json for stdlib compatibility, then enhance
             from .json import loads as loads_json
 
-            return loads_json(content, **kwargs)
+            data = loads_json(content)
+            return load_smart(data, **kwargs)
     else:
         # For file paths, check size and warn if large
         try:
@@ -240,9 +251,12 @@ def load(fp: Any, **kwargs: Any) -> Any:
                     stacklevel=2,
                 )
 
-            # Use DataSON's load_json for stdlib compatibility
+            # Use DataSON's smart loading for enhanced features
             with open(fp, encoding="utf-8") as f:
-                return load_json(f, **kwargs)
+                from .json import loads as loads_json
+
+                data = loads_json(f.read())
+                return load_smart(data, **kwargs)
 
         except (OSError, TypeError) as e:
             # Fallback to load_smart_file if json.load fails or file can't be opened
@@ -290,13 +304,14 @@ def get_ml_config() -> SerializationConfig:
         SerializationConfig: Configuration optimized for ML/AI objects
     """
     return SerializationConfig(
-        preserve_numpy=True,
-        preserve_tensors=True,
-        preserve_ml_models=True,
-        convert_datetimes=True,
-        convert_decimals=True,
-        convert_uuids=True,
-        convert_sets=True,
+        date_format=DateFormat.UNIX_MS,
+        dataframe_orient=DataFrameOrient.RECORDS,
+        nan_handling=NanHandling.NULL,
+        type_coercion=TypeCoercion.AGGRESSIVE,
+        preserve_decimals=False,  # ML often doesn't need exact decimal precision
+        preserve_complex=False,  # ML typically converts complex to real
+        sort_keys=True,  # Consistent output for ML pipelines
+        include_type_hints=True,  # Enable type metadata for ML objects
         max_depth=100,
     )
 
@@ -308,17 +323,18 @@ def get_api_config() -> SerializationConfig:
         SerializationConfig: Configuration optimized for API responses
     """
     return SerializationConfig(
-        preserve_numpy=False,
-        preserve_tensors=False,
-        preserve_ml_models=False,
-        convert_datetimes=True,
-        convert_decimals=True,
-        convert_uuids=True,
-        convert_sets=True,
-        max_depth=10,
-        ensure_ascii=True,
+        date_format=DateFormat.ISO,
+        dataframe_orient=DataFrameOrient.RECORDS,
+        nan_handling=NanHandling.NULL,
+        type_coercion=TypeCoercion.SAFE,
+        preserve_decimals=True,
+        preserve_complex=True,
         sort_keys=True,
-        indent=2,
+        ensure_ascii=True,  # Safe for all HTTP clients
+        # Keep UUIDs as strings for API compatibility (Pydantic/FastAPI)
+        uuid_format="string",
+        parse_uuids=False,
+        max_depth=10,
     )
 
 
@@ -329,58 +345,20 @@ def get_performance_config() -> SerializationConfig:
         SerializationConfig: Configuration optimized for performance
     """
     return SerializationConfig(
-        preserve_numpy=False,
-        preserve_tensors=False,
-        preserve_ml_models=False,
-        convert_datetimes=False,
-        convert_decimals=False,
-        convert_uuids=False,
-        convert_sets=False,
+        date_format=DateFormat.UNIX,  # Fastest date format
+        dataframe_orient=DataFrameOrient.VALUES,  # Fastest DataFrame format
+        nan_handling=NanHandling.NULL,
+        type_coercion=TypeCoercion.SAFE,
+        preserve_decimals=False,  # Skip decimal preservation for speed
+        preserve_complex=False,  # Skip complex preservation for speed
+        sort_keys=False,  # Don't sort for speed
         max_depth=10,
         ensure_ascii=False,
-        sort_keys=False,
-        indent=None,
     )
 
 
-def serialize_chunked(obj: Any, chunk_size: int = 1000, config: Optional[SerializationConfig] = None) -> Any:
-    """Serialize a large object in chunks to avoid memory issues.
-
-    Args:
-        obj: The object to serialize
-        chunk_size: Maximum number of items to process in each chunk
-        config: Serialization configuration
-
-    Returns:
-        A generator that yields serialized chunks of the object
-    """
-    if config is None:
-        config = SerializationConfig()
-
-    # Handle sequences (lists, tuples, etc.)
-    if isinstance(obj, (list, tuple)):
-        for i in range(0, len(obj), chunk_size):
-            chunk = obj[i : i + chunk_size]
-            yield core_serialize(chunk, config=config)
-    # Handle dictionaries
-    elif isinstance(obj, dict):
-        items = list(obj.items())
-        for i in range(0, len(items), chunk_size):
-            chunk = dict(items[i : i + chunk_size])
-            yield core_serialize(chunk, config=config)
-    # Handle other iterables
-    elif hasattr(obj, "__iter__") and not isinstance(obj, (str, bytes, bytearray)):
-        chunk = []
-        for item in obj:
-            chunk.append(item)
-            if len(chunk) >= chunk_size:
-                yield core_serialize(chunk, config=config)
-                chunk = []
-        if chunk:  # Don't forget the last chunk
-            yield core_serialize(chunk, config=config)
-    else:
-        # For non-iterables or small objects, just serialize the whole thing
-        yield core_serialize(obj, config=config)
+# Remove the old serialize_chunked function since it's defined in core_new.py
+# Import it instead
 
 
 # =============================================================================
@@ -707,9 +685,12 @@ def stream_load(
         ...     for item in stream:
         ...         process_item(item)
     """
+    # Detect format if not provided
+    detected_format = _detect_file_format(file_path, format)
+
     return stream_deserialize(
         file_path=file_path,
-        format=format,
+        format=detected_format,
         chunk_processor=chunk_processor,
         buffer_size=buffer_size,
         **kwargs,
@@ -1141,7 +1122,7 @@ def get_api_info() -> Dict[str, Any]:
             "file_operations": True,
         },
         "dump_functions": ["dump", "dump_ml", "dump_api", "dump_secure", "dump_fast", "dump_chunked", "stream_dump"],
-        "load_functions": ["load", "load_basic", "load_smart", "load_perfect", "load_typed", "stream_load"],
+        "load_functions": ["load_basic", "load_smart", "load_perfect", "load_typed"],
         "file_functions": ["save_ml", "save_secure", "save_api", "load_smart_file", "load_perfect_file"],
         "convenience": ["loads", "dumps"],
         "help": ["help_api", "get_api_info"],
@@ -1200,7 +1181,9 @@ def _load_from_file(
 ) -> Iterator[Any]:
     """Core file reading utility supporting both JSON and JSONL formats."""
     detected_format = _detect_file_format(path, format)
-    return stream_deserialize(path, format=detected_format)
+    # Use the StreamingDeserializer as a context manager to get the iterator
+    with stream_deserialize(path, format=detected_format) as stream:
+        yield from stream
 
 
 def save_ml(obj: Any, path: Union[str, Path], *, format: Optional[str] = None, **kwargs: Any) -> None:
