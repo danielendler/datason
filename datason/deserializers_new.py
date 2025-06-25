@@ -12,10 +12,7 @@ from decimal import Decimal
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, Dict, Generator, List, Optional, Set, Union
 
-from .json import JSONDecodeError  # Also import with standard name for compatibility
-
 # Import DataSON's JSON functions
-from .json import JSONDecodeError as DataSONJSONDecodeError
 from .json import loads as loads_json
 
 # Import configuration and security constants
@@ -978,7 +975,9 @@ def safe_deserialize(json_str: str, allow_pickle: bool = False, **kwargs: Any) -
             )
 
         return deserialize(parsed, **kwargs)
-    except (JSONDecodeError, ValueError, TypeError):  # DataSON's loads_json raises JSONDecodeError for invalid JSON
+    except (ValueError, TypeError):  # Standard Python errors
+        return json_str  # Return original string on error
+    except Exception:  # Catch any JSON parsing errors including DataSON's JSONDecodeError
         return json_str  # Return original string on error
 
 
@@ -2447,7 +2446,8 @@ class StreamingDeserializer:
                             item = self.chunk_processor(item)
                         self._items_yielded += 1
                         yield item
-                    except (JSONDecodeError, DataSONJSONDecodeError) as e:
+                    except Exception as e:
+                        # Catch any JSON parsing errors (including JSONDecodeError from loads_json)
                         warnings.warn(
                             f"Invalid JSON line: {line[:100]}... Error: {e}",
                             stacklevel=2,
@@ -2494,7 +2494,8 @@ class StreamingDeserializer:
                     self._items_yielded += 1
                     yield data
 
-            except JSONDecodeError as e:
+            except Exception as e:
+                # Catch any JSON parsing errors (including JSONDecodeError from loads_json)
                 raise ValueError(f"Invalid JSON file: {e}") from e
         else:
             raise ValueError(f"Unsupported format: {self.format}")

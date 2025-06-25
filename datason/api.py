@@ -16,24 +16,24 @@ import warnings
 from pathlib import Path
 from typing import Any, Dict, Iterator, List, Optional, Union
 
-from datason.config import SerializationConfig
+from datason.config import SerializationConfig, get_strict_config
+from datason.core_new import (
+    StreamingSerializer,
+)
+from datason.core_new import (
+    serialize as core_serialize,
+)
+from datason.core_new import (
+    serialize_chunked as stream_serialize,
+)
 from datason.deserializers_new import (
     StreamingDeserializer,
     deserialize,
-    deserialize_chunked_file,
     deserialize_fast,
     deserialize_with_template,
     stream_deserialize,
 )
 from datason.json import JSONDecodeError
-from datason.serializers_new import (
-    StreamingSerializer,
-    stream_serialize,
-)
-from datason.serializers_new import (
-    serialize as core_serialize,
-)
-from datason.utils import get_strict_config
 
 # Type alias for better type hints
 StreamingIterator = Iterator[Dict[str, Any]]
@@ -1200,7 +1200,7 @@ def _load_from_file(
 ) -> Iterator[Any]:
     """Core file reading utility supporting both JSON and JSONL formats."""
     detected_format = _detect_file_format(path, format)
-    return deserialize_chunked_file(path, format=detected_format)
+    return stream_deserialize(path, format=detected_format)
 
 
 def save_ml(obj: Any, path: Union[str, Path], *, format: Optional[str] = None, **kwargs: Any) -> None:
