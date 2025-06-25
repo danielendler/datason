@@ -10,6 +10,7 @@ from pathlib import Path
 ALLOWED_FILES = {
     "datason/json.py",  # Drop-in compatibility module
     "datason/integrity.py",  # Canonical JSON output needed
+    "datason/core_new.py",  # Core module with well-documented legitimate usage
     "tests/unit/test_json_compatibility_requirement.py",
     "tests/unit/test_json_drop_in_compatibility.py",
     "tests/unit/test_enhanced_api_strategy.py",

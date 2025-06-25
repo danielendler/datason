@@ -13,6 +13,73 @@ Progressive complexity load functions for different accuracy and performance nee
 | **FILE OPERATIONS** | | | |
 | `load_smart_file()` | 80-90% | ⚡⚡ | File-based production |
 | `load_perfect_file()` | 100% | ⚡ | File-based critical |
+| `stream_load()` | 100% | ⚡⚡⚡ | Large file streaming |
+
+## 🚀 Streaming Deserialization
+
+For handling large files that don't fit in memory, use `stream_load()` to process data in chunks.
+
+### stream_load()
+
+Stream data from a file with memory efficiency, supporting both JSONL and JSON array formats.
+
+::: datason.stream_load
+    options:
+      show_source: true
+      show_signature: true
+      show_signature_annotations: true
+
+**Features:**
+
+- Memory-efficient processing of large files
+- Supports both JSONL and JSON array formats
+- Automatic gzip decompression (.gz files)
+- Progress tracking with items_yielded
+- Optional chunk processing callback
+
+**Basic Example:**
+
+```python
+# Process a large JSONL file efficiently
+with ds.stream_load("large_data.jsonl") as stream:
+    for item in stream:
+        process_item(item)  # Process one item at a time
+    print(f"Processed {stream.items_yielded} items")
+```
+
+**Gzipped JSON Example:**
+
+```python
+# Process a gzipped JSON file with a chunk processor
+def process_chunk(chunk):
+    chunk["processed"] = True
+    return chunk
+
+with ds.stream_load("data.json.gz", format="json", chunk_processor=process_chunk) as stream:
+    results = list(stream)  # Process all items with chunk processing
+```
+
+**Performance Considerations:**
+
+- Uses buffered I/O for efficient file reading
+- Processes one item at a time to minimize memory usage
+- Automatically detects and handles gzip compression
+- Supports both string paths and pathlib.Path objects
+
+**Example Script:**
+
+For a complete working example that demonstrates different ways to use `stream_load()`, see the [streaming_example.py](https://github.com/yourusername/datason/blob/main/examples/streaming_example.py) in the examples directory. You can run it with:
+
+```bash
+python examples/streaming_example.py
+```
+
+This example shows:
+
+- Basic streaming from JSONL files
+- Streaming with chunk processing
+- Handling gzipped files
+- Progress tracking and item counting
 
 ## 📦 Detailed Function Documentation
 
@@ -27,6 +94,7 @@ Fast, basic deserialization for exploration and testing.
       show_signature_annotations: true
 
 **Quick Exploration Example:**
+
 ```python
 # Fast loading for data exploration
 json_data = '{"values": [1, 2, 3], "timestamp": "2024-01-01T12:00:00"}'
@@ -45,6 +113,7 @@ Intelligent deserialization with good accuracy for production use.
       show_signature_annotations: true
 
 **Production Example:**
+
 ```python
 # Intelligent type detection for production
 smart_data = ds.load_smart(json_data)

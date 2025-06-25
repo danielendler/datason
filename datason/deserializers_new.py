@@ -10,7 +10,13 @@ import warnings
 from datetime import datetime
 from decimal import Decimal
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set
+from typing import TYPE_CHECKING, Any, Callable, Dict, Generator, List, Optional, Set, Union
+
+from .json import JSONDecodeError  # Also import with standard name for compatibility
+
+# Import DataSON's JSON functions
+from .json import JSONDecodeError as DataSONJSONDecodeError
+from .json import loads as loads_json
 
 # Import configuration and security constants
 try:
@@ -960,12 +966,9 @@ def safe_deserialize(json_str: str, allow_pickle: bool = False, **kwargs: Any) -
     Raises:
         DeserializationSecurityError: If pickle data is detected and allow_pickle=False
     """
-    import json
-
     try:
-        # NOTE: Using stdlib json.loads here is legitimate for security validation:
-        # We need to parse the JSON first to check for pickle data before DataSON processing
-        parsed = json.loads(json_str)
+        # Parse JSON using DataSON's loads_json
+        parsed = loads_json(json_str)
 
         # Security check for pickle data
         if not allow_pickle and _contains_pickle_data(parsed):
@@ -975,8 +978,8 @@ def safe_deserialize(json_str: str, allow_pickle: bool = False, **kwargs: Any) -
             )
 
         return deserialize(parsed, **kwargs)
-    except (json.JSONDecodeError, TypeError, ValueError):
-        return json_str
+    except (JSONDecodeError, ValueError, TypeError):  # DataSON's loads_json raises JSONDecodeError for invalid JSON
+        return json_str  # Return original string on error
 
 
 def parse_datetime_string(s: Any) -> Optional[datetime]:
@@ -2126,7 +2129,7 @@ def _looks_like_uuid_optimized(s: str) -> bool:
 
     # More thorough check: validate all hex segments
     segments = [s[:8], s[9:13], s[14:18], s[19:23], s[24:]]
-    return all(all(c in "0123456789abcdefABCDEF" for c in segment) for segment in segments)
+    return all(all(c in _UUID_CHAR_SET for c in segment) for segment in segments)
 
 
 def _looks_like_path_optimized(s: str) -> bool:
@@ -2361,6 +2364,177 @@ def _clear_deserialization_caches() -> None:
 def clear_caches() -> None:
     """Clear all caches - new name for _clear_deserialization_caches."""
     _clear_deserialization_caches()
+
+
+class StreamingDeserializer:
+    """Context manager for streaming deserialization from files.
+
+    Enables processing of datasets larger than available memory by reading
+    and deserializing data in chunks without loading everything into memory.
+    """
+
+    def __init__(
+        self,
+        file_path: Union[str, Path],
+        format: str = "jsonl",
+        chunk_processor: Optional[Callable[[Any], Any]] = None,
+        buffer_size: int = 8192,
+    ):
+        """Initialize streaming deserializer.
+
+        Args:
+            file_path: Path to input file
+            format: Input format ('jsonl' or 'json')
+            chunk_processor: Optional function to process each deserialized chunk
+            buffer_size: Read buffer size in bytes
+
+        Raises:
+            ValueError: If format is not 'jsonl' or 'json'
+        """
+        self.file_path = Path(file_path)
+        self.format = format.lower()
+        if self.format not in ("jsonl", "json"):
+            raise ValueError(f"Unsupported format: {format}. Must be 'jsonl' or 'json'")
+        self.chunk_processor = chunk_processor
+        self.buffer_size = buffer_size
+        self._file = None
+        self._items_yielded = 0
+        self._is_gzipped = False
+
+    def __enter__(self) -> "StreamingDeserializer":
+        """Enter context manager."""
+        # Check for gzip compression
+        try:
+            with self.file_path.open("rb") as f:
+                magic = f.read(2)
+                self._is_gzipped = magic == b"\x1f\x8b"
+        except OSError:
+            self._is_gzipped = False
+
+        # Open the file with appropriate compression handling
+        if self._is_gzipped:
+            import gzip
+
+            self._file = gzip.open(self.file_path, "rt", encoding="utf-8")
+        else:
+            self._file = self.file_path.open("r", encoding="utf-8", buffering=self.buffer_size)
+
+        return self
+
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+        """Exit context manager."""
+        if self._file:
+            self._file.close()
+            self._file = None
+
+    def __iter__(self) -> Generator[Any, None, None]:
+        """Iterate over deserialized objects.
+
+        Yields:
+            Deserialized objects from the file
+        """
+        if not self._file:
+            raise RuntimeError("StreamingDeserializer not in context manager")
+
+        if self.format == "jsonl":
+            # JSON Lines format - one object per line
+            for line in self._file:
+                line = line.strip()
+                if line:
+                    try:
+                        item = loads_json(line)
+                        if self.chunk_processor:
+                            item = self.chunk_processor(item)
+                        self._items_yielded += 1
+                        yield item
+                    except (JSONDecodeError, DataSONJSONDecodeError) as e:
+                        warnings.warn(
+                            f"Invalid JSON line: {line[:100]}... Error: {e}",
+                            stacklevel=2,
+                        )
+                        continue
+
+        elif self.format == "json":
+            # JSON format - read entire file and parse as JSON
+            try:
+                # Reset file position in case we've already read from it
+                if self._is_gzipped:
+                    self._file.close()
+                    import gzip
+
+                    with gzip.open(self.file_path, "rt", encoding="utf-8") as f:
+                        data = loads_json(f.read())
+                else:
+                    self._file.seek(0)
+                    data = loads_json(self._file.read())
+
+                # Handle different data structures
+                if isinstance(data, list):
+                    # Direct list of items
+                    for item in data:
+                        if self.chunk_processor:
+                            item = self.chunk_processor(item)
+                        self._items_yielded += 1
+                        yield item
+                elif isinstance(data, dict):
+                    # Support both 'chunks' and 'data' keys for chunked data
+                    items = data.get("chunks", data.get("data", [data]))
+                    if not isinstance(items, list):
+                        items = [items]
+
+                    for item in items:
+                        if self.chunk_processor:
+                            item = self.chunk_processor(item)
+                        self._items_yielded += 1
+                        yield item
+                else:
+                    # Single item
+                    if self.chunk_processor:
+                        data = self.chunk_processor(data)
+                    self._items_yielded += 1
+                    yield data
+
+            except JSONDecodeError as e:
+                raise ValueError(f"Invalid JSON file: {e}") from e
+        else:
+            raise ValueError(f"Unsupported format: {self.format}")
+
+    @property
+    def items_yielded(self) -> int:
+        """Get the number of items yielded so far."""
+        return self._items_yielded
+
+
+def stream_deserialize(
+    file_path: Union[str, Path],
+    format: str = "jsonl",
+    chunk_processor: Optional[Callable[[Any], Any]] = None,
+    buffer_size: int = 8192,
+) -> StreamingDeserializer:
+    """Create a streaming deserializer context manager.
+
+    Args:
+        file_path: Path to input file
+        format: Input format ('jsonl' or 'json')
+        chunk_processor: Optional function to process each deserialized chunk
+        buffer_size: Read buffer size in bytes
+
+    Returns:
+        StreamingDeserializer context manager
+
+    Examples:
+        >>> # Process items one at a time (memory efficient)
+        >>> with stream_deserialize("large_data.jsonl") as stream:
+        ...     for item in stream:
+        ...         process_item(item)
+        >>> # Apply custom processing to each item
+        >>> def process_item(item):
+        ...     return {k: v * 2 for k, v in item.items()}
+        >>>
+        >>> with stream_deserialize("data.jsonl", chunk_processor=process_item) as stream:
+        ...     processed_items = list(stream)
+    """
+    return StreamingDeserializer(file_path, format, chunk_processor, buffer_size)
 
 
 def _convert_string_keys_to_int_if_possible(data: Dict[str, Any]) -> Dict[Any, Any]:
