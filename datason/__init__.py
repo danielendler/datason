@@ -57,6 +57,7 @@ from .api import (
     save_ml,
     save_secure,
     stream_dump,
+    stream_load,  # Streaming deserialization for large files
     stream_save_ml,
     suppress_deprecation_warnings,
 )
@@ -288,6 +289,7 @@ __all__ = [  # noqa: RUF022
     "load_smart",
     "load_perfect",
     "load_typed",
+    "stream_load",
     "loads",
     "dumps",
     "help_api",

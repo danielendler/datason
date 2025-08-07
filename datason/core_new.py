@@ -1583,6 +1583,10 @@ def deserialize_chunked_file(
                     line = line.strip()
                     if line:
                         try:
+                            # NOTE: Using stdlib json.loads here is legitimate because:
+                            # 1. This is core module - can't import from api/deserializers (circular dependency)
+                            # 2. JSONL parsing requires basic JSON parsing, not enhanced DataSON features
+                            # 3. chunk_processor allows post-processing for DataSON enhancements
                             chunk = json.loads(line)
                             if chunk_processor:
                                 chunk = chunk_processor(chunk)
@@ -1596,6 +1600,10 @@ def deserialize_chunked_file(
                     line = line.strip()
                     if line:
                         try:
+                            # NOTE: Using stdlib json.loads here is legitimate because:
+                            # 1. This is core module - can't import from api/deserializers (circular dependency)
+                            # 2. JSONL parsing requires basic JSON parsing, not enhanced DataSON features
+                            # 3. chunk_processor allows post-processing for DataSON enhancements
                             chunk = json.loads(line)
                             if chunk_processor:
                                 chunk = chunk_processor(chunk)
@@ -1608,9 +1616,11 @@ def deserialize_chunked_file(
         # JSON format with array
         if is_gzipped:
             with gzip.open(file_path, "rt", encoding="utf-8") as f:
+                # NOTE: Using stdlib json.load here is legitimate (same reasons as above)
                 data = json.load(f)
         else:
             with file_path.open("r", encoding="utf-8") as f:
+                # NOTE: Using stdlib json.load here is legitimate (same reasons as above)
                 data = json.load(f)
 
         # Handle different data structures

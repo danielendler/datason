@@ -11,7 +11,8 @@ Each feature is demonstrated with real-world use cases and performance considera
 """
 
 import datetime
-import json
+
+# import json
 import tempfile
 from pathlib import Path
 
@@ -339,7 +340,7 @@ def demonstrate_large_dataset_workflow():
 
         # Save template for later use
         with template_file.open("w") as f:
-            json.dump(datason.serialize(dataset_template), f, indent=2)
+            datason.dump_json(datason.serialize(dataset_template), f, indent=2)
 
         # Stream full dataset
         with datason.stream_serialize(dataset_file, format="jsonl") as stream:
@@ -368,7 +369,7 @@ def demonstrate_large_dataset_workflow():
 
         # Load template
         with template_file.open("r") as f:
-            loaded_template = json.load(f)
+            loaded_template = datason.load_json(f)
 
         # Process chunks with template validation
         processed_samples = 0

@@ -26,7 +26,8 @@ from .config import OutputType, SerializationConfig, TypeCoercion
 
 # Import DataSON's core functionality
 from .core_new import serialize as _core_serialize
-from .deserializers_new import deserialize as _basic_deserialize
+
+# Note: _basic_deserialize imported lazily to avoid circular imports
 
 # Re-export json module constants and exceptions for compatibility
 JSONDecodeError = _json.JSONDecodeError
@@ -102,6 +103,9 @@ def loads(s: str, **kwargs: Any) -> Any:
     parsed = _json.loads(s, **kwargs)
 
     # Then process with DataSON's basic deserializer (no smart features)
+    # Lazy import to avoid circular dependency
+    from .deserializers_new import deserialize as _basic_deserialize
+
     return _basic_deserialize(parsed, parse_dates=False, parse_uuids=False)
 
 
@@ -150,6 +154,9 @@ def load(fp, **kwargs: Any) -> Any:
     parsed = _json.load(fp, **kwargs)
 
     # Then process with DataSON's basic deserializer (no smart features)
+    # Lazy import to avoid circular dependency
+    from .deserializers_new import deserialize as _basic_deserialize
+
     return _basic_deserialize(parsed, parse_dates=False, parse_uuids=False)
 
 

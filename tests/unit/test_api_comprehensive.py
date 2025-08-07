@@ -37,7 +37,7 @@ class TestDumpFunction:
 
     def test_dump_basic_usage(self):
         """Test basic dump functionality."""
-        with patch("datason.core_new.serialize") as mock_serialize:
+        with patch("datason.api.core_serialize") as mock_serialize:
             mock_serialize.return_value = {"__datason_type__": "dict", "__datason_value__": {"test": "data"}}
 
             # Use a custom object that will definitely require serialization
@@ -55,7 +55,7 @@ class TestDumpFunction:
         """Test dump with explicit config."""
         config = SerializationConfig()
 
-        with patch("datason.core_new.serialize") as mock_serialize:
+        with patch("datason.api.core_serialize") as mock_serialize:
             mock_serialize.return_value = {"__datason_type__": "dict", "__datason_value__": {"test": "data"}}
 
             # Use a custom object that will definitely require serialization
@@ -66,13 +66,13 @@ class TestDumpFunction:
 
             # serialize is called recursively, so we just check that it was called with a config
             assert mock_serialize.called
-            # Verify that the config was passed to at least one call as a keyword argument
+            # Verify that the config was passed to at least one call as a keyword argument (for dumps())
             config_passed = any(call[1].get("config") == config for call in mock_serialize.call_args_list)
             assert config_passed
 
     def test_dump_ml_mode(self):
         """Test dump with ML mode enabled."""
-        with patch("datason.core_new.serialize") as mock_serialize, patch(
+        with patch("datason.api.core_serialize") as mock_serialize, patch(
             "datason.api.get_ml_config"
         ) as mock_get_ml_config:
             mock_config = SerializationConfig()
@@ -88,12 +88,13 @@ class TestDumpFunction:
             mock_get_ml_config.assert_called_once()
             # serialize is called recursively, so we just check that it was called with the config
             assert mock_serialize.called
+            # Verify that the config was passed to at least one call as a keyword argument (for dumps())
             config_passed = any(call[1].get("config") == mock_config for call in mock_serialize.call_args_list)
             assert config_passed
 
     def test_dump_api_mode(self):
         """Test dump with API mode enabled."""
-        with patch("datason.core_new.serialize") as mock_serialize, patch(
+        with patch("datason.api.core_serialize") as mock_serialize, patch(
             "datason.api.get_api_config"
         ) as mock_get_api_config:
             mock_config = SerializationConfig()
@@ -109,12 +110,13 @@ class TestDumpFunction:
             mock_get_api_config.assert_called_once()
             # serialize is called recursively, so we just check that it was called with the config
             assert mock_serialize.called
+            # Verify that the config was passed to at least one call as a keyword argument (for dumps())
             config_passed = any(call[1].get("config") == mock_config for call in mock_serialize.call_args_list)
             assert config_passed
 
     def test_dump_fast_mode(self):
         """Test dump with fast mode enabled."""
-        with patch("datason.core_new.serialize") as mock_serialize, patch(
+        with patch("datason.api.core_serialize") as mock_serialize, patch(
             "datason.api.get_performance_config"
         ) as mock_get_performance_config:
             mock_config = SerializationConfig()
@@ -130,6 +132,7 @@ class TestDumpFunction:
             mock_get_performance_config.assert_called_once()
             # serialize is called recursively, so we just check that it was called with the config
             assert mock_serialize.called
+            # Verify that the config was passed to at least one call as a keyword argument (for dumps())
             config_passed = any(call[1].get("config") == mock_config for call in mock_serialize.call_args_list)
             assert config_passed
 
@@ -149,7 +152,7 @@ class TestDumpFunction:
 
     def test_dump_secure_mode(self):
         """Test dump with secure mode enabled."""
-        with patch("datason.core_new.serialize") as mock_serialize:
+        with patch("datason.api.core_serialize") as mock_serialize:
             mock_serialize.return_value = {"test": "data"}
 
             # Use a complex object that will definitely require serialization
@@ -163,7 +166,7 @@ class TestDumpFunction:
 
             # Verify config has security settings - config is passed as keyword argument
             call_args = mock_serialize.call_args
-            config = call_args[1].get("config")  # Keyword argument
+            config = call_args[1]["config"]  # Config keyword argument
 
             assert config is not None
             assert config.redact_patterns is not None
@@ -184,7 +187,7 @@ class TestDumpFunction:
 
     def test_dump_with_kwargs(self):
         """Test dump with additional kwargs."""
-        with patch("datason.core_new.serialize") as mock_serialize:
+        with patch("datason.api.core_serialize") as mock_serialize:
             mock_serialize.return_value = {"test": "data"}
 
             # Test that kwargs are passed but don't necessarily create valid config
@@ -200,7 +203,7 @@ class TestDumpVariants:
 
     def test_dump_ml(self):
         """Test dump_ml function."""
-        with patch("datason.core_new.serialize") as mock_serialize, patch(
+        with patch("datason.api.core_serialize") as mock_serialize, patch(
             "datason.api.get_ml_config"
         ) as mock_get_ml_config:
             mock_config = SerializationConfig()
@@ -210,12 +213,16 @@ class TestDumpVariants:
             result = api.dump_ml({"model": "data"})
 
             mock_get_ml_config.assert_called_once()
-            mock_serialize.assert_called_once_with({"model": "data"}, config=mock_config)
+            # Verify serialize was called with the correct arguments
+            mock_serialize.assert_called_once()
+            call_args = mock_serialize.call_args
+            assert call_args[0][0] == {"model": "data"}  # First positional arg
+            assert call_args[1]["config"] == mock_config  # Config as keyword arg
             assert result == {"__datason_type__": "ml.model", "__datason_value__": {"model": "data"}}
 
     def test_dump_api(self):
         """Test dump_api function."""
-        with patch("datason.core_new.serialize") as mock_serialize, patch(
+        with patch("datason.api.core_serialize") as mock_serialize, patch(
             "datason.api.get_api_config"
         ) as mock_get_api_config:
             mock_config = SerializationConfig()
@@ -228,12 +235,16 @@ class TestDumpVariants:
             result = api.dump_api({"response": "data"})
 
             mock_get_api_config.assert_called_once()
-            mock_serialize.assert_called_once_with({"response": "data"}, config=mock_config)
+            # Verify serialize was called with the correct arguments
+            mock_serialize.assert_called_once()
+            call_args = mock_serialize.call_args
+            assert call_args[0][0] == {"response": "data"}  # First positional arg
+            assert call_args[1]["config"] == mock_config  # Config as keyword arg
             assert result == {"__datason_type__": "api.response", "__datason_value__": {"response": "data"}}
 
     def test_dump_secure_default_settings(self):
         """Test dump_secure with default settings."""
-        with patch("datason.core_new.serialize") as mock_serialize:
+        with patch("datason.api.core_serialize") as mock_serialize:
             mock_serialize.return_value = {
                 "__datason_type__": "secure.data",
                 "__datason_value__": {"sensitive": "data"},
@@ -243,7 +254,7 @@ class TestDumpVariants:
 
             mock_serialize.assert_called_once()
             call_args = mock_serialize.call_args
-            obj, config = call_args[0][0], call_args[1]["config"]
+            obj, config = call_args[0][0], call_args[1]["config"]  # First positional, config keyword
 
             assert obj == {"sensitive": "data"}
             assert config.redact_patterns is not None
@@ -253,7 +264,7 @@ class TestDumpVariants:
 
     def test_dump_secure_custom_settings(self):
         """Test dump_secure with custom settings."""
-        with patch("datason.core_new.serialize") as mock_serialize:
+        with patch("datason.api.core_serialize") as mock_serialize:
             mock_serialize.return_value = {"secure": "data"}
 
             api.dump_secure(
@@ -264,7 +275,7 @@ class TestDumpVariants:
 
     def test_dump_fast(self):
         """Test dump_fast function."""
-        with patch("datason.core_new.serialize") as mock_serialize, patch(
+        with patch("datason.api.core_serialize") as mock_serialize, patch(
             "datason.api.get_performance_config"
         ) as mock_get_performance_config:
             mock_config = SerializationConfig()
@@ -279,7 +290,7 @@ class TestDumpVariants:
 
             mock_get_performance_config.assert_called_once()
             assert mock_serialize.called
-            # Verify config passing by checking call arguments
+            # Verify config passing by checking call arguments (keyword argument for dump_fast)
             config_passed = any(call[1].get("config") == mock_config for call in mock_serialize.call_args_list)
             assert config_passed
             # Result will be the mock return value applied to each field
@@ -470,7 +481,7 @@ class TestMigrationHelpers:
         """Test serialize_modern shows deprecation warning."""
         api._suppress_deprecation_warnings = False
 
-        with patch("datason.core_new.serialize") as mock_serialize, pytest.warns(
+        with patch("datason.api.core_serialize") as mock_serialize, pytest.warns(
             DeprecationWarning, match="serialize\\(\\) is deprecated"
         ):
             mock_serialize.return_value = {"data": "serialized"}
@@ -489,7 +500,7 @@ class TestMigrationHelpers:
         """Test serialize_modern with suppressed warnings."""
         api._suppress_deprecation_warnings = True
 
-        with patch("datason.core_new.serialize") as mock_serialize:
+        with patch("datason.api.core_serialize") as mock_serialize:
             mock_serialize.return_value = {"data": "serialized"}
 
             with warnings.catch_warnings(record=True) as w:
@@ -638,7 +649,7 @@ class TestEdgeCases:
 
     def test_dump_secure_with_none_redact_fields(self):
         """Test dump_secure handles None redact_fields gracefully."""
-        with patch("datason.core_new.serialize") as mock_serialize:
+        with patch("datason.api.core_serialize") as mock_serialize:
             mock_serialize.return_value = {"secure": "data"}
 
             api.dump_secure({"data": "test"}, redact_fields=None)
@@ -661,7 +672,7 @@ class TestEdgeCases:
 
     def test_complex_kwargs_handling(self):
         """Test handling of complex kwargs combinations."""
-        with patch("datason.core_new.serialize") as mock_serialize:
+        with patch("datason.api.core_serialize") as mock_serialize:
             mock_serialize.return_value = {"test": "data"}
 
             # Test that invalid kwargs cause TypeError
@@ -685,7 +696,7 @@ class TestIntegrationScenarios:
         mock_model = {"type": "sklearn", "model_data": [1, 2, 3]}
 
         # Serialize with ML optimization
-        with patch("datason.core_new.serialize") as mock_serialize:
+        with patch("datason.api.core_serialize") as mock_serialize:
             mock_serialize.return_value = {"serialized_model": "data"}
 
             serialized = api.dump_ml(mock_model)
@@ -704,7 +715,7 @@ class TestIntegrationScenarios:
         api_data = {"users": [{"id": 1, "email": "test@example.com"}], "count": 1}
 
         # Serialize for API
-        with patch("datason.core_new.serialize") as mock_serialize:
+        with patch("datason.api.core_serialize") as mock_serialize:
             mock_serialize.return_value = {"api_response": "data"}
 
             api_response = api.dump_api(api_data)
@@ -720,7 +731,7 @@ class TestIntegrationScenarios:
     def test_secure_workflow_simulation(self):
         """Test a complete secure data workflow."""
         # Serialize securely
-        with patch("datason.core_new.serialize") as mock_serialize:
+        with patch("datason.api.core_serialize") as mock_serialize:
             mock_serialize.return_value = {"redacted": "data"}
 
             # Actually call the function to trigger the mock

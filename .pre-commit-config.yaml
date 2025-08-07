@@ -69,6 +69,13 @@ repos:
         files: ^(mkdocs\.yml|docs/.*)$
         pass_filenames: false
 
+      - id: json-usage-check
+        name: Check for inappropriate stdlib json usage (staged files only)
+        entry: python scripts/simple_json_check.py --staged-only
+        language: python
+        files: ^(datason/.*\.py|examples/.*\.py)$
+        pass_filenames: true
+
       # Lightweight coverage check for changed files only
       # Note: Disabled due to pytest not being available in pre-commit environment
       # Use local testing instead: pytest --cov=datason

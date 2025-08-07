@@ -2,6 +2,34 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.12.0] - 2025-06-24
+
+### Added
+- **New `stream_load()` function** for memory-efficient streaming deserialization of large files
+  - Supports both JSONL and JSON array formats
+  - Automatic gzip decompression (.gz files)
+  - Progress tracking with `items_yielded` property
+  - Optional chunk processor callback for on-the-fly transformations
+  - Context manager interface for proper resource cleanup
+  - Comprehensive unit test coverage
+
+  Example usage:
+  ```python
+  # Process a large JSONL file efficiently
+  with ds.stream_load("large_data.jsonl") as stream:
+      for item in stream:
+          process_item(item)
+      print(f"Processed {stream.items_yielded} items")
+  ```
+
+### Changed
+- Moved `StreamingDeserializer` and `stream_deserialize` from `core_new.py` to `deserializers_new.py` for better code organization
+- Improved error handling for invalid format parameters in streaming deserializer
+
+### Fixed
+- Fixed linting issues in test files and documentation
+- Added missing type hints and docstrings for streaming functionality
+
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 

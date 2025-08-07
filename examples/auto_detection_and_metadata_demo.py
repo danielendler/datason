@@ -13,7 +13,7 @@ Features demonstrated:
 - Performance comparison between modes
 """
 
-import json
+# import json
 import tempfile
 import time
 import uuid
@@ -165,11 +165,11 @@ def demo_basic_auto_detection():
             print(f"  {key}: {type(value).__name__}")
 
     # Serialize to JSON string
-    json_str = json.dumps(test_data)
+    json_str = ds.dumps_json(test_data)
     print(f"\nJSON string length: {len(json_str)} characters")
 
     # Standard deserialization (no auto-detection)
-    standard_result = deserialize(json.loads(json_str))
+    standard_result = deserialize(ds.loads(json_str))
     print("\nStandard deserialization types:")
     for key, value in standard_result.items():
         if isinstance(value, list):
@@ -178,7 +178,7 @@ def demo_basic_auto_detection():
             print(f"  {key}: {type(value).__name__}")
 
     # Auto-detection deserialization
-    auto_result = auto_deserialize(json.loads(json_str))
+    auto_result = auto_deserialize(ds.loads(json_str))
     print("\nAuto-detection deserialization types:")
     for key, value in auto_result.items():
         if isinstance(value, list):
@@ -228,16 +228,16 @@ def demo_aggressive_mode():
         print("  definitely_not: dict with mismatched column lengths")
 
         # Serialize and deserialize
-        json_str = json.dumps(test_data)
+        json_str = ds.dumps_json(test_data)
 
         # Conservative auto-detection
-        conservative_result = auto_deserialize(json.loads(json_str), aggressive=False)
+        conservative_result = auto_deserialize(ds.loads(json_str), aggressive=False)
         print("\nConservative mode results:")
         for key, value in conservative_result.items():
             print(f"  {key}: {type(value).__name__}")
 
         # Aggressive auto-detection
-        aggressive_result = auto_deserialize(json.loads(json_str), aggressive=True)
+        aggressive_result = auto_deserialize(ds.loads(json_str), aggressive=True)
         print("\nAggressive mode results:")
         for key, value in aggressive_result.items():
             print(f"  {key}: {type(value).__name__}")
@@ -563,14 +563,14 @@ def demo_file_based_workflow():
         standard_file = temp_path / "standard_data.json"
         standard_serialized = serialize(test_data)
         with standard_file.open("w") as f:
-            json.dump(standard_serialized, f, indent=2)
+            ds.dump_json(standard_serialized, f, indent=2)
 
         # Save with type metadata
         metadata_file = temp_path / "metadata_data.json"
         metadata_config = SerializationConfig(include_type_hints=True)
         metadata_serialized = serialize(test_data, config=metadata_config)
         with metadata_file.open("w") as f:
-            json.dump(metadata_serialized, f, indent=2)
+            ds.dump_json(metadata_serialized, f, indent=2)
 
         print("📁 Files created:")
         print(f"  Standard: {standard_file.stat().st_size:,} bytes")
@@ -581,12 +581,12 @@ def demo_file_based_workflow():
 
         # Standard file with auto-detection
         with standard_file.open() as f:
-            standard_loaded = json.load(f)
+            standard_loaded = ds.load_json(f)
         auto_deserialize(standard_loaded, aggressive=True)
 
         # Metadata file (auto-detects type metadata)
         with metadata_file.open() as f:
-            metadata_loaded = json.load(f)
+            metadata_loaded = ds.load_json(f)
         metadata_processed = auto_deserialize(metadata_loaded)
 
         print("✅ Both files processed successfully")

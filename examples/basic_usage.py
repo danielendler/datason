@@ -2,9 +2,9 @@
 """Basic usage examples for datason.
 
 This script demonstrates the simple & direct API of the datason package.
+Shows proper DataSON usage patterns without double processing.
 """
 
-import json
 import uuid
 from datetime import datetime
 from typing import Any, Dict
@@ -32,7 +32,7 @@ def example_simple_api() -> None:
     ds.dump_fast(data)  # Performance optimized (for demo)
 
     print("API-optimized serialization (clean JSON):")
-    print(json.dumps(api_data, indent=2))
+    print(ds.dumps_json(api_data, indent=2))  # Use DataSON's JSON string output
     print()
 
 
@@ -53,7 +53,7 @@ def example_basic_serialization() -> None:
 
     serialized = ds.serialize(data)
     print("Original data structure converted to JSON-ready format:")
-    print(json.dumps(serialized, indent=2))
+    print(ds.dumps_json(serialized, indent=2))  # Use DataSON's JSON string output
     print()
 
 
@@ -71,7 +71,7 @@ def example_uuid_api_compatibility() -> None:
     # Simple API automatically handles UUIDs for web APIs
     api_data = ds.dump_api(data)
     print("UUIDs automatically become strings for APIs:")
-    print(json.dumps(api_data, indent=2))
+    print(ds.dumps_json(api_data, indent=2))  # Use DataSON's JSON string output
     print("✅ No more Pydantic validation errors!")
     print()
 
@@ -117,7 +117,7 @@ def example_datetime_handling() -> None:
 
     serialized = ds.serialize(data)
     print("DateTime objects converted to ISO format:")
-    print(json.dumps(serialized, indent=2))
+    print(ds.dumps_json(serialized, indent=2))  # Use DataSON's JSON string output
     print()
 
 
@@ -135,7 +135,7 @@ def example_edge_cases() -> None:
 
     serialized = ds.serialize(data)
     print("Edge cases handled gracefully:")
-    print(json.dumps(serialized, indent=2))
+    print(ds.dumps_json(serialized, indent=2))  # Use DataSON's JSON string output
     print()
 
 
@@ -255,7 +255,7 @@ def example_nested_complex_data() -> None:
 
     serialized = ds.serialize(user_data)
     print("Complex nested structure with various data types:")
-    print(json.dumps(serialized, indent=2))
+    print(ds.dumps_json(serialized, indent=2))  # Use DataSON's JSON string output
     print()
 
 
@@ -296,7 +296,7 @@ def example_custom_objects() -> None:
 
     serialized = ds.serialize(data)
     print("Custom objects serialized:")
-    print(json.dumps(serialized, indent=2))
+    print(ds.dumps_json(serialized, indent=2))  # Use DataSON's JSON string output
     print()
 
 
