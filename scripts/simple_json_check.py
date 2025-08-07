@@ -8,7 +8,8 @@ from pathlib import Path
 
 # Files where stdlib json import is legitimate
 ALLOWED_FILES = {
-    "datason/json.py",  # Drop-in compatibility module
+    "datason/json.py",  # Legacy path (kept for backward compatibility)
+    "datason/json/__init__.py",  # Drop-in compatibility package
     "datason/integrity.py",  # Canonical JSON output needed
     "datason/core_new.py",  # Core module with well-documented legitimate usage
     "tests/unit/test_json_compatibility_requirement.py",

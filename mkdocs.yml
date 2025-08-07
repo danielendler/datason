@@ -124,6 +124,7 @@ markdown_extensions:
 # Fixed navigation using files that actually exist
 nav:
   - Home: index.md
+  - Two Modes: two-modes.md
 
   # User Guide Section
   - User Guide:

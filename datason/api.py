@@ -102,6 +102,19 @@ def dump(obj: Any, fp: Any, **kwargs: Any) -> None:
         save_ml(obj, fp, **kwargs)
 
 
+def save(obj: Any, fp: Any, **kwargs: Any) -> None:
+    """Enhanced file serialization alias.
+
+    This function mirrors :func:`dump` but uses a name that emphasizes
+    DataSON's role as an enhanced saver rather than a drop-in
+    replacement. Behaviour is identical to :func:`dump` and therefore
+    differs from :func:`json.dump` by performing type preservation and
+    datetime handling.
+    """
+
+    dump(obj, fp, **kwargs)
+
+
 def dump_json(
     obj: Any,
     fp: Any,
@@ -954,6 +967,18 @@ def dumps_json(
     from .json import dumps as dumps_json_stdlib
 
     return dumps_json_stdlib(serialized, **json_params)
+
+
+def save_string(obj: Any, **kwargs: Any) -> str:
+    """Enhanced serialization to JSON string.
+
+    This is an alias for :func:`dumps_json` that highlights the
+    difference from :func:`json.dumps`. DataSON performs type
+    inference and normalization before encoding the result as a JSON
+    string.
+    """
+
+    return dumps_json(obj, **kwargs)
 
 
 # =============================================================================

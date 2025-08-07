@@ -6,6 +6,8 @@ Intention-revealing dump functions for different use cases and optimization need
 
 | Function | Purpose | Best For |
 |----------|---------|----------|
+| `save()` | Enhanced file writer (alias of `dump`) | Smart file output |
+| `save_string()` | JSON string with type inference | String output |
 | `dump()` | General-purpose with composable options | Flexible workflows |
 | `dump_ml()` | ML-optimized for models and tensors | Data science |
 | `dump_api()` | Clean JSON for web APIs | Web development |
@@ -20,6 +22,34 @@ Intention-revealing dump functions for different use cases and optimization need
 | `save_chunked()` | Save large data efficiently to files | Big dataset export |
 
 ## 📦 Detailed Function Documentation
+
+### save()
+
+Enhanced file serialization to path or file object.
+
+::: datason.save
+    options:
+      show_source: true
+      show_signature: true
+      show_signature_annotations: true
+
+!!! warning "Breaking behavior"
+    Unlike `json.dump`, `save()` performs type preservation and datetime
+    conversion before writing to disk.
+
+### save_string()
+
+Enhanced serialization that returns a JSON string.
+
+::: datason.save_string
+    options:
+      show_source: true
+      show_signature: true
+      show_signature_annotations: true
+
+!!! warning "Breaking behavior"
+    `save_string()` applies DataSON's type inference before producing a
+    JSON string, while `json.dumps` only handles basic types.
 
 ### dump()
 
