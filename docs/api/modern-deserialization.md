@@ -102,6 +102,10 @@ basic_data = ds.load_basic(json_data)
 # Basic types only, minimal processing
 ```
 
+!!! warning "Breaking behavior"
+    Unlike `json.loads`, `load_basic()` may convert ISO formatted
+    strings to :class:`datetime.datetime` objects.
+
 ### load_smart()
 
 Intelligent deserialization with good accuracy for production use.
@@ -119,6 +123,10 @@ Intelligent deserialization with good accuracy for production use.
 smart_data = ds.load_smart(json_data)
 print(type(smart_data["timestamp"]))  # <class 'datetime.datetime'>
 ```
+
+!!! warning "Breaking behavior"
+    Performs aggressive type inference (datetimes, UUIDs, pandas types)
+    beyond what `json.loads` provides.
 
 ### load_perfect()
 
@@ -142,6 +150,10 @@ template = {
 # 100% reliable restoration
 perfect_data = ds.load_perfect(json_data, template)
 ```
+
+!!! warning "Breaking behavior"
+    Requires a template and can reconstruct complex Python types; the
+    standard library has no equivalent.
 
 ### load_typed()
 
