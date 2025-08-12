@@ -27,7 +27,7 @@ jobs:
 
     steps:
     - name: 📥 Checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     - name: 🤖 Auto-approve Dependabot PRs (Updated to v4 with proper permissions)
       uses: hmarr/auto-approve-action@v4
@@ -76,7 +76,7 @@ jobs:
 
     steps:
     - name: 📥 Checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     # 🚀 PATH A: Dependabot PRs - FULLY AUTOMATIC (no approval needed)
     - name: 🤖 Auto-merge Dependabot PRs (Fast path - FULLY AUTOMATIC)
