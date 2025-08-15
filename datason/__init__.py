@@ -52,10 +52,12 @@ from .api import (
     load_typed,
     loads,  # Enhanced default (smart parsing, datetime support)
     loads_json,  # JSON compatibility (exact stdlib behavior)
+    save,
     save_api,
     save_chunked,
     save_ml,
     save_secure,
+    save_string,
     stream_dump,
     stream_load,  # Streaming deserialization for large files
     stream_save_ml,
@@ -228,6 +230,8 @@ __all__ = [  # noqa: RUF022
     # Enhanced DataSON API (default recommended usage)
     "dump",  # Enhanced file writing with smart features
     "dumps",  # Enhanced serialization returning dict
+    "save",  # Alias for dump
+    "save_string",  # Enhanced JSON string serialization
     "load",  # Enhanced file reading with smart parsing
     "loads",  # Enhanced string parsing with smart features
     "serialize",  # Enhanced serialization (returns dict)
@@ -276,6 +280,8 @@ __all__ = [  # noqa: RUF022
     "dump_chunked",
     "stream_dump",
     # File I/O Operations - Modern API Integration
+    "save",
+    "save_string",
     "save_ml",
     "save_secure",
     "save_api",

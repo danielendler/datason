@@ -23,6 +23,7 @@
 - 🚀 **Enhanced by Default**: Main API provides smart datetime parsing and type detection automatically
 - ⚡ **Dual API Strategy**: Choose stdlib compatibility (`datason.json`) or enhanced features (`datason`)
 - 🛠️ **Zero Migration**: Existing `json.loads/dumps` code works immediately with optional enhancements
+- 📚 **Need help choosing?** See [Two Modes: When to Use Which](docs/two-modes.md)
 
 ### 🧠 **Intelligent Processing**  
 - 🧠 **Smart Type Detection**: Automatically handles pandas DataFrames, NumPy arrays, datetime objects, and more
