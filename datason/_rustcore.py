@@ -3,6 +3,7 @@
 This module loads the optional Rust extension and exposes helper
 functions that verify objects are eligible for the fast path.
 """
+
 from __future__ import annotations
 
 import math
@@ -17,7 +18,8 @@ from .core_new import (
 )
 
 try:  # pragma: no cover - import failure handled in AVAILABLE flag
-    from ._datason_rust import dumps_core as _dumps_core, loads_core as _loads_core
+    from ._datason_rust import dumps_core as _dumps_core
+    from ._datason_rust import loads_core as _loads_core
 
     AVAILABLE = True
 except Exception:  # pragma: no cover - rust module is optional

@@ -113,17 +113,17 @@ try:
         SerializationConfig,
         TypeCoercion,
         cache_scope,  # noqa: F401
+        get_accel_mode,  # noqa: F401
         get_api_config,  # noqa: F401
         get_cache_scope,  # noqa: F401
         get_default_config,  # noqa: F401
-        get_accel_mode,  # noqa: F401
         get_ml_config,  # noqa: F401
         get_performance_config,  # noqa: F401
         get_strict_config,  # noqa: F401
         reset_default_config,  # noqa: F401
+        set_accel_mode,  # noqa: F401
         set_cache_scope,  # noqa: F401
         set_default_config,
-        set_accel_mode,
     )
 
     _config_available = True
@@ -491,13 +491,15 @@ def serialize(obj: Any, config: Any = None, **kwargs: Any) -> Any:
 
 # Add convenience functions to __all__ if config is available
 if _config_available:
-    __all__.extend([
-        "configure",
-        "serialize_with_config",
-        "serialize",
-        "set_accel_mode",
-        "get_accel_mode",
-    ])
+    __all__.extend(
+        [
+            "configure",
+            "serialize_with_config",
+            "serialize",
+            "set_accel_mode",
+            "get_accel_mode",
+        ]
+    )
 
 # Add redaction exports if available (v0.5.5)
 try:

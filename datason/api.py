@@ -711,8 +711,8 @@ def load_basic(data: Any, **kwargs: Any) -> Any:
     """Basic deserialization using heuristics only.
 
     Uses simple heuristics to reconstruct Python objects from serialized data.
-    Fast but with limited type fidelity - suitable for exploration and
-    non-critical applications.
+    Fast but with limited type fidelity—around 60-70% accurate for complex
+    types—making it suitable for exploration and non-critical applications.
 
     The optional Rust accelerator is used when available and when the input is
     a basic JSON string or bytes.
