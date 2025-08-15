@@ -198,7 +198,7 @@ from .validation import serialize_marshmallow, serialize_pydantic  # noqa: F401
 # =============================================================================
 
 # Profile sink for external benchmarking tools (e.g., datason-benchmark)
-profile_sink = None  # Will be set by external tools as a list to append events
+# Note: External tools should use set_profile_sink() to register callbacks
 
 
 def set_profile_sink(sink: Optional[Callable[[dict], None]]) -> None:
@@ -242,13 +242,14 @@ def save_string(obj: Any) -> str:
     return dumps_json(obj)
 
 
-def load_basic(json_str: str) -> Any:
-    """Parse JSON string to Python object.
+def load_basic(data: Any) -> Any:
+    """Parse JSON string or deserialize parsed data to Python object.
 
     Primary API expected by datason-benchmark for measuring deserialization performance.
+    Also supports already-parsed data for API compatibility.
 
     Args:
-        json_str: JSON string to parse
+        data: JSON string to parse or already-parsed data to deserialize
 
     Returns:
         Parsed Python object
@@ -256,11 +257,18 @@ def load_basic(json_str: str) -> Any:
     Example:
         >>> obj = datason.load_basic('{"key": "value"}')
         >>> assert obj == {"key": "value"}
+        >>> obj = datason.load_basic({"key": "value"})  # Also works
+        >>> assert obj == {"key": "value"}
     """
-    # Use loads_json for direct string parsing
+    # Use loads_json for string parsing, deserialize for already-parsed data
     from .api import loads_json
+    from .deserializers_new import deserialize
 
-    return loads_json(json_str)
+    if isinstance(data, (str, bytes)):
+        return loads_json(data)
+    else:
+        # For already-parsed data, use deserialize
+        return deserialize(data)
 
 
 def _get_version() -> str:
@@ -302,7 +310,6 @@ __all__ = [  # noqa: RUF022
     "serialize",  # Enhanced serialization (returns dict)
     # Profiling and benchmarking support
     "set_profile_sink",  # Debug profiling sink registration
-    "profile_sink",  # External profiling event list
     "RUST_AVAILABLE",  # Rust backend availability flag
     "save_string",  # Core benchmarking API (serialize to string)
     "load_basic",  # Core benchmarking API (parse from string)
