@@ -4,6 +4,8 @@ This module tests all configuration classes, enums, and functions
 to achieve maximum coverage and verify all configuration behaviors.
 """
 
+import pytest
+
 from datason.config import (
     CacheScope,
     DataFrameOrient,
@@ -614,3 +616,42 @@ class TestConfigIntegration:
         assert strict_config.type_coercion == TypeCoercion.STRICT
         assert strict_config.preserve_decimals is True
         assert strict_config.include_type_hints is True
+
+
+class TestRustAccelConfig:
+    def test_set_and_get_accel_mode(self):
+        import importlib
+
+        import datason.config as config
+
+        importlib.reload(config)
+        config.set_accel_mode("off")
+        assert config.get_accel_mode() == "off"
+        config.set_accel_mode("auto")
+        assert config.get_accel_mode() == "auto"
+
+    def test_invalid_accel_mode(self):
+        import importlib
+
+        import datason.config as config
+
+        importlib.reload(config)
+        with pytest.raises(ValueError):
+            config.set_accel_mode("invalid")
+
+    def test_env_override(self, monkeypatch):
+        import importlib
+
+        import datason.config as config
+
+        monkeypatch.setenv("DATASON_RUST", "0")
+        importlib.reload(config)
+        assert config.get_accel_mode() == "off"
+
+        monkeypatch.setenv("DATASON_RUST", "1")
+        importlib.reload(config)
+        assert config.get_accel_mode() == "auto"
+
+        monkeypatch.delenv("DATASON_RUST", raising=False)
+        importlib.reload(config)
+        assert config.get_accel_mode() == "auto"
