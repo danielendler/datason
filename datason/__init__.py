@@ -10,7 +10,7 @@ NEW: Configurable caching system for optimized performance across different work
 
 import sys
 import warnings
-from typing import Any
+from typing import Any, Callable, Optional
 
 # Python version compatibility check
 if sys.version_info < (3, 8):  # noqa: UP036
@@ -41,7 +41,7 @@ from .api import (
     get_api_info,
     help_api,
     load,  # Enhanced default (smart parsing, datetime support)
-    load_basic,
+    # NOTE: load_basic redefined below for benchmark integration
     # NEW: File I/O operations integrated with modern API
     load_basic_file,
     load_json,  # JSON compatibility (exact stdlib behavior)
@@ -193,6 +193,83 @@ from .integrity import (  # noqa: F401
 )
 from .validation import serialize_marshmallow, serialize_pydantic  # noqa: F401
 
+# =============================================================================
+# PROFILING AND BENCHMARKING SUPPORT
+# =============================================================================
+
+# Profile sink for external benchmarking tools (e.g., datason-benchmark)
+# Note: External tools should use set_profile_sink() to register callbacks
+
+
+def set_profile_sink(sink: Optional[Callable[[dict], None]]) -> None:
+    """Register a callback to receive profiling timings.
+
+    The callable will be invoked with a dictionary of stage timings whenever
+    profiling is enabled and a top-level operation completes. Importing is
+    deferred to avoid any overhead when profiling is disabled.
+
+    Args:
+        sink: Callable that receives timing dictionaries, or None to disable
+    """
+    from ._profiling import set_profile_sink as _set_profile_sink
+
+    _set_profile_sink(sink)
+
+
+# Rust availability detection (will be implemented in codex/add-rust-core-mvp-for-datason)
+RUST_AVAILABLE = False
+
+
+# Core APIs for benchmarking and Rust exploration
+def save_string(obj: Any) -> str:
+    """Serialize object to JSON string.
+
+    Primary API expected by datason-benchmark for measuring serialization performance.
+
+    Args:
+        obj: Object to serialize
+
+    Returns:
+        JSON string representation
+
+    Example:
+        >>> result = datason.save_string({"key": "value"})
+        >>> assert isinstance(result, str)
+    """
+    # Use dumps_json for direct string output
+    from .api import dumps_json
+
+    return dumps_json(obj)
+
+
+def load_basic(data: Any) -> Any:
+    """Parse JSON string or deserialize parsed data to Python object.
+
+    Primary API expected by datason-benchmark for measuring deserialization performance.
+    Also supports already-parsed data for API compatibility.
+
+    Args:
+        data: JSON string to parse or already-parsed data to deserialize
+
+    Returns:
+        Parsed Python object
+
+    Example:
+        >>> obj = datason.load_basic('{"key": "value"}')
+        >>> assert obj == {"key": "value"}
+        >>> obj = datason.load_basic({"key": "value"})  # Also works
+        >>> assert obj == {"key": "value"}
+    """
+    # Use loads_json for string parsing, deserialize for already-parsed data
+    from .api import loads_json
+    from .deserializers_new import deserialize
+
+    if isinstance(data, (str, bytes)):
+        return loads_json(data)
+    else:
+        # For already-parsed data, use deserialize
+        return deserialize(data)
+
 
 def _get_version() -> str:
     """Get version from pyproject.toml or fallback to a default."""
@@ -231,6 +308,11 @@ __all__ = [  # noqa: RUF022
     "load",  # Enhanced file reading with smart parsing
     "loads",  # Enhanced string parsing with smart features
     "serialize",  # Enhanced serialization (returns dict)
+    # Profiling and benchmarking support
+    "set_profile_sink",  # Debug profiling sink registration
+    "RUST_AVAILABLE",  # Rust backend availability flag
+    "save_string",  # Core benchmarking API (serialize to string)
+    "load_basic",  # Core benchmarking API (parse from string)
     # JSON Compatibility API (for stdlib replacement)
     "dump_json",  # Exact json.dump() behavior
     "dumps_json",  # Exact json.dumps() behavior (returns string)

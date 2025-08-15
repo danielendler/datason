@@ -410,47 +410,52 @@ def serialize(
         >>> # Chunked for large data
         >>> result = serialize(big_data, chunked=True, chunk_size=5000)
     """
-    # Handle mutually exclusive modes
-    mode_count = sum([ml_mode, api_mode, fast_mode])
-    if mode_count > 1:
-        raise ValueError("Only one mode can be enabled: ml_mode, api_mode, or fast_mode")
+    from ._profiling import profile_run, stage
 
-    # Use provided config or determine from mode
-    if config is None:
-        if ml_mode:
-            config = get_ml_config()
-        elif api_mode:
-            config = get_api_config()
-        elif fast_mode:
-            config = get_performance_config()
-        else:
-            config = SerializationConfig(**kwargs) if kwargs else None
+    with profile_run():
+        # Handle mutually exclusive modes
+        mode_count = sum([ml_mode, api_mode, fast_mode])
+        if mode_count > 1:
+            raise ValueError("Only one mode can be enabled: ml_mode, api_mode, or fast_mode")
 
-    # Handle security enhancements
-    if secure:
+        # Use provided config or determine from mode
         if config is None:
-            config = SerializationConfig()
+            if ml_mode:
+                config = get_ml_config()
+            elif api_mode:
+                config = get_api_config()
+            elif fast_mode:
+                config = get_performance_config()
+            else:
+                config = SerializationConfig(**kwargs) if kwargs else None
 
-        # Add common PII redaction patterns
-        config.redact_patterns = config.redact_patterns or []
-        config.redact_patterns.extend(
-            [
-                r"\b\d{4}-\d{4}-\d{4}-\d{4}\b",  # Credit cards with dashes
-                r"\b\d{16}\b",  # Credit cards without dashes
-                r"\b\d{3}-\d{2}-\d{4}\b",  # SSN
-                r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b",  # Email
-            ]
-        )
-        config.redact_fields = config.redact_fields or []
-        config.redact_fields.extend(["password", "api_key", "secret", "token"])
-        config.include_redaction_summary = True
+        # Handle security enhancements
+        if secure:
+            if config is None:
+                config = SerializationConfig()
 
-    # Handle chunked serialization
-    if chunked:
-        return serialize_chunked(obj, chunk_size=chunk_size, config=config)
+            # Add common PII redaction patterns
+            config.redact_patterns = config.redact_patterns or []
+            config.redact_patterns.extend(
+                [
+                    r"\b\d{4}-\d{4}-\d{4}-\d{4}\b",  # Credit cards with dashes
+                    r"\b\d{16}\b",  # Credit cards without dashes
+                    r"\b\d{3}-\d{2}-\d{4}\b",  # SSN
+                    r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b",  # Email
+                ]
+            )
+            config.redact_fields = config.redact_fields or []
+            config.redact_fields.extend(["password", "api_key", "secret", "token"])
+            config.include_redaction_summary = True
 
-    # Use the existing imported serialize function to avoid circular imports
-    return core_serialize(obj, config=config)
+        # Handle chunked serialization
+        if chunked:
+            with stage("serialize_inner_python"):
+                return serialize_chunked(obj, chunk_size=chunk_size, config=config)
+
+        # Use the existing imported serialize function to avoid circular imports
+        with stage("serialize_inner_python"):
+            return core_serialize(obj, config=config)
 
 
 def dump_ml(obj: Any, **kwargs: Any) -> Any:
@@ -725,7 +730,11 @@ def load_basic(data: Any, **kwargs: Any) -> Any:
         >>> result = load_basic(serialized)
         >>> # Works well for simple structures
     """
-    return deserialize(data, **kwargs)
+    from ._profiling import profile_run, stage
+
+    with profile_run():
+        with stage("json_parse_python"):
+            return deserialize(data, **kwargs)
 
 
 def load_smart(data: Any, config: Optional[SerializationConfig] = None, **kwargs: Any) -> Any:
