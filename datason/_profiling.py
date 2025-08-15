@@ -19,8 +19,8 @@ from typing import Callable
 ENABLED = os.getenv("DATASON_PROFILE") == "1"
 
 # Context variable storing the timing dictionary for the current run
-_current_timings: contextvars.ContextVar[dict[str, float] | None] = (
-    contextvars.ContextVar("datason_profile_timings", default=None)
+_current_timings: contextvars.ContextVar[dict[str, float] | None] = contextvars.ContextVar(
+    "datason_profile_timings", default=None
 )
 
 # Optional sink callable invoked with timings at the end of a profiling run
@@ -58,13 +58,34 @@ class _ProfileRun:
     def __exit__(self, exc_type, exc, tb) -> bool:  # noqa: D401 - context manager
         if self.token is not None:
             _current_timings.reset(self.token)
+
+        # Call the registered profile sink
         sink = _profile_sink
         if sink is not None:
             try:
                 sink(self.timings)
-            except Exception:
+            except Exception:  # nosec B110
                 # Profiling must never interfere with normal execution
                 pass
+
+        # Also append to external profile_sink if it's a list (for datason-benchmark)
+        try:
+            import datason
+
+            external_sink = getattr(datason, "profile_sink", None)
+            if external_sink is not None and hasattr(external_sink, "append"):
+                # Convert timings to benchmark-expected format (nanoseconds)
+                for stage, duration_seconds in self.timings.items():
+                    external_sink.append(
+                        {
+                            "stage": stage,
+                            "duration": int(duration_seconds * 1_000_000_000),  # Convert to nanoseconds
+                        }
+                    )
+        except Exception:  # nosec B110
+            # Profiling must never interfere with normal execution
+            pass
+
         return False
 
 
@@ -114,4 +135,3 @@ def stage(name: str) -> _Stage | _NullStage:
     if not ENABLED:
         return _NULL_STAGE
     return _Stage(name)
-
