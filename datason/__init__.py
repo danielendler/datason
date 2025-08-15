@@ -56,6 +56,7 @@ from .api import (
     save_chunked,
     save_ml,
     save_secure,
+    save_string,
     stream_dump,
     stream_load,  # Streaming deserialization for large files
     stream_save_ml,
@@ -115,12 +116,14 @@ try:
         get_api_config,  # noqa: F401
         get_cache_scope,  # noqa: F401
         get_default_config,  # noqa: F401
+        get_accel_mode,  # noqa: F401
         get_ml_config,  # noqa: F401
         get_performance_config,  # noqa: F401
         get_strict_config,  # noqa: F401
         reset_default_config,  # noqa: F401
         set_cache_scope,  # noqa: F401
         set_default_config,
+        set_accel_mode,
     )
 
     _config_available = True
@@ -280,6 +283,7 @@ __all__ = [  # noqa: RUF022
     "save_secure",
     "save_api",
     "save_chunked",
+    "save_string",
     "load_smart_file",
     "load_perfect_file",
     "load_basic_file",
@@ -487,7 +491,13 @@ def serialize(obj: Any, config: Any = None, **kwargs: Any) -> Any:
 
 # Add convenience functions to __all__ if config is available
 if _config_available:
-    __all__.extend(["configure", "serialize_with_config", "serialize"])
+    __all__.extend([
+        "configure",
+        "serialize_with_config",
+        "serialize",
+        "set_accel_mode",
+        "get_accel_mode",
+    ])
 
 # Add redaction exports if available (v0.5.5)
 try:
