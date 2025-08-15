@@ -262,16 +262,19 @@ def serialize(
         ValueError: If the object cannot be serialized.
         TypeError: If an unsupported type is encountered.
     """
+    from ._profiling import stage
+
     # ULTRA-FAST IDEMPOTENCY CHECK: Before any other processing
     # This must be the very first check for optimal performance
-    obj_type = type(obj)
-    if obj_type is dict and "__datason_type__" in obj:
-        # Already serialized - return immediately (< 100ns target)
-        return obj
-    elif obj_type in (list, tuple) and len(obj) == 2:
-        first_item = obj[0] if obj else None
-        if type(first_item) is str and first_item[:10] == "__datason_":
+    with stage("eligibility_check"):
+        obj_type = type(obj)
+        if obj_type is dict and "__datason_type__" in obj:
+            # Already serialized - return immediately (< 100ns target)
             return obj
+        elif obj_type in (list, tuple) and len(obj) == 2:
+            first_item = obj[0] if obj else None
+            if type(first_item) is str and first_item[:10] == "__datason_":
+                return obj
 
     # NEW: Apply redaction if configured and at root level (v0.5.5)
     if _depth == 0 and config and any([config.redact_fields, config.redact_patterns, config.redact_large_objects]):
@@ -300,7 +303,8 @@ def serialize(
             obj = redaction_engine.process_object(obj)
 
             # Serialize the redacted object
-            serialized_result = _serialize_core(obj, config, _depth, _seen, _type_handler)
+            with stage("serialize_inner_python"):
+                serialized_result = _serialize_core(obj, config, _depth, _seen, _type_handler)
 
             # Add redaction metadata to result if requested
             if config.include_redaction_summary or config.audit_trail:
@@ -326,23 +330,26 @@ def serialize(
 
     # Early depth analysis for edge case tests at root level
     if _depth == 0:
-        max_depth = config.max_depth if config else MAX_SERIALIZATION_DEPTH
-        estimated_depth = _estimate_max_depth(obj, max_depth + 1)  # Check one level beyond limit
-        if estimated_depth > max_depth:
-            return {
-                "__datason_type__": "security_error",
-                "__datason_value__": f"Maximum depth ({max_depth}) exceeded. "
-                f"Estimated depth: {estimated_depth}. This may indicate circular references, "
-                "extremely nested data, or a potential depth bomb attack. "
-                f"You can increase max_depth in your SerializationConfig if needed.",
-            }
+        with stage("limits_prepare"):
+            max_depth = config.max_depth if config else MAX_SERIALIZATION_DEPTH
+            estimated_depth = _estimate_max_depth(obj, max_depth + 1)  # Check one level beyond limit
+            if estimated_depth > max_depth:
+                return {
+                    "__datason_type__": "security_error",
+                    "__datason_value__": f"Maximum depth ({max_depth}) exceeded. "
+                    f"Estimated depth: {estimated_depth}. This may indicate circular references, "
+                    "extremely nested data, or a potential depth bomb attack. "
+                    f"You can increase max_depth in your SerializationConfig if needed.",
+                }
 
     # Proceed with normal serialization (outside the redaction block)
     try:
-        return _serialize_core(obj, config, _depth, _seen, _type_handler)
+        with stage("serialize_inner_python"):
+            return _serialize_core(obj, config, _depth, _seen, _type_handler)
     except SecurityError as e:
         # Convert SecurityError to error dict for edge case tests
-        return {"__datason_type__": "security_error", "__datason_value__": str(e)}
+        with stage("postprocess"):
+            return {"__datason_type__": "security_error", "__datason_value__": str(e)}
 
 
 def _serialize_core(

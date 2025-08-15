@@ -10,7 +10,7 @@ NEW: Configurable caching system for optimized performance across different work
 
 import sys
 import warnings
-from typing import Any
+from typing import Any, Callable, Optional
 
 # Python version compatibility check
 if sys.version_info < (3, 8):  # noqa: UP036
@@ -194,6 +194,19 @@ from .integrity import (  # noqa: F401
 from .validation import serialize_marshmallow, serialize_pydantic  # noqa: F401
 
 
+def set_profile_sink(sink: Optional[Callable[[dict], None]]) -> None:
+    """Register a callback to receive profiling timings.
+
+    The callable will be invoked with a dictionary of stage timings whenever
+    profiling is enabled and a top-level operation completes.  Importing is
+    deferred to avoid any overhead when profiling is disabled.
+    """
+
+    from ._profiling import set_profile_sink as _set_profile_sink
+
+    _set_profile_sink(sink)
+
+
 def _get_version() -> str:
     """Get version from pyproject.toml or fallback to a default."""
     import os
@@ -231,6 +244,7 @@ __all__ = [  # noqa: RUF022
     "load",  # Enhanced file reading with smart parsing
     "loads",  # Enhanced string parsing with smart features
     "serialize",  # Enhanced serialization (returns dict)
+    "set_profile_sink",  # Debug profiling sink registration
     # JSON Compatibility API (for stdlib replacement)
     "dump_json",  # Exact json.dump() behavior
     "dumps_json",  # Exact json.dumps() behavior (returns string)
