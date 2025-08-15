@@ -84,7 +84,7 @@ class TestApiIntegration:
                 raise DummyRust.UnsupportedType()
 
         monkeypatch.setattr(api, "_rustcore", DummyRust())
-        monkeypatch.setattr(api, "deserialize", lambda data, **kw: {"fallback": True})
+        monkeypatch.setattr(api, "loads_json", lambda data, **kw: {"fallback": True})
         assert api.load_basic("{}") == {"fallback": True}
 
     def test_save_string_uses_rust(self, monkeypatch):

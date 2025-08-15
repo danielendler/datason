@@ -18,12 +18,13 @@ from .core_new import (
 )
 
 try:  # pragma: no cover - import failure handled in AVAILABLE flag
+    from ._datason_rust import SecurityError as _RustSecurityError
     from ._datason_rust import dumps_core as _dumps_core
     from ._datason_rust import loads_core as _loads_core
 
     AVAILABLE = True
 except Exception:  # pragma: no cover - rust module is optional
-    _dumps_core = _loads_core = None  # type: ignore
+    _dumps_core = _loads_core = _RustSecurityError = None  # type: ignore
     AVAILABLE = False
 
 
@@ -62,6 +63,9 @@ def dumps(obj: Any, *, ensure_ascii: bool = False, allow_nan: bool = False) -> b
             MAX_STRING_LENGTH,
         )
     except Exception as e:  # pragma: no cover - any rust error triggers fallback
+        # Convert Rust SecurityError to Python SecurityError for consistency
+        if _RustSecurityError and isinstance(e, _RustSecurityError):
+            raise SecurityError(str(e)) from e
         if isinstance(e, SecurityError):
             raise
         raise UnsupportedType(str(e)) from e
@@ -79,6 +83,9 @@ def loads(data: Any) -> Any:
             MAX_STRING_LENGTH,
         )
     except Exception as e:  # pragma: no cover
+        # Convert Rust SecurityError to Python SecurityError for consistency
+        if _RustSecurityError and isinstance(e, _RustSecurityError):
+            raise SecurityError(str(e)) from e
         if isinstance(e, SecurityError):
             raise
         raise UnsupportedType(str(e)) from e

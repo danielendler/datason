@@ -196,6 +196,12 @@ from .integrity import (  # noqa: F401
 )
 from .validation import serialize_marshmallow, serialize_pydantic  # noqa: F401
 
+# Rust accelerator availability flag (for benchmark integration)
+try:
+    from ._rustcore import AVAILABLE as RUST_AVAILABLE
+except ImportError:
+    RUST_AVAILABLE = False
+
 
 def _get_version() -> str:
     """Get version from pyproject.toml or fallback to a default."""
@@ -234,6 +240,8 @@ __all__ = [  # noqa: RUF022
     "load",  # Enhanced file reading with smart parsing
     "loads",  # Enhanced string parsing with smart features
     "serialize",  # Enhanced serialization (returns dict)
+    # Rust accelerator support
+    "RUST_AVAILABLE",  # Rust backend availability flag
     # JSON Compatibility API (for stdlib replacement)
     "dump_json",  # Exact json.dump() behavior
     "dumps_json",  # Exact json.dumps() behavior (returns string)

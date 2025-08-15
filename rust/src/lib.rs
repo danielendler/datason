@@ -1,7 +1,15 @@
-use pyo3::exceptions::PyTypeError;
+use pyo3::exceptions::{PyTypeError, PyValueError};
 use pyo3::prelude::*;
 use pyo3::types::{PyBytes, PyDict, PyList, PyString, PyTuple};
 use serde_json::{self, Number, Value};
+
+// Define SecurityError to match DataSON's Python SecurityError
+pyo3::create_exception!(
+    _datason_rust,
+    SecurityError,
+    pyo3::exceptions::PyRuntimeError,
+    "DataSON security limit exceeded"
+);
 
 fn py_to_value(
     obj: &PyAny,
@@ -12,10 +20,10 @@ fn py_to_value(
     max_str: usize,
 ) -> PyResult<Value> {
     if depth > max_depth {
-        return Err(PyErr::new::<PyTypeError, _>("Maximum depth exceeded"));
+        return Err(SecurityError::new_err("Maximum serialization depth exceeded"));
     }
     if *total > max_total {
-        return Err(PyErr::new::<PyTypeError, _>("Object too large"));
+        return Err(SecurityError::new_err("Object too large"));
     }
     if obj.is_none() {
         *total += 1;
@@ -39,11 +47,11 @@ fn py_to_value(
     }
     if let Ok(s) = obj.extract::<String>() {
         if s.len() > max_str {
-            return Err(PyErr::new::<PyTypeError, _>("String length exceeds limit"));
+            return Err(SecurityError::new_err("String length exceeds limit"));
         }
         *total += s.len();
         if *total > max_total {
-            return Err(PyErr::new::<PyTypeError, _>("Object too large"));
+            return Err(SecurityError::new_err("Object too large"));
         }
         return Ok(Value::String(s));
     }
@@ -85,10 +93,10 @@ fn value_to_py(
     max_str: usize,
 ) -> PyResult<PyObject> {
     if depth > max_depth {
-        return Err(PyTypeError::new_err("Maximum depth exceeded"));
+        return Err(SecurityError::new_err("Maximum deserialization depth exceeded"));
     }
     if *total > max_total {
-        return Err(PyTypeError::new_err("Object too large"));
+        return Err(SecurityError::new_err("Object too large"));
     }
     Ok(match value {
         Value::Null => {
@@ -116,7 +124,7 @@ fn value_to_py(
         }
         Value::String(s) => {
             if s.len() > max_str {
-                return Err(PyTypeError::new_err("String length exceeds limit"));
+                return Err(SecurityError::new_err("String length exceeds limit"));
             }
             *total += s.len();
             PyString::new(py, s).into_py(py)
@@ -133,7 +141,7 @@ fn value_to_py(
             let dict = PyDict::new(py);
             for (k, v) in map {
                 if k.len() > max_str {
-                    return Err(PyTypeError::new_err("String length exceeds limit"));
+                    return Err(SecurityError::new_err("String length exceeds limit"));
                 }
                 let val = value_to_py(py, v, depth + 1, max_depth, total, max_total, max_str)?;
                 dict.set_item(k, val)?;
@@ -168,7 +176,7 @@ fn dumps_core(
         serde_json::to_string(&value)?
     };
     if s.len() > max_total_bytes {
-        return Err(PyTypeError::new_err("Object too large"));
+        return Err(SecurityError::new_err("Serialized object too large"));
     }
     Ok(PyBytes::new(py, s.as_bytes()).into())
 }
@@ -187,7 +195,7 @@ fn loads_core(
         data.extract::<Vec<u8>>(py)?
     };
     if bytes.len() > max_total_bytes {
-        return Err(PyTypeError::new_err("Object too large"));
+        return Err(SecurityError::new_err("Input too large"));
     }
     let value: Value = serde_json::from_slice(&bytes)?;
     let mut total = 0usize;
@@ -207,5 +215,6 @@ fn loads_core(
 fn _datason_rust(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(dumps_core, m)?)?;
     m.add_function(wrap_pyfunction!(loads_core, m)?)?;
+    m.add("SecurityError", _py.get_type::<SecurityError>())?;
     Ok(())
 }

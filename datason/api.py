@@ -729,6 +729,12 @@ def load_basic(data: Any, **kwargs: Any) -> Any:
             return _rustcore.loads(data)
         except _rustcore.UnsupportedType:
             pass
+
+    # If input is a JSON string, parse it first
+    if isinstance(data, (str, bytes)):
+        return loads_json(data, **kwargs)
+
+    # For already-parsed data, use deserialize
     return deserialize(data, **kwargs)
 
 
