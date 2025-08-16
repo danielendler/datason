@@ -39,6 +39,11 @@ from datason.deserializers_new import (
     deserialize_with_template,
     stream_deserialize,
 )
+
+try:  # Optional Rust accelerator
+    from . import _rustcore
+except Exception:  # pragma: no cover - rust module optional
+    _rustcore = None
 from datason.json import JSONDecodeError
 
 # Type alias for better type hints
@@ -711,12 +716,11 @@ def load_basic(data: Any, **kwargs: Any) -> Any:
     """Basic deserialization using heuristics only.
 
     Uses simple heuristics to reconstruct Python objects from serialized data.
-    Fast but with limited type fidelity - suitable for exploration and
-    non-critical applications.
+    Fast but with limited type fidelity—around 60-70% accurate for complex
+    types—making it suitable for exploration and non-critical applications.
 
-    Success rate: ~60-70% for complex objects
-    Speed: Fastest
-    Use case: Data exploration, simple objects
+    The optional Rust accelerator is used when available and when the input is
+    a basic JSON string or bytes.
 
     Args:
         data: Serialized data to deserialize
@@ -724,17 +728,51 @@ def load_basic(data: Any, **kwargs: Any) -> Any:
 
     Returns:
         Deserialized Python object
-
-    Example:
-        >>> serialized = {"numbers": [1, 2, 3], "text": "hello"}
-        >>> result = load_basic(serialized)
-        >>> # Works well for simple structures
     """
     from ._profiling import profile_run, stage
 
     with profile_run():
         with stage("json_parse_python"):
+            if _rustcore and isinstance(data, (str, bytes)):
+                try:
+                    return _rustcore.loads(data)
+                except _rustcore.UnsupportedType:
+                    pass
+
+            # If input is a JSON string, parse it first
+            if isinstance(data, (str, bytes)):
+                return loads_json(data, **kwargs)
+
+            # For already-parsed data, use deserialize
             return deserialize(data, **kwargs)
+
+
+def save_string(
+    obj: Any,
+    *,
+    ensure_ascii: bool = False,
+    allow_nan: bool = False,
+) -> str:
+    """Serialize *obj* to a JSON string.
+
+    Uses the optional Rust accelerator for basic JSON trees when available.
+
+    Args:
+        obj: Object to serialize
+        ensure_ascii: Escape non-ASCII characters
+        allow_nan: Allow non-finite floats (ignored in Rust path)
+
+    Returns:
+        JSON string representation of *obj*.
+    """
+    if _rustcore and _rustcore._eligible_basic_tree(obj):
+        try:
+            return _rustcore.dumps(obj, ensure_ascii=ensure_ascii, allow_nan=allow_nan).decode()
+        except _rustcore.UnsupportedType:
+            pass
+    import json as _json
+
+    return _json.dumps(obj, ensure_ascii=ensure_ascii, allow_nan=allow_nan)
 
 
 def load_smart(data: Any, config: Optional[SerializationConfig] = None, **kwargs: Any) -> Any:

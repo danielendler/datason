@@ -220,6 +220,20 @@ class TestChunkedSerialization:
 class TestStreamingSerialization:
     """Test streaming serialization functionality."""
 
+    def setup_method(self, method):
+        """Setup clean state before each test to prevent CI environment corruption."""
+        # Clear all caches to prevent state contamination
+        try:
+            datason.clear_all_caches()
+        except (AttributeError, ImportError):
+            pass  # Method might not be available in all environments
+
+        # Reset default configuration to ensure clean state
+        try:
+            datason.reset_default_config()
+        except (AttributeError, ImportError):
+            pass  # Method might not be available in all environments
+
     def test_streaming_serializer_jsonl(self):
         """Test streaming serializer with JSONL format."""
         data_items = [{"id": i, "value": f"item_{i}", "uuid": str(uuid.uuid4())} for i in range(100)]
@@ -318,9 +332,57 @@ class TestStreamingSerialization:
 
     def test_streaming_serializer_custom_config(self):
         """Test streaming serializer with custom configuration."""
+        # AGGRESSIVE STATE CLEARING: Force complete environment reset
+        import sys
+
+        # Clear all caches multiple times with different methods
+        for clear_method in ["clear_all_caches", "clear_caches"]:
+            try:
+                getattr(datason, clear_method)()
+            except (AttributeError, TypeError):
+                pass
+
+        # Reset configuration aggressively
+        for reset_method in ["reset_default_config", "reset_cache_metrics"]:
+            try:
+                getattr(datason, reset_method)()
+            except (AttributeError, TypeError):
+                pass
+
+        # Force reload only modules that can cause environment corruption
+        # NOTE: Avoid reloading datason.config as it creates new enum instances
+        # that break enum comparisons in subsequent tests
+        modules_to_reload = [
+            "datason.core_new",
+            "datason.api",
+            "datason.datetime_utils",
+            "datason.type_handlers",
+        ]
+        for module_name in modules_to_reload:
+            if module_name in sys.modules:
+                try:
+                    import importlib
+
+                    importlib.reload(sys.modules[module_name])
+                except Exception:
+                    pass
+
+        # Validate environment before proceeding
         data_items = [{"timestamp": datetime.now(), "value": 123.456}]
 
+        # Get fresh performance config and validate it immediately
         config = datason.get_performance_config()
+
+        # VALIDATION: Test direct serialization first to ensure config works
+        direct_serialized = datason.serialize(data_items[0], config=config)
+        direct_timestamp = direct_serialized["timestamp"]
+
+        # If direct serialization doesn't work, the environment is corrupted
+        assert isinstance(direct_timestamp, (int, float)), (
+            f"ENVIRONMENT CORRUPTION: Direct serialization failed. "
+            f"Expected int/float timestamp, got {type(direct_timestamp).__name__}: {direct_timestamp!r}. "
+            f"Config: {config.date_format}"
+        )
 
         with tempfile.TemporaryDirectory() as temp_dir:
             file_path = Path(temp_dir) / "config_test.jsonl"
@@ -336,7 +398,16 @@ class TestStreamingSerialization:
                 content = json.loads(f.readline().strip())
 
             # Performance config uses Unix timestamps
-            assert isinstance(content["timestamp"], (int, float))
+            # Add detailed debugging for CI failures
+            timestamp_value = content["timestamp"]
+            timestamp_type = type(timestamp_value)
+
+            assert isinstance(timestamp_value, (int, float)), (
+                f"STREAMING FAILURE: Expected timestamp to be int/float, got {timestamp_type.__name__}: {timestamp_value!r}. "
+                f"Config date_format: {config.date_format}. "
+                f"Direct serialization worked: {direct_timestamp} ({type(direct_timestamp)}). "
+                f"Full content: {content}"
+            )
 
 
 class TestDeserializeChunkedFile:

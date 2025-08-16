@@ -112,6 +112,7 @@ try:
         SerializationConfig,
         TypeCoercion,
         cache_scope,  # noqa: F401
+        get_accel_mode,  # noqa: F401
         get_api_config,  # noqa: F401
         get_cache_scope,  # noqa: F401
         get_default_config,  # noqa: F401
@@ -119,6 +120,7 @@ try:
         get_performance_config,  # noqa: F401
         get_strict_config,  # noqa: F401
         reset_default_config,  # noqa: F401
+        set_accel_mode,  # noqa: F401
         set_cache_scope,  # noqa: F401
         set_default_config,
     )
@@ -200,6 +202,9 @@ from .validation import serialize_marshmallow, serialize_pydantic  # noqa: F401
 # Profile sink for external benchmarking tools (e.g., datason-benchmark)
 # Note: External tools should use set_profile_sink() to register callbacks
 
+# List-based profile sink for datason-benchmarks compatibility
+profile_sink: Optional[list] = []
+
 
 def set_profile_sink(sink: Optional[Callable[[dict], None]]) -> None:
     """Register a callback to receive profiling timings.
@@ -216,8 +221,11 @@ def set_profile_sink(sink: Optional[Callable[[dict], None]]) -> None:
     _set_profile_sink(sink)
 
 
-# Rust availability detection (will be implemented in codex/add-rust-core-mvp-for-datason)
-RUST_AVAILABLE = False
+# Rust accelerator availability flag (for benchmark integration)
+try:
+    from ._rustcore import AVAILABLE as RUST_AVAILABLE
+except ImportError:
+    RUST_AVAILABLE = False
 
 
 # Core APIs for benchmarking and Rust exploration
@@ -236,10 +244,13 @@ def save_string(obj: Any) -> str:
         >>> result = datason.save_string({"key": "value"})
         >>> assert isinstance(result, str)
     """
-    # Use dumps_json for direct string output
+    # Use dumps_json with profiling support
+    from ._profiling import profile_run, stage
     from .api import dumps_json
 
-    return dumps_json(obj)
+    with profile_run():
+        with stage("save_string"):
+            return dumps_json(obj)
 
 
 def load_basic(data: Any) -> Any:
@@ -260,15 +271,19 @@ def load_basic(data: Any) -> Any:
         >>> obj = datason.load_basic({"key": "value"})  # Also works
         >>> assert obj == {"key": "value"}
     """
-    # Use loads_json for string parsing, deserialize for already-parsed data
+    # Use loads_json and deserialize with profiling support
+    from ._profiling import profile_run, stage
     from .api import loads_json
     from .deserializers_new import deserialize
 
-    if isinstance(data, (str, bytes)):
-        return loads_json(data)
-    else:
-        # For already-parsed data, use deserialize
-        return deserialize(data)
+    with profile_run():
+        if isinstance(data, (str, bytes)):
+            with stage("load_basic_json"):
+                return loads_json(data)
+        else:
+            # For already-parsed data, use deserialize
+            with stage("load_basic_deserialize"):
+                return deserialize(data)
 
 
 def _get_version() -> str:
@@ -310,6 +325,7 @@ __all__ = [  # noqa: RUF022
     "serialize",  # Enhanced serialization (returns dict)
     # Profiling and benchmarking support
     "set_profile_sink",  # Debug profiling sink registration
+    "profile_sink",  # List-based profiling sink for datason-benchmarks
     "RUST_AVAILABLE",  # Rust backend availability flag
     "save_string",  # Core benchmarking API (serialize to string)
     "load_basic",  # Core benchmarking API (parse from string)
@@ -362,6 +378,7 @@ __all__ = [  # noqa: RUF022
     "save_secure",
     "save_api",
     "save_chunked",
+    "save_string",
     "load_smart_file",
     "load_perfect_file",
     "load_basic_file",
@@ -569,7 +586,15 @@ def serialize(obj: Any, config: Any = None, **kwargs: Any) -> Any:
 
 # Add convenience functions to __all__ if config is available
 if _config_available:
-    __all__.extend(["configure", "serialize_with_config", "serialize"])
+    __all__.extend(
+        [
+            "configure",
+            "serialize_with_config",
+            "serialize",
+            "set_accel_mode",
+            "get_accel_mode",
+        ]
+    )
 
 # Add redaction exports if available (v0.5.5)
 try:

@@ -10,6 +10,7 @@ datason serializes different data types. Users can configure:
 - Recursion and size limits
 """
 
+import os
 from contextlib import contextmanager
 from contextvars import ContextVar
 from dataclasses import dataclass
@@ -321,3 +322,33 @@ def cache_scope(scope: CacheScope) -> Generator[None, None, None]:
             except (AttributeError, ImportError):
                 # Ignore cache clearing errors during scope exit
                 pass  # nosec B110 - intentional fallback for cache clearing
+
+
+# ---------------------------------------------------------------------------
+# Optional Rust accelerator configuration
+# ---------------------------------------------------------------------------
+_accel_mode = "auto"
+_env = os.getenv("DATASON_RUST")
+if _env == "0":
+    _accel_mode = "off"
+elif _env == "1":
+    _accel_mode = "auto"
+
+
+def set_accel_mode(mode: str) -> None:
+    """Configure usage of the optional Rust accelerator.
+
+    Args:
+        mode: "auto" to use Rust when available, "off" to disable.
+    """
+
+    if mode not in {"auto", "off"}:
+        raise ValueError("mode must be 'auto' or 'off'")
+    global _accel_mode
+    _accel_mode = mode
+
+
+def get_accel_mode() -> str:
+    """Return current accelerator mode."""
+
+    return _accel_mode
