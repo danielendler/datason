@@ -14,6 +14,8 @@
 
 🎯 **Perfect Drop-in Replacement for Python's JSON Module** with enhanced features for complex data types and ML workflows. Zero migration effort - your existing JSON code works immediately with smart datetime parsing, type preservation, and advanced serialization capabilities.
 
+📊 **NEW: Integrated Performance Profiling** - Automated CI performance monitoring with nanosecond-precision timing and comprehensive benchmarking.
+
 > **🔄 Works exactly like `json` module**: Use `import datason.json as json` for perfect compatibility, or `import datason` for enhanced features like automatic datetime parsing and ML type support.
 
 ## ✨ Features
