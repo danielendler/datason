@@ -27,7 +27,7 @@ jobs:
 
     steps:
     - name: 📥 Checkout Code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     - name: 🐍 Set up Python
       uses: actions/setup-python@v5
@@ -93,7 +93,7 @@ jobs:
 
     steps:
     - name: 📥 Download Build Artifacts
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v5
       with:
         name: dist-packages
         path: dist/
@@ -121,7 +121,7 @@ jobs:
 
     steps:
     - name: 📥 Download Build Artifacts
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v5
       with:
         name: dist-packages
         path: dist/

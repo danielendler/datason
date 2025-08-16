@@ -131,63 +131,67 @@ def deserialize(obj: Any, parse_dates: bool = True, parse_uuids: bool = True) ->
         >>> deserialize(data)
         {"date": datetime(2023, 1, 1, 12, 0), "id": UUID('12345678-1234-5678-9012-123456789abc')}
     """
+    from ._profiling import stage
+
     # ==================================================================================
     # IDEMPOTENCY CHECKS: Prevent double deserialization
     # ==================================================================================
 
-    # IDEMPOTENCY CHECK 1: Check if object is already in final deserialized form
-    if _is_already_deserialized(obj):
-        return obj
+    with stage("eligibility_check"):
+        # IDEMPOTENCY CHECK 1: Check if object is already in final deserialized form
+        if _is_already_deserialized(obj):
+            return obj
 
-    if obj is None:
-        return None
+        if obj is None:
+            return None
 
-    # NEW: Handle type metadata for round-trip serialization
-    if isinstance(obj, dict) and TYPE_METADATA_KEY in obj:
-        return _deserialize_with_type_metadata(obj)
+        # NEW: Handle type metadata for round-trip serialization
+        if isinstance(obj, dict) and TYPE_METADATA_KEY in obj:
+            return _deserialize_with_type_metadata(obj)
 
     # Handle basic types (already in correct format)
-    if isinstance(obj, (int, float, bool)):
-        return obj
+    with stage("smart_scalars"):
+        if isinstance(obj, (int, float, bool)):
+            return obj
 
-    # Handle strings - attempt intelligent parsing
-    if isinstance(obj, str):
-        # Try to parse as UUID first (more specific pattern)
-        if parse_uuids and _looks_like_uuid(obj):
-            try:
-                import uuid as uuid_module  # Fresh import to avoid state issues
+        # Handle strings - attempt intelligent parsing
+        if isinstance(obj, str):
+            # Try to parse as UUID first (more specific pattern)
+            if parse_uuids and _looks_like_uuid(obj):
+                try:
+                    import uuid as uuid_module  # Fresh import to avoid state issues
 
-                return uuid_module.UUID(obj)
-            except (ValueError, ImportError):
-                # Log parsing failure but continue with string
-                warnings.warn(f"Failed to parse UUID string: {obj}", stacklevel=2)
+                    return uuid_module.UUID(obj)
+                except (ValueError, ImportError):
+                    # Log parsing failure but continue with string
+                    warnings.warn(f"Failed to parse UUID string: {obj}", stacklevel=2)
 
-        # Try to parse as datetime if enabled
-        if parse_dates and _looks_like_datetime(obj):
-            try:
-                import sys
-                from datetime import datetime as datetime_class  # Fresh import
+            # Try to parse as datetime if enabled
+            if parse_dates and _looks_like_datetime(obj):
+                try:
+                    import sys
+                    from datetime import datetime as datetime_class  # Fresh import
 
-                # Handle 'Z' timezone suffix for Python < 3.11
-                date_str = obj.replace("Z", "+00:00") if obj.endswith("Z") and sys.version_info < (3, 11) else obj
-                return datetime_class.fromisoformat(date_str)
-            except (ValueError, ImportError):
-                # Log parsing failure but continue with string
-                warnings.warn(
-                    f"Failed to parse datetime string: {obj[:50]}{'...' if len(obj) > 50 else ''}",
-                    stacklevel=2,
-                )
+                    # Handle 'Z' timezone suffix for Python < 3.11
+                    date_str = obj.replace("Z", "+00:00") if obj.endswith("Z") and sys.version_info < (3, 11) else obj
+                    return datetime_class.fromisoformat(date_str)
+                except (ValueError, ImportError):
+                    # Log parsing failure but continue with string
+                    warnings.warn(
+                        f"Failed to parse datetime string: {obj[:50]}{'...' if len(obj) > 50 else ''}",
+                        stacklevel=2,
+                    )
 
-        # Return as string if no parsing succeeded
-        return obj
+            # Return as string if no parsing succeeded
+            return obj
 
-    # Handle lists
-    if isinstance(obj, list):
-        return [deserialize(item, parse_dates, parse_uuids) for item in obj]
+    # Handle lists and dicts (recursive structures)
+    with stage("postprocess"):
+        if isinstance(obj, list):
+            return [deserialize(item, parse_dates, parse_uuids) for item in obj]
 
-    # Handle dictionaries
-    if isinstance(obj, dict):
-        return {k: deserialize(v, parse_dates, parse_uuids) for k, v in obj.items()}
+        if isinstance(obj, dict):
+            return {k: deserialize(v, parse_dates, parse_uuids) for k, v in obj.items()}
 
     # For any other type, return as-is
     return obj
