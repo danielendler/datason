@@ -349,9 +349,10 @@ class TestStreamingSerialization:
             except (AttributeError, TypeError):
                 pass
 
-        # Force reload all potentially corrupted modules
+        # Force reload only modules that can cause environment corruption
+        # NOTE: Avoid reloading datason.config as it creates new enum instances
+        # that break enum comparisons in subsequent tests
         modules_to_reload = [
-            "datason.config",
             "datason.core_new",
             "datason.api",
             "datason.datetime_utils",
