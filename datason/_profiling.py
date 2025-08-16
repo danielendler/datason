@@ -68,23 +68,8 @@ class _ProfileRun:
                 # Profiling must never interfere with normal execution
                 pass
 
-        # Also append to external profile_sink if it's a list (for datason-benchmark)
-        try:
-            import datason
-
-            external_sink = getattr(datason, "profile_sink", None)
-            if external_sink is not None and hasattr(external_sink, "append"):
-                # Convert timings to benchmark-expected format (nanoseconds)
-                for stage, duration_seconds in self.timings.items():
-                    external_sink.append(
-                        {
-                            "stage": stage,
-                            "duration": int(duration_seconds * 1_000_000_000),  # Convert to nanoseconds
-                        }
-                    )
-        except Exception:  # nosec B110
-            # Profiling must never interfere with normal execution
-            pass
+        # Note: Individual events are now emitted immediately by _Stage.__exit__
+        # This avoids accumulation issues and ensures proper event timing
 
         return False
 
@@ -113,7 +98,24 @@ class _Stage:
         timings = self.timings
         if timings is not None:
             end = time.perf_counter()
-            timings[self.name] = timings.get(self.name, 0.0) + (end - self.start)
+            duration_seconds = end - self.start
+            timings[self.name] = timings.get(self.name, 0.0) + duration_seconds
+
+            # Also emit individual events to external profile_sink for benchmarks
+            try:
+                import datason
+
+                external_sink = getattr(datason, "profile_sink", None)
+                if external_sink is not None and hasattr(external_sink, "append"):
+                    external_sink.append(
+                        {
+                            "stage": self.name,
+                            "duration": int(duration_seconds * 1_000_000_000),  # Convert to nanoseconds
+                        }
+                    )
+            except Exception:  # nosec B110
+                # Profiling must never interfere with normal execution
+                pass
         return False
 
 
