@@ -90,7 +90,38 @@ _COMMON_STRING_POOL: Dict[str, str] = {
     "0": "0",
     "1": "1",
     "-1": "-1",
+    # Common field names in APIs and data structures
+    "id": "id",
+    "name": "name",
+    "type": "type",
+    "value": "value",
+    "key": "key",
+    "data": "data",
+    "user": "user",
+    "users": "users",
+    "email": "email",
+    "created_at": "created_at",
+    "updated_at": "updated_at",
+    "timestamp": "timestamp",
+    "username": "username",
+    "profile": "profile",
+    "metadata": "metadata",
+    "config": "config",
+    "settings": "settings",
+    "status": "status",
+    "active": "active",
+    "enabled": "enabled",
+    "page": "page",
+    "limit": "limit",
+    "offset": "offset",
+    "total": "total",
+    "count": "count",
 }
+
+# Dynamic string cache for frequently seen strings during serialization
+_DYNAMIC_STRING_CACHE: Dict[str, str] = {}
+_STRING_FREQUENCY_COUNTER: Dict[str, int] = {}
+_DYNAMIC_CACHE_SIZE_LIMIT = 500  # Limit to prevent memory bloat
 
 # Pre-allocated result containers for reuse
 _RESULT_DICT_POOL: List[Dict] = []
@@ -668,9 +699,9 @@ def _serialize_hot_path(obj: Any, config: Optional["SerializationConfig"], max_s
     # Handle basic JSON types with minimal overhead
     if obj_type is _TYPE_STR:
         # Inline string processing for short strings
-        if len(obj) <= 10:
-            # Try to intern common strings
-            interned = _COMMON_STRING_POOL.get(obj, obj)
+        if len(obj) <= 20:  # Increased from 10 to 20 for better interning coverage
+            # Try to intern common strings (now includes dynamic caching)
+            interned = _intern_common_string(obj)
             return interned
         elif len(obj) <= max_string_length:
             return obj
@@ -1910,10 +1941,11 @@ def estimate_memory_usage(obj: Any, config: Optional["SerializationConfig"] = No
 def _process_string_optimized(obj: str, max_string_length: int) -> str:
     """Optimized string processing with length caching and interning."""
     # OPTIMIZATION: Try to intern common strings first
-    if len(obj) <= 10:  # Only check short strings for interning
+    if len(obj) <= 20:  # Increased from 10 to 20 for better interning coverage
         interned = _intern_common_string(obj)
-        if interned is not obj:  # String was interned
-            return interned
+        # Always return the interned result (which might be the same object)
+        # The interning function handles frequency tracking internally
+        return interned
 
     obj_id = id(obj)
 
@@ -2344,8 +2376,25 @@ def _return_list_to_pool(lst: List) -> None:
 
 
 def _intern_common_string(s: str) -> str:
-    """Intern common strings to reduce memory allocation."""
-    return _COMMON_STRING_POOL.get(s, s)
+    """Intern common strings to reduce memory allocation with dynamic caching."""
+    # First check static pool (fastest)
+    if s in _COMMON_STRING_POOL:
+        return _COMMON_STRING_POOL[s]
+
+    # Check dynamic cache (second fastest)
+    if s in _DYNAMIC_STRING_CACHE:
+        return _DYNAMIC_STRING_CACHE[s]
+
+    # For strings <= 20 chars, track frequency and cache popular ones
+    if len(s) <= 20:
+        _STRING_FREQUENCY_COUNTER[s] = _STRING_FREQUENCY_COUNTER.get(s, 0) + 1
+
+        # If string is seen multiple times, intern it
+        if _STRING_FREQUENCY_COUNTER[s] >= 2 and len(_DYNAMIC_STRING_CACHE) < _DYNAMIC_CACHE_SIZE_LIMIT:
+            _DYNAMIC_STRING_CACHE[s] = s
+            return s
+
+    return s
 
 
 # PHASE 2.1: JSON-FIRST SERIALIZATION STRATEGY
