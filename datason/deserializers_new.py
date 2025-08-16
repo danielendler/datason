@@ -311,13 +311,13 @@ def auto_deserialize(obj: Any, aggressive: bool = False, config: Optional["Seria
         ):
             # Check if any strings might need special parsing (UUID, datetime, etc.)
             needs_parsing = False
-            if aggressive:  # Only check if aggressive parsing is enabled
-                for v in obj.values():
-                    if isinstance(v, str) and (
-                        (len(v) > 8 and (_looks_like_uuid(v) or _looks_like_datetime(v))) or _looks_like_number(v)
-                    ):
-                        needs_parsing = True
-                        break
+            for v in obj.values():
+                if isinstance(v, str) and (
+                    (len(v) > 8 and (_looks_like_uuid(v) or _looks_like_datetime(v)))
+                    or (aggressive and _looks_like_number(v))
+                ):
+                    needs_parsing = True
+                    break
 
             if not needs_parsing:
                 # All values are simple JSON types that don't need deserialization
