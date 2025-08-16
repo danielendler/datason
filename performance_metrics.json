@@ -1,0 +1,77 @@
+{
+  "version": "0.12.0",
+  "rust_available": false,
+  "basic_test": {
+    "dataset_size": 383,
+    "save_ms": 0.96,
+    "json_size": 383,
+    "save_events": 4,
+    "load_ms": 772.12,
+    "load_events": 4
+  },
+  "scenarios": [
+    {
+      "name": "Tiny JSON",
+      "json_size": 16,
+      "save_ms": 0.04,
+      "save_events": 4,
+      "load_ms": 0.02,
+      "load_events": 4,
+      "total_events": 8
+    },
+    {
+      "name": "Small Nested",
+      "json_size": 92,
+      "save_ms": 0.06,
+      "save_events": 4,
+      "load_ms": 0.03,
+      "load_events": 4,
+      "total_events": 8
+    },
+    {
+      "name": "Medium Array",
+      "json_size": 3234,
+      "save_ms": 0.81,
+      "save_events": 4,
+      "load_ms": 1.06,
+      "load_events": 4,
+      "total_events": 8
+    },
+    {
+      "name": "Large Complex",
+      "json_size": 22629,
+      "save_ms": 8.08,
+      "save_events": 4,
+      "load_ms": 7.7,
+      "load_events": 4,
+      "total_events": 8
+    }
+  ],
+  "profile_events": {},
+  "stage_timings": [
+    {
+      "stage": "eligibility_check",
+      "count": 2,
+      "total_ms": 772.053,
+      "avg_ms": 386.026
+    },
+    {
+      "stage": "limits_prepare",
+      "count": 1,
+      "total_ms": 0.016,
+      "avg_ms": 0.016
+    },
+    {
+      "stage": "serialize_inner_python",
+      "count": 1,
+      "total_ms": 0.214,
+      "avg_ms": 0.214
+    },
+    {
+      "stage": "load_basic_json",
+      "count": 1,
+      "total_ms": 772.109,
+      "avg_ms": 772.109
+    }
+  ]
+}

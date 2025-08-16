@@ -63,9 +63,12 @@ jobs:
         "
 
     - name: 📊 Run profiling performance test
-      run: python examples/profiling_demo.py
+      run: |
+        echo "🚀 Running DataSON profiling tests..."
+        python examples/profiling_demo.py | tee profiling_output.txt
+        echo "✅ Profiling test completed"
 
-    - name: 🔍 Run comparative benchmark (if datason-benchmarks available)
+    - name: 🔍 Run comparative benchmark on datason-benchmarks
       run: |
         echo "🚀 Running comparative benchmark analysis..."
 
@@ -77,73 +80,45 @@ jobs:
 
         cd datason-benchmarks
 
+        # Install the current PR version of datason
+        pip install -e ..
+
         # Install minimal dependencies
         pip install orjson ujson msgpack jsonpickle || echo "Some competitive libraries failed to install"
 
-        # Run a quick comparative test
-        echo "Running save_string benchmark..."
-        python scripts/bench_rust_core.py save_string --with-rust auto --sizes 1k,10k --output ../comparative_results.json || {
-          echo "⚠️ Benchmark failed, but that's okay for this demonstration"
-          echo '{"error": "Benchmark execution failed, but profiling system is working"}' > ../comparative_results.json
+        # Run profiling demo on the benchmarks repo for comparison
+        echo "Running profiling on datason-benchmarks..."
+        if [ -f "../examples/profiling_demo.py" ]; then
+          DATASON_PROFILE=1 python ../examples/profiling_demo.py | tee ../benchmark_profiling_output.txt
+        fi
+
+        # Also run the standard benchmark suite
+        echo "Running standard benchmark suite..."
+        python scripts/bench_rust_core.py save_string --with-rust auto --sizes 1k,10k,100k --output ../comparative_results.json || {
+          echo "⚠️ Standard benchmark failed, continuing with profiling data only"
         }
 
         cd ..
         echo "✅ Comparative benchmark completed"
 
-    - name: 📈 Generate performance analysis
+    - name: 📈 Generate performance analysis with real metrics
       run: |
-        echo "=== Generating Performance Analysis ==="
+        echo "=== Generating Performance Analysis with Real Metrics ==="
 
-        # Create a simple performance report
-        cat > pr_analysis_report.md << 'EOF'
-        # 🚀 DataSON PR Performance Analysis
+        # Extract actual performance metrics using our new script
+        if [ -f "benchmark_profiling_output.txt" ]; then
+          echo "Generating comparison report..."
+          python scripts/extract_performance_metrics.py profiling_output.txt benchmark_profiling_output.txt > pr_analysis_report.md
+        else
+          echo "Generating single report..."
+          python scripts/extract_performance_metrics.py profiling_output.txt > pr_analysis_report.md
+        fi
 
-        ## 📊 Performance Summary
+        # Display the report for debugging
+        echo "Generated PR Comment:"
+        cat pr_analysis_report.md
 
-        ✅ **Profiling System**: Working correctly
-        📊 **Benchmark APIs**: All functional
-        🔍 **Stage Timing**: Nanosecond precision profiling active
-        🔄 **Round-trip Validation**: All test scenarios pass
-        🦀 **Rust Status**: Ready for integration (currently Python-only)
-
-        ## 🔍 Profiling Infrastructure Status
-
-        | Component | Status | Details |
-        |-----------|--------|---------|
-        | 🔍 **Profiling Infrastructure** | ✅ Working | Stage timing capture with nanosecond precision |
-        | 📊 **Benchmark APIs** | ✅ Ready | `save_string()`, `load_basic()`, `profile_sink` |
-        | 🌍 **Environment Control** | ✅ Active | `DATASON_PROFILE=1`, `DATASON_RUST=auto` |
-        | 🚀 **CI Integration** | ✅ Functional | Automated performance analysis on every PR |
-        | 🔄 **Round-trip Validation** | ✅ Passing | All test scenarios maintain data integrity |
-
-        ## 🎯 Key Features Demonstrated
-
-        - **Multi-scenario Testing**: Simple JSON, nested objects, large arrays, complex data
-        - **Stage-level Profiling**: `eligibility_check`, `serialize_inner_python`, `load_basic_json`
-        - **Performance Monitoring**: Detailed timing analysis with overhead measurement
-        - **Environment Controls**: `DATASON_RUST` and `DATASON_PROFILE` environment variables
-        - **CI Integration**: Automated performance analysis on every pull request
-
-        ## 🦀 Rust Core Integration Ready
-
-        **Infrastructure is fully prepared for Rust acceleration:**
-        - 🔧 Environment variable controls implemented
-        - 📊 Profiling system will automatically track Rust vs Python paths
-        - 🚀 Benchmarking APIs compatible with external tools
-        - 📈 Performance baselines established for comparison
-
-        ## ✅ Merge Readiness
-
-        - **✅ Independent of Rust core**: Can be merged before Rust implementation
-        - **✅ Non-breaking**: All existing functionality preserved
-        - **✅ Production safe**: Profiling disabled by default
-        - **✅ CI validated**: All tests pass with profiling enabled
-
-        ---
-        *This analysis was automatically generated by DataSON's integrated profiling system*
-        EOF
-
-        echo "✅ Performance analysis report generated"
+        echo "✅ Performance analysis report generated with actual metrics"
 
     - name: 💬 Post performance analysis to PR
       if: github.event_name == 'pull_request'
@@ -246,6 +221,9 @@ jobs:
         path: |
           pr_analysis_report.md
           comparative_results.json
+          profiling_output.txt
+          benchmark_profiling_output.txt
+          performance_metrics.json
         retention-days: 30
 
     - name: ✅ Performance check summary
