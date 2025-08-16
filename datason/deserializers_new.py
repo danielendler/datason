@@ -197,6 +197,27 @@ def deserialize(obj: Any, parse_dates: bool = True, parse_uuids: bool = True) ->
             return [deserialize(item, parse_dates, parse_uuids) for item in obj]
 
         if isinstance(obj, dict):
+            # PERFORMANCE OPTIMIZATION: Fast path for dictionaries with only JSON-basic values
+            # This avoids calling deserialize on every simple value
+            if len(obj) <= 10000 and all(
+                isinstance(k, str) and isinstance(v, (str, int, float, bool, type(None))) for k, v in obj.items()
+            ):
+                # Check if any strings might need special parsing (UUID, datetime, etc.)
+                needs_parsing = False
+                if parse_dates or parse_uuids:  # Only check if parsing is enabled
+                    for v in obj.values():
+                        if isinstance(v, str) and (
+                            len(v) > 8
+                            and (parse_uuids and _looks_like_uuid(v))
+                            or (parse_dates and _looks_like_datetime(v))
+                        ):
+                            needs_parsing = True
+                            break
+
+                if not needs_parsing:
+                    # All values are simple JSON types that don't need deserialization
+                    return obj
+
             return {k: deserialize(v, parse_dates, parse_uuids) for k, v in obj.items()}
 
     # For any other type, return as-is
@@ -282,6 +303,23 @@ def auto_deserialize(obj: Any, aggressive: bool = False, config: Optional["Seria
                 return _reconstruct_from_split(obj)
             except Exception:  # nosec B110
                 pass
+
+        # PERFORMANCE OPTIMIZATION: Fast path for dictionaries with only JSON-basic values
+        # This avoids calling auto_deserialize on every simple value
+        if len(obj) <= 10000 and all(
+            isinstance(k, str) and isinstance(v, (str, int, float, bool, type(None))) for k, v in obj.items()
+        ):
+            # Check if any strings might need special parsing (UUID, datetime, etc.)
+            needs_parsing = False
+            if aggressive:  # Only check if aggressive parsing is enabled
+                for v in obj.values():
+                    if isinstance(v, str) and (len(v) > 8 and (_looks_like_uuid(v) or _looks_like_datetime(v))):
+                        needs_parsing = True
+                        break
+
+            if not needs_parsing:
+                # All values are simple JSON types that don't need deserialization
+                return obj
 
         # Standard dictionary deserialization
         return {k: auto_deserialize(v, aggressive, config) for k, v in obj.items()}

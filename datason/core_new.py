@@ -496,12 +496,12 @@ def _serialize_core(
                 # Safe homogeneity check with strict limits
                 homogeneity = _is_homogeneous_collection(obj, sample_size=10, _max_check_depth=2)
 
-            # Quick JSON compatibility check for small dicts
+            # Quick JSON compatibility check for dicts
             # SECURITY: Disable optimization paths when depth is significant to prevent bypass
             if (
                 _depth < 10  # Additional security: no optimizations at significant depth
                 and homogeneity == "json_basic"
-                and len(obj) <= 5
+                and len(obj) <= 10000  # PERFORMANCE FIX: Increased from 5 to 10000 for large dict optimization
                 and all(
                     isinstance(k, str)
                     and type(v) in _JSON_BASIC_TYPES
@@ -509,7 +509,7 @@ def _serialize_core(
                     for k, v in obj.items()
                 )
             ):
-                # SECURITY FIX: Even for "json_basic" small dicts, we must check if any values
+                # SECURITY FIX: Even for "json_basic" dicts, we must check if any values
                 # are nested containers that could lead to depth bomb attacks
                 has_nested_containers = any(isinstance(v, (dict, list, tuple)) for v in obj.values())
                 if not has_nested_containers:
@@ -543,16 +543,16 @@ def _serialize_core(
                 # Safe homogeneity check with strict limits
                 homogeneity = _is_homogeneous_collection(obj, sample_size=10, _max_check_depth=2)
 
-                # Quick JSON compatibility check for small lists
+                # Quick JSON compatibility check for lists
             # SECURITY: Disable optimization paths when depth is significant to prevent bypass
             if (
                 _depth < 10  # Additional security: no optimizations at significant depth
                 and homogeneity == "json_basic"
-                and len(obj) <= 5
+                and len(obj) <= 10000  # PERFORMANCE FIX: Increased from 5 to 10000 for large list optimization
                 and all(type(item) in _JSON_BASIC_TYPES for item in obj)
                 and not (config and config.include_type_hints and obj_type is _TYPE_TUPLE)
             ):
-                # SECURITY FIX: Even for "json_basic" small lists, we must check if any items
+                # SECURITY FIX: Even for "json_basic" lists, we must check if any items
                 # are nested containers that could lead to depth bomb attacks
                 has_nested_containers = any(isinstance(item, (dict, list, tuple)) for item in obj)
                 if not has_nested_containers:
@@ -2601,20 +2601,22 @@ def _estimate_max_depth(obj: Any, max_check_depth: int, _current_depth: int = 0)
             return _current_depth
         # Check the first element to estimate max depth
         max_depth = _current_depth
-        for item in obj[:5]:  # Check only first few items for performance
+        # Optimize: iterate directly with count instead of slicing
+        for checked_count, item in enumerate(obj):
             item_depth = _estimate_max_depth(item, max_check_depth, _current_depth + 1)
             max_depth = max(max_depth, item_depth)
-            if max_depth >= max_check_depth:  # Early termination
+            if max_depth >= max_check_depth or checked_count >= 4:  # Early termination (4 = 5th item)
                 break
         return max_depth
     elif isinstance(obj, dict):
         if not obj:
             return _current_depth
         max_depth = _current_depth
-        for value in list(obj.values())[:5]:  # Check only first few values for performance
+        # Optimize: iterate directly instead of converting all values to list first
+        for checked_count, value in enumerate(obj.values()):
             value_depth = _estimate_max_depth(value, max_check_depth, _current_depth + 1)
             max_depth = max(max_depth, value_depth)
-            if max_depth >= max_check_depth:  # Early termination
+            if max_depth >= max_check_depth or checked_count >= 4:  # Early termination (4 = 5th item)
                 break
         return max_depth
     else:
