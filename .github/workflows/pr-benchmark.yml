@@ -1,4 +1,4 @@
-name: 📊 PR Performance Analysis
+name: 📊 PR Performance Trigger
 
 on:
   pull_request:
@@ -7,22 +7,18 @@ on:
       - 'datason/**'
       - 'pyproject.toml'
       - 'rust/**'  # For future Rust core changes
+      - 'examples/profiling_demo.py'
   workflow_dispatch:
-    inputs:
-      detailed_profiling:
-        description: 'Run detailed profiling with flamegraphs'
-        type: boolean
-        default: false
 
 permissions:
   contents: read
   pull-requests: write
 
 jobs:
-  benchmark-analysis:
-    name: 🚀 Performance & Profiling Test
+  trigger-benchmarks:
+    name: 🚀 Trigger Performance Benchmarks
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
 
     steps:
     - name: 📥 Checkout DataSON PR
@@ -33,210 +29,95 @@ jobs:
       with:
         python-version: "3.11"
 
-    - name: 📦 Install DataSON with profiling support
+    - name: 📦 Build DataSON wheel
       run: |
         python -m pip install --upgrade pip
-        pip install -e .
+        pip install build wheel setuptools
 
-        # Install optional dependencies for comprehensive testing
-        pip install numpy pandas || echo "Optional deps failed, continuing..."
+        # Clean any previous builds
+        rm -rf dist/ build/ *.egg-info/
 
-    - name: 🧪 Validate profiling infrastructure
-      run: |
-        python -c "
-        import datason
-        import os
+        # Build wheel
+        python -m build --wheel
 
-        print('=== DataSON Profiling Infrastructure Validation ===')
-        print(f'DataSON Version: {datason.__version__}')
-        print(f'Rust Available: {datason.RUST_AVAILABLE}')
-        print(f'Profile Sink Available: {hasattr(datason, \"profile_sink\")}')
-        print(f'Set Profile Sink Available: {hasattr(datason, \"set_profile_sink\")}')
-        print(f'Save String API: {hasattr(datason, \"save_string\")}')
-        print(f'Load Basic API: {hasattr(datason, \"load_basic\")}')
+        # Get wheel filename
+        WHEEL_FILE=$(ls dist/*.whl | head -n1)
+        WHEEL_NAME=$(basename "$WHEEL_FILE")
 
-        # Test environment variable support
-        os.environ['DATASON_PROFILE'] = '1'
-        os.environ['DATASON_RUST'] = 'auto'
+        echo "✅ Built wheel: $WHEEL_NAME"
+        ls -la dist/
 
-        print('✅ All profiling infrastructure is ready')
-        "
+    - name: 📤 Upload DataSON wheel
+      uses: actions/upload-artifact@v4
+      with:
+        name: datason-wheel
+        path: dist/*.whl
+        retention-days: 7
 
-    - name: 📊 Run profiling performance test
-      run: |
-        echo "🚀 Running DataSON profiling tests..."
-        python examples/profiling_demo.py | tee profiling_output.txt
-        echo "✅ Profiling test completed"
+    - name: 📤 Upload profiling demo script
+      uses: actions/upload-artifact@v4
+      with:
+        name: datason-profiling-demo
+        path: |
+          examples/profiling_demo.py
+          scripts/extract_performance_metrics.py
+        retention-days: 7
 
-    - name: 🔍 Run comparative benchmark on datason-benchmarks
-      run: |
-        echo "🚀 Running comparative benchmark analysis..."
-
-        # Clone the benchmark repository
-        git clone https://github.com/danielendler/datason-benchmarks.git || {
-          echo "⚠️ Benchmark repository not available, skipping comparative analysis"
-          exit 0
-        }
-
-        cd datason-benchmarks
-
-        # Install the current PR version of datason
-        pip install -e ..
-
-        # Install minimal dependencies
-        pip install orjson ujson msgpack jsonpickle || echo "Some competitive libraries failed to install"
-
-        # Run profiling demo on the benchmarks repo for comparison
-        echo "Running profiling on datason-benchmarks..."
-        if [ -f "../examples/profiling_demo.py" ]; then
-          DATASON_PROFILE=1 python ../examples/profiling_demo.py | tee ../benchmark_profiling_output.txt
-        fi
-
-        # Also run the standard benchmark suite
-        echo "Running standard benchmark suite..."
-        python scripts/bench_rust_core.py save_string --with-rust auto --sizes 1k,10k,100k --output ../comparative_results.json || {
-          echo "⚠️ Standard benchmark failed, continuing with profiling data only"
-        }
-
-        cd ..
-        echo "✅ Comparative benchmark completed"
-
-    - name: 📈 Generate performance analysis with real metrics
-      run: |
-        echo "=== Generating Performance Analysis with Real Metrics ==="
-
-        # Extract actual performance metrics using our new script
-        if [ -f "benchmark_profiling_output.txt" ]; then
-          echo "Generating comparison report..."
-          python scripts/extract_performance_metrics.py profiling_output.txt benchmark_profiling_output.txt > pr_analysis_report.md
-        else
-          echo "Generating single report..."
-          python scripts/extract_performance_metrics.py profiling_output.txt > pr_analysis_report.md
-        fi
-
-        # Display the report for debugging
-        echo "Generated PR Comment:"
-        cat pr_analysis_report.md
-
-        echo "✅ Performance analysis report generated with actual metrics"
-
-    - name: 💬 Post performance analysis to PR
-      if: github.event_name == 'pull_request'
+    - name: 🚀 Trigger datason-benchmarks workflow
       uses: actions/github-script@v7
       with:
+        github-token: ${{ secrets.BENCHMARK_REPO_TOKEN }}
         script: |
-          const fs = require('fs');
+          console.log('🚀 Triggering comprehensive benchmarks in datason-benchmarks repository...');
 
           try {
-            const analysis = fs.readFileSync('pr_analysis_report.md', 'utf8');
-
-            await github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: analysis
+            const response = await github.rest.actions.createWorkflowDispatch({
+              owner: 'danielendler',
+              repo: 'datason-benchmarks',
+              workflow_id: 'datason-pr-integration.yml',
+              ref: 'main',
+              inputs: {
+                pr_number: '${{ github.event.number }}',
+                commit_sha: '${{ github.event.pull_request.head.sha || github.sha }}',
+                artifact_name: 'datason-wheel',
+                datason_repo: '${{ github.repository }}',
+                benchmark_type: 'pr_optimized'
+              }
             });
 
-            console.log('✅ Posted performance analysis to PR');
+            console.log('✅ Successfully triggered benchmark workflow');
+            console.log('📊 The datason-benchmarks repository will:');
+            console.log('   • Download the PR wheel artifact');
+            console.log('   • Run comprehensive performance tests');
+            console.log('   • Execute profiling analysis');
+            console.log('   • Compare against baseline');
+            console.log('   • Post detailed results back to this PR');
+            console.log('');
+            console.log('🔍 Monitor progress at:');
+            console.log('   https://github.com/danielendler/datason-benchmarks/actions');
+
           } catch (error) {
-            console.error('❌ Failed to post PR comment:', error);
+            console.error('❌ Failed to trigger benchmark workflow:', error.message);
 
-            // Fallback simple comment
-            const fallbackComment = `## 🚀 DataSON Performance Test
+            if (error.message.includes('workflow_id')) {
+              console.log('');
+              console.log('📝 The benchmark repository may need setup. Expected workflow file:');
+              console.log('   .github/workflows/datason-pr-integration.yml');
+            }
 
-            ✅ **Profiling System**: Working correctly
-            📊 **Benchmark APIs**: All functional
-            🔍 **Analysis**: Detailed results available in workflow artifacts
-
-            *Performance analysis completed successfully*`;
-
-            await github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: fallbackComment
-            });
+            throw error;
           }
 
-    - name: 🔥 Advanced profiling (if requested)
-      if: github.event.inputs.detailed_profiling == 'true' || github.event_name == 'workflow_dispatch'
-      run: |
-        echo "🔥 Running advanced profiling analysis..."
-
-        # Install profiling tools
-        pip install py-spy memory-profiler || echo "Advanced profiling tools not available"
-
-        # Run intensive profiling test
-        DATASON_PROFILE=1 python -c "
-        import datason
-        import time
-
-        datason.profile_sink = []
-
-        # Create a large, complex dataset
-        large_data = {
-            'users': [
-                {
-                    'id': i,
-                    'profile': {
-                        'name': f'User {i}',
-                        'email': f'user{i}@example.com',
-                        'settings': {
-                            'theme': 'dark' if i % 2 else 'light',
-                            'notifications': [f'type_{j}' for j in range(10)]
-                        }
-                    },
-                    'data': list(range(100))
-                }
-                for i in range(100)
-            ],
-            'metadata': {
-                'total_users': 100,
-                'generated_at': time.time(),
-                'schema_version': '1.0'
-            }
-        }
-
-        print('Running intensive profiling test...')
-        start = time.perf_counter()
-
-        for iteration in range(10):
-            datason.profile_sink.clear()
-            json_result = datason.save_string(large_data)
-            loaded_result = datason.load_basic(json_result)
-
-        end = time.perf_counter()
-
-        print(f'Advanced profiling completed: {(end-start)*1000:.2f}ms total')
-        print(f'Final profile events: {len(datason.profile_sink)}')
-        "
-
-        echo "✅ Advanced profiling completed"
-
-    - name: 📦 Upload comprehensive artifacts
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: datason-performance-analysis-${{ github.event.number || github.run_id }}
-        path: |
-          pr_analysis_report.md
-          comparative_results.json
-          profiling_output.txt
-          benchmark_profiling_output.txt
-          performance_metrics.json
-        retention-days: 30
-
-    - name: ✅ Performance check summary
+    - name: ✅ Benchmark trigger summary
       run: |
         echo "=================================="
-        echo "🎉 DataSON Performance Check Complete"
+        echo "🎉 DataSON Benchmark Trigger Complete"
         echo "=================================="
         echo ""
-        echo "✅ Profiling system validated"
-        echo "📊 Performance metrics captured"
-        echo "🔍 Detailed analysis generated"
-        echo "💬 PR comment posted (if applicable)"
-        echo "📦 Artifacts uploaded for review"
+        echo "✅ DataSON wheel built and uploaded"
+        echo "✅ Profiling demo script uploaded"
+        echo "✅ Benchmark workflow triggered in datason-benchmarks"
         echo ""
-        echo "🚀 Ready for merge!"
+        echo "📊 Performance analysis will be posted back to this PR"
+        echo "🔍 Check datason-benchmarks Actions tab for progress"
         echo "=================================="
