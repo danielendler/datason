@@ -95,6 +95,7 @@ class DeserializationSecurityError(Exception):
 if TYPE_CHECKING:
     import numpy as np
     import pandas as pd
+    import torch
 else:
     try:
         import pandas as pd
@@ -105,6 +106,11 @@ else:
         import numpy as np
     except ImportError:
         np = None
+
+    try:
+        import torch
+    except ImportError:
+        torch = None
 
 
 # NEW: Type metadata constants for round-trip serialization
@@ -2848,27 +2854,52 @@ def _is_already_deserialized(obj: Any) -> bool:
         return True
 
     # Check for ML framework objects (if available)
-    try:
-        import torch
+    # PERFORMANCE FIX: Import torch only once at module level to avoid 600ms import overhead
+    if torch is not None and isinstance(obj, torch.Tensor):
+        return True
 
-        if isinstance(obj, torch.Tensor):
-            return True
-    except ImportError:
-        pass
-
-    # For containers, check if they contain already deserialized objects
+    # PERFORMANCE OPTIMIZATION: For containers, use fast heuristics
     if isinstance(obj, dict):
         # If dict contains type metadata, it's not yet deserialized
         if TYPE_METADATA_KEY in obj and VALUE_METADATA_KEY in obj:
             return False
-        # If dict contains complex objects, it's likely already deserialized
-        for value in obj.values():
+
+        # CRITICAL OPTIMIZATION: For large dictionaries, use type-based fast path
+        # If dict is large and contains only basic JSON types, assume it's JSON data
+        if len(obj) > 100:  # Large dictionary threshold
+            # Quick sample of value types without recursion
+            for sample_count, value in enumerate(obj.values()):
+                if not isinstance(value, (str, int, float, bool, type(None), dict, list)):
+                    # Found non-JSON type, need full check
+                    break
+                if sample_count >= 2:  # Sample 3 values (0, 1, 2)
+                    # All sampled values are basic JSON types, assume JSON data
+                    return False
+
+        # Small dict or mixed types: check first few values recursively
+        for check_count, value in enumerate(obj.values()):
             if _is_already_deserialized(value):
                 return True
+            if check_count >= 2:  # Check 3 values (0, 1, 2)
+                break
     elif isinstance(obj, list):
-        # If list contains complex objects, it's likely already deserialized
-        for item in obj:
-            if _is_already_deserialized(item):
+        # OPTIMIZATION: For large lists, use type-based fast path
+        if len(obj) > 50:  # Large list threshold
+            # Quick sample without recursion
+            sample_size = min(3, len(obj))
+            for i in range(sample_size):
+                value = obj[i]
+                if not isinstance(value, (str, int, float, bool, type(None), dict, list)):
+                    # Found non-JSON type, need full check
+                    break
+            else:
+                # All sampled values are basic JSON types, assume JSON data
+                return False
+
+        # Small list or mixed types: check first few items recursively
+        items_to_check = min(3, len(obj))  # Reduced from 5 to 3
+        for i in range(items_to_check):
+            if _is_already_deserialized(obj[i]):
                 return True
 
     # Basic types and strings are considered "neutral" - could be either state
