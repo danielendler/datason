@@ -698,16 +698,17 @@ def _serialize_hot_path(obj: Any, config: Optional["SerializationConfig"], max_s
 
     # Handle basic JSON types with minimal overhead
     if obj_type is _TYPE_STR:
+        # Enforce security limit before fast-path processing
+        obj_len = len(obj)
+        if obj_len > max_string_length:
+            # Exceeds allowed length; delegate to full path for security error
+            return None
         # Inline string processing for short strings
-        if len(obj) <= 20:  # Increased from 10 to 20 for better interning coverage
+        if obj_len <= 20:  # Increased from 10 to 20 for better interning coverage
             # Try to intern common strings (now includes dynamic caching)
             interned = _intern_common_string(obj)
             return interned
-        elif len(obj) <= max_string_length:
-            return obj
-        else:
-            # Needs full string processing
-            return None
+        return obj
 
     elif obj_type is _TYPE_INT or obj_type is _TYPE_BOOL:
         return obj
@@ -1940,42 +1941,37 @@ def estimate_memory_usage(obj: Any, config: Optional["SerializationConfig"] = No
 
 def _process_string_optimized(obj: str, max_string_length: int) -> str:
     """Optimized string processing with length caching and interning."""
-    # OPTIMIZATION: Try to intern common strings first
-    if len(obj) <= 20:  # Increased from 10 to 20 for better interning coverage
+    # Enforce security limit before any caching or interning
+    obj_len = len(obj)
+    if obj_len > max_string_length:
+        warnings.warn(
+            f"String length ({obj_len}) exceeds maximum ({max_string_length}). Returning security error.",
+            stacklevel=4,
+        )
+        return {
+            "__datason_type__": "security_error",
+            "__datason_value__": (
+                f"String length ({obj_len}) exceeds maximum allowed length ({max_string_length}). "
+                "Operation blocked for security."
+            ),
+        }
+
+    # OPTIMIZATION: Try to intern common short strings first
+    if obj_len <= 20:  # Increased from 10 to 20 for better interning coverage
         interned = _intern_common_string(obj)
-        # Always return the interned result (which might be the same object)
-        # The interning function handles frequency tracking internally
         return interned
 
     obj_id = id(obj)
-
-    # Check cache first for long strings
+    # Check cache first for known length classification
     if obj_id in _STRING_LENGTH_CACHE:
-        is_long = _STRING_LENGTH_CACHE[obj_id]
-        if not is_long:
-            return obj  # Short string, return as-is
+        if not _STRING_LENGTH_CACHE[obj_id]:
+            return obj  # Previously classified as short string
     else:
-        # Calculate and cache length check
-        obj_len = len(obj)
-        is_long = obj_len > max_string_length
-
-        # Only cache if we haven't hit the limit
+        # Cache length classification for future calls
+        is_long = False  # already known obj_len <= max_string_length
         if len(_STRING_LENGTH_CACHE) < _STRING_CACHE_SIZE_LIMIT:
             _STRING_LENGTH_CACHE[obj_id] = is_long
-
-        if not is_long:
-            return obj  # Short string, return as-is
-
-    # Handle long string - return security error dict instead of truncating
-    warnings.warn(
-        f"String length ({len(obj)}) exceeds maximum ({max_string_length}). Returning security error.",
-        stacklevel=4,
-    )
-    # Return security error dict instead of truncating for better security handling
-    return {
-        "__datason_type__": "security_error",
-        "__datason_value__": f"String length ({len(obj)}) exceeds maximum allowed length ({max_string_length}). Operation blocked for security.",
-    }
+    return obj
 
 
 def _uuid_to_string_optimized(obj: uuid.UUID) -> str:
