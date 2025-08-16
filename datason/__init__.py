@@ -203,7 +203,7 @@ from .validation import serialize_marshmallow, serialize_pydantic  # noqa: F401
 # Note: External tools should use set_profile_sink() to register callbacks
 
 # List-based profile sink for datason-benchmarks compatibility
-profile_sink: Optional[list] = None
+profile_sink: Optional[list] = []
 
 
 def set_profile_sink(sink: Optional[Callable[[dict], None]]) -> None:
