@@ -202,6 +202,9 @@ from .validation import serialize_marshmallow, serialize_pydantic  # noqa: F401
 # Profile sink for external benchmarking tools (e.g., datason-benchmark)
 # Note: External tools should use set_profile_sink() to register callbacks
 
+# List-based profile sink for datason-benchmarks compatibility
+profile_sink: Optional[list] = None
+
 
 def set_profile_sink(sink: Optional[Callable[[dict], None]]) -> None:
     """Register a callback to receive profiling timings.
@@ -241,10 +244,13 @@ def save_string(obj: Any) -> str:
         >>> result = datason.save_string({"key": "value"})
         >>> assert isinstance(result, str)
     """
-    # Use dumps_json for direct string output
+    # Use dumps_json with profiling support
+    from ._profiling import profile_run, stage
     from .api import dumps_json
 
-    return dumps_json(obj)
+    with profile_run():
+        with stage("save_string"):
+            return dumps_json(obj)
 
 
 def load_basic(data: Any) -> Any:
@@ -265,15 +271,19 @@ def load_basic(data: Any) -> Any:
         >>> obj = datason.load_basic({"key": "value"})  # Also works
         >>> assert obj == {"key": "value"}
     """
-    # Use loads_json for string parsing, deserialize for already-parsed data
+    # Use loads_json and deserialize with profiling support
+    from ._profiling import profile_run, stage
     from .api import loads_json
     from .deserializers_new import deserialize
 
-    if isinstance(data, (str, bytes)):
-        return loads_json(data)
-    else:
-        # For already-parsed data, use deserialize
-        return deserialize(data)
+    with profile_run():
+        if isinstance(data, (str, bytes)):
+            with stage("load_basic_json"):
+                return loads_json(data)
+        else:
+            # For already-parsed data, use deserialize
+            with stage("load_basic_deserialize"):
+                return deserialize(data)
 
 
 def _get_version() -> str:
@@ -315,6 +325,7 @@ __all__ = [  # noqa: RUF022
     "serialize",  # Enhanced serialization (returns dict)
     # Profiling and benchmarking support
     "set_profile_sink",  # Debug profiling sink registration
+    "profile_sink",  # List-based profiling sink for datason-benchmarks
     "RUST_AVAILABLE",  # Rust backend availability flag
     "save_string",  # Core benchmarking API (serialize to string)
     "load_basic",  # Core benchmarking API (parse from string)
