@@ -120,7 +120,7 @@ jobs:
             const response = await github.rest.actions.createWorkflowDispatch({
               owner: 'danielendler',
               repo: 'datason-benchmarks',
-              workflow_id: 'datason-pr-integration.yml',
+              workflow_id: 'pr-performance-check.yml',
               ref: 'main',
               inputs: {
                 pr_number: '${{ github.event_name == 'pull_request' && github.event.number || github.event.inputs.pr_number }}',
@@ -143,7 +143,7 @@ jobs:
             if (error.message.includes('workflow_id')) {
               console.log('');
               console.log('📝 The benchmark repository may need setup. Expected workflow file:');
-              console.log('   .github/workflows/datason-pr-integration.yml');
+              console.log('   .github/workflows/pr-performance-check.yml');
               console.log('');
               console.log('🔧 To set up the benchmark repository:');
               console.log('   1. Create the workflow file in datason-benchmarks repository');
@@ -166,6 +166,6 @@ jobs:
         echo "🔍 Monitor progress at:"
         echo "   https://github.com/danielendler/datason-benchmarks/actions"
         echo ""
-        echo "📋 Expected workflow: datason-pr-integration.yml"
+        echo "📋 Expected workflow: pr-performance-check.yml"
         echo "📦 Artifact name: datason-wheel"
         echo "🎯 Benchmark type: ${{ github.event.inputs.benchmark_type || 'pr_optimized' }}"
