@@ -520,10 +520,16 @@ def _serialize_core(
             if not obj:
                 return obj
 
-            # PERFORMANCE OPTIMIZATION: Homogeneity check (ONLY after security verification)
-            # This is now safe because we already enforced depth limits
+            # PERFORMANCE: Fast path for small dicts - skip expensive optimization analysis
+            if len(obj) < 20:
+                # For small dicts, the optimization overhead exceeds the benefit
+                # Use standard recursive processing
+                return {k: _serialize_core(v, config, _depth + 1, _seen, _type_handler) for k, v in obj.items()}
+
+            # PERFORMANCE OPTIMIZATION: Smart conditional homogeneity check
+            # Only run expensive analysis for larger structures that will benefit
             homogeneity = None
-            if _depth < 5:  # Only use optimization at reasonable depths
+            if _depth < 5:  # Only analyze at reasonable depths
                 # Safe homogeneity check with strict limits
                 homogeneity = _is_homogeneous_collection(obj, sample_size=10, _max_check_depth=2)
 
@@ -540,9 +546,10 @@ def _serialize_core(
                     return obj  # Simple dict with only basic values
 
                 # ENHANCED: Check if this is a dict with shallow nested JSON-basic structures
+                # Only run expensive nested analysis for medium-sized dicts
                 elif (
                     _depth < 8  # More restrictive depth for nested optimization
-                    and len(obj) <= 1000  # Smaller limit for nested structures
+                    and 50 <= len(obj) <= 1000  # Only analyze medium-sized structures
                     and all(isinstance(k, str) for k in obj)
                     and _is_shallow_json_structure(obj, max_string_length, _depth + 1)
                 ):
@@ -582,9 +589,21 @@ def _serialize_core(
                     return _create_type_metadata("tuple", [])
                 return [] if obj_type is _TYPE_TUPLE else obj
 
-            # PERFORMANCE OPTIMIZATION: Homogeneity check (ONLY after security verification)
+            # PERFORMANCE: Fast path for small arrays - skip expensive optimization analysis
+            if len(obj) < 10:
+                # For small arrays, the optimization overhead exceeds the benefit
+                # Use standard recursive processing
+                result = [_serialize_core(item, config, _depth + 1, _seen, _type_handler) for item in obj]
+                return (
+                    result
+                    if obj_type is not _TYPE_TUPLE or not (config and config.include_type_hints)
+                    else _create_type_metadata("tuple", result)
+                )
+
+            # PERFORMANCE OPTIMIZATION: Smart conditional homogeneity check
+            # Only run expensive analysis for larger arrays that will benefit
             homogeneity = None
-            if _depth < 5:  # Only use optimization at reasonable depths
+            if _depth < 5:  # Only analyze at reasonable depths
                 # Safe homogeneity check with strict limits
                 homogeneity = _is_homogeneous_collection(obj, sample_size=10, _max_check_depth=2)
 
@@ -605,11 +624,11 @@ def _serialize_core(
                 # If there are nested containers, fall through to recursive processing
 
             # ENHANCED: Array of simple objects optimization
+            # Only run expensive object array analysis for larger arrays
             elif (
                 _depth < 8  # More restrictive depth for array optimization
                 and homogeneity in ("single_type", "mixed")  # Arrays of objects or mixed types
-                and len(obj) <= 5000  # Reasonable limit for array size
-                and len(obj) > 0  # Must have items
+                and 20 <= len(obj) <= 5000  # Only analyze medium to large arrays
                 and _is_simple_object_array(obj, max_string_length)
             ):
                 # This array contains only simple objects that can be optimized
