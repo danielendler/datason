@@ -90,7 +90,38 @@ _COMMON_STRING_POOL: Dict[str, str] = {
     "0": "0",
     "1": "1",
     "-1": "-1",
+    # Common field names in APIs and data structures
+    "id": "id",
+    "name": "name",
+    "type": "type",
+    "value": "value",
+    "key": "key",
+    "data": "data",
+    "user": "user",
+    "users": "users",
+    "email": "email",
+    "created_at": "created_at",
+    "updated_at": "updated_at",
+    "timestamp": "timestamp",
+    "username": "username",
+    "profile": "profile",
+    "metadata": "metadata",
+    "config": "config",
+    "settings": "settings",
+    "status": "status",
+    "active": "active",
+    "enabled": "enabled",
+    "page": "page",
+    "limit": "limit",
+    "offset": "offset",
+    "total": "total",
+    "count": "count",
 }
+
+# Dynamic string cache for frequently seen strings during serialization
+_DYNAMIC_STRING_CACHE: Dict[str, str] = {}
+_STRING_FREQUENCY_COUNTER: Dict[str, int] = {}
+_DYNAMIC_CACHE_SIZE_LIMIT = 500  # Limit to prevent memory bloat
 
 # Pre-allocated result containers for reuse
 _RESULT_DICT_POOL: List[Dict] = []
@@ -99,7 +130,7 @@ _POOL_SIZE_LIMIT = 20  # Limit pool size to prevent memory bloat
 
 # OPTIMIZATION: Function call overhead reduction - Phase 1 Step 1.5
 # Pre-computed type sets for ultra-fast membership testing
-_JSON_BASIC_TYPES = (str, int, bool, type(None))
+_JSON_BASIC_TYPES = (str, int, float, bool, type(None))
 _NUMERIC_TYPES = (int, float)
 _CONTAINER_TYPES = (dict, list, tuple)
 
@@ -489,32 +520,53 @@ def _serialize_core(
             if not obj:
                 return obj
 
-            # PERFORMANCE OPTIMIZATION: Homogeneity check (ONLY after security verification)
-            # This is now safe because we already enforced depth limits
+            # PERFORMANCE: Fast path for small dicts - skip expensive optimization analysis
+            if len(obj) < 20:
+                # For small dicts, the optimization overhead exceeds the benefit
+                # Use standard recursive processing
+                return {k: _serialize_core(v, config, _depth + 1, _seen, _type_handler) for k, v in obj.items()}
+
+            # PERFORMANCE OPTIMIZATION: Smart conditional homogeneity check
+            # Only run expensive analysis for larger structures that will benefit
             homogeneity = None
-            if _depth < 5:  # Only use optimization at reasonable depths
+            if _depth < 5:  # Only analyze at reasonable depths
                 # Safe homogeneity check with strict limits
                 homogeneity = _is_homogeneous_collection(obj, sample_size=10, _max_check_depth=2)
 
-            # Quick JSON compatibility check for small dicts
+            # Enhanced JSON compatibility check for dicts (including nested structures)
             # SECURITY: Disable optimization paths when depth is significant to prevent bypass
-            if (
-                _depth < 10  # Additional security: no optimizations at significant depth
-                and homogeneity == "json_basic"
-                and len(obj) <= 5
-                and all(
+            if _depth < 10 and homogeneity in ("json_basic", "mixed") and len(obj) <= 10000:
+                # Check if this is a simple dict (original optimization)
+                if all(
                     isinstance(k, str)
                     and type(v) in _JSON_BASIC_TYPES
                     and (type(v) is not str or len(v) <= max_string_length)
                     for k, v in obj.items()
-                )
-            ):
-                # SECURITY FIX: Even for "json_basic" small dicts, we must check if any values
-                # are nested containers that could lead to depth bomb attacks
-                has_nested_containers = any(isinstance(v, (dict, list, tuple)) for v in obj.values())
-                if not has_nested_containers:
-                    return obj
-                # If there are nested containers, fall through to recursive processing
+                ):
+                    return obj  # Simple dict with only basic values
+
+                # ENHANCED: Check if this is a dict with shallow nested JSON-basic structures
+                # Only run expensive nested analysis for medium-sized dicts
+                elif (
+                    _depth < 8  # More restrictive depth for nested optimization
+                    and 50 <= len(obj) <= 1000  # Only analyze medium-sized structures
+                    and all(isinstance(k, str) for k in obj)
+                    and _is_shallow_json_structure(obj, max_string_length, _depth + 1)
+                ):
+                    # This dict contains only shallow JSON-basic nested structures
+                    # Process recursively but with minimal overhead
+                    result = {}
+                    for k, v in obj.items():
+                        if isinstance(v, dict) and _is_simple_json_dict(v, max_string_length):
+                            result[k] = v  # Skip recursive call for simple nested dict
+                        elif isinstance(v, (list, tuple)) and _is_simple_json_list(v, max_string_length):
+                            result[k] = (
+                                list(v) if isinstance(v, tuple) else v
+                            )  # Skip recursive call for simple nested list
+                        else:
+                            # Need normal processing for this value
+                            result[k] = serialize(v, config, _depth + 1, _seen, _type_handler)
+                    return result
 
             # GUARANTEED SAFE PROCESSING: Each recursive call has verified depth increment
             result = {}
@@ -537,27 +589,82 @@ def _serialize_core(
                     return _create_type_metadata("tuple", [])
                 return [] if obj_type is _TYPE_TUPLE else obj
 
-            # PERFORMANCE OPTIMIZATION: Homogeneity check (ONLY after security verification)
+            # PERFORMANCE: Fast path for small arrays - skip expensive optimization analysis
+            if len(obj) < 10:
+                # For small arrays, the optimization overhead exceeds the benefit
+                # Use standard recursive processing
+                result = [_serialize_core(item, config, _depth + 1, _seen, _type_handler) for item in obj]
+                return (
+                    result
+                    if obj_type is not _TYPE_TUPLE or not (config and config.include_type_hints)
+                    else _create_type_metadata("tuple", result)
+                )
+
+            # PERFORMANCE OPTIMIZATION: Smart conditional homogeneity check
+            # Only run expensive analysis for larger arrays that will benefit
             homogeneity = None
-            if _depth < 5:  # Only use optimization at reasonable depths
+            if _depth < 5:  # Only analyze at reasonable depths
                 # Safe homogeneity check with strict limits
                 homogeneity = _is_homogeneous_collection(obj, sample_size=10, _max_check_depth=2)
 
-                # Quick JSON compatibility check for small lists
+                # Quick JSON compatibility check for lists
             # SECURITY: Disable optimization paths when depth is significant to prevent bypass
             if (
                 _depth < 10  # Additional security: no optimizations at significant depth
                 and homogeneity == "json_basic"
-                and len(obj) <= 5
+                and len(obj) <= 10000  # PERFORMANCE FIX: Increased from 5 to 10000 for large list optimization
                 and all(type(item) in _JSON_BASIC_TYPES for item in obj)
                 and not (config and config.include_type_hints and obj_type is _TYPE_TUPLE)
             ):
-                # SECURITY FIX: Even for "json_basic" small lists, we must check if any items
+                # SECURITY FIX: Even for "json_basic" lists, we must check if any items
                 # are nested containers that could lead to depth bomb attacks
                 has_nested_containers = any(isinstance(item, (dict, list, tuple)) for item in obj)
                 if not has_nested_containers:
                     return list(obj) if obj_type is _TYPE_TUPLE else obj
                 # If there are nested containers, fall through to recursive processing
+
+            # ENHANCED: Array of simple objects optimization
+            # Only run expensive object array analysis for larger arrays
+            elif (
+                _depth < 8  # More restrictive depth for array optimization
+                and homogeneity in ("single_type", "mixed")  # Arrays of objects or mixed types
+                and 20 <= len(obj) <= 5000  # Only analyze medium to large arrays
+                and _is_simple_object_array(obj, max_string_length)
+            ):
+                # This array contains only simple objects that can be optimized
+                result_list = []
+                for item in obj:
+                    if isinstance(item, dict) and _is_shallow_json_structure(item, max_string_length, _depth + 1):
+                        # Process shallow nested structure with minimal overhead
+                        processed_dict = {}
+                        for k, v in item.items():
+                            if isinstance(v, dict) and _is_simple_json_dict(v, max_string_length):
+                                processed_dict[k] = v  # Skip recursive call for simple nested dict
+                            elif isinstance(v, (list, tuple)) and _is_simple_json_list(v, max_string_length):
+                                processed_dict[k] = (
+                                    list(v) if isinstance(v, tuple) else v
+                                )  # Skip recursive call for simple nested list
+                            elif type(v) in _JSON_BASIC_TYPES:
+                                processed_dict[k] = v  # Basic types need no processing
+                            else:
+                                # Need normal processing for this value
+                                processed_dict[k] = serialize(v, config, _depth + 2, _seen, _type_handler)
+                        result_list.append(processed_dict)
+                    elif isinstance(item, (list, tuple)) and _is_simple_json_list(item, max_string_length):
+                        result_list.append(
+                            list(item) if isinstance(item, tuple) else item
+                        )  # Skip recursive call for simple list
+                    elif type(item) in _JSON_BASIC_TYPES:
+                        result_list.append(item)  # Basic types need no processing
+                    else:
+                        # Need normal processing for this item
+                        serialized_value = serialize(item, config, _depth + 1, _seen, _type_handler)
+                        result_list.append(serialized_value)
+
+                # Handle type metadata for tuples
+                if isinstance(obj, tuple) and config and config.include_type_hints:
+                    return _create_type_metadata("tuple", result_list)
+                return result_list
 
             # GUARANTEED SAFE PROCESSING: Each recursive call has verified depth increment
             result_list = []
@@ -610,16 +717,17 @@ def _serialize_hot_path(obj: Any, config: Optional["SerializationConfig"], max_s
 
     # Handle basic JSON types with minimal overhead
     if obj_type is _TYPE_STR:
-        # Inline string processing for short strings
-        if len(obj) <= 10:
-            # Try to intern common strings
-            interned = _COMMON_STRING_POOL.get(obj, obj)
-            return interned
-        elif len(obj) <= max_string_length:
-            return obj
-        else:
-            # Needs full string processing
+        # Enforce security limit before fast-path processing
+        obj_len = len(obj)
+        if obj_len > max_string_length:
+            # Exceeds allowed length; delegate to full path for security error
             return None
+        # Inline string processing for short strings
+        if obj_len <= 20:  # Increased from 10 to 20 for better interning coverage
+            # Try to intern common strings (now includes dynamic caching)
+            interned = _intern_common_string(obj)
+            return interned
+        return obj
 
     elif obj_type is _TYPE_INT or obj_type is _TYPE_BOOL:
         return obj
@@ -1159,6 +1267,133 @@ def _serialize_full_path(
     except Exception:
         # OPTIMIZATION: Return interned fallback string
         return f"<{type(obj).__name__} object>"
+
+
+def _is_shallow_json_structure(obj: dict, max_string_length: int, depth: int) -> bool:
+    """Check if a dict contains only shallow JSON-basic nested structures.
+
+    This checks if the dict has values that are either:
+    1. JSON-basic types (str, int, float, bool, None)
+    2. Simple dicts with only JSON-basic values
+    3. Simple lists/tuples with only JSON-basic values
+
+    This enables optimization of structures like:
+    {"users": [{"id": 1, "name": "John"}]} or {"config": {"host": "localhost", "port": 5432}}
+    """
+    if depth > 3:  # Limit nesting depth to prevent deep recursion
+        return False
+
+    for value in obj.values():
+        value_type = type(value)
+
+        # Basic JSON types are always OK
+        if value_type in _JSON_BASIC_TYPES:
+            if value_type is str and len(value) > max_string_length:
+                return False
+            continue
+
+        # Check for simple nested dict
+        elif value_type is dict:
+            if not _is_simple_json_dict(value, max_string_length):
+                return False
+
+        # Check for simple nested list/tuple
+        elif value_type in (list, tuple):
+            if not _is_simple_json_list(value, max_string_length):
+                return False
+
+        else:
+            # Any other type means it's not a simple JSON structure
+            return False
+
+    return True
+
+
+def _is_simple_json_dict(obj: dict, max_string_length: int) -> bool:
+    """Check if a dict contains only JSON-basic values (no nested containers)."""
+    if len(obj) > 1000:  # Limit size for performance
+        return False
+
+    for key, value in obj.items():
+        # Key must be string
+        if type(key) is not str:
+            return False
+
+        # Value must be JSON-basic type
+        value_type = type(value)
+        if value_type not in _JSON_BASIC_TYPES:
+            return False
+
+        # Check string length limits
+        if value_type is str and len(value) > max_string_length:
+            return False
+
+    return True
+
+
+def _is_simple_json_list(obj: Union[list, tuple], max_string_length: int) -> bool:
+    """Check if a list/tuple contains only JSON-basic values or simple dicts."""
+    if len(obj) > 1000:  # Limit size for performance
+        return False
+
+    for value in obj:
+        value_type = type(value)
+
+        # JSON-basic types are always OK
+        if value_type in _JSON_BASIC_TYPES:
+            if value_type is str and len(value) > max_string_length:
+                return False
+            continue
+
+        # Simple dicts are also OK
+        elif value_type is dict:
+            if not _is_simple_json_dict(value, max_string_length):
+                return False
+
+        else:
+            # Any other type (including nested lists) is not allowed
+            return False
+
+    return True
+
+
+def _is_simple_object_array(obj: Union[list, tuple], max_string_length: int) -> bool:
+    """Check if an array contains only simple objects that can be optimized.
+
+    This enables optimization of structures like:
+    [{"id": 1, "name": "John"}, {"id": 2, "name": "Jane"}]
+    """
+    if len(obj) == 0:
+        return False
+
+    # Sample first few items to check if they're simple objects
+    sample_size = min(10, len(obj))
+
+    for i in range(sample_size):
+        item = obj[i]
+        item_type = type(item)
+
+        # JSON-basic types are always OK
+        if item_type in _JSON_BASIC_TYPES:
+            if item_type is str and len(item) > max_string_length:
+                return False
+            continue
+
+        # Simple dicts are OK (including shallow nested structures)
+        elif item_type is dict:
+            if not _is_shallow_json_structure(item, max_string_length, 2):
+                return False
+
+        # Simple lists are OK
+        elif item_type in (list, tuple):
+            if not _is_simple_json_list(item, max_string_length):
+                return False
+
+        else:
+            # Any other complex type means it's not a simple array
+            return False
+
+    return True
 
 
 def _create_type_metadata(type_name: str, value: Any) -> Dict[str, Any]:
@@ -1725,41 +1960,37 @@ def estimate_memory_usage(obj: Any, config: Optional["SerializationConfig"] = No
 
 def _process_string_optimized(obj: str, max_string_length: int) -> str:
     """Optimized string processing with length caching and interning."""
-    # OPTIMIZATION: Try to intern common strings first
-    if len(obj) <= 10:  # Only check short strings for interning
+    # Enforce security limit before any caching or interning
+    obj_len = len(obj)
+    if obj_len > max_string_length:
+        warnings.warn(
+            f"String length ({obj_len}) exceeds maximum ({max_string_length}). Returning security error.",
+            stacklevel=4,
+        )
+        return {
+            "__datason_type__": "security_error",
+            "__datason_value__": (
+                f"String length ({obj_len}) exceeds maximum allowed length ({max_string_length}). "
+                "Operation blocked for security."
+            ),
+        }
+
+    # OPTIMIZATION: Try to intern common short strings first
+    if obj_len <= 20:  # Increased from 10 to 20 for better interning coverage
         interned = _intern_common_string(obj)
-        if interned is not obj:  # String was interned
-            return interned
+        return interned
 
     obj_id = id(obj)
-
-    # Check cache first for long strings
+    # Check cache first for known length classification
     if obj_id in _STRING_LENGTH_CACHE:
-        is_long = _STRING_LENGTH_CACHE[obj_id]
-        if not is_long:
-            return obj  # Short string, return as-is
+        if not _STRING_LENGTH_CACHE[obj_id]:
+            return obj  # Previously classified as short string
     else:
-        # Calculate and cache length check
-        obj_len = len(obj)
-        is_long = obj_len > max_string_length
-
-        # Only cache if we haven't hit the limit
+        # Cache length classification for future calls
+        is_long = False  # already known obj_len <= max_string_length
         if len(_STRING_LENGTH_CACHE) < _STRING_CACHE_SIZE_LIMIT:
             _STRING_LENGTH_CACHE[obj_id] = is_long
-
-        if not is_long:
-            return obj  # Short string, return as-is
-
-    # Handle long string - return security error dict instead of truncating
-    warnings.warn(
-        f"String length ({len(obj)}) exceeds maximum ({max_string_length}). Returning security error.",
-        stacklevel=4,
-    )
-    # Return security error dict instead of truncating for better security handling
-    return {
-        "__datason_type__": "security_error",
-        "__datason_value__": f"String length ({len(obj)}) exceeds maximum allowed length ({max_string_length}). Operation blocked for security.",
-    }
+    return obj
 
 
 def _uuid_to_string_optimized(obj: uuid.UUID) -> str:
@@ -2160,8 +2391,25 @@ def _return_list_to_pool(lst: List) -> None:
 
 
 def _intern_common_string(s: str) -> str:
-    """Intern common strings to reduce memory allocation."""
-    return _COMMON_STRING_POOL.get(s, s)
+    """Intern common strings to reduce memory allocation with dynamic caching."""
+    # First check static pool (fastest)
+    if s in _COMMON_STRING_POOL:
+        return _COMMON_STRING_POOL[s]
+
+    # Check dynamic cache (second fastest)
+    if s in _DYNAMIC_STRING_CACHE:
+        return _DYNAMIC_STRING_CACHE[s]
+
+    # For strings <= 20 chars, track frequency and cache popular ones
+    if len(s) <= 20:
+        _STRING_FREQUENCY_COUNTER[s] = _STRING_FREQUENCY_COUNTER.get(s, 0) + 1
+
+        # If string is seen multiple times, intern it
+        if _STRING_FREQUENCY_COUNTER[s] >= 2 and len(_DYNAMIC_STRING_CACHE) < _DYNAMIC_CACHE_SIZE_LIMIT:
+            _DYNAMIC_STRING_CACHE[s] = s
+            return s
+
+    return s
 
 
 # PHASE 2.1: JSON-FIRST SERIALIZATION STRATEGY
@@ -2601,20 +2849,22 @@ def _estimate_max_depth(obj: Any, max_check_depth: int, _current_depth: int = 0)
             return _current_depth
         # Check the first element to estimate max depth
         max_depth = _current_depth
-        for item in obj[:5]:  # Check only first few items for performance
+        # Optimize: iterate directly with count instead of slicing
+        for checked_count, item in enumerate(obj):
             item_depth = _estimate_max_depth(item, max_check_depth, _current_depth + 1)
             max_depth = max(max_depth, item_depth)
-            if max_depth >= max_check_depth:  # Early termination
+            if max_depth >= max_check_depth or checked_count >= 4:  # Early termination (4 = 5th item)
                 break
         return max_depth
     elif isinstance(obj, dict):
         if not obj:
             return _current_depth
         max_depth = _current_depth
-        for value in list(obj.values())[:5]:  # Check only first few values for performance
+        # Optimize: iterate directly instead of converting all values to list first
+        for checked_count, value in enumerate(obj.values()):
             value_depth = _estimate_max_depth(value, max_check_depth, _current_depth + 1)
             max_depth = max(max_depth, value_depth)
-            if max_depth >= max_check_depth:  # Early termination
+            if max_depth >= max_check_depth or checked_count >= 4:  # Early termination (4 = 5th item)
                 break
         return max_depth
     else:

@@ -71,3 +71,143 @@ def test_profiling_overhead_smoke(monkeypatch):
     assert overhead <= 0.30, (
         f"Profiling overhead too high: {overhead:.1%} (baseline: {baseline:.4f}s, profiled: {profiled:.4f}s)"
     )
+
+
+def test_set_profile_sink_none(monkeypatch):
+    """Test setting profile sink to None removes the sink."""
+    monkeypatch.setenv("DATASON_PROFILE", "1")
+    profiling = importlib.reload(importlib.import_module("datason._profiling"))
+
+    # Set a sink first
+    captured = {}
+
+    def sink(d):
+        captured.update(d)
+
+    profiling.set_profile_sink(sink)
+
+    # Run profiling - should capture data
+    with profiling.profile_run() as timings:
+        with profiling.stage("test_stage"):
+            time.sleep(0.001)
+
+    assert "test_stage" in captured
+
+    # Clear the sink
+    profiling.set_profile_sink(None)
+    captured.clear()
+
+    # Run profiling again - should not capture data
+    with profiling.profile_run() as timings:
+        with profiling.stage("test_stage2"):
+            time.sleep(0.001)
+
+    assert "test_stage2" not in captured  # No sink to capture data
+    assert "test_stage2" in timings  # Still tracks internally
+
+
+def test_profile_sink_exception_handling(monkeypatch):
+    """Test that exceptions in profile sink don't crash profiling."""
+    monkeypatch.setenv("DATASON_PROFILE", "1")
+    profiling = importlib.reload(importlib.import_module("datason._profiling"))
+
+    # Set a sink that always raises an exception
+    def failing_sink(d):
+        raise ValueError("Sink failed")
+
+    profiling.set_profile_sink(failing_sink)
+
+    # This should not raise an exception despite the failing sink
+    with profiling.profile_run() as timings:
+        with profiling.stage("test_stage"):
+            time.sleep(0.001)
+
+    # Profiling should still work internally
+    assert "test_stage" in timings
+    assert timings["test_stage"] > 0
+
+
+def test_external_profile_sink_integration(monkeypatch):
+    """Test integration with external datason.profile_sink for benchmarks."""
+    monkeypatch.setenv("DATASON_PROFILE", "1")
+    profiling = importlib.reload(importlib.import_module("datason._profiling"))
+
+    # Mock datason module with profile_sink
+    external_events = []
+    datason.profile_sink = external_events
+
+    with profiling.profile_run():
+        with profiling.stage("benchmark_stage"):
+            time.sleep(0.001)
+
+    # Should have captured external event
+    assert len(external_events) == 1
+    event = external_events[0]
+    assert event["stage"] == "benchmark_stage"
+    assert "duration" in event
+    assert isinstance(event["duration"], int)  # Should be in nanoseconds
+    assert event["duration"] > 0
+
+
+def test_external_profile_sink_exception_handling(monkeypatch):
+    """Test that exceptions in external profile sink don't crash profiling."""
+    monkeypatch.setenv("DATASON_PROFILE", "1")
+    profiling = importlib.reload(importlib.import_module("datason._profiling"))
+
+    # Mock datason module with a profile_sink that isn't a list
+    datason.profile_sink = "not_a_list"
+
+    # This should not raise an exception
+    with profiling.profile_run() as timings:
+        with profiling.stage("test_stage"):
+            time.sleep(0.001)
+
+    # Internal profiling should still work
+    assert "test_stage" in timings
+    assert timings["test_stage"] > 0
+
+
+def test_external_profile_sink_no_datason_module(monkeypatch):
+    """Test handling when datason module import fails."""
+    monkeypatch.setenv("DATASON_PROFILE", "1")
+    profiling = importlib.reload(importlib.import_module("datason._profiling"))
+
+    # Remove datason from sys.modules temporarily to simulate import failure
+    original_datason = sys.modules.get("datason")
+    if "datason" in sys.modules:
+        del sys.modules["datason"]
+
+    try:
+        with profiling.profile_run() as timings:
+            with profiling.stage("test_stage"):
+                time.sleep(0.001)
+
+        # Should still work despite import failure
+        assert "test_stage" in timings
+        assert timings["test_stage"] > 0
+    finally:
+        # Restore datason module
+        if original_datason:
+            sys.modules["datason"] = original_datason
+
+
+def test_external_profile_sink_append_exception(monkeypatch):
+    """Test exception handling when external profile sink append fails."""
+    monkeypatch.setenv("DATASON_PROFILE", "1")
+    profiling = importlib.reload(importlib.import_module("datason._profiling"))
+
+    # Create a mock sink that raises exception on append
+    class FailingList:
+        def append(self, item):
+            raise RuntimeError("Append failed")
+
+    datason.profile_sink = FailingList()
+
+    # This should not raise an exception despite the failing append
+    with profiling.profile_run() as timings:
+        with profiling.stage("test_stage"):
+            time.sleep(0.001)
+
+    # Internal profiling should still work
+    assert "test_stage" in timings
+    assert timings["test_stage"] > 0

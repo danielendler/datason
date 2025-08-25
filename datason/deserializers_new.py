@@ -95,6 +95,7 @@ class DeserializationSecurityError(Exception):
 if TYPE_CHECKING:
     import numpy as np
     import pandas as pd
+    import torch
 else:
     try:
         import pandas as pd
@@ -105,6 +106,11 @@ else:
         import numpy as np
     except ImportError:
         np = None
+
+    try:
+        import torch
+    except ImportError:
+        torch = None
 
 
 # NEW: Type metadata constants for round-trip serialization
@@ -191,6 +197,27 @@ def deserialize(obj: Any, parse_dates: bool = True, parse_uuids: bool = True) ->
             return [deserialize(item, parse_dates, parse_uuids) for item in obj]
 
         if isinstance(obj, dict):
+            # PERFORMANCE OPTIMIZATION: Fast path for dictionaries with only JSON-basic values
+            # This avoids calling deserialize on every simple value
+            if len(obj) <= 10000 and all(
+                isinstance(k, str) and isinstance(v, (str, int, float, bool, type(None))) for k, v in obj.items()
+            ):
+                # Check if any strings might need special parsing (UUID, datetime, etc.)
+                needs_parsing = False
+                if parse_dates or parse_uuids:  # Only check if parsing is enabled
+                    for v in obj.values():
+                        if isinstance(v, str) and (
+                            len(v) > 8
+                            and (parse_uuids and _looks_like_uuid(v))
+                            or (parse_dates and _looks_like_datetime(v))
+                        ):
+                            needs_parsing = True
+                            break
+
+                if not needs_parsing:
+                    # All values are simple JSON types that don't need deserialization
+                    return obj
+
             return {k: deserialize(v, parse_dates, parse_uuids) for k, v in obj.items()}
 
     # For any other type, return as-is
@@ -276,6 +303,25 @@ def auto_deserialize(obj: Any, aggressive: bool = False, config: Optional["Seria
                 return _reconstruct_from_split(obj)
             except Exception:  # nosec B110
                 pass
+
+        # PERFORMANCE OPTIMIZATION: Fast path for dictionaries with only JSON-basic values
+        # This avoids calling auto_deserialize on every simple value
+        if len(obj) <= 10000 and all(
+            isinstance(k, str) and isinstance(v, (str, int, float, bool, type(None))) for k, v in obj.items()
+        ):
+            # Check if any strings might need special parsing (UUID, datetime, etc.)
+            needs_parsing = False
+            for v in obj.values():
+                if isinstance(v, str) and (
+                    (len(v) > 8 and (_looks_like_uuid(v) or _looks_like_datetime(v)))
+                    or (aggressive and _looks_like_number(v))
+                ):
+                    needs_parsing = True
+                    break
+
+            if not needs_parsing:
+                # All values are simple JSON types that don't need deserialization
+                return obj
 
         # Standard dictionary deserialization
         return {k: auto_deserialize(v, aggressive, config) for k, v in obj.items()}
@@ -2848,27 +2894,52 @@ def _is_already_deserialized(obj: Any) -> bool:
         return True
 
     # Check for ML framework objects (if available)
-    try:
-        import torch
+    # PERFORMANCE FIX: Import torch only once at module level to avoid 600ms import overhead
+    if torch is not None and isinstance(obj, torch.Tensor):
+        return True
 
-        if isinstance(obj, torch.Tensor):
-            return True
-    except ImportError:
-        pass
-
-    # For containers, check if they contain already deserialized objects
+    # PERFORMANCE OPTIMIZATION: For containers, use fast heuristics
     if isinstance(obj, dict):
         # If dict contains type metadata, it's not yet deserialized
         if TYPE_METADATA_KEY in obj and VALUE_METADATA_KEY in obj:
             return False
-        # If dict contains complex objects, it's likely already deserialized
-        for value in obj.values():
+
+        # CRITICAL OPTIMIZATION: For large dictionaries, use type-based fast path
+        # If dict is large and contains only basic JSON types, assume it's JSON data
+        if len(obj) > 100:  # Large dictionary threshold
+            # Quick sample of value types without recursion
+            for sample_count, value in enumerate(obj.values()):
+                if not isinstance(value, (str, int, float, bool, type(None), dict, list)):
+                    # Found non-JSON type, need full check
+                    break
+                if sample_count >= 2:  # Sample 3 values (0, 1, 2)
+                    # All sampled values are basic JSON types, assume JSON data
+                    return False
+
+        # Small dict or mixed types: check first few values recursively
+        for check_count, value in enumerate(obj.values()):
             if _is_already_deserialized(value):
                 return True
+            if check_count >= 2:  # Check 3 values (0, 1, 2)
+                break
     elif isinstance(obj, list):
-        # If list contains complex objects, it's likely already deserialized
-        for item in obj:
-            if _is_already_deserialized(item):
+        # OPTIMIZATION: For large lists, use type-based fast path
+        if len(obj) > 50:  # Large list threshold
+            # Quick sample without recursion
+            sample_size = min(3, len(obj))
+            for i in range(sample_size):
+                value = obj[i]
+                if not isinstance(value, (str, int, float, bool, type(None), dict, list)):
+                    # Found non-JSON type, need full check
+                    break
+            else:
+                # All sampled values are basic JSON types, assume JSON data
+                return False
+
+        # Small list or mixed types: check first few items recursively
+        items_to_check = min(3, len(obj))  # Reduced from 5 to 3
+        for i in range(items_to_check):
+            if _is_already_deserialized(obj[i]):
                 return True
 
     # Basic types and strings are considered "neutral" - could be either state
