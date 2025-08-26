@@ -85,11 +85,63 @@ class RedactionEngine:
             except re.error as e:
                 warnings.warn(f"Invalid regex pattern '{pattern}': {e}", stacklevel=2)
 
+        # OPTIMIZATION: Pre-compile field patterns for caching
+        self._compiled_field_patterns: List[Tuple[str, Pattern]] = []
+        for field_pattern in self.redact_fields:
+            regex_pattern = field_pattern.replace(".", r"\.").replace("*", ".*").replace("?", ".")
+            regex_pattern = f"^{regex_pattern}$"
+            try:
+                compiled = re.compile(regex_pattern, re.IGNORECASE)
+                self._compiled_field_patterns.append((field_pattern, compiled))
+            except re.error:
+                # Store as None for fallback string matching
+                self._compiled_field_patterns.append((field_pattern, None))
+
         # Audit trail storage
         self._audit_entries: List[RedactionAuditEntry] = []
 
         # Redaction summary
         self._summary = RedactionSummary()
+
+        # OPTIMIZATION: Cache for field redaction decisions
+        self._field_cache: Dict[str, bool] = {}
+
+    def _should_redact_field_cached(self, field_path: str) -> bool:
+        """OPTIMIZED: Cached check if field should be redacted based on patterns.
+
+        This is the critical performance optimization - caches redaction decisions
+        to avoid repeated regex matching on the same field paths.
+
+        Args:
+            field_path: Dot-separated path to the field
+
+        Returns:
+            True if field should be redacted
+        """
+        # Check cache first
+        if field_path in self._field_cache:
+            return self._field_cache[field_path]
+
+        # Compute result and cache it
+        result = False
+        # Use pre-compiled patterns for better performance
+        for field_pattern, compiled_pattern in self._compiled_field_patterns:
+            if compiled_pattern is None:
+                # Fallback to simple string matching for invalid regex
+                if field_pattern.lower() in field_path.lower():
+                    result = True
+                    break
+            else:
+                # Use pre-compiled regex pattern
+                if compiled_pattern.match(field_path):
+                    result = True
+                    break
+
+        # Cache the result (limit cache size to prevent memory leaks)
+        if len(self._field_cache) < 1024:
+            self._field_cache[field_path] = result
+
+        return result
 
     def _should_redact_field(self, field_path: str) -> bool:
         """Check if a field should be redacted based on patterns.
@@ -100,7 +152,7 @@ class RedactionEngine:
         Returns:
             True if field should be redacted
         """
-        return any(self._match_field_pattern(field_path, pattern) for pattern in self.redact_fields)
+        return self._should_redact_field_cached(field_path)
 
     def _match_field_pattern(self, field_path: str, pattern: str) -> bool:
         """Match field path against pattern with wildcard support.
@@ -266,6 +318,10 @@ class RedactionEngine:
         obj_id = id(obj)
         if obj_id in _visited:
             return "<CIRCULAR_REFERENCE>"
+
+        # OPTIMIZATION: Early exit for primitive types that can't contain sensitive data
+        if isinstance(obj, (int, float, bool, type(None))):
+            return obj
 
         # Check for large object redaction first
         if self.should_redact_large_object(obj):

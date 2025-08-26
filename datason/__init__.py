@@ -10,7 +10,7 @@ NEW: Configurable caching system for optimized performance across different work
 
 import sys
 import warnings
-from typing import Any
+from typing import Any, Callable, Optional
 
 # Python version compatibility check
 if sys.version_info < (3, 8):  # noqa: UP036
@@ -41,7 +41,7 @@ from .api import (
     get_api_info,
     help_api,
     load,  # Enhanced default (smart parsing, datetime support)
-    load_basic,
+    # NOTE: load_basic redefined below for benchmark integration
     # NEW: File I/O operations integrated with modern API
     load_basic_file,
     load_json,  # JSON compatibility (exact stdlib behavior)
@@ -112,6 +112,7 @@ try:
         SerializationConfig,
         TypeCoercion,
         cache_scope,  # noqa: F401
+        get_accel_mode,  # noqa: F401
         get_api_config,  # noqa: F401
         get_cache_scope,  # noqa: F401
         get_default_config,  # noqa: F401
@@ -119,6 +120,7 @@ try:
         get_performance_config,  # noqa: F401
         get_strict_config,  # noqa: F401
         reset_default_config,  # noqa: F401
+        set_accel_mode,  # noqa: F401
         set_cache_scope,  # noqa: F401
         set_default_config,
     )
@@ -193,6 +195,96 @@ from .integrity import (  # noqa: F401
 )
 from .validation import serialize_marshmallow, serialize_pydantic  # noqa: F401
 
+# =============================================================================
+# PROFILING AND BENCHMARKING SUPPORT
+# =============================================================================
+
+# Profile sink for external benchmarking tools (e.g., datason-benchmark)
+# Note: External tools should use set_profile_sink() to register callbacks
+
+# List-based profile sink for datason-benchmarks compatibility
+profile_sink: Optional[list] = []
+
+
+def set_profile_sink(sink: Optional[Callable[[dict], None]]) -> None:
+    """Register a callback to receive profiling timings.
+
+    The callable will be invoked with a dictionary of stage timings whenever
+    profiling is enabled and a top-level operation completes. Importing is
+    deferred to avoid any overhead when profiling is disabled.
+
+    Args:
+        sink: Callable that receives timing dictionaries, or None to disable
+    """
+    from ._profiling import set_profile_sink as _set_profile_sink
+
+    _set_profile_sink(sink)
+
+
+# Rust accelerator availability flag (for benchmark integration)
+try:
+    from ._rustcore import AVAILABLE as RUST_AVAILABLE
+except ImportError:
+    RUST_AVAILABLE = False
+
+
+# Core APIs for benchmarking and Rust exploration
+def save_string(obj: Any) -> str:
+    """Serialize object to JSON string.
+
+    Primary API expected by datason-benchmark for measuring serialization performance.
+
+    Args:
+        obj: Object to serialize
+
+    Returns:
+        JSON string representation
+
+    Example:
+        >>> result = datason.save_string({"key": "value"})
+        >>> assert isinstance(result, str)
+    """
+    # Use dumps_json with profiling support
+    from ._profiling import profile_run, stage
+    from .api import dumps_json
+
+    with profile_run():
+        with stage("save_string"):
+            return dumps_json(obj)
+
+
+def load_basic(data: Any) -> Any:
+    """Parse JSON string or deserialize parsed data to Python object.
+
+    Primary API expected by datason-benchmark for measuring deserialization performance.
+    Also supports already-parsed data for API compatibility.
+
+    Args:
+        data: JSON string to parse or already-parsed data to deserialize
+
+    Returns:
+        Parsed Python object
+
+    Example:
+        >>> obj = datason.load_basic('{"key": "value"}')
+        >>> assert obj == {"key": "value"}
+        >>> obj = datason.load_basic({"key": "value"})  # Also works
+        >>> assert obj == {"key": "value"}
+    """
+    # Use loads_json and deserialize with profiling support
+    from ._profiling import profile_run, stage
+    from .api import loads_json
+    from .deserializers_new import deserialize
+
+    with profile_run():
+        if isinstance(data, (str, bytes)):
+            with stage("load_basic_json"):
+                return loads_json(data)
+        else:
+            # For already-parsed data, use deserialize
+            with stage("load_basic_deserialize"):
+                return deserialize(data)
+
 
 def _get_version() -> str:
     """Get version from pyproject.toml or fallback to a default."""
@@ -218,7 +310,7 @@ def _get_version() -> str:
     return "0.5.0"
 
 
-__version__ = "0.12.0"
+__version__ = "0.13.0"
 __author__ = "datason Contributors"
 __license__ = "MIT"
 __description__ = "Python serialization of complex data types for JSON with configurable caching"
@@ -231,6 +323,12 @@ __all__ = [  # noqa: RUF022
     "load",  # Enhanced file reading with smart parsing
     "loads",  # Enhanced string parsing with smart features
     "serialize",  # Enhanced serialization (returns dict)
+    # Profiling and benchmarking support
+    "set_profile_sink",  # Debug profiling sink registration
+    "profile_sink",  # List-based profiling sink for datason-benchmarks
+    "RUST_AVAILABLE",  # Rust backend availability flag
+    "save_string",  # Core benchmarking API (serialize to string)
+    "load_basic",  # Core benchmarking API (parse from string)
     # JSON Compatibility API (for stdlib replacement)
     "dump_json",  # Exact json.dump() behavior
     "dumps_json",  # Exact json.dumps() behavior (returns string)
@@ -280,6 +378,7 @@ __all__ = [  # noqa: RUF022
     "save_secure",
     "save_api",
     "save_chunked",
+    "save_string",
     "load_smart_file",
     "load_perfect_file",
     "load_basic_file",
@@ -487,7 +586,15 @@ def serialize(obj: Any, config: Any = None, **kwargs: Any) -> Any:
 
 # Add convenience functions to __all__ if config is available
 if _config_available:
-    __all__.extend(["configure", "serialize_with_config", "serialize"])
+    __all__.extend(
+        [
+            "configure",
+            "serialize_with_config",
+            "serialize",
+            "set_accel_mode",
+            "get_accel_mode",
+        ]
+    )
 
 # Add redaction exports if available (v0.5.5)
 try:
