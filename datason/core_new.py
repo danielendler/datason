@@ -10,7 +10,7 @@ import warnings
 from datetime import datetime
 from decimal import Decimal
 from pathlib import Path
-from typing import Any, Callable, Dict, Generator, Iterator, List, Optional, Set, Union
+from typing import Any, Callable, Dict, Generator, Iterator, List, Optional, Set, Tuple, Union
 
 try:
     import pandas as pd
@@ -76,7 +76,7 @@ _UUID_CACHE_SIZE_LIMIT = 100  # Small cache for common UUIDs
 # OPTIMIZATION: Collection processing cache for bulk operations
 # Cache homogeneity results per collection identity and size to avoid stale results
 # when a collection is mutated (e.g., empty -> single item) but retains identity.
-_COLLECTION_COMPATIBILITY_CACHE: Dict[tuple[int, int], str] = {}
+_COLLECTION_COMPATIBILITY_CACHE: Dict[Tuple[int, int], str] = {}
 _COLLECTION_CACHE_SIZE_LIMIT = 200  # Smaller cache for collections
 
 # OPTIMIZATION: Memory allocation optimization - Phase 1 Step 1.4
