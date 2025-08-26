@@ -17,15 +17,22 @@ from .core_new import (
     SecurityError,
 )
 
-try:  # pragma: no cover - import failure handled in AVAILABLE flag
+try:  # pragma: no cover - prefer in-package extension
     from ._datason_rust import SecurityError as _RustSecurityError
     from ._datason_rust import dumps_core as _dumps_core
     from ._datason_rust import loads_core as _loads_core
 
     AVAILABLE = True
-except Exception:  # pragma: no cover - rust module is optional
-    _dumps_core = _loads_core = _RustSecurityError = None  # type: ignore
-    AVAILABLE = False
+except Exception:  # pragma: no cover - fall back to top-level module name
+    try:
+        from _datason_rust import SecurityError as _RustSecurityError  # type: ignore
+        from _datason_rust import dumps_core as _dumps_core  # type: ignore
+        from _datason_rust import loads_core as _loads_core  # type: ignore
+
+        AVAILABLE = True
+    except Exception:
+        _dumps_core = _loads_core = _RustSecurityError = None  # type: ignore
+        AVAILABLE = False
 
 
 class UnsupportedType(Exception):
