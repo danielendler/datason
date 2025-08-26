@@ -10,7 +10,7 @@ import warnings
 from datetime import datetime
 from decimal import Decimal
 from pathlib import Path
-from typing import Any, Callable, Dict, Generator, Iterator, List, Optional, Set, Union
+from typing import Any, Callable, Dict, Generator, Iterator, List, Optional, Set, Tuple, Union
 
 try:
     import pandas as pd
@@ -74,7 +74,9 @@ _UUID_STRING_CACHE: Dict[int, str] = {}  # Maps UUID object id to string
 _UUID_CACHE_SIZE_LIMIT = 100  # Small cache for common UUIDs
 
 # OPTIMIZATION: Collection processing cache for bulk operations
-_COLLECTION_COMPATIBILITY_CACHE: Dict[int, str] = {}  # Maps collection id to compatibility status
+# Cache homogeneity results per collection identity and size to avoid stale results
+# when a collection is mutated (e.g., empty -> single item) but retains identity.
+_COLLECTION_COMPATIBILITY_CACHE: Dict[Tuple[int, int], str] = {}
 _COLLECTION_CACHE_SIZE_LIMIT = 200  # Smaller cache for collections
 
 # OPTIMIZATION: Memory allocation optimization - Phase 1 Step 1.4
@@ -2102,6 +2104,7 @@ def _is_homogeneous_collection(
 
     # SECURITY: Check for circular references
     obj_id = id(obj)
+    obj_len = len(obj) if isinstance(obj, (list, tuple, dict)) else 0
     if obj_id in _seen_ids:
         # Circular reference detected, assume mixed to force full processing
         return "mixed"
@@ -2111,8 +2114,9 @@ def _is_homogeneous_collection(
 
     try:
         # OPTIMIZATION: Check cache first for collections we've seen before
-        if obj_id in _COLLECTION_COMPATIBILITY_CACHE:
-            return _COLLECTION_COMPATIBILITY_CACHE[obj_id]
+        cache_key = (obj_id, obj_len)
+        if cache_key in _COLLECTION_COMPATIBILITY_CACHE:
+            return _COLLECTION_COMPATIBILITY_CACHE[cache_key]
 
         homogeneity_result = None
 
@@ -2128,7 +2132,9 @@ def _is_homogeneous_collection(
                     homogeneity_result = "json_basic"
                 elif all(_is_json_basic_type_safe(v, _seen_ids, _max_check_depth - 1) for v in sample):
                     # Check if all values are JSON-basic types
-                    homogeneity_result = "json_basic"
+                    # For single-item collections, return 'single_type' to avoid overconfident
+                    # classification as 'json_basic' with insufficient sample size.
+                    homogeneity_result = "single_type" if len(sample) == 1 else "json_basic"
                 else:
                     # Check if all values are the same type
                     first_type = type(sample[0])
@@ -2143,7 +2149,8 @@ def _is_homogeneous_collection(
 
                 if all(_is_json_basic_type_safe(item, _seen_ids, _max_check_depth - 1) for item in sample_items):
                     # Check if all items are JSON-basic types
-                    homogeneity_result = "json_basic"
+                    # For single-item collections, prefer 'single_type' to avoid overclassification
+                    homogeneity_result = "single_type" if len(sample_items) == 1 else "json_basic"
                 else:
                     # Check if all items are the same type
                     first_type = type(sample_items[0])
@@ -2153,7 +2160,7 @@ def _is_homogeneous_collection(
 
         # Cache the result if we have space
         if homogeneity_result is not None and len(_COLLECTION_COMPATIBILITY_CACHE) < _COLLECTION_CACHE_SIZE_LIMIT:
-            _COLLECTION_COMPATIBILITY_CACHE[obj_id] = homogeneity_result
+            _COLLECTION_COMPATIBILITY_CACHE[cache_key] = homogeneity_result
 
         return homogeneity_result
 

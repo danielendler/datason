@@ -291,6 +291,11 @@ jobs:
         export PYTHONDONTWRITEBYTECODE=1
         export PYTHONOVERSAFE=1
 
+        # Only run Supported Types Matrix test in ML/full environments
+        if [ "${{ matrix.dependency-set.use-ml }}" = "true" ] || [ "${{ matrix.dependency-set.use-dev }}" = "true" ]; then
+          export RUN_SUPPORTED_TYPES=1
+        fi
+
         pytest ${{ matrix.dependency-set.test-pattern }} -v \
           --cov=datason \
           --cov-report=xml:coverage-${{ matrix.dependency-set.name }}.xml \

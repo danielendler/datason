@@ -1,0 +1,12 @@
+name: "CodeQL configuration for datason"
+
+# Restrict analysis to Python until Rust code is added.
+languages:
+  - python
+
+# Optionally tune paths; keep default behavior otherwise.
+paths-ignore:
+  - docs/
+  - examples/
+  - tests/
+  - scripts/

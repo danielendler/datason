@@ -80,6 +80,9 @@ plugins:
             merge_init_into_class: true
             show_submodules: true
 
+hooks:
+  - tools/mkdocs_hooks.py
+
 # Extensions
 markdown_extensions:
   - abbr
@@ -124,6 +127,7 @@ markdown_extensions:
 # Fixed navigation using files that actually exist
 nav:
   - Home: index.md
+  - Supported Types: supported-types.md
 
   # User Guide Section
   - User Guide:
@@ -195,6 +199,7 @@ nav:
   # Reference Documentation
   - Reference:
     - Feature Matrix: FEATURE_MATRIX.md
+    - Supported Types: supported-types.md
     - AI Usage Guide: AI_USAGE_GUIDE.md
 
   # Community & Development Section
