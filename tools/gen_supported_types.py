@@ -143,7 +143,9 @@ def generate_supported_types_table(doc_path: Path | None = None, fail_on_regress
         status = "✅" if success else ("❌" if success is False else "⚠️")
         test_id = f"T{idx:03d}"
         lines.append(f"| {type_name} | {status} | {note} | {test_id} |")
-        if previous.get(type_name) and success is not True:
+        # Only treat as regression on explicit failure. Missing deps (None)
+        # are not counted as regressions to avoid CI false positives.
+        if previous.get(type_name) and success is False:
             regressions.append(type_name)
 
     doc_path.write_text(header + "\n".join(lines) + "\n", encoding="utf-8")
