@@ -74,7 +74,9 @@ _UUID_STRING_CACHE: Dict[int, str] = {}  # Maps UUID object id to string
 _UUID_CACHE_SIZE_LIMIT = 100  # Small cache for common UUIDs
 
 # OPTIMIZATION: Collection processing cache for bulk operations
-_COLLECTION_COMPATIBILITY_CACHE: Dict[int, str] = {}  # Maps collection id to compatibility status
+# Cache homogeneity results per collection identity and size to avoid stale results
+# when a collection is mutated (e.g., empty -> single item) but retains identity.
+_COLLECTION_COMPATIBILITY_CACHE: Dict[tuple[int, int], str] = {}
 _COLLECTION_CACHE_SIZE_LIMIT = 200  # Smaller cache for collections
 
 # OPTIMIZATION: Memory allocation optimization - Phase 1 Step 1.4
@@ -1725,6 +1727,9 @@ def _process_string_optimized(obj: str, max_string_length: int) -> str:
             return interned
 
     obj_id = id(obj)
+    # Current length is part of cache key to avoid stale results when mutated
+    obj_len = len(obj) if isinstance(obj, (list, tuple, dict)) else 0
+    obj_len = len(obj) if isinstance(obj, (list, tuple, dict)) else 0
 
     # Check cache first for long strings
     if obj_id in _STRING_LENGTH_CACHE:
@@ -1864,6 +1869,7 @@ def _is_homogeneous_collection(
 
     # SECURITY: Check for circular references
     obj_id = id(obj)
+    obj_len = len(obj) if isinstance(obj, (list, tuple, dict)) else 0
     if obj_id in _seen_ids:
         # Circular reference detected, assume mixed to force full processing
         return "mixed"
@@ -1873,8 +1879,9 @@ def _is_homogeneous_collection(
 
     try:
         # OPTIMIZATION: Check cache first for collections we've seen before
-        if obj_id in _COLLECTION_COMPATIBILITY_CACHE:
-            return _COLLECTION_COMPATIBILITY_CACHE[obj_id]
+        cache_key = (obj_id, obj_len)
+        if cache_key in _COLLECTION_COMPATIBILITY_CACHE:
+            return _COLLECTION_COMPATIBILITY_CACHE[cache_key]
 
         homogeneity_result = None
 
@@ -1918,7 +1925,7 @@ def _is_homogeneous_collection(
 
         # Cache the result if we have space
         if homogeneity_result is not None and len(_COLLECTION_COMPATIBILITY_CACHE) < _COLLECTION_CACHE_SIZE_LIMIT:
-            _COLLECTION_COMPATIBILITY_CACHE[obj_id] = homogeneity_result
+            _COLLECTION_COMPATIBILITY_CACHE[cache_key] = homogeneity_result
 
         return homogeneity_result
 
