@@ -110,7 +110,7 @@ jobs:
 
     steps:
     - name: 🚀 Trigger datason-benchmarks repository
-      uses: actions/github-script@v7
+      uses: actions/github-script@v8
       with:
         github-token: ${{ secrets.BENCHMARK_REPO_TOKEN }}
         script: |

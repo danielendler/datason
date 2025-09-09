@@ -415,7 +415,7 @@ jobs:
 
     - name: 🎉 Create GitHub Release
       if: steps.changes_check.outputs.has_changes == 'true' && steps.tag_check.outputs.should_skip == 'false'
-      uses: actions/github-script@v7
+      uses: actions/github-script@v8
       with:
         script: |
           const { repo, owner } = context.repo;
@@ -452,7 +452,7 @@ jobs:
 
     - name: 🚀 Trigger PyPI Release Workflow
       if: steps.changes_check.outputs.has_changes == 'true' && steps.tag_check.outputs.should_skip == 'false'
-      uses: actions/github-script@v7
+      uses: actions/github-script@v8
       with:
         script: |
           try {
