@@ -93,7 +93,7 @@ jobs:
 
     steps:
     - name: 📥 Download Build Artifacts
-      uses: actions/download-artifact@v5
+      uses: actions/download-artifact@v6
       with:
         name: dist-packages
         path: dist/
@@ -121,7 +121,7 @@ jobs:
 
     steps:
     - name: 📥 Download Build Artifacts
-      uses: actions/download-artifact@v5
+      uses: actions/download-artifact@v6
       with:
         name: dist-packages
         path: dist/
