@@ -104,11 +104,12 @@ class TypeRegistry:
         """
         for handler in self._handlers:
             try:
-                if handler.can_handle(obj):
-                    return handler
+                can_handle = handler.can_handle(obj)
             except Exception:
                 # Skip handlers that fail during detection
-                continue  # nosec B112
+                can_handle = False
+            if can_handle:
+                return handler
         return None
 
     def find_handler_by_type_name(self, type_name: str) -> Optional[TypeHandler]:
@@ -122,10 +123,11 @@ class TypeRegistry:
         """
         for handler in self._handlers:
             try:
-                if handler.type_name == type_name:
-                    return handler
+                matches = handler.type_name == type_name
             except Exception:
-                continue
+                matches = False
+            if matches:
+                return handler
         return None
 
     def serialize(self, obj: Any) -> Optional[Dict[str, Any]]:
@@ -172,9 +174,11 @@ class TypeRegistry:
         type_names = []
         for handler in self._handlers:
             try:
-                type_names.append(handler.type_name)
+                name = handler.type_name
             except Exception:
-                continue
+                name = None
+            if name is not None:
+                type_names.append(name)
         return type_names
 
     def clear_handlers(self) -> None:
