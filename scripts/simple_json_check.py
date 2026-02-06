@@ -11,6 +11,8 @@ ALLOWED_FILES = {
     # v2 core: these ARE the serialization engine, they must use stdlib json
     "datason/_core.py",
     "datason/_deserialize.py",
+    # v2 security: integrity module wraps/unwraps raw JSON envelopes
+    "datason/security/integrity.py",
     # v1 legacy (kept for reference)
     "datason/json.py",
     "datason/integrity.py",

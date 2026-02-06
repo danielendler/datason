@@ -17,6 +17,9 @@ from ._errors import SecurityError, SerializationError
 from ._protocols import SerializeContext
 from ._registry import default_registry
 from ._types import JSON_BASIC_TYPES
+from .security.redaction import redact_value, should_redact_field
+
+_REDACTED = "[REDACTED]"
 
 
 def _serialize_recursive(obj: Any, ctx: SerializeContext) -> Any:
@@ -91,11 +94,19 @@ def _handle_float(obj: float, ctx: SerializeContext) -> Any:
 
 
 def _serialize_dict(obj: dict[str, Any], ctx: SerializeContext) -> dict[str, Any]:
-    """Serialize a dict, recursing into values."""
+    """Serialize a dict, recursing into values. Applies redaction if configured."""
     if len(obj) > ctx.config.max_size:
         raise SecurityError(f"Dict size {len(obj)} exceeds limit {ctx.config.max_size}")
     child = ctx.child()
-    return {str(k): _serialize_recursive(v, child) for k, v in obj.items()}
+    result: dict[str, Any] = {}
+    for k, v in obj.items():
+        key = str(k)
+        if should_redact_field(key, ctx.config.redact_fields):
+            result[key] = _REDACTED
+        else:
+            serialized = _serialize_recursive(v, child)
+            result[key] = redact_value(serialized, ctx.config.redact_patterns)
+    return result
 
 
 def _serialize_sequence(obj: Any, ctx: SerializeContext) -> list[Any]:
