@@ -32,7 +32,8 @@ class DatetimePlugin:
         return 100
 
     def can_handle(self, obj: Any) -> bool:
-        return isinstance(obj, _HANDLED_TYPES)
+        # Use exact type lookup to avoid claiming subclasses like pd.Timestamp
+        return type(obj) in _TYPE_NAMES
 
     def serialize(self, obj: Any, ctx: SerializeContext) -> Any:
         type_name = _TYPE_NAMES.get(type(obj))
