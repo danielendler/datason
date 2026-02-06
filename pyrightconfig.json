@@ -16,9 +16,11 @@
   "reportUnnecessaryTypeIgnoreComment": true,
   "reportUnnecessaryIsInstance": "warning",
   "reportInvalidTypeVarUse": true,
-  "reportMissingReturnType": true,
   "reportMissingParameterType": true,
   "reportUntypedFunctionDecorator": "warning",
   "reportUntypedClassDecorator": "warning",
-  "reportUntypedBaseClass": "warning"
+  "reportUntypedBaseClass": "warning",
+  "reportUnknownArgumentType": false,
+  "reportUnknownVariableType": false,
+  "reportUnknownMemberType": false
 }

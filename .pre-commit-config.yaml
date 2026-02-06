@@ -82,7 +82,7 @@ repos:
       # ============================================================================
       - id: check-module-size
         name: Check module size limits (500 lines max)
-        entry: bash -c 'status=0; for f in "$@"; do lines=$(wc -l < "$f"); if [ "$lines" -gt 500 ]; then echo "FAIL: $f has $lines lines (limit 500)"; status=1; fi; done; exit $status'
+        entry: python scripts/check_module_size.py
         language: system
         files: ^datason/.*\.py$
         types: [python]

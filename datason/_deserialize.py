@@ -104,7 +104,7 @@ def load(fp: IOBase, **kwargs: Any) -> Any:
     """
     config = _resolve_config(kwargs)
     ctx = DeserializeContext(config=config)
-    parsed = json.load(fp)  # type: ignore[arg-type]
+    parsed = json.load(fp)
     return _deserialize_recursive(parsed, ctx)
 
 
@@ -112,7 +112,7 @@ def _resolve_config(overrides: dict[str, Any]) -> SerializationConfig:
     """Resolve config from kwargs or active context."""
     if overrides:
         base = get_active_config()
-        fields = {f.name: getattr(base, f.name) for f in base.__dataclass_fields__.values()}  # type: ignore[attr-defined]
+        fields = {f.name: getattr(base, f.name) for f in base.__dataclass_fields__.values()}
         fields.update(overrides)
         return SerializationConfig(**fields)
     return get_active_config()

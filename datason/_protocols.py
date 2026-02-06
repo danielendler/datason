@@ -20,7 +20,7 @@ class SerializeContext:
 
     config: SerializationConfig
     depth: int = 0
-    seen_ids: set[int] = field(default_factory=set)
+    seen_ids: set[int] = field(default_factory=lambda: set[int]())
 
     def child(self) -> SerializeContext:
         """Create a child context with incremented depth."""

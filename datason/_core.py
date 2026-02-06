@@ -144,7 +144,7 @@ def dump(obj: Any, fp: IOBase, **kwargs: Any) -> None:
     serialized = _serialize_recursive(obj, ctx)
     json.dump(
         serialized,
-        fp,  # type: ignore[arg-type]
+        fp,
         sort_keys=config.sort_keys,
         ensure_ascii=False,
     )
@@ -171,7 +171,7 @@ def _resolve_config(overrides: dict[str, Any]) -> SerializationConfig:
     if overrides:
         base = get_active_config()
         # Build new config with overrides applied
-        fields = {f.name: getattr(base, f.name) for f in base.__dataclass_fields__.values()}  # type: ignore[attr-defined]
+        fields = {f.name: getattr(base, f.name) for f in base.__dataclass_fields__.values()}
         fields.update(overrides)
         return SerializationConfig(**fields)
     return get_active_config()

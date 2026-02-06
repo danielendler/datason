@@ -2,6 +2,8 @@
 
 from importlib.metadata import version
 
+import datason.plugins  # noqa: F401  # pyright: ignore[reportUnusedImport]
+
 from ._config import (
     DataFrameOrient,
     DateFormat,

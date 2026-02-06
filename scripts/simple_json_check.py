@@ -8,13 +8,17 @@ from pathlib import Path
 
 # Files where stdlib json import is legitimate
 ALLOWED_FILES = {
-    "datason/json.py",  # Drop-in compatibility module
-    "datason/integrity.py",  # Canonical JSON output needed
-    "datason/core_new.py",  # Core module with well-documented legitimate usage
+    # v2 core: these ARE the serialization engine, they must use stdlib json
+    "datason/_core.py",
+    "datason/_deserialize.py",
+    # v1 legacy (kept for reference)
+    "datason/json.py",
+    "datason/integrity.py",
+    "datason/core_new.py",
     "tests/unit/test_json_compatibility_requirement.py",
     "tests/unit/test_json_drop_in_compatibility.py",
     "tests/unit/test_enhanced_api_strategy.py",
-    "scripts/setup_github_labels.py",  # Infrastructure
+    "scripts/setup_github_labels.py",
 }
 
 
