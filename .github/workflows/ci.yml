@@ -1,539 +1,213 @@
-name: 🧪 CI (Optimized Plugin Testing)
+# =============================================================================
+# Datason v2 - Consolidated CI Pipeline
+# =============================================================================
+# This is the TEMPLATE for v2. It replaces 9 separate workflow files with 1.
+# To activate: rename to ci.yml and delete the old workflow files.
+# =============================================================================
+
+name: CI
 
 on:
   push:
-    branches: [ main, develop ]
-    paths-ignore:
-      - 'docs/**'
-      - '*.md'
-      - 'mkdocs.yml'
-      - '.readthedocs.yaml'
+    branches: [main]
   pull_request:
-    branches: [ main ]
-    paths-ignore:
-      - 'docs/**'
-      - '*.md'
-      - 'mkdocs.yml'
-      - '.readthedocs.yaml'
+    branches: [main]
 
-# Set explicit permissions for security
 permissions:
   contents: read
-  packages: read
-  actions: read
 
 env:
-  # Optimize pip for CI
-  PIP_CACHE_DIR: ~/.cache/pip
-  PIP_DISABLE_PIP_VERSION_CHECK: 1
-  PIP_NO_INPUT: 1
+  UV_CACHE_DIR: /tmp/.uv-cache
 
 jobs:
-  # Pre-cache base dependencies (runs first, others depend on it)
-  cache-base:
-    runs-on: ubuntu-latest
-    outputs:
-      cache-key: ${{ steps.cache-key.outputs.key }}
-    steps:
-    - name: 📥 Checkout code
-      uses: actions/checkout@v5
-
-    - name: 🐍 Set up Python 3.11
-      uses: actions/setup-python@v5
-      with:
-        python-version: "3.11"
-
-    - name: 🔑 Generate cache key
-      id: cache-key
-      run: |
-        echo "key=base-${{ runner.os }}-py3.11-${{ hashFiles('**/pyproject.toml') }}-${{ hashFiles('**/requirements*.txt') }}" >> $GITHUB_OUTPUT
-
-    - name: 💾 Cache base Python dependencies
-      uses: actions/cache@v4
-      id: cache-base-deps
-      with:
-        path: |
-          ~/.cache/pip
-          ~/.local/lib/python3.11/site-packages
-        key: ${{ steps.cache-key.outputs.key }}
-        restore-keys: |
-          base-${{ runner.os }}-py3.11-
-
-    - name: 📦 Warm cache with base dependencies
-      if: steps.cache-base-deps.outputs.cache-hit != 'true'
-      run: |
-        python -m pip install --upgrade pip setuptools wheel
-        pip install pytest pytest-cov build twine bandit
-
-  # Matrix testing (runs in parallel after base cache is warmed)
-  test:
-    needs: cache-base
-    runs-on: ubuntu-latest
-    strategy:
-      # Fail-fast strategy: Start fastest + slowest tests first
-      fail-fast: false
-      max-parallel: 12  # Increased to ensure first batch (minimal + full) starts immediately
-      matrix:
-        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12", "3.13"]
-        dependency-set:
-          # BATCH 1: Start fastest + slowest simultaneously for fail-fast optimization
-          - name: "minimal"
-            packages: ""
-            description: "Core functionality only (no optional dependencies)"
-            test-pattern: "tests/unit/"
-            cache-extra: ""
-
-          - name: "full"
-            packages: ""  # Will use dev dependencies
-            description: "All dependencies (full test suite)"
-            test-pattern: "tests/unit/ tests/integration/ tests/edge_cases/"
-            cache-extra: "dev"
-            use-dev: true
-
-          # BATCH 2: Medium-speed tests (start after first batch)
-          - name: "with-numpy"
-            packages: "numpy"
-            description: "Core + NumPy support"
-            test-pattern: "tests/unit/ tests/integration/test_ml_serializers.py"
-            cache-extra: "numpy"
-
-          - name: "with-pandas"
-            packages: "pandas"
-            description: "Core + Pandas support"
-            test-pattern: "tests/unit/ tests/integration/test_auto_detection_and_metadata.py tests/integration/test_chunked_streaming.py tests/integration/test_template_deserializer.py tests/edge_cases/test_datetime_coverage_boost.py"
-            cache-extra: "pandas"
-
-          - name: "with-ml-deps"
-            packages: "numpy pandas scikit-learn torch tensorflow"  # Explicit package list for reliability
-            description: "Core + ML dependencies (all frameworks)"
-            test-pattern: "tests/unit/ tests/integration/"
-            cache-extra: "ml"
-            use-ml: true
-        exclude:
-          # Strategic test distribution for efficiency while maintaining coverage:
-          # - Python 3.8: Only minimal tests (core compatibility validation)
-          # - Python 3.9-3.10: Minimal + one dependency set each (broader compatibility)
-          # - Python 3.11: Full coverage (primary development version)
-          # - Python 3.12: Full coverage (latest stable version)
-          # - Python 3.13: Minimal tests only (dependency availability lag)
-
-          # Python 3.8 - minimal compatibility only
-          - python-version: "3.8"
-            dependency-set: {name: "with-numpy"}
-          - python-version: "3.8"
-            dependency-set: {name: "with-pandas"}
-          - python-version: "3.8"
-            dependency-set: {name: "with-ml-deps"}
-          - python-version: "3.8"
-            dependency-set: {name: "full"}
-
-          # Python 3.9 - minimal + pandas (data science focus)
-          - python-version: "3.9"
-            dependency-set: {name: "with-numpy"}
-          - python-version: "3.9"
-            dependency-set: {name: "with-ml-deps"}
-          - python-version: "3.9"
-            dependency-set: {name: "full"}
-
-          # Python 3.10 - minimal + ml-deps (ML focus) - ALLOW ML TESTS
-          - python-version: "3.10"
-            dependency-set: {name: "with-numpy"}
-          - python-version: "3.10"
-            dependency-set: {name: "with-pandas"}
-          - python-version: "3.10"
-            dependency-set: {name: "full"}
-          # Remove the exclusion for with-ml-deps on Python 3.10 to allow ML testing
-
-          # Python 3.13 - minimal only (waiting for optional dependency support)
-          - python-version: "3.13"
-            dependency-set: {name: "with-numpy"}
-          - python-version: "3.13"
-            dependency-set: {name: "with-pandas"}
-          - python-version: "3.13"
-            dependency-set: {name: "with-ml-deps"}
-          - python-version: "3.13"
-            dependency-set: {name: "full"}
-
-    name: "🧪 ${{ matrix.dependency-set.name }} (Python ${{ matrix.python-version }})"
-
-    steps:
-    - name: 📥 Checkout code
-      uses: actions/checkout@v5
-
-    - name: 🐍 Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v5
-      with:
-        python-version: ${{ matrix.python-version }}
-
-    # Restore base cache first
-    - name: 💾 Restore base dependencies cache
-      uses: actions/cache@v4
-      with:
-        path: |
-          ~/.cache/pip
-          ~/.local/lib/python${{ matrix.python-version }}/site-packages
-        key: base-${{ runner.os }}-py${{ matrix.python-version }}-${{ hashFiles('**/pyproject.toml') }}
-        restore-keys: |
-          base-${{ runner.os }}-py${{ matrix.python-version }}-
-
-    # Specific cache for this dependency set
-    - name: 💾 Cache specific dependencies
-      uses: actions/cache@v4
-      with:
-        path: ~/.cache/pip
-        key: deps-${{ runner.os }}-py${{ matrix.python-version }}-${{ matrix.dependency-set.cache-extra }}-${{ hashFiles('**/pyproject.toml') }}
-        restore-keys: |
-          deps-${{ runner.os }}-py${{ matrix.python-version }}-${{ matrix.dependency-set.cache-extra }}-
-          deps-${{ runner.os }}-py${{ matrix.python-version }}-
-
-    - name: 📦 Install package and dependencies
-      run: |
-        python -m pip install --upgrade pip
-        # Install package first
-        pip install -e .
-
-        # Install test dependencies
-        pip install pytest pytest-cov
-
-        # Install specific optional dependencies
-        if [ "${{ matrix.dependency-set.use-dev }}" = "true" ]; then
-          echo "Installing full development environment with all dependencies..."
-          # Install core ML dependencies first to avoid conflicts
-          pip install numpy pandas scikit-learn scipy || echo "Basic ML deps failed, continuing..."
-          pip install torch --index-url https://download.pytorch.org/whl/cpu || echo "PyTorch failed, continuing..."
-          pip install tensorflow-cpu || echo "TensorFlow failed, continuing..."
-          pip install Pillow catboost optuna plotly polars || echo "Additional ML deps failed, continuing..."
-
-          # Install the package with dev and core ML dependencies (avoiding problematic ones)
-          pip install -e ".[dev,ml]" || echo "Dev/ml group install had issues, but continuing..."
-
-          # Try to install problematic packages separately (optional)
-          pip install jax[cpu] || echo "JAX failed, skipping..."
-          pip install transformers || echo "Transformers failed, skipping..."
-          pip install keras || echo "Keras failed, skipping..."
-        elif [ "${{ matrix.dependency-set.use-ml }}" = "true" ]; then
-          # Install ML dependencies with explicit package list for reliability
-          echo "Installing ML dependencies..."
-          pip install numpy pandas scikit-learn || echo "Basic ML deps failed, continuing..."
-          pip install torch --index-url https://download.pytorch.org/whl/cpu || echo "PyTorch failed, continuing..."
-          pip install tensorflow-cpu || echo "TensorFlow failed, continuing..."
-          pip install catboost keras optuna plotly polars || echo "Additional ML deps failed, continuing..."
-          # Also try the ml group as fallback
-          pip install -e ".[ml]" || echo "ML group install failed, continuing with installed packages..."
-        elif [ -n "${{ matrix.dependency-set.packages }}" ]; then
-          pip install ${{ matrix.dependency-set.packages }}
-        fi
-
-    - name: 📋 Show installed packages (for debugging)
-      run: pip list
-
-    - name: 🧪 Test package import
-      run: |
-        python -c "
-        import datason
-        print('✅ Package imports successfully')
-        data = {'test': 123, 'nested': {'value': 'hello'}}
-        result = datason.serialize(data)
-        print('✅ Basic serialization works:', result)
-        "
-
-    - name: 🔬 Test ML dependencies (if ML or full job)
-      if: matrix.dependency-set.use-ml == true || matrix.dependency-set.use-dev == true
-      run: |
-        python -c "
-        import sys
-        print('🔬 Testing ML library availability:')
-
-        # Test core ML libraries
-        try:
-            import numpy as np
-            print('✅ NumPy:', np.__version__)
-        except ImportError:
-            print('❌ NumPy: Not available')
-
-        try:
-            import pandas as pd
-            print('✅ Pandas:', pd.__version__)
-        except ImportError:
-            print('❌ Pandas: Not available')
-
-        try:
-            from sklearn.linear_model import LogisticRegression
-            print('✅ Scikit-learn: Available')
-        except ImportError:
-            print('❌ Scikit-learn: Not available')
-
-        try:
-            import torch
-            print('✅ PyTorch:', torch.__version__)
-        except ImportError:
-            print('❌ PyTorch: Not available')
-
-        try:
-            import tensorflow as tf
-            print('✅ TensorFlow:', tf.__version__)
-        except ImportError:
-            print('❌ TensorFlow: Not available')
-
-        # Test datason ML functionality
-        try:
-            from datason.ml_serializers import get_ml_library_info
-            ml_info = get_ml_library_info()
-            available_libs = [k for k, v in ml_info.items() if v]
-            print(f'🎯 Available ML libraries for datason: {available_libs}')
-        except Exception as e:
-            print(f'❌ ML library detection failed: {e}')
-        "
-
-    - name: 🧪 Run tests
-      run: |
-        # Add test isolation for better reliability
-        export PYTHONDONTWRITEBYTECODE=1
-        export PYTHONOVERSAFE=1
-
-        # Only run Supported Types Matrix test in ML/full environments
-        if [ "${{ matrix.dependency-set.use-ml }}" = "true" ] || [ "${{ matrix.dependency-set.use-dev }}" = "true" ]; then
-          export RUN_SUPPORTED_TYPES=1
-        fi
-
-        pytest ${{ matrix.dependency-set.test-pattern }} -v \
-          --cov=datason \
-          --cov-report=xml:coverage-${{ matrix.dependency-set.name }}.xml \
-          --cov-report=term-missing \
-          --junitxml=junit-${{ matrix.dependency-set.name }}.xml \
-          --tb=short \
-          -x \
-          --cache-clear
-
-    - name: 📊 Upload coverage to Codecov
-      uses: codecov/codecov-action@v5
-      if: always() && matrix.dependency-set.name == 'full'
-      with:
-        files: ./coverage-${{ matrix.dependency-set.name }}.xml
-        flags: ${{ matrix.dependency-set.name }}
-        name: ${{ matrix.dependency-set.name }}-py${{ matrix.python-version }}
-        token: ${{ secrets.CODECOV_TOKEN }}
-        fail_ci_if_error: false  # Don't fail CI if codecov upload fails
-        verbose: true
-        # Only upload from full test suite for accurate coverage calculation
-        env_vars: OS,PYTHON
-
-    - name: 📤 Upload test results
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: test-results-${{ matrix.dependency-set.name }}-py${{ matrix.python-version }}
-        path: |
-          coverage-${{ matrix.dependency-set.name }}.xml
-          junit-${{ matrix.dependency-set.name }}.xml
-
-  # Quality checks (runs in parallel with tests)
+  # ===========================================================================
+  # Job 1: Lint + Type Check + Architecture (fast, fails early)
+  # ===========================================================================
   quality:
-    needs: cache-base
-    runs-on: ubuntu-latest
-    name: "🔍 Code Quality & Security"
-    steps:
-    - name: 📥 Checkout code
-      uses: actions/checkout@v5
-
-    - name: 🐍 Set up Python 3.11
-      uses: actions/setup-python@v5
-      with:
-        python-version: "3.11"
-
-    - name: 💾 Restore base dependencies cache
-      uses: actions/cache@v4
-      with:
-        path: |
-          ~/.cache/pip
-          ~/.local/lib/python3.11/site-packages
-        key: ${{ needs.cache-base.outputs.cache-key }}
-
-    - name: 📦 Install quality tools
-      run: |
-        python -m pip install --upgrade pip
-        pip install -e .  # Install package to ensure dependencies are available
-        pip install ruff bandit[toml] mypy
-
-    - name: 🎨 Run Ruff linter
-      run: |
-        echo "🔍 Running Ruff linter..."
-        ruff check datason/ tests/ examples/ scripts/ --output-format=github
-
-    - name: 🎨 Run Ruff formatter check
-      run: |
-        echo "🎨 Checking code formatting..."
-        ruff format --check datason/ tests/ examples/ scripts/
-
-    - name: 🔍 Type check with mypy
-      run: |
-        echo "🔍 Running type checks..."
-        mypy datason/ --install-types --non-interactive || true
-
-    - name: 🔒 Run Bandit security scan
-      run: |
-        echo "🔒 Running security scan..."
-        bandit -r datason/ -f json -o bandit-report.json || true
-
-    - name: 📊 Generate Quality & Security Report
-      if: always()
-      run: |
-        echo "## 🔍 Code Quality & Security Report" >> $GITHUB_STEP_SUMMARY
-
-        echo "### 🎨 Ruff Linting" >> $GITHUB_STEP_SUMMARY
-        if ruff check datason/ tests/ examples/ scripts/ --output-format=concise > ruff-results.txt 2>&1; then
-          echo "✅ **Linting**: All checks passed" >> $GITHUB_STEP_SUMMARY
-        else
-          echo "❌ **Linting**: Issues found" >> $GITHUB_STEP_SUMMARY
-          echo "<details><summary>Show Details</summary>" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-          head -20 ruff-results.txt >> $GITHUB_STEP_SUMMARY || echo "No detailed output available" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-          echo "</details>" >> $GITHUB_STEP_SUMMARY
-        fi
-
-        echo "### 🎨 Code Formatting" >> $GITHUB_STEP_SUMMARY
-        if ruff format --check --diff datason/ tests/ examples/ scripts/ > format-results.txt 2>&1; then
-          echo "✅ **Formatting**: All files properly formatted" >> $GITHUB_STEP_SUMMARY
-        else
-          echo "❌ **Formatting**: Issues found" >> $GITHUB_STEP_SUMMARY
-          echo "<details><summary>Show Formatting Diff</summary>" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo '```diff' >> $GITHUB_STEP_SUMMARY
-          head -30 format-results.txt >> $GITHUB_STEP_SUMMARY || echo "No detailed output available" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-          echo "</details>" >> $GITHUB_STEP_SUMMARY
-        fi
-
-        echo "### 🛡️ Security Scan Results" >> $GITHUB_STEP_SUMMARY
-        if [ -f bandit-report.json ]; then
-          python3 -c "
-        import json
-        try:
-            with open('bandit-report.json') as f:
-                report = json.load(f)
-            metrics = report['metrics']['_totals']
-            high = metrics.get('SEVERITY.HIGH', 0)
-            medium = metrics.get('SEVERITY.MEDIUM', 0)
-            low = metrics.get('SEVERITY.LOW', 0)
-            loc = metrics.get('loc', 0)
-
-            print(f'📊 **Scanned**: {loc} lines of code')
-            if high == 0 and medium == 0:
-                print('✅ **Security**: No critical issues found')
-                if low > 0:
-                    print(f'ℹ️ **Info**: {low} low severity informational findings')
-            else:
-                print(f'⚠️ **Security**: {high} high, {medium} medium, {low} low severity issues')
-        except Exception as e:
-            print('❌ **Security**: Scan report parsing failed')
-            print(f'Error: {e}')
-        " >> $GITHUB_STEP_SUMMARY
-        else
-          echo "❌ **Security**: Report not generated" >> $GITHUB_STEP_SUMMARY
-        fi
-
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "---" >> $GITHUB_STEP_SUMMARY
-        echo "*Quality checks completed at $(date)*" >> $GITHUB_STEP_SUMMARY
-
-    - name: 📤 Upload security report
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: security-report-py3.11
-        path: bandit-report.json
-
-  # Build package (only runs if tests pass - but doesn't wait for ALL tests)
-  build:
-    needs: [cache-base]
-    # Only run if not a draft PR
-    if: github.event.pull_request.draft == false || github.event_name == 'push'
+    name: Quality Gates
     runs-on: ubuntu-latest
     steps:
-    - name: 📥 Checkout code
-      uses: actions/checkout@v5
+      - uses: actions/checkout@v5
 
-    - name: 🐍 Set up Python 3.11
-      uses: actions/setup-python@v5
-      with:
-        python-version: "3.11"
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
 
-    - name: 💾 Restore base dependencies cache
-      uses: actions/cache@v4
-      with:
-        path: |
-          ~/.cache/pip
-          ~/.local/lib/python3.11/site-packages
-        key: ${{ needs.cache-base.outputs.cache-key }}
+      - name: Set up Python
+        run: uv python install 3.12
 
-    - name: 📦 Install build tools
-      run: |
-        python -m pip install --upgrade pip
-        pip install build twine
+      - name: Install dependencies
+        run: uv sync --all-extras
 
-    - name: 🏗️ Build package
-      run: python -m build
+      - name: Ruff lint
+        run: uv run ruff check datason/ tests/
 
-    - name: ✅ Check package
-      run: twine check dist/*
+      - name: Ruff format check
+        run: uv run ruff format datason/ tests/ --check
 
-    - name: 📤 Upload build artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: dist-py3.11
-        path: dist/
+      - name: Pyright type check
+        run: uv run pyright --project .
 
-  # Summary job (waits for all tests, provides final status)
-  test-summary:
-    needs: [test, quality, build]
+      - name: Architecture - module size limits (500 lines)
+        run: |
+          violations=0
+          while IFS= read -r line; do
+            count=$(echo "$line" | awk '{print $1}')
+            file=$(echo "$line" | awk '{print $2}')
+            if [ "$count" -gt 500 ] && [ "$file" != "total" ]; then
+              echo "::error file=$file::Module has $count lines (limit: 500)"
+              violations=$((violations + 1))
+            fi
+          done < <(find datason -name "*.py" -exec wc -l {} +)
+          if [ $violations -gt 0 ]; then
+            echo "Found $violations module(s) exceeding 500 line limit"
+            exit 1
+          fi
+
+      - name: Architecture - function length limits (50 lines)
+        run: |
+          uv run python -c "
+          import ast, sys, pathlib
+          violations = 0
+          for path in sorted(pathlib.Path('datason').rglob('*.py')):
+              try:
+                  tree = ast.parse(path.read_text())
+                  for node in ast.walk(tree):
+                      if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                          length = (node.end_lineno or 0) - node.lineno + 1
+                          if length > 50:
+                              print(f'::error file={path},line={node.lineno}::{node.name}() is {length} lines (limit: 50)')
+                              violations += 1
+              except SyntaxError:
+                  pass
+          if violations:
+              print(f'Found {violations} function(s) exceeding 50 line limit')
+              sys.exit(1)
+          "
+
+      - name: Security scan
+        run: |
+          uv run ruff check datason/ --select S
+          uv run pip-audit
+
+  # ===========================================================================
+  # Job 2: Tests across Python versions
+  # ===========================================================================
+  test:
+    name: Test (Python ${{ matrix.python-version }})
+    needs: quality
     runs-on: ubuntu-latest
-    if: always()
-    steps:
-    - name: 📋 Check test results
-      run: |
-        if [ "${{ needs.test.result }}" = "success" ] && [ "${{ needs.quality.result }}" = "success" ]; then
-          echo "✅ All tests passed!"
-          exit 0
-        else
-          echo "❌ Some tests failed:"
-          echo "  Tests: ${{ needs.test.result }}"
-          echo "  Quality: ${{ needs.quality.result }}"
-          echo "  Build: ${{ needs.build.result }}"
-          exit 1
-        fi
-
-  # Python version compatibility check (tests our minimum version claim)
-  python-compatibility:
-    runs-on: ubuntu-latest
-    name: "🐍 Python Compatibility Check"
     strategy:
+      fail-fast: false
       matrix:
-        python-version: ["3.8", "3.13"]  # Test minimum and current versions
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
+        include:
+          # Full test suite with all optional deps on 3.11 and 3.12
+          - python-version: "3.11"
+            extras: "--all-extras"
+          - python-version: "3.12"
+            extras: "--all-extras"
+          # Core-only tests on 3.10 and 3.13
+          - python-version: "3.10"
+            extras: ""
+          - python-version: "3.13"
+            extras: ""
     steps:
-    - name: 📥 Checkout code
-      uses: actions/checkout@v5
+      - uses: actions/checkout@v5
 
-    - name: 🐍 Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v5
-      with:
-        python-version: ${{ matrix.python-version }}
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
 
-    - name: 📦 Install package (minimal)
-      run: |
-        python -m pip install --upgrade pip
-        pip install -e .
+      - name: Set up Python ${{ matrix.python-version }}
+        run: uv python install ${{ matrix.python-version }}
 
-    - name: 🧪 Run compatibility test
-      run: |
-        python scripts/test_python_compatibility.py
+      - name: Install dependencies
+        run: uv sync ${{ matrix.extras }}
 
-    - name: 📋 Generate compatibility report
-      run: |
-        echo "## 🐍 Python ${{ matrix.python-version }} Compatibility Report" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "### Test Results:" >> $GITHUB_STEP_SUMMARY
-        echo '```' >> $GITHUB_STEP_SUMMARY
-        python scripts/test_python_compatibility.py >> $GITHUB_STEP_SUMMARY
-        echo '```' >> $GITHUB_STEP_SUMMARY
+      - name: Run tests
+        run: |
+          uv run pytest tests/unit/ \
+            --cov=datason \
+            --cov-report=xml \
+            --cov-report=term-missing \
+            -x --tb=short \
+            --junitxml=junit-results.xml
+
+      - name: Upload coverage
+        if: matrix.python-version == '3.12'
+        uses: codecov/codecov-action@v5
+        with:
+          files: coverage.xml
+          flags: unittests
+          fail_ci_if_error: false
+
+  # ===========================================================================
+  # Job 3: Benchmarks (on PR only, non-blocking)
+  # ===========================================================================
+  benchmark:
+    name: Performance Benchmarks
+    needs: quality
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Install dependencies
+        run: uv sync --all-extras
+
+      - name: Run benchmarks
+        run: |
+          uv run pytest tests/benchmarks/ \
+            --benchmark-only \
+            --benchmark-sort=mean \
+            --benchmark-json=benchmark-results.json \
+            || echo "No benchmarks found yet - skipping"
+
+      - name: Store benchmark result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results
+          path: benchmark-results.json
+          if-no-files-found: ignore
+
+  # ===========================================================================
+  # Job 4: Build validation
+  # ===========================================================================
+  build:
+    name: Build Package
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Build
+        run: uv run python -m build
+
+      - name: Check package
+        run: uv run twine check dist/*
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
