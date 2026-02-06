@@ -1,0 +1,118 @@
+"""Core deserialization engine for datason.
+
+Handles recursive traversal of parsed JSON data, dispatching to
+plugins for type-annotated dicts. This module must stay under 300 lines.
+"""
+
+from __future__ import annotations
+
+import json
+from io import IOBase
+from typing import Any
+
+from ._config import SerializationConfig, get_active_config
+from ._errors import DeserializationError, SecurityError
+from ._protocols import DeserializeContext
+from ._registry import default_registry
+from ._types import TYPE_METADATA_KEY
+
+
+def _deserialize_recursive(data: Any, ctx: DeserializeContext) -> Any:
+    """Recursively deserialize parsed JSON data back to Python objects."""
+    # Security: depth limit
+    if ctx.depth > ctx.config.max_depth:
+        raise SecurityError(f"Deserialization depth {ctx.depth} exceeds limit {ctx.config.max_depth}")
+
+    # Primitive types: pass through
+    if data is None or isinstance(data, str | int | float | bool):
+        return data
+
+    # Dict: check for type metadata, then recurse
+    if isinstance(data, dict):
+        return _deserialize_dict(data, ctx)
+
+    # List: recurse into elements
+    if isinstance(data, list):
+        return _deserialize_list(data, ctx)
+
+    return data
+
+
+def _deserialize_dict(data: dict[str, Any], ctx: DeserializeContext) -> Any:
+    """Deserialize a dict, checking for type metadata first."""
+    # Check if this dict is a type-annotated value
+    if TYPE_METADATA_KEY in data:
+        plugin_result = default_registry.find_deserializer(data, ctx)
+        if plugin_result is not None:
+            _plugin, deserialized = plugin_result
+            return deserialized
+
+        # No plugin found for this type annotation
+        if ctx.config.strict:
+            type_name = data.get(TYPE_METADATA_KEY, "<unknown>")
+            raise DeserializationError(
+                f"No plugin registered to deserialize type "
+                f"'{type_name}'. Install the relevant plugin or "
+                f"set strict=False in config."
+            )
+        # Non-strict: fall through to regular dict deserialization
+
+    # Regular dict: recurse into values
+    child = ctx.child()
+    return {k: _deserialize_recursive(v, child) for k, v in data.items()}
+
+
+def _deserialize_list(data: list[Any], ctx: DeserializeContext) -> list[Any]:
+    """Deserialize a list by recursing into each element."""
+    child = ctx.child()
+    return [_deserialize_recursive(item, child) for item in data]
+
+
+# =========================================================================
+# Public API
+# =========================================================================
+
+
+def loads(s: str, **kwargs: Any) -> Any:
+    """Deserialize a JSON string to Python objects.
+
+    Type-annotated values (with __datason_type__ metadata) are
+    reconstructed via plugins. Plain JSON is returned as-is.
+
+    Args:
+        s: JSON string to deserialize.
+        **kwargs: Override SerializationConfig fields inline.
+
+    Returns:
+        Deserialized Python object.
+    """
+    config = _resolve_config(kwargs)
+    ctx = DeserializeContext(config=config)
+    parsed = json.loads(s)
+    return _deserialize_recursive(parsed, ctx)
+
+
+def load(fp: IOBase, **kwargs: Any) -> Any:
+    """Deserialize from a file-like object.
+
+    Args:
+        fp: File-like object with a read() method.
+        **kwargs: Override SerializationConfig fields inline.
+
+    Returns:
+        Deserialized Python object.
+    """
+    config = _resolve_config(kwargs)
+    ctx = DeserializeContext(config=config)
+    parsed = json.load(fp)  # type: ignore[arg-type]
+    return _deserialize_recursive(parsed, ctx)
+
+
+def _resolve_config(overrides: dict[str, Any]) -> SerializationConfig:
+    """Resolve config from kwargs or active context."""
+    if overrides:
+        base = get_active_config()
+        fields = {f.name: getattr(base, f.name) for f in base.__dataclass_fields__.values()}  # type: ignore[attr-defined]
+        fields.update(overrides)
+        return SerializationConfig(**fields)
+    return get_active_config()
