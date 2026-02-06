@@ -53,21 +53,22 @@ repos:
   # ============================================================================
   - repo: local
     hooks:
-      - id: sync-docs
-        name: Sync documentation files to docs directory
-        entry: python scripts/sync_docs.py
-        language: python
-        files: >-
-          ^(CONTRIBUTING|SECURITY|CHANGELOG)\.md$|^docs/community/(CONTRIBUTING|SECURITY|CHANGELOG)\.md$
-        pass_filenames: false
-        always_run: false
+      # NOTE: sync-docs and mkdocs-strict disabled until docs/ is rebuilt for v2
+      # - id: sync-docs
+      #   name: Sync documentation files to docs directory
+      #   entry: python scripts/sync_docs.py
+      #   language: python
+      #   files: >-
+      #     ^(CONTRIBUTING|SECURITY|CHANGELOG)\.md$|^docs/community/(CONTRIBUTING|SECURITY|CHANGELOG)\.md$
+      #   pass_filenames: false
+      #   always_run: false
 
-      - id: mkdocs-strict
-        name: MkDocs strict mode check
-        entry: mkdocs build --strict --clean
-        language: system
-        files: ^(mkdocs\.yml|docs/.*)$
-        pass_filenames: false
+      # - id: mkdocs-strict
+      #   name: MkDocs strict mode check
+      #   entry: mkdocs build --strict --clean
+      #   language: system
+      #   files: ^(mkdocs\.yml|docs/.*)$
+      #   pass_filenames: false
 
       - id: json-usage-check
         name: Check for inappropriate stdlib json usage (staged files only)

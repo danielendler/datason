@@ -1,17 +1,14 @@
 # =============================================================================
 # Datason v2 - Consolidated CI Pipeline
 # =============================================================================
-# This is the TEMPLATE for v2. It replaces 9 separate workflow files with 1.
-# To activate: rename to ci.yml and delete the old workflow files.
-# =============================================================================
 
 name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, v2]
   pull_request:
-    branches: [main]
+    branches: [main, v2]
 
 permissions:
   contents: read
