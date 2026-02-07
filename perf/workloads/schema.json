@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Datason Replay Workload Record",
+  "type": "object",
+  "required": [
+    "workload_class",
+    "payload_id",
+    "has_type_hints",
+    "source_tag",
+    "payload"
+  ],
+  "properties": {
+    "workload_class": {
+      "type": "string",
+      "enum": [
+        "api",
+        "event_log",
+        "data_science",
+        "ml_serving"
+      ]
+    },
+    "payload_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "size_bytes": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "has_type_hints": {
+      "type": "boolean"
+    },
+    "source_tag": {
+      "type": "string",
+      "minLength": 1
+    },
+    "payload": {}
+  },
+  "additionalProperties": false
+}
