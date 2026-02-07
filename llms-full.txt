@@ -1,0 +1,474 @@
+# datason — Complete API Reference for LLMs
+
+> datason is a zero-dependency drop-in replacement for Python's `json` module that serializes any Python object to JSON and back — including datetime, UUID, Decimal, Path, NumPy, Pandas, PyTorch, TensorFlow, and scikit-learn objects. Install: `pip install datason`. Python 3.10+.
+
+## When to use datason
+
+Use datason instead of `json` when you need to serialize Python objects that `json.dumps()` cannot handle. Common cases:
+- datetime objects in API responses or logs
+- NumPy arrays from ML model inference
+- Pandas DataFrames from data pipelines
+- Mixed-type dicts containing dates, arrays, UUIDs, etc.
+- Any scenario where `TypeError: Object of type X is not JSON serializable` occurs
+
+datason requires zero configuration for basic use — just replace `json.dumps` with `datason.dumps`.
+
+## Installation
+
+```bash
+pip install datason                    # Core (zero dependencies)
+pip install datason[numpy]             # + NumPy support
+pip install datason[pandas]            # + Pandas support
+pip install datason[ml]                # + PyTorch, TensorFlow, scikit-learn, SciPy
+pip install datason[all]               # Everything
+```
+
+## Core API — 5 Functions
+
+### datason.dumps(obj, **kwargs) -> str
+
+Serialize any Python object to a JSON string.
+
+```python
+import datason
+import datetime as dt
+import numpy as np
+import pandas as pd
+from uuid import uuid4
+from decimal import Decimal
+from pathlib import Path
+
+# Simple data (works like json.dumps)
+datason.dumps({"name": "Alice", "age": 30})
+# '{"name": "Alice", "age": 30}'
+
+# datetime objects
+datason.dumps({"created": dt.datetime(2024, 1, 15, 10, 30)})
+# '{"created": {"__datason_type__": "datetime", "__datason_value__": "2024-01-15T10:30:00"}}'
+
+# NumPy arrays
+datason.dumps({"weights": np.array([0.1, 0.9, 0.3])})
+# '{"weights": {"__datason_type__": "ndarray", "__datason_value__": {"data": [0.1, 0.9, 0.3], "dtype": "float64", "shape": [3]}}}'
+
+# Pandas DataFrames
+df = pd.DataFrame({"name": ["Alice", "Bob"], "score": [95.5, 87.3]})
+datason.dumps(df)
+# '[{"name": "Alice", "score": 95.5}, {"name": "Bob", "score": 87.3}]'
+
+# UUIDs, Decimals, Paths
+datason.dumps({"id": uuid4(), "price": Decimal("19.99"), "path": Path("/data")})
+
+# Mixed types in one call
+datason.dumps({
+    "timestamp": dt.datetime.now(),
+    "scores": np.array([1.0, 2.0, 3.0]),
+    "metadata": {"id": uuid4(), "version": Decimal("2.1")},
+})
+
+# With inline config overrides
+datason.dumps(data, sort_keys=True)
+datason.dumps(data, include_type_hints=False)
+datason.dumps(data, nan_handling=NanHandling.STRING)
+datason.dumps(data, fallback_to_string=True)
+```
+
+### datason.loads(s, **kwargs) -> Any
+
+Deserialize a JSON string back to Python objects. Type-annotated values (with `__datason_type__` metadata) are reconstructed to their original types.
+
+```python
+import datason
+
+# Simple data (works like json.loads)
+datason.loads('{"name": "Alice", "age": 30}')
+# {'name': 'Alice', 'age': 30}
+
+# Round-trip with type reconstruction
+import datetime as dt
+import numpy as np
+
+original = {"ts": dt.datetime(2024, 1, 15), "arr": np.array([1, 2, 3])}
+json_str = datason.dumps(original)
+restored = datason.loads(json_str)
+# restored["ts"] is a datetime.datetime
+# restored["arr"] is a numpy.ndarray
+```
+
+### datason.dump(obj, fp, **kwargs) -> None
+
+Serialize and write to a file-like object.
+
+```python
+import datason
+
+with open("data.json", "w") as f:
+    datason.dump({"key": "value", "ts": dt.datetime.now()}, f)
+```
+
+### datason.load(fp, **kwargs) -> Any
+
+Read from a file-like object and deserialize.
+
+```python
+import datason
+
+with open("data.json") as f:
+    data = datason.load(f)
+```
+
+### datason.config(**kwargs) — Context Manager
+
+Temporarily set serialization config for a block of code. Thread-safe via ContextVar.
+
+```python
+import datason
+from datason import DateFormat, NanHandling, DataFrameOrient
+
+# Sort keys for deterministic output
+with datason.config(sort_keys=True):
+    datason.dumps({"z": 1, "a": 2})  # '{"a": 2, "z": 1}'
+
+# UNIX timestamps instead of ISO strings
+with datason.config(date_format=DateFormat.UNIX):
+    datason.dumps({"ts": dt.datetime(2024, 1, 15)})
+
+# NaN as string instead of null
+with datason.config(nan_handling=NanHandling.STRING):
+    datason.dumps({"v": float("nan")})  # '{"v": "nan"}'
+
+# DataFrame as split format
+with datason.config(dataframe_orient=DataFrameOrient.SPLIT):
+    datason.dumps(df)
+
+# Disable type hints (smaller output, no round-trip)
+with datason.config(include_type_hints=False):
+    datason.dumps({"ts": dt.datetime.now()})
+    # '{"ts": "2024-01-15T10:30:00"}'  (just a string, not reconstructable)
+
+# Nest configs — inner overrides outer
+with datason.config(sort_keys=True):
+    with datason.config(nan_handling=NanHandling.STRING):
+        datason.dumps(data)  # sort_keys is NOT inherited — each config() is independent
+```
+
+## Configuration Reference
+
+### SerializationConfig fields
+
+```python
+from datason import SerializationConfig, DateFormat, NanHandling, DataFrameOrient
+
+config = SerializationConfig(
+    # Type formatting
+    date_format=DateFormat.ISO,          # ISO, UNIX, UNIX_MS, STRING
+    dataframe_orient=DataFrameOrient.RECORDS,  # RECORDS, SPLIT, DICT, LIST, VALUES
+    nan_handling=NanHandling.NULL,       # NULL, STRING, KEEP, DROP
+    include_type_hints=True,             # Emit __datason_type__ metadata for round-trip
+    sort_keys=False,                     # Sort dict keys in output
+
+    # Security limits
+    max_depth=50,                        # Max nesting depth (raises SecurityError)
+    max_size=100_000,                    # Max items in a dict/list (raises SecurityError)
+    max_string_length=1_000_000,         # Max string length
+
+    # Behavior
+    fallback_to_string=False,            # Convert unknown types to str() instead of raising
+    strict=True,                         # Raise on unrecognized type metadata during loads
+
+    # Redaction
+    redact_fields=(),                    # Field names to redact (case-insensitive substring match)
+    redact_patterns=(),                  # Regex patterns to redact from string values
+)
+```
+
+### Config Presets
+
+```python
+from datason import ml_config, api_config, strict_config, performance_config
+
+# ML workflows: UNIX_MS dates, fallback_to_string=True
+cfg = ml_config()
+
+# API responses: ISO dates, sorted keys, no type hints
+cfg = api_config()
+
+# Strict validation: no fallbacks, type hints required
+cfg = strict_config()
+
+# Maximum speed: no type hints, no sorting, keep NaN
+cfg = performance_config()
+
+# Use a preset with overrides
+cfg = ml_config(sort_keys=True)
+
+# Apply preset via config context manager
+with datason.config(**ml_config().__dict__):
+    datason.dumps(model_output)
+```
+
+### DateFormat enum values
+
+| Value | Serializes datetime as | Example |
+|-------|----------------------|---------|
+| `DateFormat.ISO` | ISO 8601 string | `"2024-01-15T10:30:00"` |
+| `DateFormat.UNIX` | Unix timestamp (seconds) | `1705312200.0` |
+| `DateFormat.UNIX_MS` | Unix timestamp (milliseconds) | `1705312200000.0` |
+| `DateFormat.STRING` | Python str() | `"2024-01-15 10:30:00"` |
+
+### NanHandling enum values
+
+| Value | Behavior | JSON output for `float("nan")` |
+|-------|----------|-------------------------------|
+| `NanHandling.NULL` | Replace with None | `null` |
+| `NanHandling.STRING` | Replace with str | `"nan"` |
+| `NanHandling.KEEP` | Keep as-is (invalid JSON!) | `NaN` |
+| `NanHandling.DROP` | Replace with None | `null` |
+
+### DataFrameOrient enum values
+
+| Value | Output format |
+|-------|--------------|
+| `DataFrameOrient.RECORDS` | `[{"col1": val, "col2": val}, ...]` |
+| `DataFrameOrient.SPLIT` | `{"columns": [...], "index": [...], "data": [...]}` |
+| `DataFrameOrient.DICT` | `{"col1": {"0": val, ...}, "col2": {...}}` |
+| `DataFrameOrient.LIST` | `{"col1": [vals...], "col2": [vals...]}` |
+| `DataFrameOrient.VALUES` | `[[val, val], [val, val]]` |
+
+## Supported Types (Complete List)
+
+### Always available (zero dependencies)
+| Python type | Serialized as |
+|------------|--------------|
+| `str`, `int`, `float`, `bool`, `None` | JSON primitive (no wrapper) |
+| `dict` | JSON object (recurses into values) |
+| `list` | JSON array (recurses into elements) |
+| `tuple` | JSON array |
+| `set`, `frozenset` | Sorted JSON array |
+| `datetime.datetime` | ISO string or timestamp (configurable) |
+| `datetime.date` | ISO date string |
+| `datetime.time` | ISO time string |
+| `datetime.timedelta` | Total seconds as float |
+| `uuid.UUID` | UUID string |
+| `decimal.Decimal` | String representation (preserves precision) |
+| `complex` | `{"real": float, "imag": float}` |
+| `pathlib.Path` | String path |
+
+### Requires `pip install datason[numpy]`
+| Python type | Serialized as |
+|------------|--------------|
+| `numpy.ndarray` | `{"data": [...], "dtype": "float64", "shape": [3, 3]}` |
+| `numpy.integer` | Python int |
+| `numpy.floating` | Python float |
+| `numpy.bool_` | Python bool |
+| `numpy.complexfloating` | `{"real": float, "imag": float}` |
+
+### Requires `pip install datason[pandas]`
+| Python type | Serialized as |
+|------------|--------------|
+| `pandas.DataFrame` | Records list (configurable via DataFrameOrient) |
+| `pandas.Series` | `{"data": [...], "name": "col", "dtype": "float64"}` |
+| `pandas.Timestamp` | ISO string |
+| `pandas.Timedelta` | Total seconds |
+
+### Requires `pip install datason[ml]`
+| Python type | Serialized as |
+|------------|--------------|
+| `torch.Tensor` | ndarray-like with dtype/shape |
+| `tensorflow.Tensor` | ndarray-like with dtype/shape |
+| `sklearn` estimators | `{"class": "LinearRegression", "params": {...}, "fitted": {...}}` |
+| `scipy.sparse` matrices | `{"format": "csr", "data": [...], "indices": [...], ...}` |
+
+## Security Features
+
+### PII Redaction
+
+```python
+import datason
+
+# Redact fields by name (case-insensitive substring match)
+datason.dumps(
+    {"username": "alice", "password": "secret123", "api_key": "sk-xxx"},
+    redact_fields=("password", "key", "secret"),
+)
+# '{"username": "alice", "password": "[REDACTED]", "api_key": "[REDACTED]"}'
+
+# Redact patterns in string values (built-in: email, ssn, credit_card, phone_us, ipv4)
+datason.dumps(
+    {"msg": "Contact alice@example.com or 555-123-4567"},
+    redact_patterns=("email", "phone_us"),
+)
+# '{"msg": "Contact [REDACTED] or [REDACTED]"}'
+```
+
+### Integrity Verification
+
+```python
+from datason.security.integrity import wrap_with_integrity, verify_integrity
+import datason
+
+# Hash-based integrity envelope
+json_str = datason.dumps({"data": "important"})
+wrapped = wrap_with_integrity(json_str)
+is_valid, payload = verify_integrity(wrapped)
+assert is_valid
+
+# HMAC with secret key
+wrapped = wrap_with_integrity(json_str, key="my-secret")
+is_valid, payload = verify_integrity(wrapped, key="my-secret")
+```
+
+### Security Limits
+
+```python
+import datason
+from datason._errors import SecurityError
+
+# These raise SecurityError:
+# - Nesting deeper than max_depth (default: 50)
+# - Dicts/lists larger than max_size (default: 100,000)
+# - Circular references (detected via id() tracking)
+
+datason.dumps(deeply_nested, max_depth=10)  # Override limit inline
+```
+
+## Error Handling
+
+```python
+from datason._errors import (
+    DatasonError,          # Base class
+    SecurityError,         # Depth/size/circular ref limits — always fatal
+    SerializationError,    # Unknown type — fatal unless fallback_to_string=True
+    DeserializationError,  # Bad type metadata — fatal unless strict=False
+    PluginError,           # Plugin failure — logs warning, tries next plugin
+)
+```
+
+## Writing a Custom Plugin
+
+```python
+from datason._protocols import TypePlugin, SerializeContext, DeserializeContext
+from datason._registry import default_registry
+from datason._types import TYPE_METADATA_KEY, VALUE_METADATA_KEY
+from typing import Any
+
+class MoneyPlugin:
+    """Example plugin for a custom Money type."""
+
+    @property
+    def name(self) -> str:
+        return "money"
+
+    @property
+    def priority(self) -> int:
+        return 400  # 400+ for user-defined plugins
+
+    def can_handle(self, obj: Any) -> bool:
+        return isinstance(obj, Money)
+
+    def serialize(self, obj: Any, ctx: SerializeContext) -> dict[str, Any]:
+        return {
+            TYPE_METADATA_KEY: "Money",
+            VALUE_METADATA_KEY: {"amount": str(obj.amount), "currency": obj.currency},
+        }
+
+    def can_deserialize(self, data: dict[str, Any]) -> bool:
+        return data.get(TYPE_METADATA_KEY) == "Money"
+
+    def deserialize(self, data: dict[str, Any], ctx: DeserializeContext) -> Money:
+        value = data[VALUE_METADATA_KEY]
+        return Money(amount=Decimal(value["amount"]), currency=value["currency"])
+
+# Register the plugin
+default_registry.register(MoneyPlugin())
+```
+
+## Common Patterns
+
+### ML Model Inference Pipeline
+```python
+import datason
+import numpy as np
+from datason import ml_config
+
+# Serialize model output with ML-friendly config
+predictions = {
+    "model": "gpt-classifier-v2",
+    "predictions": np.array([0.92, 0.05, 0.03]),
+    "labels": ["positive", "neutral", "negative"],
+    "timestamp": dt.datetime.now(),
+}
+
+with datason.config(**ml_config().__dict__):
+    json_str = datason.dumps(predictions)
+    # Store, send over HTTP, log, etc.
+
+# Later: reconstruct
+restored = datason.loads(json_str)
+assert isinstance(restored["predictions"], np.ndarray)
+```
+
+### API Response Serialization
+```python
+import datason
+from datason import api_config
+
+response = {
+    "user_id": uuid4(),
+    "created_at": dt.datetime.now(),
+    "scores": [Decimal("99.95"), Decimal("87.30")],
+}
+
+with datason.config(**api_config().__dict__):
+    return datason.dumps(response)
+# Sorted keys, ISO dates, no type hints (clean JSON for API consumers)
+```
+
+### Data Pipeline with File I/O
+```python
+import datason
+import pandas as pd
+
+# Save pipeline results
+results = {
+    "run_id": uuid4(),
+    "timestamp": dt.datetime.now(),
+    "metrics": pd.DataFrame({"epoch": [1, 2, 3], "loss": [0.5, 0.3, 0.1]}),
+    "config": {"lr": 0.001, "batch_size": 32},
+}
+
+with open("results.json", "w") as f:
+    datason.dump(results, f)
+
+# Load them back
+with open("results.json") as f:
+    loaded = datason.load(f)
+assert isinstance(loaded["metrics"], pd.DataFrame)
+```
+
+### Sanitize User Data Before Logging
+```python
+import datason
+
+user_event = {
+    "action": "login",
+    "email": "alice@example.com",
+    "password": "hunter2",
+    "ip": "192.168.1.100",
+    "timestamp": dt.datetime.now(),
+}
+
+safe_log = datason.dumps(
+    user_event,
+    redact_fields=("password", "secret", "key", "token"),
+    redact_patterns=("email", "ipv4"),
+)
+# password → [REDACTED], email and IP patterns → [REDACTED]
+```
+
+## Architecture Notes
+
+- **Zero runtime dependencies** — only stdlib imports in core. NumPy/Pandas/ML libs are optional.
+- **Plugin-based** — every non-JSON type is handled by a `TypePlugin` registered in a priority-sorted registry.
+- **Thread-safe** — global registry uses `threading.Lock`, config scoping uses `contextvars.ContextVar`.
+- **Type metadata format** — `{"__datason_type__": "typename", "__datason_value__": <data>}` enables round-trip fidelity.
+- **Security by default** — depth limit (50), size limit (100K), circular reference detection all enabled by default.

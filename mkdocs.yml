@@ -1,301 +1,66 @@
-# datason Documentation Configuration
 site_name: datason
-site_description: A comprehensive Python package for intelligent serialization that handles complex data types with ease.
-site_author: datason Contributors
-site_url: https://datason.readthedocs.io/
-
-# Repository
-repo_name: danielendler/datason
+site_description: "Drop-in replacement for json.dumps/json.loads that handles datetime, NumPy, Pandas, PyTorch, and 50+ Python types."
+site_url: https://datason.readthedocs.io
 repo_url: https://github.com/danielendler/datason
-edit_uri: edit/main/docs/
+repo_name: danielendler/datason
+edit_uri: edit/v2/docs/
 
-# Copyright
-copyright: Copyright &copy; 2025 datason Contributors
-
-# Configuration
 theme:
   name: material
-
-  # Material theme features
-  features:
-    - announce.dismiss
-    - content.action.edit
-    - content.action.view
-    - content.code.annotate
-    - content.code.copy
-    - content.tabs.link
-    - content.tooltips
-    - header.autohide
-    - navigation.expand
-    - navigation.footer
-    - navigation.indexes
-    - navigation.sections
-    - navigation.tabs
-    - navigation.tabs.sticky
-    - navigation.top
-    - navigation.tracking
-    - search.highlight
-    - search.share
-    - search.suggest
-    - toc.follow
-
-  # Color palette
   palette:
     - scheme: default
       primary: blue
-      accent: amber
+      accent: light-blue
       toggle:
         icon: material/brightness-7
         name: Switch to dark mode
     - scheme: slate
       primary: blue
-      accent: amber
+      accent: light-blue
       toggle:
         icon: material/brightness-4
         name: Switch to light mode
+  features:
+    - content.code.copy
+    - content.code.annotate
+    - navigation.instant
+    - navigation.sections
+    - navigation.expand
+    - search.highlight
+    - toc.follow
 
-  # Typography
-  font:
-    text: Roboto
-    code: Roboto Mono
+nav:
+  - Home: index.md
+  - Getting Started: getting-started.md
+  - API Reference: api.md
+  - Configuration: configuration.md
+  - Security: security.md
+  - Custom Plugins: plugins.md
+  - For AI Agents: ai-agents.md
+  - Migration from v1: migration.md
+  - Changelog: changelog.md
 
-  # Logo and favicon (optional - will use defaults if missing)
-  # logo: assets/logo.png
-  # favicon: assets/favicon.png
-
-# Plugins
 plugins:
-  - search:
-      separator: '[\s\-,:!=\[\]()"`/]+|\.(?!\d)|&[lg]t;|(?!\b)(?=[A-Z][a-z])'
+  - search
   - mkdocstrings:
       handlers:
         python:
           options:
-            docstring_style: google
-            show_source: true
+            show_source: false
             show_root_heading: true
-            show_symbol_type_heading: true
-            show_symbol_type_toc: true
-            signature_crossrefs: true
-            merge_init_into_class: true
-            show_submodules: true
+            heading_level: 3
 
-hooks:
-  - tools/mkdocs_hooks.py
-
-# Extensions
 markdown_extensions:
-  - abbr
   - admonition
-  - attr_list
-  - def_list
-  - footnotes
-  - md_in_html
-  - toc:
-      permalink: true
-  - pymdownx.arithmatex:
-      generic: true
-  - pymdownx.betterem:
-      smart_enable: all
-  - pymdownx.caret
   - pymdownx.details
-  - pymdownx.emoji
+  - pymdownx.superfences
   - pymdownx.highlight:
       anchor_linenums: true
-      line_spans: __span
-      pygments_lang_class: true
   - pymdownx.inlinehilite
-  - pymdownx.keys
-  - pymdownx.magiclink:
-      repo_url_shorthand: true
-      user: danielendler
-      repo: datason
-  - pymdownx.mark
-  - pymdownx.smartsymbols
-  - pymdownx.superfences:
-      custom_fences:
-        - name: mermaid
-          class: mermaid
-          # format disabled due to YAML issues
-          # format: !!python/name:pymdownx.superfences.fence_code_format
   - pymdownx.tabbed:
       alternate_style: true
-  - pymdownx.tasklist:
-      custom_checkbox: true
-  - pymdownx.tilde
-
-# Fixed navigation using files that actually exist
-nav:
-  - Home: index.md
-  - Supported Types: supported-types.md
-
-  # User Guide Section
-  - User Guide:
-    - Quick Start: user-guide/quick-start.md
-    - Modern API Guide: user-guide/modern-api-guide.md
-    - Examples Gallery: user-guide/examples/index.md
-
-  # Features Section (using existing feature docs)
-  - Features:
-    - Overview: features/index.md
-    - File Operations: features/file-operations.md
-    - API Integration: features/api-integration.md
-    - Core Serialization: features/core/index.md
-    - Configuration: features/configuration/index.md
-    - Advanced Types: features/advanced-types/index.md
-    - Date/Time Handling: features/datetime/index.md
-    - Chunked Processing: features/chunked-processing/index.md
-    - Template Deserialization: features/template-deserialization/index.md
-    - ML/AI Integration: features/ml-ai/index.md
-    - Model Serving Integration:
-      - Overview: features/model-serving/index.md
-      - Architecture Overview: features/model-serving/architecture-overview.md
-      - Production Patterns: features/model-serving/production-patterns.md
-    - Pandas Integration: features/pandas/index.md
-    - Pickle Bridge: features/pickle-bridge/index.md
-    - Performance: features/performance/index.md
-    - Caching: features/caching/index.md
-    - Data Privacy & Redaction: features/redaction.md
-    - Migration Guide: features/migration/index.md
-    - Data Utilities: features/data-utilities/index.md
-    - Data Utilities Summary: features/data-utilities/SUMMARY.md
-    - Data Integrity & Verification: integrity.md
-
-  # AI Developer Guide Section
-  - AI Developer Guide:
-    - Overview: ai-guide/overview.md
-
-  # API Reference Section
-  - API Reference:
-    - Overview: api/index.md
-    - JSON Module Replacement: api/json-replacement.md
-    - Modern API Functions:
-      - Overview: api/modern-api.md
-      - Serialization Functions: api/modern-serialization.md
-      - Deserialization Functions: api/modern-deserialization.md
-      - Utility Functions: api/modern-utilities.md
-    - Traditional API Functions:
-      - Core Functions: api/core-functions.md
-      - Configuration System: api/configuration.md
-      - Chunked & Streaming: api/chunked-streaming.md
-      - Template System: api/template-system.md
-    - Specialized Features:
-      - ML Integration: api/ml-integration.md
-      - Data Privacy: api/data-privacy.md
-      - Integrity Functions: api/integrity.md
-      - Type System: api/type-system.md
-      - Utilities: api/utilities.md
-    - Reference:
-      - Exceptions: api/exceptions.md
-      - Enums & Constants: api/enums-constants.md
-      - Complete API Reference: api/complete-reference.md
-
-  # Advanced Topics Section
-  - Advanced Topics:
-    - Performance Benchmarks: advanced/benchmarks.md
-    - Core Serialization Strategy: core-serialization-strategy.md
-    - Performance Improvements: performance-improvements.md
-
-  # Reference Documentation
-  - Reference:
-    - Feature Matrix: FEATURE_MATRIX.md
-    - Supported Types: supported-types.md
-    - AI Usage Guide: AI_USAGE_GUIDE.md
-
-  # Community & Development Section
-  - Community & Development:
-    - Contributing Guide: community/contributing.md
-    - Release Notes: community/changelog.md
-    - Full Changelog: CHANGELOG.md
-    - Roadmap: community/roadmap.md
-    - Security Policy: community/security.md
-
-  # Development Documentation
-  - Development:
-    - Tooling Guide: TOOLING_GUIDE.md
-    - CI/CD Pipeline: CI_PIPELINE_GUIDE.md
-    - CI Performance: CI_PERFORMANCE.md
-    - External Benchmark Setup: EXTERNAL_BENCHMARK_SETUP.md
-    - Testing & Integration: TESTING_INTEGRATION_IMPROVEMENTS.md
-    - Build & Publish: BUILD_PUBLISH.md
-    - Release Management: RELEASE_MANAGEMENT.md
-    - Plugin Testing: PLUGIN_TESTING.md
-    - GitHub Pages Setup: GITHUB_PAGES_SETUP.md
-    - Dependabot Guide: DEPENDABOT_GUIDE.md
-    - Idempotency Implementation Plan: idempotency-implementation-plan.md
-
-    - Documentation Fix Summary: DOCUMENTATION_FIX_SUMMARY.md
-    - Documentation Restructure Summary: DOCUMENTATION_RESTRUCTURE_SUMMARY.md
-    - Integration Feedback Analysis: INTEGRATION_FEEDBACK_ANALYSIS.md
-    - Pipeline Audit: PIPELINE_AUDIT.md
-    - Release Workflows: RELEASE_WORKFLOWS.md
-    - Roadmap Discussion: ROADMAP_DISCUSSION.md
-    - Roadmap Updated: ROADMAP_UPDATED.md
-    - Deserialization Details: features/deserialization.md
-    - Pydantic/Marshmallow Integration: features/pydantic-marshmallow-integration.md
-    - API Modernization: migration/api-modernization.md
-# Extra
-  - Internal Notes:
-    - Caching Guide: internal-notes/CACHING_GUIDE.md
-    - Consolidation Completed: internal-notes/CONSOLIDATION_COMPLETED.md
-    - Coverage Analysis Strategy: internal-notes/COVERAGE_ANALYSIS_STRATEGY.md
-    - Coverage Strategy Results: internal-notes/COVERAGE_STRATEGY_RESULTS.md
-    - Deserializer Optimization: internal-notes/DESERIALIZER_OPTIMIZATION_SUMMARY.md
-    - Enhanced Type Plan: internal-notes/ENHANCED_TYPE_PLAN.md
-    - Final Consolidation Plan: internal-notes/FINAL_CONSOLIDATION_PLAN.md
-    - Legacy Cleanup Implementation: internal-notes/LEGACY_CLEANUP_IMPLEMENTATION.md
-    - Module-based Consolidation: internal-notes/MODULE_BASED_CONSOLIDATION.md
-    - Phase 3 Implementation Summary: internal-notes/PHASE_3_IMPLEMENTATION_SUMMARY.md
-    - Progress Summary: internal-notes/PROGRESS_SUMMARY.md
-    - Proper Test Reorganization: internal-notes/PROPER_TEST_REORGANIZATION.md
-    - Proper Test Structure: internal-notes/PROPER_TEST_STRUCTURE.md
-    - PR Description Performance: internal-notes/PR_DESCRIPTION_PERFORMANCE.md
-    - Roadmap Analysis & Legacy Cleanup: internal-notes/ROADMAP_ANALYSIS_AND_LEGACY_CLEANUP.md
-    - Test Cleanup Plan: internal-notes/TEST_CLEANUP_PLAN.md
-    - Test Cleanup Summary: internal-notes/TEST_CLEANUP_SUMMARY.md
-extra:
-  version:
-    provider: mike
-  social:
-    - icon: fontawesome/brands/github
-      link: https://github.com/danielendler/datason
-      name: datason on GitHub
-    - icon: fontawesome/brands/python
-      link: https://pypi.org/project/datason/
-      name: PyPI
-    - icon: fontawesome/solid/book
-      link: https://datason.readthedocs.io/
-      name: Documentation
-
-  generator: false
-
-  # Analytics (update with your tracking ID)
-  analytics:
-    provider: google
-    property: G-XXXXXXXXXX
-    feedback:
-      title: Was this page helpful?
-      ratings:
-        - icon: material/emoticon-happy-outline
-          name: This page was helpful
-          data: 1
-          note: >-
-            Thanks for your feedback!
-        - icon: material/emoticon-sad-outline
-          name: This page could be improved
-          data: 0
-          note: >-
-            Thanks for your feedback! Help us improve this page by
-            <a href="https://github.com/danielendler/datason/issues/new/?title=[Docs]" target="_blank" rel="noopener">opening an issue</a>.
-
-  # Homepage override
-  homepage: https://github.com/danielendler/datason
-
-# Additional CSS/JS
-extra_css:
-  - stylesheets/extra.css
-
-extra_javascript:
-  - javascripts/mathjax.js
-  - https://polyfill.io/v3/polyfill.min.js?features=es6
-  - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
+  - toc:
+      permalink: true
+  - attr_list
+  - def_list
+  - tables

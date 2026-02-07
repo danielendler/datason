@@ -1,173 +1,234 @@
-"""
-Global test configuration for comprehensive test isolation and state management.
+"""Root conftest for datason v2 tests.
 
-This module ensures proper test isolation by clearing all caches and resetting
-state between tests to prevent interference in CI environments.
+Single conftest with explicit fixtures. No global autouse —
+prefer proper isolation in each test.
+
+Includes hypothesis custom strategies and profile configuration.
 """
+
+from __future__ import annotations
+
+import datetime as dt
+import os
+import pathlib
+from decimal import Decimal
+from typing import Any
 
 import pytest
+from hypothesis import settings
+from hypothesis import strategies as st
+
+from datason._cache import type_cache
+from datason._registry import default_registry
+
+# Optional imports — numpy/pandas may not be installed (e.g. Python 3.10/3.13 CI)
+try:
+    import numpy as np
+
+    _HAS_NUMPY = True
+except ImportError:
+    np = None  # type: ignore[assignment]
+    _HAS_NUMPY = False
+
+try:
+    import pandas as pd
+
+    _HAS_PANDAS = True
+except ImportError:
+    pd = None  # type: ignore[assignment]
+    _HAS_PANDAS = False
+
+# =========================================================================
+# Hypothesis profiles
+# =========================================================================
+
+settings.register_profile("ci", max_examples=200, deadline=None)
+settings.register_profile("dev", max_examples=20, deadline=500)
+settings.load_profile(os.getenv("HYPOTHESIS_PROFILE", "dev"))
 
 
-@pytest.fixture(autouse=True, scope="function")
-def ensure_clean_test_state():
-    """
-    Ensure complete test isolation by clearing all caches and resetting state.
+# =========================================================================
+# Pytest fixtures
+# =========================================================================
 
-    This fixture runs automatically before and after every test to prevent:
-    - Cache contamination between tests
-    - ML import state persistence
-    - Configuration state leakage
-    - Global variable interference
-    """
-    # Clear all state before test
-    _clear_all_datason_state()
 
+@pytest.fixture()
+def clean_state():
+    """Reset all datason global state. Use explicitly in tests that need it."""
+    type_cache.clear()
+    default_registry.clear()
     yield
-
-    # Clear all state after test
-    _clear_all_datason_state()
-
-
-def _clear_all_datason_state():
-    """Clear all possible datason state and caches."""
-    try:
-        import datason
-
-        # Clear all caches using the comprehensive clear function
-        datason.clear_all_caches()
-
-        # Additional cleanup for ML state - PROPERLY reinitialize lazy imports
-        try:
-            from datason import ml_serializers
-
-            # Don't just clear - reinitialize with the proper structure!
-            if hasattr(ml_serializers, "_LAZY_IMPORTS"):
-                ml_serializers._LAZY_IMPORTS.clear()
-                # Reinitialize with ALL the required keys that are actually used in the code
-                ml_serializers._LAZY_IMPORTS.update(
-                    {
-                        "torch": None,
-                        "tensorflow": None,
-                        "jax": None,
-                        "jnp": None,  # JAX numpy alias
-                        "sklearn": None,
-                        "BaseEstimator": None,  # sklearn base estimator class
-                        "scipy": None,
-                        "PIL_Image": None,  # This was the missing key causing the KeyError!
-                        "PIL": None,
-                        "transformers": None,
-                        "catboost": None,
-                        "keras": None,
-                        "optuna": None,
-                        "plotly": None,
-                        "polars": None,
-                        "pandas": None,
-                        "numpy": None,
-                    }
-                )
-        except ImportError:
-            pass
-
-        # Reset global configuration state
-        try:
-            from datason.config import SerializationConfig
-
-            datason.set_default_config(SerializationConfig())
-        except (ImportError, AttributeError):
-            pass
-
-        # Ensure ML serializer is properly restored
-        try:
-            import datason.core_new
-            from datason.ml_serializers import detect_and_serialize_ml_object
-
-            datason.core_new._ml_serializer = detect_and_serialize_ml_object
-        except (ImportError, AttributeError):
-            # If ML serializers are not available, set to None
-            try:
-                import datason.core_new
-
-                datason.core_new._ml_serializer = None
-            except ImportError:
-                pass
-
-        # Ensure ML type handlers are properly registered
-        try:
-            from datason.ml_type_handlers import register_all_ml_handlers
-
-            register_all_ml_handlers()
-        except ImportError:
-            pass
-
-    except ImportError:
-        # datason not available, nothing to clear
-        pass
+    type_cache.clear()
+    default_registry.clear()
 
 
-@pytest.fixture
-def ml_config():
-    """Provide a fresh ML configuration for ML-specific tests."""
-    try:
-        from datason.config import get_ml_config
-
-        return get_ml_config()
-    except ImportError:
-        # Fallback if config module is not available
-        return None
-
-
-@pytest.fixture(scope="function")
-def isolated_test_environment():
-    """Provide completely isolated test environment for critical tests."""
-    # Pre-test cleanup
-    _clear_all_datason_state()
-
-    yield
-
-    # Post-test cleanup
-    _clear_all_datason_state()
+@pytest.fixture()
+def sample_data() -> dict:
+    """Provide a basic nested dict for serialization tests."""
+    return {
+        "name": "test",
+        "count": 42,
+        "ratio": 3.14,
+        "active": True,
+        "nothing": None,
+        "tags": ["a", "b", "c"],
+        "nested": {"x": 1, "y": 2},
+    }
 
 
-@pytest.fixture(autouse=True, scope="session")
-def configure_test_environment():
-    """Configure the test environment for optimal CI performance."""
-    try:
-        import os
+# =========================================================================
+# Hypothesis strategies: stdlib types
+# =========================================================================
 
-        # Set environment variables for reduced ML library verbosity
-        os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "3")  # TensorFlow
-        os.environ.setdefault("TF_ENABLE_ONEDNN_OPTS", "0")
-        os.environ.setdefault("CUDA_VISIBLE_DEVICES", "")  # Disable CUDA
 
-        # Suppress Keras logging
-        os.environ.setdefault("TF_KERAS_LOG_LEVEL", "ERROR")
+@st.composite
+def st_datetimes(draw: Any) -> dt.datetime:
+    """Datetimes in a range safe for UNIX timestamp roundtrip."""
+    return draw(
+        st.datetimes(min_value=dt.datetime(1970, 1, 2), max_value=dt.datetime(9999, 12, 31))  # noqa: DTZ001
+    )
 
-        # Try to configure Keras logging directly
-        try:
-            import tensorflow as tf
 
-            tf.get_logger().setLevel("ERROR")
-            tf.autograph.set_verbosity(0)
-        except ImportError:
-            pass
+@st.composite
+def st_dates(draw: Any) -> dt.date:
+    """Dates in the full valid range."""
+    return draw(st.dates(min_value=dt.date(1, 1, 1), max_value=dt.date(9999, 12, 31)))
 
-        try:
-            import keras
 
-            keras.utils.disable_interactive_logging()
-        except (ImportError, AttributeError):
-            pass
+@st.composite
+def st_times(draw: Any) -> dt.time:
+    """Arbitrary time objects."""
+    return draw(st.times())
 
-        # Suppress warnings
-        import warnings
 
-        warnings.filterwarnings("ignore", category=DeprecationWarning)
-        warnings.filterwarnings("ignore", category=FutureWarning)
-        warnings.filterwarnings("ignore", category=UserWarning, module="tensorflow")
-        warnings.filterwarnings("ignore", category=UserWarning, module="torch")
-        warnings.filterwarnings("ignore", category=UserWarning, module="keras")
+@st.composite
+def st_timedeltas(draw: Any) -> dt.timedelta:
+    """Timedeltas from integer seconds to avoid float precision loss."""
+    seconds = draw(st.integers(min_value=-86400 * 999, max_value=86400 * 999))
+    return dt.timedelta(seconds=seconds)
 
-    except ImportError:
-        pass
 
-    yield
+@st.composite
+def st_decimals_finite(draw: Any) -> Decimal:
+    """Finite decimals (no NaN/Inf/sNaN)."""
+    return draw(st.decimals(allow_nan=False, allow_infinity=False, places=6))
+
+
+@st.composite
+def st_paths(draw: Any) -> pathlib.PurePosixPath:
+    """PurePosixPath from random alphanumeric parts."""
+    parts = draw(
+        st.lists(
+            st.text(
+                alphabet=st.characters(whitelist_categories=("L", "N"), whitelist_characters="-_"),
+                min_size=1,
+                max_size=20,
+            ),
+            min_size=1,
+            max_size=5,
+        )
+    )
+    return pathlib.PurePosixPath("/", *parts)
+
+
+# =========================================================================
+# Hypothesis strategies: numpy types (only when numpy is installed)
+# =========================================================================
+
+if _HAS_NUMPY:
+    _NP_DTYPES = [np.float64, np.float32, np.int64, np.int32]
+
+    @st.composite
+    def st_numpy_arrays(draw: Any, dtype: Any = None, ndim: int | None = None) -> Any:
+        """Numpy arrays with controlled shape and dtype (no NaN)."""
+        if dtype is None:
+            dtype = draw(st.sampled_from(_NP_DTYPES))
+        if ndim is None:
+            ndim = draw(st.integers(min_value=1, max_value=3))
+        shape = tuple(draw(st.lists(st.integers(min_value=1, max_value=8), min_size=ndim, max_size=ndim)))
+
+        if np.issubdtype(dtype, np.floating):
+            elements = st.floats(min_value=-1e6, max_value=1e6, allow_nan=False, allow_infinity=False)
+        else:
+            info = np.iinfo(dtype)
+            elements = st.integers(min_value=int(info.min), max_value=int(info.max))
+
+        flat = draw(st.lists(elements, min_size=int(np.prod(shape)), max_size=int(np.prod(shape))))
+        return np.array(flat, dtype=dtype).reshape(shape)
+
+
+# =========================================================================
+# Hypothesis strategies: pandas types (only when pandas is installed)
+# =========================================================================
+
+if _HAS_PANDAS:
+
+    @st.composite
+    def st_dataframes(draw: Any) -> Any:
+        """Small DataFrames with 1-5 columns, 1-20 rows."""
+        n_cols = draw(st.integers(min_value=1, max_value=5))
+        n_rows = draw(st.integers(min_value=1, max_value=20))
+        data: dict[str, list[Any]] = {}
+        for i in range(n_cols):
+            col_type = draw(st.sampled_from(["int", "float", "str"]))
+            name = f"col_{i}"
+            match col_type:
+                case "int":
+                    data[name] = draw(
+                        st.lists(st.integers(min_value=-1000, max_value=1000), min_size=n_rows, max_size=n_rows)
+                    )
+                case "float":
+                    data[name] = draw(
+                        st.lists(
+                            st.floats(min_value=-1e6, max_value=1e6, allow_nan=False, allow_infinity=False),
+                            min_size=n_rows,
+                            max_size=n_rows,
+                        )
+                    )
+                case "str":
+                    data[name] = draw(st.lists(st.text(min_size=1, max_size=10), min_size=n_rows, max_size=n_rows))
+        return pd.DataFrame(data)
+
+    @st.composite
+    def st_series(draw: Any) -> Any:
+        """Pandas Series with 1-20 elements."""
+        n = draw(st.integers(min_value=1, max_value=20))
+        name = draw(st.text(min_size=1, max_size=10) | st.none())
+        values = draw(
+            st.lists(
+                st.floats(min_value=-1e6, max_value=1e6, allow_nan=False, allow_infinity=False),
+                min_size=n,
+                max_size=n,
+            )
+        )
+        return pd.Series(values, name=name)
+
+    @st.composite
+    def st_pandas_timestamps(draw: Any) -> Any:
+        """Pandas Timestamps in a safe range."""
+        d = draw(st.datetimes(min_value=dt.datetime(1970, 1, 2), max_value=dt.datetime(2262, 4, 11)))  # noqa: DTZ001
+        return pd.Timestamp(d)
+
+
+# =========================================================================
+# Hypothesis strategies: mixed types
+# =========================================================================
+
+
+@st.composite
+def st_mixed_serializable_data(draw: Any) -> dict:
+    """Dict with a random mix of basic + plugin types."""
+    data: dict[str, Any] = {
+        "str_val": draw(st.text(max_size=50)),
+        "int_val": draw(st.integers(min_value=-10000, max_value=10000)),
+        "float_val": draw(st.floats(allow_nan=False, allow_infinity=False, min_value=-1e6, max_value=1e6)),
+    }
+    if draw(st.booleans()):
+        data["datetime_val"] = draw(st_datetimes())
+    if draw(st.booleans()):
+        data["uuid_val"] = draw(st.uuids())
+    if draw(st.booleans()):
+        data["decimal_val"] = Decimal(
+            str(draw(st.floats(min_value=-1e6, max_value=1e6, allow_nan=False, allow_infinity=False)))
+        )
+    return data

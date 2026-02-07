@@ -1,0 +1,29 @@
+# datason
+
+> datason is a zero-dependency Python library that serializes any Python object to JSON and back. It is a drop-in replacement for `json.dumps`/`json.loads` that handles datetime, UUID, Decimal, Path, NumPy arrays, Pandas DataFrames, PyTorch tensors, TensorFlow tensors, and scikit-learn models out of the box. Install with `pip install datason`. Requires Python 3.10+.
+
+datason's API is intentionally minimal: 5 functions that mirror the stdlib `json` module. Every type beyond JSON primitives is handled by a plugin-based registry that serializes objects to `{"__datason_type__": "typename", "__datason_value__": <data>}` metadata dicts, enabling perfect round-trip fidelity.
+
+## Docs
+
+- [README](https://github.com/danielendler/datason/blob/v2/README.md): Quick start, installation, and feature overview
+- [Full LLM Reference](https://github.com/danielendler/datason/blob/v2/llms-full.txt): Complete API reference with all function signatures, config options, and code examples
+
+## API Reference
+
+- [Core API (dumps, loads, dump, load, config)](https://github.com/danielendler/datason/blob/v2/datason/_core.py): Serialization and deserialization functions
+- [Configuration](https://github.com/danielendler/datason/blob/v2/datason/_config.py): SerializationConfig dataclass, DateFormat/NanHandling/DataFrameOrient enums, preset factories
+- [Plugin Protocol](https://github.com/danielendler/datason/blob/v2/datason/_protocols.py): TypePlugin interface for extending datason with custom types
+- [Error Types](https://github.com/danielendler/datason/blob/v2/datason/_errors.py): DatasonError, SecurityError, SerializationError, DeserializationError, PluginError
+
+## Examples
+
+- [Basic Usage](https://github.com/danielendler/datason/blob/v2/examples/basic_usage.py): Drop-in json replacement, file I/O, NaN handling
+- [Type Plugins](https://github.com/danielendler/datason/blob/v2/examples/type_plugins.py): datetime, UUID, Decimal, Path, NumPy, Pandas serialization
+- [Security Features](https://github.com/danielendler/datason/blob/v2/examples/security.py): PII redaction, integrity verification
+
+## Optional
+
+- [Security: Integrity](https://github.com/danielendler/datason/blob/v2/datason/security/integrity.py): Hash and HMAC envelope for tamper detection
+- [Security: Redaction](https://github.com/danielendler/datason/blob/v2/datason/security/redaction.py): PII field and pattern redaction
+- [Plugin Registry](https://github.com/danielendler/datason/blob/v2/datason/_registry.py): Thread-safe plugin registration and priority dispatch

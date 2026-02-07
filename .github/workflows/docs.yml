@@ -1,121 +1,69 @@
-name: 📚 Documentation
+# =============================================================================
+# Datason v2 — Documentation (build + deploy to GitHub Pages)
+# =============================================================================
+
+name: Docs
 
 on:
   push:
     branches: [main]
-    paths: ['docs/**', 'mkdocs.yml', 'README.md']
+    paths: ["docs/**", "mkdocs.yml", "README.md"]
   pull_request:
     branches: [main]
-    paths: ['docs/**', 'mkdocs.yml', 'README.md']
-  workflow_dispatch:  # Allow manual triggering
+    paths: ["docs/**", "mkdocs.yml", "README.md"]
+  workflow_dispatch:
 
-# Set permissions for GitHub Pages deployment
 permissions:
   contents: read
   pages: write
   id-token: write
 
-# Allow only one concurrent deployment, skipping runs queued between the run in-progress and latest queued.
 concurrency:
-  group: "pages"
+  group: pages
   cancel-in-progress: false
 
 jobs:
-  # Build docs for preview/testing
-  build-docs:
+  build:
+    name: Build Docs
     runs-on: ubuntu-latest
     steps:
-    - name: 📥 Checkout
-      uses: actions/checkout@v5
+      - uses: actions/checkout@v5
 
-    - name: 🐍 Setup Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.11'
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
 
-    - name: 💾 Cache pip dependencies (docs)
-      uses: actions/cache@v4
-      with:
-        path: ~/.cache/pip
-        key: ${{ runner.os }}-docs-pip-${{ hashFiles('**/pyproject.toml') }}
-        restore-keys: |
-          ${{ runner.os }}-docs-pip-
-          ${{ runner.os }}-pip-
+      - run: uv python install 3.12
 
-    - name: 💾 Cache MkDocs build
-      uses: actions/cache@v4
-      with:
-        path: .cache
-        key: ${{ runner.os }}-mkdocs-${{ hashFiles('mkdocs.yml') }}-${{ hashFiles('docs/**') }}
-        restore-keys: |
-          ${{ runner.os }}-mkdocs-${{ hashFiles('mkdocs.yml') }}-
-          ${{ runner.os }}-mkdocs-
+      - run: uv sync --group docs
 
-    - name: 📦 Install dependencies
-      run: |
-        pip install -e ".[docs]"
+      - name: Build MkDocs
+        run: uv run mkdocs build --strict
 
-    - name: 🏗️ Build docs
-      run: |
-        mkdocs build --strict
+      - uses: actions/upload-artifact@v4
+        with:
+          name: documentation
+          path: site/
 
-    - name: 📤 Upload docs artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: documentation
-        path: site/
-
-  # Deploy to GitHub Pages
-  deploy-github-pages:
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: build
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
-    needs: build-docs
-
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     steps:
-    - name: 📥 Checkout
-      uses: actions/checkout@v5
+      - uses: actions/download-artifact@v4
+        with:
+          name: documentation
+          path: site/
 
-    - name: 🐍 Setup Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.11'
+      - uses: actions/configure-pages@v5
 
-    - name: 💾 Cache pip dependencies (pages)
-      uses: actions/cache@v4
-      with:
-        path: ~/.cache/pip
-        key: ${{ runner.os }}-pages-pip-${{ hashFiles('**/pyproject.toml') }}
-        restore-keys: |
-          ${{ runner.os }}-pages-pip-
-          ${{ runner.os }}-docs-pip-
-          ${{ runner.os }}-pip-
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: site/
 
-    - name: 💾 Cache MkDocs build (pages)
-      uses: actions/cache@v4
-      with:
-        path: .cache
-        key: ${{ runner.os }}-mkdocs-pages-${{ hashFiles('mkdocs.yml') }}-${{ hashFiles('docs/**') }}
-        restore-keys: |
-          ${{ runner.os }}-mkdocs-pages-${{ hashFiles('mkdocs.yml') }}-
-          ${{ runner.os }}-mkdocs-${{ hashFiles('mkdocs.yml') }}-
-          ${{ runner.os }}-mkdocs-
-
-    - name: 📦 Install dependencies
-      run: |
-        pip install -e ".[docs]"
-
-    - name: 🏗️ Build docs
-      run: |
-        mkdocs build --strict
-
-    - name: 🔧 Setup GitHub Pages
-      uses: actions/configure-pages@v5
-
-    - name: 📤 Upload Pages artifact
-      uses: actions/upload-pages-artifact@v4
-      with:
-        path: './site'
-
-    - name: 🚀 Deploy to GitHub Pages
-      id: deployment
-      uses: actions/deploy-pages@v4
+      - id: deployment
+        uses: actions/deploy-pages@v4
