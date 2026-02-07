@@ -88,7 +88,9 @@ def _deserialize_value(type_name: str, value: Any) -> Any:
             if isinstance(value, str):
                 return dt.datetime.fromisoformat(value)
             if isinstance(value, int | float):
-                return dt.datetime.fromtimestamp(value, tz=dt.timezone.utc)
+                # Detect millisecond timestamps (> year 2100 in seconds)
+                ts = value / 1000 if abs(value) > 4_102_444_800 else value
+                return dt.datetime.fromtimestamp(ts, tz=dt.timezone.utc)
             raise PluginError(f"Cannot deserialize datetime from {type(value).__name__}")
         case "date":
             if isinstance(value, str):
