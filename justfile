@@ -104,6 +104,10 @@ bench-save:
 bench-compare:
     uv run pytest tests/benchmarks/ --benchmark-only --benchmark-compare=baseline --benchmark-sort=mean
 
+# Run mutation testing (manual/targeted use)
+mutmut *ARGS:
+    uvx --from mutmut mutmut run {{ARGS}}
+
 # ============================================================
 # FULL CI PIPELINE
 # ============================================================

@@ -83,21 +83,30 @@ flags:
   # Core functionality tests
   core:
     paths:
-      - datason/core.py
-      - datason/converters.py
-      - datason/deserializers.py
+      - datason/_core.py
+      - datason/_deserialize.py
+      - datason/_registry.py
+      - datason/_types.py
   # ML integration tests
   ml:
     paths:
-      - datason/ml_serializers.py
+      - datason/plugins/torch.py
+      - datason/plugins/tensorflow.py
+      - datason/plugins/sklearn.py
+      - datason/plugins/ml_misc.py
+      - datason/plugins/scipy_sparse.py
   # Configuration system
   config:
     paths:
-      - datason/config.py
-      - datason/type_handlers.py
+      - datason/_config.py
+      - datason/_cache.py
+      - datason/_errors.py
   # Utility modules
   utils:
     paths:
-      - datason/datetime_utils.py
-      - datason/data_utils.py
-      - datason/serializers.py
+      - datason/plugins/datetime.py
+      - datason/plugins/decimal.py
+      - datason/plugins/path.py
+      - datason/plugins/uuid.py
+      - datason/plugins/numpy.py
+      - datason/plugins/pandas.py

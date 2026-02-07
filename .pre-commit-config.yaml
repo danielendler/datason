@@ -53,15 +53,14 @@ repos:
   # ============================================================================
   - repo: local
     hooks:
-      # NOTE: sync-docs and mkdocs-strict disabled until docs/ is rebuilt for v2
-      # - id: sync-docs
-      #   name: Sync documentation files to docs directory
-      #   entry: python scripts/sync_docs.py
-      #   language: python
-      #   files: >-
-      #     ^(CONTRIBUTING|SECURITY|CHANGELOG)\.md$|^docs/community/(CONTRIBUTING|SECURITY|CHANGELOG)\.md$
-      #   pass_filenames: false
-      #   always_run: false
+      - id: sync-docs
+        name: Sync documentation files to docs directory
+        entry: python scripts/sync_docs.py
+        language: python
+        files: >-
+          ^(CONTRIBUTING|SECURITY|CHANGELOG)\.md$|^docs/community/(CONTRIBUTING|SECURITY|CHANGELOG)\.md$
+        pass_filenames: false
+        always_run: false
 
       # - id: mkdocs-strict
       #   name: MkDocs strict mode check
@@ -75,6 +74,13 @@ repos:
         entry: python scripts/simple_json_check.py --staged-only
         language: python
         files: ^(datason/.*\.py|examples/.*\.py)$
+        pass_filenames: true
+
+      - id: pyright
+        name: Pyright type check
+        entry: uv run pyright --project .
+        language: system
+        files: ^(datason/.*\.py|tests/.*\.py)$
         pass_filenames: true
 
       # ============================================================================
