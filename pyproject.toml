@@ -5,11 +5,30 @@ build-backend = "hatchling.build"
 [project]
 name = "datason"
 version = "2.0.0a1"
-description = "Zero-dependency Python serialization with intelligent type handling — drop-in json replacement."
+description = "Drop-in replacement for json.dumps/json.loads that handles datetime, NumPy, Pandas, PyTorch, and 50+ Python types. Zero dependencies."
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
-keywords = ["serialization", "json", "pandas", "datetime", "numpy", "ml", "ai", "data-science"]
+keywords = [
+    "serialization",
+    "json",
+    "json-serialization",
+    "datetime-serialization",
+    "numpy-serialization",
+    "pandas-serialization",
+    "pytorch",
+    "tensorflow",
+    "scikit-learn",
+    "ml",
+    "ai",
+    "data-science",
+    "data-pipeline",
+    "type-handling",
+    "drop-in-replacement",
+    "round-trip",
+    "ai-agent",
+    "llm",
+]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
@@ -23,6 +42,8 @@ classifiers = [
     "Programming Language :: Python :: 3.13",
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Internet :: WWW/HTTP :: Dynamic Content",
+    "Topic :: System :: Archiving",
     "Typing :: Typed",
 ]
 dependencies = []

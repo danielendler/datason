@@ -1,81 +1,173 @@
 # datason
 
-> **v2 rewrite in progress** — Plugin-based architecture, Python 3.10+, zero dependencies.
+**Drop-in replacement for `json.dumps`/`json.loads` that handles datetime, NumPy, Pandas, PyTorch, and 50+ Python types. Zero dependencies.**
 
-Zero-dependency Python serialization with intelligent type handling. Drop-in `json` replacement that handles datetime, UUID, Decimal, Path, NumPy, Pandas, and more.
+```python
+import datason
+import datetime as dt
+import numpy as np
+
+# Just replace json.dumps with datason.dumps — everything else works
+datason.dumps({"ts": dt.datetime.now(), "scores": np.array([0.9, 0.1])})
+```
+
+No more `TypeError: Object of type datetime is not JSON serializable`.
 
 ## Install
 
 ```bash
-pip install datason
+pip install datason                    # Core (zero dependencies)
+pip install datason[numpy]             # + NumPy support
+pip install datason[pandas]            # + Pandas support
+pip install datason[ml]                # + PyTorch, TensorFlow, scikit-learn, SciPy
+pip install datason[all]               # Everything
 ```
+
+Requires Python 3.10+.
 
 ## Quick Start
 
 ```python
 import datason
-
-# Drop-in replacement for json.dumps / json.loads
-data = {"name": "Alice", "scores": [95.5, 87.3]}
-json_str = datason.dumps(data)
-restored = datason.loads(json_str)
-
-# Handles complex types automatically
 import datetime as dt
-import numpy as np
-import pandas as pd
+import uuid
+from decimal import Decimal
+from pathlib import Path
 
-result = datason.dumps({
-    "timestamp": dt.datetime.now(),
-    "array": np.array([1, 2, 3]),
-    "df": pd.DataFrame({"a": [1, 2], "b": [3, 4]}),
-})
+# Works exactly like json for simple data
+datason.dumps({"name": "Alice", "age": 30})
+# '{"name": "Alice", "age": 30}'
+
+# But also handles complex types that json.dumps cannot
+data = {
+    "timestamp": dt.datetime(2024, 6, 15, 10, 30),
+    "id": uuid.uuid4(),
+    "price": Decimal("19.99"),
+    "config_path": Path("/data/models"),
+}
+json_str = datason.dumps(data)
+
+# And brings them back on deserialization
+restored = datason.loads(json_str)
+assert isinstance(restored["timestamp"], dt.datetime)
+assert isinstance(restored["id"], uuid.UUID)
 ```
 
-## API
+### NumPy + Pandas
 
 ```python
-datason.dumps(obj, **config)    # -> JSON string
-datason.loads(s, **config)      # -> Python object
-datason.dump(obj, fp, **config) # -> write to file
-datason.load(fp, **config)      # -> read from file
-datason.config(**config)        # -> context manager
+import numpy as np
+import pandas as pd
+import datason
+
+# NumPy arrays serialize with shape and dtype preserved
+arr = np.array([[1.0, 2.0], [3.0, 4.0]])
+json_str = datason.dumps(arr)
+restored = datason.loads(json_str)
+assert isinstance(restored, np.ndarray)
+assert restored.shape == (2, 2)
+
+# Pandas DataFrames serialize as records by default
+df = pd.DataFrame({"name": ["Alice", "Bob"], "score": [95.5, 87.3]})
+json_str = datason.dumps(df)
+restored = datason.loads(json_str)
+assert isinstance(restored, pd.DataFrame)
 ```
 
-## Type Support
+### ML Frameworks
+
+```python
+import torch
+import datason
+
+# PyTorch tensors
+tensor = torch.randn(3, 3)
+json_str = datason.dumps({"weights": tensor})
+restored = datason.loads(json_str)
+assert isinstance(restored["weights"], torch.Tensor)
+
+# Also supports: TensorFlow tensors, scikit-learn models, SciPy sparse matrices
+```
+
+## API — 5 Functions
+
+```python
+import datason
+
+datason.dumps(obj, **config)    # Serialize to JSON string
+datason.loads(s, **config)      # Deserialize from JSON string
+datason.dump(obj, fp, **config) # Write to file
+datason.load(fp, **config)      # Read from file
+datason.config(**config)        # Context manager for temp config
+```
+
+That's the entire public API.
+
+## Supported Types
 
 | Category | Types |
 |----------|-------|
-| JSON primitives | `str`, `int`, `float`, `bool`, `None`, `dict`, `list` |
-| Stdlib | `datetime`, `date`, `time`, `timedelta`, `UUID`, `Decimal`, `complex`, `Path`, `set`, `tuple`, `frozenset` |
-| NumPy | `ndarray`, `integer`, `floating`, `bool_`, `complexfloating` |
-| Pandas | `DataFrame`, `Series`, `Timestamp`, `Timedelta` |
+| **JSON primitives** | `str`, `int`, `float`, `bool`, `None`, `dict`, `list` |
+| **Stdlib** | `datetime`, `date`, `time`, `timedelta`, `UUID`, `Decimal`, `complex`, `Path`, `set`, `tuple`, `frozenset` |
+| **NumPy** | `ndarray`, `integer`, `floating`, `bool_`, `complexfloating` |
+| **Pandas** | `DataFrame`, `Series`, `Timestamp`, `Timedelta` |
+| **PyTorch** | `Tensor` |
+| **TensorFlow** | `Tensor`, `EagerTensor` |
+| **scikit-learn** | All estimators (`LinearRegression`, `RandomForestClassifier`, etc.) |
+| **SciPy** | Sparse matrices (`csr`, `csc`, `coo`, etc.) |
 
-NumPy and Pandas are optional — install them separately if needed.
+All non-core types are optional — install the relevant extra (`numpy`, `pandas`, `ml`).
 
 ## Configuration
 
 ```python
-# Inline config
-datason.dumps(data, sort_keys=True, include_type_hints=True)
+import datason
+from datason import DateFormat, NanHandling, DataFrameOrient
 
-# Context manager
+# Inline overrides
+datason.dumps(data, sort_keys=True)
+datason.dumps(data, date_format=DateFormat.UNIX)
+datason.dumps(data, nan_handling=NanHandling.STRING)
+datason.dumps(data, include_type_hints=False)  # Smaller output, no round-trip
+
+# Context manager for scoped config
 with datason.config(sort_keys=True, nan_handling=NanHandling.STRING):
     datason.dumps(data)
 
-# Presets
-from datason._config import ml_config, api_config
+# Presets for common use cases
+from datason import ml_config, api_config, strict_config, performance_config
+
 with datason.config(**ml_config().__dict__):
-    datason.dumps(model_data)
+    datason.dumps(model_output)   # UNIX_MS dates, fallback to string
+
+with datason.config(**api_config().__dict__):
+    datason.dumps(response)       # ISO dates, sorted keys, no type hints
 ```
+
+### Config Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `date_format` | `DateFormat` | `ISO` | How to serialize datetimes: `ISO`, `UNIX`, `UNIX_MS`, `STRING` |
+| `dataframe_orient` | `DataFrameOrient` | `RECORDS` | DataFrame format: `RECORDS`, `SPLIT`, `DICT`, `LIST`, `VALUES` |
+| `nan_handling` | `NanHandling` | `NULL` | Float NaN/Inf: `NULL`, `STRING`, `KEEP`, `DROP` |
+| `include_type_hints` | `bool` | `True` | Emit type metadata for round-trip fidelity |
+| `sort_keys` | `bool` | `False` | Sort dict keys in output |
+| `max_depth` | `int` | `50` | Max nesting depth (security) |
+| `max_size` | `int` | `100_000` | Max dict/list size (security) |
+| `fallback_to_string` | `bool` | `False` | `str()` unknown types instead of raising |
+| `strict` | `bool` | `True` | Raise on unrecognized type metadata |
+| `redact_fields` | `tuple[str, ...]` | `()` | Field names to redact |
+| `redact_patterns` | `tuple[str, ...]` | `()` | Regex patterns to redact from strings |
 
 ## Security Features
 
 ### PII Redaction
 
 ```python
-# Redact sensitive fields by name (case-insensitive substring match)
-datason.dumps(user, redact_fields=("password", "key", "secret"))
+# Redact by field name (case-insensitive substring match)
+datason.dumps(user_data, redact_fields=("password", "key", "secret", "token"))
+# {"username": "alice", "password": "[REDACTED]", "api_key": "[REDACTED]"}
 
 # Redact patterns in string values (built-in: email, ssn, credit_card, phone_us, ipv4)
 datason.dumps(data, redact_patterns=("email", "ssn"))
@@ -86,7 +178,7 @@ datason.dumps(data, redact_patterns=("email", "ssn"))
 ```python
 from datason.security.integrity import wrap_with_integrity, verify_integrity
 
-# Hash-based integrity
+# Wrap with hash-based integrity envelope
 wrapped = wrap_with_integrity(datason.dumps(data))
 is_valid, payload = verify_integrity(wrapped)
 
@@ -96,28 +188,57 @@ is_valid, payload = verify_integrity(wrapped, key="secret")
 ```
 
 ### Built-in Limits
-
-- **Max depth**: 50 (prevents stack overflow)
-- **Max size**: 100,000 items (prevents memory exhaustion)
+- **Max depth**: 50 (prevents stack overflow from nested data)
+- **Max size**: 100,000 items per dict/list (prevents memory exhaustion)
 - **Circular reference detection** (prevents infinite loops)
 
-## Architecture
+All limits raise `SecurityError` and are configurable.
 
-Plugin-based design where every non-JSON type is handled by a registered `TypePlugin`:
+## How It Works
+
+datason uses a plugin-based architecture. Every type beyond JSON primitives is handled by a `TypePlugin` registered in a priority-sorted registry:
 
 ```
-datason/
-  _core.py          # Serialize engine (dumps/dump)
-  _deserialize.py   # Deserialize engine (loads/load)
-  _config.py        # SerializationConfig dataclass
-  _registry.py      # Plugin dispatch
-  plugins/           # datetime, uuid, decimal, path, numpy, pandas
-  security/          # redaction, integrity
+Your object --> dumps() --> Plugin registry --> Type-specific serializer --> JSON
+JSON string --> loads() --> Plugin registry --> Type-specific deserializer --> Your object
 ```
+
+Type metadata is embedded as `{"__datason_type__": "datetime", "__datason_value__": "2024-01-15T10:30:00"}`, enabling lossless round-trips.
+
+### Writing a Custom Plugin
+
+```python
+from datason._protocols import TypePlugin, SerializeContext, DeserializeContext
+from datason._registry import default_registry
+from datason._types import TYPE_METADATA_KEY, VALUE_METADATA_KEY
+
+class MoneyPlugin:
+    name = "money"
+    priority = 400  # 400+ for user plugins
+
+    def can_handle(self, obj):
+        return isinstance(obj, Money)
+
+    def serialize(self, obj, ctx):
+        return {TYPE_METADATA_KEY: "Money", VALUE_METADATA_KEY: {"amount": str(obj.amount), "currency": obj.currency}}
+
+    def can_deserialize(self, data):
+        return data.get(TYPE_METADATA_KEY) == "Money"
+
+    def deserialize(self, data, ctx):
+        v = data[VALUE_METADATA_KEY]
+        return Money(Decimal(v["amount"]), v["currency"])
+
+default_registry.register(MoneyPlugin())
+```
+
+## For AI Agents
+
+datason includes [`llms.txt`](llms.txt) and [`llms-full.txt`](llms-full.txt) for AI agent discoverability. The full reference contains complete API signatures, all config options, and ready-to-use code examples.
 
 ## Status
 
-This branch (`v2`) is a ground-up rewrite with 307 tests and 90%+ coverage. See [CLAUDE.md](CLAUDE.md) for architecture details and [LEARNINGS_AND_STRATEGY.md](LEARNINGS_AND_STRATEGY.md) for the v1 post-mortem.
+v2 rewrite with plugin-based architecture. 542 tests, 93% coverage, Python 3.10+.
 
 ## License
 

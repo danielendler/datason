@@ -74,17 +74,36 @@ def _deserialize_list(data: list[Any], ctx: DeserializeContext) -> list[Any]:
 
 
 def loads(s: str, **kwargs: Any) -> Any:
-    """Deserialize a JSON string to Python objects.
+    """Deserialize a JSON string back to Python objects.
 
-    Type-annotated values (with __datason_type__ metadata) are
-    reconstructed via plugins. Plain JSON is returned as-is.
+    Drop-in replacement for ``json.loads``. Values serialized with
+    ``datason.dumps`` that contain ``__datason_type__`` metadata are
+    automatically reconstructed to their original types (datetime,
+    UUID, NumPy array, DataFrame, etc.).
 
     Args:
         s: JSON string to deserialize.
-        **kwargs: Override SerializationConfig fields inline.
+        **kwargs: Override SerializationConfig fields inline
+            (strict, fallback_to_string, etc.).
 
     Returns:
-        Deserialized Python object.
+        Deserialized Python object with types reconstructed.
+
+    Raises:
+        SecurityError: If depth limit is exceeded.
+        DeserializationError: If type metadata is unrecognized and strict=True.
+
+    Examples::
+
+        >>> import datason
+        >>> datason.loads('{"name": "Alice", "age": 30}')
+        {'name': 'Alice', 'age': 30}
+
+        >>> import datetime as dt
+        >>> original = {"ts": dt.datetime(2024, 1, 15)}
+        >>> restored = datason.loads(datason.dumps(original))
+        >>> isinstance(restored["ts"], dt.datetime)
+        True
     """
     config = _resolve_config(kwargs)
     ctx = DeserializeContext(config=config)
@@ -93,14 +112,23 @@ def loads(s: str, **kwargs: Any) -> Any:
 
 
 def load(fp: IOBase, **kwargs: Any) -> Any:
-    """Deserialize from a file-like object.
+    """Read a JSON file and deserialize back to Python objects.
+
+    Drop-in replacement for ``json.load``.
 
     Args:
         fp: File-like object with a read() method.
         **kwargs: Override SerializationConfig fields inline.
 
     Returns:
-        Deserialized Python object.
+        Deserialized Python object with types reconstructed.
+
+    Examples::
+
+        >>> import datason, io
+        >>> buf = io.StringIO('{"key": "value"}')
+        >>> datason.load(buf)
+        {'key': 'value'}
     """
     config = _resolve_config(kwargs)
     ctx = DeserializeContext(config=config)

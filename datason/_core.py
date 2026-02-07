@@ -123,14 +123,32 @@ def _serialize_sequence(obj: Any, ctx: SerializeContext) -> list[Any]:
 
 
 def dumps(obj: Any, **kwargs: Any) -> str:
-    """Serialize obj to a JSON string.
+    """Serialize any Python object to a JSON string.
+
+    Drop-in replacement for ``json.dumps`` that handles datetime, UUID,
+    Decimal, Path, NumPy, Pandas, PyTorch, TensorFlow, and scikit-learn
+    objects automatically.
 
     Args:
         obj: Any Python object to serialize.
-        **kwargs: Override SerializationConfig fields inline.
+        **kwargs: Override SerializationConfig fields inline
+            (sort_keys, date_format, nan_handling, include_type_hints,
+            fallback_to_string, redact_fields, redact_patterns, etc.).
 
     Returns:
         JSON string representation of obj.
+
+    Raises:
+        SecurityError: If depth/size limits exceeded or circular refs detected.
+        SerializationError: If type is unknown and fallback_to_string is False.
+
+    Examples::
+
+        >>> import datason
+        >>> datason.dumps({"name": "Alice", "age": 30})
+        '{"name": "Alice", "age": 30}'
+        >>> datason.dumps({"z": 1, "a": 2}, sort_keys=True)
+        '{"a": 2, "z": 1}'
     """
     config = _resolve_config(kwargs)
     ctx = SerializeContext(config=config)
@@ -143,12 +161,22 @@ def dumps(obj: Any, **kwargs: Any) -> str:
 
 
 def dump(obj: Any, fp: IOBase, **kwargs: Any) -> None:
-    """Serialize obj and write to a file-like object.
+    """Serialize any Python object and write JSON to a file.
+
+    Drop-in replacement for ``json.dump``.
 
     Args:
         obj: Any Python object to serialize.
         fp: File-like object with a write() method.
         **kwargs: Override SerializationConfig fields inline.
+
+    Examples::
+
+        >>> import datason, io
+        >>> buf = io.StringIO()
+        >>> datason.dump({"key": "value"}, buf)
+        >>> buf.getvalue()
+        '{"key": "value"}'
     """
     config = _resolve_config(kwargs)
     ctx = SerializeContext(config=config)
@@ -163,11 +191,28 @@ def dump(obj: Any, fp: IOBase, **kwargs: Any) -> None:
 
 @contextmanager
 def config(**kwargs: Any):  # noqa: ANN201
-    """Context manager to set active SerializationConfig.
+    """Context manager to temporarily set serialization config.
 
-    Usage:
-        with datason.config(sort_keys=True, nan_handling=NanHandling.STRING):
-            datason.dumps(data)
+    Thread-safe via ``contextvars.ContextVar``. Each thread/async task
+    gets its own config scope.
+
+    Args:
+        **kwargs: Any SerializationConfig field to override.
+
+    Yields:
+        The active SerializationConfig instance.
+
+    Examples::
+
+        >>> import datason
+        >>> with datason.config(sort_keys=True):
+        ...     datason.dumps({"z": 1, "a": 2})
+        '{"a": 2, "z": 1}'
+
+        >>> from datason import NanHandling
+        >>> with datason.config(nan_handling=NanHandling.STRING):
+        ...     datason.dumps({"v": float("nan")})
+        '{"v": "nan"}'
     """
     new_config = SerializationConfig(**kwargs)
     token = _active_config.set(new_config)
