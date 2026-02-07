@@ -153,14 +153,16 @@ def load(fp: IOBase, **kwargs: Any) -> Any:
 
 
 _CONFIG_FIELDS = frozenset(SerializationConfig.__dataclass_fields__.keys())
-_JSON_LOADS_KWARGS = frozenset({
-    "cls",
-    "object_hook",
-    "parse_float",
-    "parse_int",
-    "parse_constant",
-    "object_pairs_hook",
-})
+_JSON_LOADS_KWARGS = frozenset(
+    {
+        "cls",
+        "object_hook",
+        "parse_float",
+        "parse_int",
+        "parse_constant",
+        "object_pairs_hook",
+    }
+)
 
 
 def _validate_load_kwargs(kwargs: dict[str, Any], *, func_name: str) -> None:
