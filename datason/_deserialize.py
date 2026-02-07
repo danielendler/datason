@@ -53,9 +53,7 @@ def _deserialize_dict(data: dict[str, Any], ctx: DeserializeContext) -> Any:
         raw_value = data.get(VALUE_METADATA_KEY)
         if not isinstance(raw_value, list):
             if ctx.config.strict:
-                raise DeserializationError(
-                    f"Cannot deserialize {type_name}: expected list in {VALUE_METADATA_KEY}."
-                )
+                raise DeserializationError(f"Cannot deserialize {type_name}: expected list in {VALUE_METADATA_KEY}.")
             return data
         child = ctx.child()
         items = [_deserialize_recursive(item, child) for item in raw_value]

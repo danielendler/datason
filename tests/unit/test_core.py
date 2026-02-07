@@ -115,6 +115,7 @@ class TestJsonCompatibilityArgs:
         value = datason.loads("1.25", parse_float=str)
         assert value == "1.25"
 
+
 class TestNanHandling:
     """Test NaN and Infinity handling."""
 

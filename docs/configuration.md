@@ -14,6 +14,7 @@ with datason.config(sort_keys=True):
 
 # 3. Presets
 from datason import ml_config
+
 with datason.config(**ml_config().__dict__):
     datason.dumps(data)
 ```
@@ -67,10 +68,10 @@ Controls how `float('nan')` and `float('inf')` are serialized:
 ```python
 from datason import NanHandling
 
-datason.dumps({"v": float("nan")}, nan_handling=NanHandling.NULL)    # null
+datason.dumps({"v": float("nan")}, nan_handling=NanHandling.NULL)  # null
 datason.dumps({"v": float("nan")}, nan_handling=NanHandling.STRING)  # "NaN"
-datason.dumps({"v": float("nan")}, nan_handling=NanHandling.KEEP)    # NaN (invalid JSON!)
-datason.dumps({"v": float("nan")}, nan_handling=NanHandling.DROP)    # null
+datason.dumps({"v": float("nan")}, nan_handling=NanHandling.KEEP)  # NaN (invalid JSON!)
+datason.dumps({"v": float("nan")}, nan_handling=NanHandling.DROP)  # null
 ```
 
 ## DataFrameOrient

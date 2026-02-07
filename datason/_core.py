@@ -21,19 +21,17 @@ from .security.redaction import redact_value, should_redact_field
 
 _REDACTED = "[REDACTED]"
 _CONFIG_FIELDS = frozenset(SerializationConfig.__dataclass_fields__.keys())
-_JSON_DUMPS_KWARGS = frozenset(
-    {
-        "skipkeys",
-        "ensure_ascii",
-        "check_circular",
-        "allow_nan",
-        "cls",
-        "indent",
-        "separators",
-        "default",
-        "sort_keys",
-    }
-)
+_JSON_DUMPS_KWARGS = frozenset({
+    "skipkeys",
+    "ensure_ascii",
+    "check_circular",
+    "allow_nan",
+    "cls",
+    "indent",
+    "separators",
+    "default",
+    "sort_keys",
+})
 
 
 def _serialize_recursive(obj: Any, ctx: SerializeContext) -> Any:
