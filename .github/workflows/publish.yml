@@ -38,8 +38,7 @@ jobs:
       - name: Verify package
         run: |
           uvx twine check dist/*
-          uv pip install dist/*.whl --system
-          python -c "import datason; print(f'OK: datason imported')"
+          uv run --with dist/*.whl python -c "import datason; print('OK: datason imported')"
 
       - uses: actions/upload-artifact@v4
         with:

@@ -44,9 +44,9 @@ jobs:
             exit 1
           fi
 
-          # Detect pre-release
+          # Detect pre-release (PEP 440: a1, b1, rc1, dev1, alpha, beta)
           IS_PRE="false"
-          [[ "$VERSION" =~ (alpha|beta|rc|dev) ]] && IS_PRE="true"
+          [[ "$VERSION" =~ (a[0-9]|b[0-9]|rc[0-9]|dev[0-9]|alpha|beta) ]] && IS_PRE="true"
 
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "is_prerelease=$IS_PRE" >> "$GITHUB_OUTPUT"
@@ -79,7 +79,7 @@ jobs:
             ## Install
 
             ```bash
-            pip install datason==${{ steps.version.outputs.version }}
+            pip install datason==$(echo "${{ steps.version.outputs.version }}" | sed 's/^v//')
             ```
           prerelease: ${{ steps.version.outputs.is_prerelease == 'true' }}
           generate_release_notes: true
