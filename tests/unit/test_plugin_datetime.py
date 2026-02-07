@@ -223,6 +223,13 @@ class TestRoundTrip:
         result = datason.loads(serialized)
         assert result == obj
 
+    def test_naive_datetime_unix_ms_roundtrip_preserves_naive(self) -> None:
+        obj = dt.datetime(2024, 1, 15, 10, 30, 0)
+        serialized = datason.dumps(obj, date_format=DateFormat.UNIX_MS)
+        result = datason.loads(serialized)
+        assert result == obj
+        assert result.tzinfo is None
+
     def test_datetime_in_dict(self) -> None:
         data = {"created": dt.datetime(2024, 1, 15, 10, 30), "name": "test"}
         serialized = datason.dumps(data)

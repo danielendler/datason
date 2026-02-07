@@ -55,7 +55,7 @@ class DatetimePlugin:
         return _deserialize_value(type_name, value)
 
 
-def _serialize_value(obj: Any, fmt: DateFormat) -> str | float:
+def _serialize_value(obj: Any, fmt: DateFormat) -> str | float | dict[str, Any]:
     """Serialize a datetime-family object according to the format config."""
     if isinstance(obj, dt.timedelta):
         return obj.total_seconds()
@@ -69,10 +69,14 @@ def _serialize_value(obj: Any, fmt: DateFormat) -> str | float:
             return obj.isoformat()
         case DateFormat.UNIX:
             if isinstance(obj, dt.datetime):
+                if obj.tzinfo is None:
+                    return {"timestamp": obj.timestamp(), "naive": True}
                 return obj.timestamp()
             return obj.isoformat()
         case DateFormat.UNIX_MS:
             if isinstance(obj, dt.datetime):
+                if obj.tzinfo is None:
+                    return {"timestamp": obj.timestamp() * 1000, "naive": True}
                 return obj.timestamp() * 1000
             return obj.isoformat()
         case DateFormat.STRING:
@@ -87,6 +91,15 @@ def _deserialize_value(type_name: str, value: Any) -> Any:
         case "datetime":
             if isinstance(value, str):
                 return dt.datetime.fromisoformat(value)
+            if isinstance(value, dict):
+                ts_value = value.get("timestamp")
+                if not isinstance(ts_value, int | float):
+                    raise PluginError("Cannot deserialize datetime dict without numeric timestamp")
+                ts = ts_value / 1000 if abs(ts_value) > 4_102_444_800 else ts_value
+                restored = dt.datetime.fromtimestamp(ts, tz=dt.timezone.utc)
+                if value.get("naive") is True:
+                    return restored.replace(tzinfo=None)
+                return restored
             if isinstance(value, int | float):
                 # Detect millisecond timestamps (> year 2100 in seconds)
                 ts = value / 1000 if abs(value) > 4_102_444_800 else value

@@ -25,6 +25,7 @@ class TestSerializationConfig:
         assert cfg.include_type_hints is True
         assert cfg.fallback_to_string is False
         assert cfg.strict is True
+        assert cfg.allow_plugin_deserialization is True
 
     def test_frozen(self):
         """Config is immutable."""
@@ -50,6 +51,7 @@ class TestPresets:
     def test_strict_config(self):
         cfg = strict_config()
         assert cfg.strict is True
+        assert cfg.allow_plugin_deserialization is True
         assert cfg.fallback_to_string is False
 
     def test_performance_config(self):
