@@ -83,7 +83,7 @@ all = [
 
 [project.urls]
 Homepage = "https://github.com/danielendler/datason"
-Documentation = "https://datason.readthedocs.io"
+Documentation = "https://danielendler.github.io/datason/"
 Repository = "https://github.com/danielendler/datason"
 "Bug Tracker" = "https://github.com/danielendler/datason/issues"
 Discussions = "https://github.com/danielendler/datason/discussions"

@@ -2,7 +2,7 @@
 
 All notable changes to datason are documented here. This project uses [Semantic Versioning](https://semver.org/).
 
-## 2.0.0a1 (Unreleased)
+## 2.0.0a1 (2026-02-07)
 
 Complete ground-up rewrite with plugin-based architecture.
 
@@ -10,32 +10,35 @@ Complete ground-up rewrite with plugin-based architecture.
 
 - **Plugin architecture**: Every non-JSON type handled by a `TypePlugin` with priority-based dispatch
 - **5-function API**: `dumps`, `loads`, `dump`, `load`, `config` -- matches `json` module interface
-- **10 built-in plugins**: datetime, UUID, Decimal, Path, NumPy, Pandas, PyTorch, TensorFlow, scikit-learn, SciPy sparse
+- **13 built-in plugins**: datetime, UUID, Decimal, Path, NumPy, Pandas, SciPy sparse, PyTorch, TensorFlow, scikit-learn, + misc (Polars, JAX, CatBoost, Optuna, Plotly)
 - **SerializationConfig**: Frozen dataclass with `DateFormat`, `NanHandling`, `DataFrameOrient` enums
 - **Config presets**: `ml_config()`, `api_config()`, `strict_config()`, `performance_config()`
 - **Context manager**: `datason.config()` for thread-safe scoped configuration via ContextVar
-- **Security features**: PII redaction (field + pattern), integrity verification (hash/HMAC), depth/size/circular reference limits
+- **Security features**: PII redaction (field + pattern), integrity verification (hash/HMAC), pickle bridge, depth/size/circular reference limits
 - **Custom plugin support**: Implement `TypePlugin` protocol and register with `default_registry.register()`
 - **Thread safety**: `threading.Lock` on global registry, `contextvars.ContextVar` for config scoping
 - **AI agent support**: `llms.txt` and `llms-full.txt` for machine-readable API documentation
-- **MkDocs documentation**: Full documentation site with getting started, API reference, configuration, security, and plugin guides
-- **542 tests**: Unit tests, integration tests, property-based tests (Hypothesis), benchmarks
-- **93% code coverage** with branch coverage enabled
+- **MkDocs documentation**: Full documentation site deployed to GitHub Pages
+- **612 tests**: Unit, integration, property-based (Hypothesis), fuzz, and snapshot (syrupy) tests
+- **90%+ code coverage** with branch coverage enabled
+- **CI pipeline**: 4-workflow GitHub Actions with Python 3.10-3.13 matrix
+- **Benchmarks**: 39 pytest-benchmark tests covering core, data science, and ML serialization
 
 ### Changed (vs v1)
 
 - Python 3.10+ minimum (was 3.8+)
 - Plugin-based dispatch replaces monolithic if/elif type chains
 - API reduced from 100+ functions to 5
-- `__init__.py` reduced from 678 lines to 36 lines
-- All modules under 500-line hard limit
-- All functions under 50-line hard limit
+- `__init__.py` reduced from 678 lines to <60 lines
+- All modules under 500-line hard limit (enforced by CI)
+- All functions under 50-line hard limit (enforced by CI)
+- CI consolidated from 12 workflows to 4
 
 ### Architecture
 
 ```
 datason/
-  __init__.py          # 36 lines, 13 exports
+  __init__.py          # <60 lines, 13 exports
   _core.py             # Serialization engine
   _deserialize.py      # Deserialization engine
   _config.py           # Config dataclass + presets
@@ -44,6 +47,6 @@ datason/
   _cache.py            # Thread-safe caching
   _errors.py           # Error hierarchy
   _types.py            # Type constants
-  plugins/             # 10 type handler plugins
-  security/            # Redaction + integrity
+  plugins/             # 13 type handler plugins
+  security/            # Redaction + integrity + pickle bridge
 ```

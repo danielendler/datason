@@ -1,5 +1,12 @@
 # datason
 
+[![CI](https://github.com/danielendler/datason/actions/workflows/ci.yml/badge.svg)](https://github.com/danielendler/datason/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/danielendler/datason/graph/badge.svg?token=UYL9LvVb8O)](https://codecov.io/gh/danielendler/datason)
+[![PyPI version](https://img.shields.io/pypi/v/datason.svg)](https://pypi.org/project/datason/)
+[![Python versions](https://img.shields.io/pypi/pyversions/datason.svg)](https://pypi.org/project/datason/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![Docs](https://img.shields.io/badge/docs-GitHub%20Pages-blue)](https://danielendler.github.io/datason/)
+
 **Drop-in replacement for `json.dumps`/`json.loads` that handles datetime, NumPy, Pandas, PyTorch, and 50+ Python types. Zero dependencies.**
 
 ```python
@@ -115,6 +122,9 @@ That's the entire public API.
 | **TensorFlow** | `Tensor`, `EagerTensor` |
 | **scikit-learn** | All estimators (`LinearRegression`, `RandomForestClassifier`, etc.) |
 | **SciPy** | Sparse matrices (`csr`, `csc`, `coo`, etc.) |
+| **Polars** | `DataFrame`, `Series` |
+| **JAX** | `Array` |
+| **Plotly** | `Figure` |
 
 All non-core types are optional — install the relevant extra (`numpy`, `pandas`, `ml`).
 
@@ -236,9 +246,9 @@ default_registry.register(MoneyPlugin())
 
 datason includes [`llms.txt`](llms.txt) and [`llms-full.txt`](llms-full.txt) for AI agent discoverability. The full reference contains complete API signatures, all config options, and ready-to-use code examples.
 
-## Status
+## Documentation
 
-v2 rewrite with plugin-based architecture. 542 tests, 93% coverage, Python 3.10+.
+Full documentation at **[danielendler.github.io/datason](https://danielendler.github.io/datason/)**.
 
 ## License
 
