@@ -37,6 +37,7 @@ nav:
   - Security: security.md
   - Custom Plugins: plugins.md
   - For AI Agents: ai-agents.md
+  - Migration from v1: migration.md
   - Changelog: changelog.md
 
 plugins:

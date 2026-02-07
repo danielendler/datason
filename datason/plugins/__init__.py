@@ -49,7 +49,11 @@ def _register_optional_plugins() -> None:
     except ImportError:
         pass
 
-    # ML framework plugins
+    _register_ml_plugins()
+
+
+def _register_ml_plugins() -> None:
+    """Register ML framework plugins (optional dependencies)."""
     try:
         from .torch import TorchPlugin
 
@@ -68,6 +72,14 @@ def _register_optional_plugins() -> None:
         from .sklearn import SklearnPlugin
 
         default_registry.register(SklearnPlugin())
+    except ImportError:
+        pass
+
+    # Misc ML plugins (Polars, JAX, CatBoost, Optuna, Plotly)
+    try:
+        from .ml_misc import MlMiscPlugin
+
+        default_registry.register(MlMiscPlugin())
     except ImportError:
         pass
 

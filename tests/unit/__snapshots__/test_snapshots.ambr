@@ -1,0 +1,91 @@
+# serializer version: 1
+# name: TestConfigPresetSnapshots.test_api_config
+  '{"score": 95.5, "ts": "2024-01-15T00:00:00+00:00"}'
+# ---
+# name: TestConfigPresetSnapshots.test_default_config
+  '{"score": 95.5, "ts": {"__datason_type__": "datetime", "__datason_value__": "2024-01-15T00:00:00+00:00"}}'
+# ---
+# name: TestConfigPresetSnapshots.test_ml_config
+  '{"ts": {"__datason_type__": "datetime", "__datason_value__": 1705276800000.0}, "score": 95.5}'
+# ---
+# name: TestDatetimeSnapshots.test_date_only
+  '{"d": {"__datason_type__": "date", "__datason_value__": "2024-06-15"}}'
+# ---
+# name: TestDatetimeSnapshots.test_iso_format
+  '{"ts": {"__datason_type__": "datetime", "__datason_value__": "2024-06-15T10:30:00+00:00"}}'
+# ---
+# name: TestDatetimeSnapshots.test_string_format
+  '{"ts": {"__datason_type__": "datetime", "__datason_value__": "2024-06-15 10:30:00+00:00"}}'
+# ---
+# name: TestDatetimeSnapshots.test_time_only
+  '{"t": {"__datason_type__": "time", "__datason_value__": "10:30:00"}}'
+# ---
+# name: TestDatetimeSnapshots.test_timedelta
+  '{"td": {"__datason_type__": "timedelta", "__datason_value__": 9000.0}}'
+# ---
+# name: TestDatetimeSnapshots.test_unix_format
+  '{"ts": {"__datason_type__": "datetime", "__datason_value__": 1718447400.0}}'
+# ---
+# name: TestDatetimeSnapshots.test_unix_ms_format
+  '{"ts": {"__datason_type__": "datetime", "__datason_value__": 1718447400000.0}}'
+# ---
+# name: TestNanHandlingSnapshots.test_inf_null
+  '{"v": null}'
+# ---
+# name: TestNanHandlingSnapshots.test_inf_string
+  '{"v": "inf"}'
+# ---
+# name: TestNanHandlingSnapshots.test_nan_null
+  '{"v": null}'
+# ---
+# name: TestNanHandlingSnapshots.test_nan_string
+  '{"v": "nan"}'
+# ---
+# name: TestNumpySnapshots.test_1d_array
+  '{"__datason_type__": "numpy.ndarray", "__datason_value__": {"data": [1.0, 2.0, 3.0], "dtype": "float64", "shape": [3]}}'
+# ---
+# name: TestNumpySnapshots.test_2d_array
+  '{"__datason_type__": "numpy.ndarray", "__datason_value__": {"data": [[1, 2], [3, 4]], "dtype": "int64", "shape": [2, 2]}}'
+# ---
+# name: TestNumpySnapshots.test_float_scalar
+  '{"v": 3.14}'
+# ---
+# name: TestNumpySnapshots.test_int_scalar
+  '{"v": {"__datason_type__": "numpy.integer", "__datason_value__": 42}}'
+# ---
+# name: TestPandasSnapshots.test_dataframe_records
+  '{"__datason_type__": "pandas.DataFrame", "__datason_value__": {"data": [{"a": 1, "b": 3.0}, {"a": 2, "b": 4.0}], "orient": "records"}}'
+# ---
+# name: TestPandasSnapshots.test_dataframe_split
+  '{"__datason_type__": "pandas.DataFrame", "__datason_value__": {"data": {"index": [0, 1], "columns": ["a", "b"], "data": [[1, 3.0], [2, 4.0]]}, "orient": "split"}}'
+# ---
+# name: TestPandasSnapshots.test_series
+  '{"__datason_type__": "pandas.Series", "__datason_value__": {"data": [10, 20, 30], "name": "scores", "dtype": "int64"}}'
+# ---
+# name: TestPrimitiveSnapshots.test_empty_structures
+  '{"dict": {}, "list": [], "null": null}'
+# ---
+# name: TestPrimitiveSnapshots.test_nested_dict
+  '{"a": {"b": {"c": 1}}, "d": [1, 2, 3]}'
+# ---
+# name: TestPrimitiveSnapshots.test_simple_dict
+  '{"age": 30, "name": "Alice"}'
+# ---
+# name: TestPrimitiveSnapshots.test_tuple_and_set
+  '{"set": [1, 2, 3], "tuple": [1, 2, 3]}'
+# ---
+# name: TestPrimitiveSnapshots.test_unicode_strings
+  '{"cjk": "test", "emoji": "hello"}'
+# ---
+# name: TestStdlibTypeSnapshots.test_complex
+  '{"z": {"__datason_type__": "complex", "__datason_value__": [3.5, 2.1]}}'
+# ---
+# name: TestStdlibTypeSnapshots.test_decimal
+  '{"price": {"__datason_type__": "decimal.Decimal", "__datason_value__": "19.99"}}'
+# ---
+# name: TestStdlibTypeSnapshots.test_path
+  '{"p": {"__datason_type__": "pathlib.Path", "__datason_value__": "/data/models/v2"}}'
+# ---
+# name: TestStdlibTypeSnapshots.test_uuid
+  '{"id": {"__datason_type__": "uuid.UUID", "__datason_value__": "12345678-1234-5678-1234-567812345678"}}'
+# ---
