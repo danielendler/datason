@@ -20,6 +20,20 @@ from ._types import JSON_BASIC_TYPES
 from .security.redaction import redact_value, should_redact_field
 
 _REDACTED = "[REDACTED]"
+_CONFIG_FIELDS = frozenset(SerializationConfig.__dataclass_fields__.keys())
+_JSON_DUMPS_KWARGS = frozenset(
+    {
+        "skipkeys",
+        "ensure_ascii",
+        "check_circular",
+        "allow_nan",
+        "cls",
+        "indent",
+        "separators",
+        "default",
+        "sort_keys",
+    }
+)
 
 
 def _serialize_recursive(obj: Any, ctx: SerializeContext) -> Any:
@@ -56,10 +70,14 @@ def _serialize_value(obj: Any, ctx: SerializeContext) -> Any:
     # Containers: recurse
     if isinstance(obj, dict):
         return _serialize_dict(obj, ctx)
-    if isinstance(obj, list | tuple):
+    if isinstance(obj, list):
         return _serialize_sequence(obj, ctx)
-    if isinstance(obj, set | frozenset):
-        return _serialize_sequence(sorted(obj, key=repr), ctx)
+    if isinstance(obj, tuple):
+        return _serialize_sequence_with_type_hint(obj, "tuple", ctx)
+    if isinstance(obj, set):
+        return _serialize_sequence_with_type_hint(sorted(obj, key=repr), "set", ctx)
+    if isinstance(obj, frozenset):
+        return _serialize_sequence_with_type_hint(sorted(obj, key=repr), "frozenset", ctx)
 
     # Plugin dispatch
     plugin_result = default_registry.find_serializer(obj, ctx)
@@ -85,6 +103,10 @@ def _handle_float(obj: float, ctx: SerializeContext) -> Any:
             case "null":
                 return None
             case "string":
+                if math.isnan(obj):
+                    return "NaN"
+                if math.isinf(obj):
+                    return "Infinity" if obj > 0 else "-Infinity"
                 return str(obj)
             case "keep":
                 return obj
@@ -115,6 +137,14 @@ def _serialize_sequence(obj: Any, ctx: SerializeContext) -> list[Any]:
         raise SecurityError(f"Sequence size {len(obj)} exceeds limit {ctx.config.max_size}")
     child = ctx.child()
     return [_serialize_recursive(item, child) for item in obj]
+
+
+def _serialize_sequence_with_type_hint(obj: Any, type_name: str, ctx: SerializeContext) -> Any:
+    """Serialize tuple/set/frozenset with optional type hint metadata."""
+    serialized = _serialize_sequence(obj, ctx)
+    if ctx.config.include_type_hints:
+        return {"__datason_type__": type_name, "__datason_value__": serialized}
+    return serialized
 
 
 # =========================================================================
@@ -150,14 +180,15 @@ def dumps(obj: Any, **kwargs: Any) -> str:
         >>> datason.dumps({"z": 1, "a": 2}, sort_keys=True)
         '{"a": 2, "z": 1}'
     """
-    config = _resolve_config(kwargs)
+    config_kwargs, json_kwargs = _split_dumps_kwargs(kwargs)
+    config = _resolve_config(config_kwargs)
     ctx = SerializeContext(config=config)
     serialized = _serialize_recursive(obj, ctx)
-    return json.dumps(
-        serialized,
-        sort_keys=config.sort_keys,
-        ensure_ascii=False,
-    )
+    if "sort_keys" not in json_kwargs:
+        json_kwargs["sort_keys"] = config.sort_keys
+    if "ensure_ascii" not in json_kwargs:
+        json_kwargs["ensure_ascii"] = False
+    return json.dumps(serialized, **json_kwargs)
 
 
 def dump(obj: Any, fp: IOBase, **kwargs: Any) -> None:
@@ -178,15 +209,15 @@ def dump(obj: Any, fp: IOBase, **kwargs: Any) -> None:
         >>> buf.getvalue()
         '{"key": "value"}'
     """
-    config = _resolve_config(kwargs)
+    config_kwargs, json_kwargs = _split_dumps_kwargs(kwargs)
+    config = _resolve_config(config_kwargs)
     ctx = SerializeContext(config=config)
     serialized = _serialize_recursive(obj, ctx)
-    json.dump(
-        serialized,
-        fp,
-        sort_keys=config.sort_keys,
-        ensure_ascii=False,
-    )
+    if "sort_keys" not in json_kwargs:
+        json_kwargs["sort_keys"] = config.sort_keys
+    if "ensure_ascii" not in json_kwargs:
+        json_kwargs["ensure_ascii"] = False
+    json.dump(serialized, fp, **json_kwargs)
 
 
 @contextmanager
@@ -231,3 +262,17 @@ def _resolve_config(overrides: dict[str, Any]) -> SerializationConfig:
         fields.update(overrides)
         return SerializationConfig(**fields)
     return get_active_config()
+
+
+def _split_dumps_kwargs(kwargs: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Split kwargs into datason config overrides and json.dumps kwargs."""
+    config_kwargs: dict[str, Any] = {}
+    json_kwargs: dict[str, Any] = {}
+    for key, value in kwargs.items():
+        if key in _CONFIG_FIELDS:
+            config_kwargs[key] = value
+        elif key in _JSON_DUMPS_KWARGS:
+            json_kwargs[key] = value
+        else:
+            raise TypeError(f"dumps() got an unexpected keyword argument '{key}'")
+    return config_kwargs, json_kwargs
