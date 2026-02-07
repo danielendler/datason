@@ -41,5 +41,35 @@ def _register_optional_plugins() -> None:
     except ImportError:
         pass
 
+    # SciPy sparse plugin (between pandas and ML frameworks)
+    try:
+        from .scipy_sparse import ScipySparsePlugin
+
+        default_registry.register(ScipySparsePlugin())
+    except ImportError:
+        pass
+
+    # ML framework plugins
+    try:
+        from .torch import TorchPlugin
+
+        default_registry.register(TorchPlugin())
+    except ImportError:
+        pass
+
+    try:
+        from .tensorflow import TensorFlowPlugin
+
+        default_registry.register(TensorFlowPlugin())
+    except ImportError:
+        pass
+
+    try:
+        from .sklearn import SklearnPlugin
+
+        default_registry.register(SklearnPlugin())
+    except ImportError:
+        pass
+
 
 _register_builtins()
