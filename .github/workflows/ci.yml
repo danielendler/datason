@@ -147,8 +147,20 @@ jobs:
     needs: quality
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
+    continue-on-error: true
+    env:
+      BENCHMARK_REGRESSION_THRESHOLD_PCT: "15"
     steps:
-      - uses: actions/checkout@v5
+      - name: Checkout PR head
+        uses: actions/checkout@v5
+        with:
+          path: head
+
+      - name: Checkout PR base
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          path: base
 
       - uses: astral-sh/setup-uv@v5
         with:
@@ -156,20 +168,133 @@ jobs:
 
       - run: uv python install 3.12
 
-      - run: uv sync --all-extras
+      - name: Install dependencies (base)
+        working-directory: base
+        run: uv sync --all-extras
 
-      - name: Run benchmarks
+      - name: Run base benchmarks
+        working-directory: base
         run: |
           uv run pytest tests/benchmarks/ \
             --benchmark-only \
             --benchmark-sort=mean \
-            --benchmark-json=benchmark-results.json
+            --benchmark-json=benchmark-base.json
+
+      - name: Install dependencies (head)
+        working-directory: head
+        run: uv sync --all-extras
+
+      - name: Run head benchmarks
+        working-directory: head
+        run: |
+          uv run pytest tests/benchmarks/ \
+            --benchmark-only \
+            --benchmark-sort=mean \
+            --benchmark-json=benchmark-head.json
+
+      - name: Compare benchmark results (base vs head)
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import sys
+          from pathlib import Path
+
+          base_path = Path("base/benchmark-base.json")
+          head_path = Path("head/benchmark-head.json")
+          threshold = float(os.environ.get("BENCHMARK_REGRESSION_THRESHOLD_PCT", "15"))
+
+          if not base_path.exists() or not head_path.exists():
+              print("Missing benchmark JSON files for comparison.")
+              sys.exit(1)
+
+          base_data = json.loads(base_path.read_text())
+          head_data = json.loads(head_path.read_text())
+
+          def to_index(payload: dict) -> dict[str, float]:
+              index: dict[str, float] = {}
+              for bench in payload.get("benchmarks", []):
+                  name = bench.get("fullname") or bench.get("name")
+                  stats = bench.get("stats", {})
+                  mean = stats.get("mean")
+                  if name and isinstance(mean, (int, float)):
+                      index[name] = float(mean)
+              return index
+
+          base_idx = to_index(base_data)
+          head_idx = to_index(head_data)
+          common = sorted(set(base_idx) & set(head_idx))
+
+          if not common:
+              print("No overlapping benchmarks found between base and head.")
+              sys.exit(1)
+
+          regressions: list[tuple[str, float, float, float]] = []
+          improvements: list[tuple[str, float, float, float]] = []
+          stable = 0
+
+          for name in common:
+              b = base_idx[name]
+              h = head_idx[name]
+              if b <= 0:
+                  continue
+              delta_pct = ((h - b) / b) * 100.0
+              if delta_pct > threshold:
+                  regressions.append((name, b, h, delta_pct))
+              elif delta_pct < -threshold:
+                  improvements.append((name, b, h, delta_pct))
+              else:
+                  stable += 1
+
+          summary = []
+          summary.append("## Benchmark Comparison (PR head vs base)")
+          summary.append("")
+          summary.append(f"- Regression threshold: `{threshold:.1f}%`")
+          summary.append(f"- Compared benchmarks: `{len(common)}`")
+          summary.append(f"- Regressions: `{len(regressions)}`")
+          summary.append(f"- Improvements: `{len(improvements)}`")
+          summary.append(f"- Stable: `{stable}`")
+          summary.append("")
+
+          if regressions:
+              summary.append("### Regressions")
+              summary.append("| Benchmark | Base mean (s) | Head mean (s) | Delta |")
+              summary.append("|---|---:|---:|---:|")
+              for name, b, h, d in sorted(regressions, key=lambda x: x[3], reverse=True)[:20]:
+                  summary.append(f"| `{name}` | {b:.6f} | {h:.6f} | +{d:.2f}% |")
+              summary.append("")
+
+          if improvements:
+              summary.append("### Improvements")
+              summary.append("| Benchmark | Base mean (s) | Head mean (s) | Delta |")
+              summary.append("|---|---:|---:|---:|")
+              for name, b, h, d in sorted(improvements, key=lambda x: x[3])[:20]:
+                  summary.append(f"| `{name}` | {b:.6f} | {h:.6f} | {d:.2f}% |")
+              summary.append("")
+
+          report = "\n".join(summary) + "\n"
+          Path("benchmark-comparison.md").write_text(report)
+
+          step_summary = os.environ.get("GITHUB_STEP_SUMMARY")
+          if step_summary:
+              with open(step_summary, "a", encoding="utf-8") as f:
+                  f.write(report)
+
+          if regressions:
+              print(f"Detected {len(regressions)} benchmark regressions over {threshold:.1f}%")
+              sys.exit(1)
+
+          print("No benchmark regressions beyond threshold.")
+          PY
 
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: benchmark-results
-          path: benchmark-results.json
+          path: |
+            base/benchmark-base.json
+            head/benchmark-head.json
+            benchmark-comparison.md
           if-no-files-found: ignore
 
   # ---------------------------------------------------------------------------
