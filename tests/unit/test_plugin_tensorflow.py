@@ -4,9 +4,10 @@ from __future__ import annotations
 
 import json
 
-import numpy as np
 import pytest
-import tensorflow as tf
+
+np = pytest.importorskip("numpy")
+tf = pytest.importorskip("tensorflow")
 
 import datason
 from datason._config import SerializationConfig

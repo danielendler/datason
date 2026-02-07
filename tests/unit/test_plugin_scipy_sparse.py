@@ -4,9 +4,10 @@ from __future__ import annotations
 
 import json
 
-import numpy as np
 import pytest
-import scipy.sparse as sp
+
+np = pytest.importorskip("numpy")
+sp = pytest.importorskip("scipy.sparse")
 
 import datason
 from datason._config import SerializationConfig

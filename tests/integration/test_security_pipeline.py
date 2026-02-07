@@ -10,9 +10,9 @@ import datetime as dt
 import json
 from typing import Any
 
-import numpy as np
 import pytest
 
+np = pytest.importorskip("numpy")
 import datason
 from datason._errors import SecurityError
 from datason.security.integrity import verify_integrity, wrap_with_integrity

@@ -9,9 +9,9 @@ from pathlib import PurePosixPath
 from typing import Any
 from uuid import UUID
 
-import numpy as np
 import pytest
 
+np = pytest.importorskip("numpy")
 import datason
 from datason._errors import SecurityError
 from datason.security.pickle_bridge import (

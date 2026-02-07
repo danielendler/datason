@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import json
 
-import numpy as np
 import pytest
 
+np = pytest.importorskip("numpy")
 import datason
 from datason._config import SerializationConfig
 from datason._errors import PluginError

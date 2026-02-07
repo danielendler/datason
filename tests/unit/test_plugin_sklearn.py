@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import json
 
-import numpy as np
 import pytest
+
+np = pytest.importorskip("numpy")
+pytest.importorskip("sklearn")
 from sklearn.linear_model import LinearRegression
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler

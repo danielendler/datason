@@ -5,7 +5,8 @@ from __future__ import annotations
 import json
 
 import pytest
-import torch
+
+torch = pytest.importorskip("torch")
 
 import datason
 from datason._config import SerializationConfig

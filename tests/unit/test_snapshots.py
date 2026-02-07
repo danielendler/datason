@@ -12,9 +12,10 @@ import uuid
 from decimal import Decimal
 from pathlib import PurePosixPath
 
-import numpy as np
-import pandas as pd
 import pytest
+
+np = pytest.importorskip("numpy")
+pd = pytest.importorskip("pandas")
 from syrupy.assertion import SnapshotAssertion
 
 import datason

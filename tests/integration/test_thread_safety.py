@@ -11,7 +11,9 @@ import json
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any
 
-import numpy as np
+import pytest
+
+np = pytest.importorskip("numpy")
 
 import datason
 

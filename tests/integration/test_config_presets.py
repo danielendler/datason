@@ -9,9 +9,9 @@ from __future__ import annotations
 import datetime as dt
 import json
 
-import numpy as np
 import pytest
 
+np = pytest.importorskip("numpy")
 import datason
 from datason._config import (
     DateFormat,

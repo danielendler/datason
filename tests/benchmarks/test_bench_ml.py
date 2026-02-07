@@ -6,10 +6,13 @@ Measures overhead of plugin dispatch + type conversion for ML types.
 
 from __future__ import annotations
 
-import numpy as np
-import scipy.sparse as sp
-import tensorflow as tf
-import torch
+import pytest
+
+np = pytest.importorskip("numpy")
+sp = pytest.importorskip("scipy.sparse")
+tf = pytest.importorskip("tensorflow")
+torch = pytest.importorskip("torch")
+pytest.importorskip("sklearn")
 from sklearn.linear_model import LinearRegression
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler

@@ -8,8 +8,10 @@ from __future__ import annotations
 
 import json
 
-import numpy as np
-import pandas as pd
+import pytest
+
+np = pytest.importorskip("numpy")
+pd = pytest.importorskip("pandas")
 from hypothesis import given
 from hypothesis import strategies as st
 
