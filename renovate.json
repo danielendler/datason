@@ -1,0 +1,50 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    ":semanticCommits",
+    ":automergeMinor",
+    "group:allNonMajor"
+  ],
+  "labels": ["dependencies", "automated"],
+  "schedule": ["before 9am on Monday"],
+  "timezone": "Etc/UTC",
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": ["before 9am on the first day of the month"]
+  },
+  "packageRules": [
+    {
+      "description": "Group GitHub Actions updates",
+      "matchManagers": ["github-actions"],
+      "groupName": "github-actions",
+      "labels": ["ci/cd", "automated"],
+      "automerge": true
+    },
+    {
+      "description": "Group dev tool updates and auto-merge",
+      "matchDepNames": [
+        "pytest", "pytest-cov", "pytest-xdist", "pytest-benchmark",
+        "hypothesis", "syrupy", "pyright", "ruff",
+        "twine", "build", "pre-commit", "pip-audit"
+      ],
+      "groupName": "dev-tools",
+      "automerge": true
+    },
+    {
+      "description": "Group docs tool updates and auto-merge",
+      "matchDepNames": ["mkdocs", "mkdocs-material", "mkdocstrings"],
+      "groupName": "docs-tools",
+      "automerge": true
+    },
+    {
+      "description": "Block major version bumps for ML frameworks",
+      "matchDepNames": [
+        "torch", "tensorflow", "jax", "scikit-learn",
+        "numpy", "pandas", "scipy"
+      ],
+      "matchUpdateTypes": ["major"],
+      "enabled": false
+    }
+  ]
+}
