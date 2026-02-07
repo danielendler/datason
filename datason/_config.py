@@ -73,6 +73,9 @@ class SerializationConfig:
     fallback_to_string: bool = False
     strict: bool = True
 
+    # Deserialization safety
+    allow_plugin_deserialization: bool = True
+
     # Redaction (optional, for security module)
     redact_fields: tuple[str, ...] = field(default_factory=tuple)
     redact_patterns: tuple[str, ...] = field(default_factory=tuple)

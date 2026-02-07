@@ -41,7 +41,7 @@ def _deserialize_recursive(data: Any, ctx: DeserializeContext) -> Any:
 def _deserialize_dict(data: dict[str, Any], ctx: DeserializeContext) -> Any:
     """Deserialize a dict, checking for type metadata first."""
     # Check if this dict is a type-annotated value
-    if TYPE_METADATA_KEY in data:
+    if TYPE_METADATA_KEY in data and ctx.config.allow_plugin_deserialization:
         plugin_result = default_registry.find_deserializer(data, ctx)
         if plugin_result is not None:
             _plugin, deserialized = plugin_result
@@ -70,7 +70,7 @@ def _deserialize_dict(data: dict[str, Any], ctx: DeserializeContext) -> Any:
         raise DeserializationError(
             f"No plugin registered to deserialize type "
             f"'{strict_type_name}'. Install the relevant plugin or "
-            f"set strict=False in config."
+            f"set strict=False in config or allow_plugin_deserialization=True."
         )
 
     # Regular dict: recurse into values
@@ -121,7 +121,7 @@ def loads(s: str, **kwargs: Any) -> Any:
         >>> isinstance(restored["ts"], dt.datetime)
         True
     """
-    _validate_load_kwargs(kwargs)
+    _validate_load_kwargs(kwargs, func_name="loads")
     config = _resolve_config({k: v for k, v in kwargs.items() if k in _CONFIG_FIELDS})
     ctx = DeserializeContext(config=config)
     parsed = json.loads(s, **_extract_json_loads_kwargs(kwargs))
@@ -147,7 +147,7 @@ def load(fp: IOBase, **kwargs: Any) -> Any:
         >>> datason.load(buf)
         {'key': 'value'}
     """
-    _validate_load_kwargs(kwargs)
+    _validate_load_kwargs(kwargs, func_name="load")
     config = _resolve_config({k: v for k, v in kwargs.items() if k in _CONFIG_FIELDS})
     ctx = DeserializeContext(config=config)
     parsed = json.load(fp, **_extract_json_loads_kwargs(kwargs))
@@ -165,12 +165,12 @@ _JSON_LOADS_KWARGS = frozenset({
 })
 
 
-def _validate_load_kwargs(kwargs: dict[str, Any]) -> None:
+def _validate_load_kwargs(kwargs: dict[str, Any], *, func_name: str) -> None:
     """Validate kwargs for loads/load."""
     allowed = _CONFIG_FIELDS | _JSON_LOADS_KWARGS
     for key in kwargs:
         if key not in allowed:
-            raise TypeError(f"loads() got an unexpected keyword argument '{key}'")
+            raise TypeError(f"{func_name}() got an unexpected keyword argument '{key}'")
 
 
 def _resolve_config(overrides: dict[str, Any]) -> SerializationConfig:

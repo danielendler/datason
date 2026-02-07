@@ -167,6 +167,7 @@ with datason.config(**api_config().__dict__):
 | `max_size` | `int` | `100_000` | Max dict/list size (security) |
 | `fallback_to_string` | `bool` | `False` | `str()` unknown types instead of raising |
 | `strict` | `bool` | `True` | Raise on unrecognized type metadata |
+| `allow_plugin_deserialization` | `bool` | `True` | Allow plugin code to run during `loads`/`load` |
 | `redact_fields` | `tuple[str, ...]` | `()` | Field names to redact |
 | `redact_patterns` | `tuple[str, ...]` | `()` | Regex patterns to redact from strings |
 
@@ -203,6 +204,16 @@ is_valid, payload = verify_integrity(wrapped, key="secret")
 - **Circular reference detection** (prevents infinite loops)
 
 All limits raise `SecurityError` and are configurable.
+
+### Untrusted Input Recommendation
+
+If you load JSON from untrusted sources, disable plugin deserialization to avoid executing plugin code paths:
+
+```python
+safe = datason.loads(payload, allow_plugin_deserialization=False)
+```
+
+This still supports built-in collection hints (`tuple`, `set`, `frozenset`) but blocks plugin-based reconstruction.
 
 ## How It Works
 

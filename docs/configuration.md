@@ -32,6 +32,7 @@ with datason.config(**ml_config().__dict__):
 | `max_string_length` | `int` | `1_000_000` | Max string length (security) |
 | `fallback_to_string` | `bool` | `False` | `str()` unknown types instead of raising |
 | `strict` | `bool` | `True` | Raise on unrecognized type metadata in `loads` |
+| `allow_plugin_deserialization` | `bool` | `True` | Allow plugin code to run during `loads`/`load` |
 | `redact_fields` | `tuple[str, ...]` | `()` | Field names to redact |
 | `redact_patterns` | `tuple[str, ...]` | `()` | Regex patterns to redact |
 
@@ -67,7 +68,7 @@ Controls how `float('nan')` and `float('inf')` are serialized:
 from datason import NanHandling
 
 datason.dumps({"v": float("nan")}, nan_handling=NanHandling.NULL)    # null
-datason.dumps({"v": float("nan")}, nan_handling=NanHandling.STRING)  # "nan"
+datason.dumps({"v": float("nan")}, nan_handling=NanHandling.STRING)  # "NaN"
 datason.dumps({"v": float("nan")}, nan_handling=NanHandling.KEEP)    # NaN (invalid JSON!)
 datason.dumps({"v": float("nan")}, nan_handling=NanHandling.DROP)    # null
 ```
