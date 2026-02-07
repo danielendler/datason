@@ -1,194 +1,85 @@
-name: 🏷️ Release Management
+# =============================================================================
+# Datason v2 — Release Management
+#
+# Creates a GitHub Release with auto-generated changelog, then triggers
+# the publish workflow for PyPI upload via OIDC trusted publishing.
+# =============================================================================
+
+name: Release
 
 on:
   push:
-    tags:
-      - 'v*.*.*'
+    tags: ["v*.*.*"]
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version to release (e.g., v0.1.2)'
+        description: "Version to release (e.g., v2.0.0)"
         required: true
         type: string
-      prerelease:
-        description: 'Is this a pre-release?'
-        required: false
-        type: boolean
-        default: false
 
-# Set explicit permissions for security
 permissions:
-  contents: write  # Needed to create releases and read repository
-  discussions: write  # Needed to create release discussions
-  actions: write  # Needed to trigger other workflows
+  contents: write
 
 jobs:
-  validate-release:
+  release:
+    name: Create Release
     runs-on: ubuntu-latest
-    outputs:
-      version: ${{ steps.version.outputs.version }}
-      is_prerelease: ${{ steps.version.outputs.is_prerelease }}
-
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v5
-      with:
-        fetch-depth: 0
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
 
-    - name: 📋 Extract version info
-      id: version
-      run: |
-        if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-          VERSION="${{ github.event.inputs.version }}"
-          IS_PRERELEASE="${{ github.event.inputs.prerelease }}"
-        else
-          VERSION="${GITHUB_REF#refs/tags/}"
-          # Check if version contains alpha, beta, rc, dev
-          if [[ "$VERSION" =~ (alpha|beta|rc|dev) ]]; then
-            IS_PRERELEASE="true"
+      - name: Determine version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="${{ github.event.inputs.version }}"
           else
-            IS_PRERELEASE="false"
+            VERSION="${GITHUB_REF#refs/tags/}"
           fi
-        fi
 
-        echo "version=$VERSION" >> $GITHUB_OUTPUT
-        echo "is_prerelease=$IS_PRERELEASE" >> $GITHUB_OUTPUT
+          # Validate format
+          if [[ ! "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9] ]]; then
+            echo "::error::Invalid version format: $VERSION (expected vX.Y.Z)"
+            exit 1
+          fi
 
-        echo "🏷️ Version: $VERSION"
-        echo "🔄 Pre-release: $IS_PRERELEASE"
+          # Detect pre-release
+          IS_PRE="false"
+          [[ "$VERSION" =~ (alpha|beta|rc|dev) ]] && IS_PRE="true"
 
-    - name: 🔍 Validate version format
-      run: |
-        VERSION="${{ steps.version.outputs.version }}"
-        if [[ ! "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+ ]]; then
-          echo "❌ Invalid version format: $VERSION"
-          echo "Expected format: v1.2.3, v1.2.3-alpha.1, etc."
-          exit 1
-        fi
-        echo "✅ Version format is valid"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "is_prerelease=$IS_PRE" >> "$GITHUB_OUTPUT"
 
-  create-release:
-    needs: validate-release
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
+      - name: Generate changelog
+        id: changelog
+        run: |
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD~1 2>/dev/null || echo "")
+          if [ -n "$PREV_TAG" ]; then
+            CHANGES=$(git log --pretty=format:"- %s" "$PREV_TAG..HEAD")
+          else
+            CHANGES=$(git log --pretty=format:"- %s" --max-count=20)
+          fi
+          {
+            echo "body<<EOF"
+            echo "$CHANGES"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
 
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v5
-      with:
-        fetch-depth: 0
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.version }}
+          name: ${{ steps.version.outputs.version }}
+          body: |
+            ## Changes
 
-    - name: 📝 Generate changelog
-      id: changelog
-      run: |
-        VERSION="${{ needs.validate-release.outputs.version }}"
+            ${{ steps.changelog.outputs.body }}
 
-        # Get the previous tag
-        PREV_TAG=$(git describe --tags --abbrev=0 HEAD~1 2>/dev/null || echo "")
+            ## Install
 
-        if [ -n "$PREV_TAG" ]; then
-          echo "📋 Changes since $PREV_TAG:"
-          CHANGELOG=$(git log --pretty=format:"- %s" $PREV_TAG..HEAD)
-        else
-          echo "📋 Initial release changes:"
-          CHANGELOG=$(git log --pretty=format:"- %s")
-        fi
-
-        # Save changelog to file and output
-        echo "$CHANGELOG" > changelog.md
-
-        # Create multi-line output
-        {
-          echo "changelog<<EOF"
-          echo "$CHANGELOG"
-          echo "EOF"
-        } >> $GITHUB_OUTPUT
-
-    - name: 🏷️ Create GitHub Release
-      uses: softprops/action-gh-release@v2
-      with:
-        tag_name: ${{ needs.validate-release.outputs.version }}
-        name: Release ${{ needs.validate-release.outputs.version }}
-        body: |
-          ## 🎉 What's New in ${{ needs.validate-release.outputs.version }}
-
-          ${{ steps.changelog.outputs.changelog }}
-
-          ## 📦 Installation
-
-          ```bash
-          pip install datason==${{ needs.validate-release.outputs.version }}
-          ```
-
-          ## 🔗 Links
-          - **📚 Documentation**: https://datason.readthedocs.io
-          - **🐛 Issues**: https://github.com/danielendler/datason/issues
-          - **💬 Discussions**: https://github.com/danielendler/datason/discussions
-
-          ---
-
-          **Full Changelog**: https://github.com/danielendler/datason/compare/${{ github.event.repository.default_branch }}...${{ needs.validate-release.outputs.version }}
-        prerelease: ${{ needs.validate-release.outputs.is_prerelease == 'true' }}
-        generate_release_notes: true
-
-    - name: 📢 Create release discussion
-      if: needs.validate-release.outputs.is_prerelease == 'false'
-      uses: actions/github-script@v7
-      continue-on-error: true  # Don't fail the workflow if discussion creation fails
-      with:
-        script: |
-          const version = '${{ needs.validate-release.outputs.version }}';
-
-          try {
-            // Create discussion for major releases (only if discussions are enabled)
-            if (!version.includes('patch')) {
-              await github.rest.discussions.create({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                title: `🎉 datason ${version} Released!`,
-                body: `
-                ## datason ${version} is now available! 🚀
-
-                ### Installation
-                \`\`\`bash
-                pip install --upgrade datason
-                \`\`\`
-
-                ### What do you think?
-                - How are you using datason?
-                - Any feedback on the new features?
-                - Ideas for future improvements?
-
-                **📚 [View Release Notes](https://github.com/danielendler/datason/releases/tag/${version})**
-                `,
-                category_id: 'announcements'
-              });
-              console.log('✅ Discussion created successfully');
-            }
-          } catch (error) {
-            console.log('ℹ️ Could not create discussion (discussions may not be enabled):', error.message);
-            // This is not a critical failure, so we continue
-          }
-
-  trigger-publish:
-    needs: [validate-release, create-release]
-    runs-on: ubuntu-latest
-
-    steps:
-    - name: 🚀 Trigger PyPI publish
-      uses: actions/github-script@v7
-      with:
-        script: |
-          // Trigger the existing publish workflow
-          github.rest.actions.createWorkflowDispatch({
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            workflow_id: 'publish.yml',
-            ref: '${{ needs.validate-release.outputs.version }}'
-          });
-
-    - name: Generate Release Notes
-      run: |
-        echo "## 🎉 datason v${{ needs.validate-release.outputs.version }} Released!" >> release_notes.md
-        echo "" >> release_notes.md
+            ```bash
+            pip install datason==${{ steps.version.outputs.version }}
+            ```
+          prerelease: ${{ steps.version.outputs.is_prerelease == 'true' }}
+          generate_release_notes: true

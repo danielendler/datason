@@ -80,6 +80,18 @@ all = [
     "datason[ml]",
     "datason[crypto]",
 ]
+
+[project.urls]
+Homepage = "https://github.com/danielendler/datason"
+Documentation = "https://datason.readthedocs.io"
+Repository = "https://github.com/danielendler/datason"
+"Bug Tracker" = "https://github.com/danielendler/datason/issues"
+Discussions = "https://github.com/danielendler/datason/discussions"
+
+# ==============================================================================
+# Dependency groups (PEP 735) — installed by `uv sync` by default
+# ==============================================================================
+[dependency-groups]
 dev = [
     "pytest>=7.4.0",
     "pytest-cov>=4.1.0",
@@ -89,9 +101,6 @@ dev = [
     "syrupy>=4.0.0",
     "pyright>=1.1.350",
     "ruff>=0.9.0",
-    "mkdocs>=1.5.3",
-    "mkdocs-material>=9.4.0",
-    "mkdocstrings[python]>=0.23.0",
     "twine>=4.0.2",
     "build>=1.0.3",
     "pre-commit>=3.5.0",
@@ -102,13 +111,6 @@ docs = [
     "mkdocs-material>=9.4.0",
     "mkdocstrings[python]>=0.23.0",
 ]
-
-[project.urls]
-Homepage = "https://github.com/danielendler/datason"
-Documentation = "https://datason.readthedocs.io"
-Repository = "https://github.com/danielendler/datason"
-"Bug Tracker" = "https://github.com/danielendler/datason/issues"
-Discussions = "https://github.com/danielendler/datason/discussions"
 
 # ==============================================================================
 # Ruff (linter + formatter)

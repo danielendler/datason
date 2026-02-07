@@ -1,38 +1,39 @@
 # =============================================================================
-# Datason v2 - Consolidated CI Pipeline
+# Datason v2 — CI Pipeline
+#
+# Jobs:
+#   1. quality   — lint, format, typecheck, architecture, security (fast gate)
+#   2. test      — unit + integration across Python 3.10-3.13
+#   3. benchmark — performance tracking on PRs (non-blocking)
+#   4. build     — wheel + sdist + twine check
 # =============================================================================
 
 name: CI
 
 on:
   push:
-    branches: [main, v2]
+    branches: [main]
   pull_request:
-    branches: [main, v2]
+    branches: [main]
 
 permissions:
   contents: read
 
-env:
-  UV_CACHE_DIR: /tmp/.uv-cache
-
 jobs:
-  # ===========================================================================
-  # Job 1: Lint + Type Check + Architecture (fast, fails early)
-  # ===========================================================================
+  # ---------------------------------------------------------------------------
+  # Quality gates — fast, fails early
+  # ---------------------------------------------------------------------------
   quality:
     name: Quality Gates
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
 
-      - name: Set up Python
-        run: uv python install 3.12
+      - run: uv python install 3.12
 
       - name: Install dependencies
         run: uv sync --all-extras
@@ -40,29 +41,27 @@ jobs:
       - name: Ruff lint
         run: uv run ruff check datason/ tests/
 
-      - name: Ruff format check
+      - name: Ruff format
         run: uv run ruff format datason/ tests/ --check
 
-      - name: Pyright type check
+      - name: Pyright
         run: uv run pyright --project .
 
-      - name: Architecture - module size limits (500 lines)
+      - name: Architecture — module size (500 lines)
         run: |
-          violations=0
-          while IFS= read -r line; do
-            count=$(echo "$line" | awk '{print $1}')
-            file=$(echo "$line" | awk '{print $2}')
-            if [ "$count" -gt 500 ] && [ "$file" != "total" ]; then
-              echo "::error file=$file::Module has $count lines (limit: 500)"
-              violations=$((violations + 1))
-            fi
-          done < <(find datason -name "*.py" -exec wc -l {} +)
-          if [ $violations -gt 0 ]; then
-            echo "Found $violations module(s) exceeding 500 line limit"
-            exit 1
-          fi
+          uv run python -c "
+          import pathlib, sys
+          violations = 0
+          for p in sorted(pathlib.Path('datason').rglob('*.py')):
+              n = len(p.read_text().splitlines())
+              if n > 500:
+                  print(f'::error file={p}::{p} has {n} lines (limit: 500)')
+                  violations += 1
+          if violations:
+              sys.exit(1)
+          "
 
-      - name: Architecture - function length limits (50 lines)
+      - name: Architecture — function length (50 lines)
         run: |
           uv run python -c "
           import ast, sys, pathlib
@@ -83,14 +82,14 @@ jobs:
               sys.exit(1)
           "
 
-      - name: Security scan
+      - name: Security — ruff S rules + pip-audit
         run: |
           uv run ruff check datason/ --select S
           uv run pip-audit
 
-  # ===========================================================================
-  # Job 2: Tests across Python versions
-  # ===========================================================================
+  # ---------------------------------------------------------------------------
+  # Tests — matrix across Python versions
+  # ---------------------------------------------------------------------------
   test:
     name: Test (Python ${{ matrix.python-version }})
     needs: quality
@@ -98,35 +97,34 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.10", "3.11", "3.12", "3.13"]
+        python-version: ["3.10", "3.13"]
+        extras: [""]
         include:
-          # Full test suite with all optional deps on 3.11 and 3.12
           - python-version: "3.11"
             extras: "--all-extras"
           - python-version: "3.12"
             extras: "--all-extras"
-          # Core-only tests on 3.10 and 3.13
-          - python-version: "3.10"
-            extras: ""
-          - python-version: "3.13"
-            extras: ""
     steps:
       - uses: actions/checkout@v5
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
 
-      - name: Set up Python ${{ matrix.python-version }}
-        run: uv python install ${{ matrix.python-version }}
+      - run: uv python install ${{ matrix.python-version }}
 
+      # Always install dev deps (pytest, etc.); optionally add all extras
       - name: Install dependencies
-        run: uv sync ${{ matrix.extras }}
+        run: |
+          if [ -n "${{ matrix.extras }}" ]; then
+            uv sync --all-extras
+          else
+            uv sync
+          fi
 
       - name: Run tests
         run: |
-          uv run pytest tests/unit/ \
+          uv run pytest tests/unit/ tests/integration/ \
             --cov=datason \
             --cov-report=xml \
             --cov-report=term-missing \
@@ -141,47 +139,42 @@ jobs:
           flags: unittests
           fail_ci_if_error: false
 
-  # ===========================================================================
-  # Job 3: Benchmarks (on PR only, non-blocking)
-  # ===========================================================================
+  # ---------------------------------------------------------------------------
+  # Benchmarks — PRs only, non-blocking
+  # ---------------------------------------------------------------------------
   benchmark:
-    name: Performance Benchmarks
+    name: Benchmarks
     needs: quality
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
     steps:
       - uses: actions/checkout@v5
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
 
-      - name: Set up Python
-        run: uv python install 3.12
+      - run: uv python install 3.12
 
-      - name: Install dependencies
-        run: uv sync --all-extras
+      - run: uv sync --all-extras
 
       - name: Run benchmarks
         run: |
           uv run pytest tests/benchmarks/ \
             --benchmark-only \
             --benchmark-sort=mean \
-            --benchmark-json=benchmark-results.json \
-            || echo "No benchmarks found yet - skipping"
+            --benchmark-json=benchmark-results.json
 
-      - name: Store benchmark result
+      - uses: actions/upload-artifact@v4
         if: always()
-        uses: actions/upload-artifact@v4
         with:
           name: benchmark-results
           path: benchmark-results.json
           if-no-files-found: ignore
 
-  # ===========================================================================
-  # Job 4: Build validation
-  # ===========================================================================
+  # ---------------------------------------------------------------------------
+  # Build — validate wheel + sdist
+  # ---------------------------------------------------------------------------
   build:
     name: Build Package
     needs: test
@@ -189,22 +182,21 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
 
-      - name: Set up Python
-        run: uv python install 3.12
+      - run: uv python install 3.12
 
-      - name: Build
-        run: uv run python -m build
+      - run: uv sync
 
-      - name: Check package
-        run: uv run twine check dist/*
+      - name: Build wheel + sdist
+        run: uv build
 
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+      - name: Check package metadata
+        run: uvx twine check dist/*
+
+      - uses: actions/upload-artifact@v4
         with:
           name: dist
           path: dist/
