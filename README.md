@@ -101,11 +101,11 @@ assert isinstance(restored["weights"], torch.Tensor)
 ```python
 import datason
 
-datason.dumps(obj, **config)    # Serialize to JSON string
-datason.loads(s, **config)      # Deserialize from JSON string
-datason.dump(obj, fp, **config) # Write to file
-datason.load(fp, **config)      # Read from file
-datason.config(**config)        # Context manager for temp config
+datason.dumps(obj, **config)  # Serialize to JSON string
+datason.loads(s, **config)  # Deserialize from JSON string
+datason.dump(obj, fp, **config)  # Write to file
+datason.load(fp, **config)  # Read from file
+datason.config(**config)  # Context manager for temp config
 ```
 
 That's the entire public API.
@@ -148,10 +148,10 @@ with datason.config(sort_keys=True, nan_handling=NanHandling.STRING):
 from datason import ml_config, api_config, strict_config, performance_config
 
 with datason.config(**ml_config().__dict__):
-    datason.dumps(model_output)   # UNIX_MS dates, fallback to string
+    datason.dumps(model_output)  # UNIX_MS dates, fallback to string
 
 with datason.config(**api_config().__dict__):
-    datason.dumps(response)       # ISO dates, sorted keys, no type hints
+    datason.dumps(response)  # ISO dates, sorted keys, no type hints
 ```
 
 ### Config Options
@@ -167,6 +167,7 @@ with datason.config(**api_config().__dict__):
 | `max_size` | `int` | `100_000` | Max dict/list size (security) |
 | `fallback_to_string` | `bool` | `False` | `str()` unknown types instead of raising |
 | `strict` | `bool` | `True` | Raise on unrecognized type metadata |
+| `allow_plugin_deserialization` | `bool` | `True` | Allow plugin code to run during `loads`/`load` |
 | `redact_fields` | `tuple[str, ...]` | `()` | Field names to redact |
 | `redact_patterns` | `tuple[str, ...]` | `()` | Regex patterns to redact from strings |
 
@@ -204,6 +205,16 @@ is_valid, payload = verify_integrity(wrapped, key="secret")
 
 All limits raise `SecurityError` and are configurable.
 
+### Untrusted Input Recommendation
+
+If you load JSON from untrusted sources, disable plugin deserialization to avoid executing plugin code paths:
+
+```python
+safe = datason.loads(payload, allow_plugin_deserialization=False)
+```
+
+This still supports built-in collection hints (`tuple`, `set`, `frozenset`) but blocks plugin-based reconstruction.
+
 ## How It Works
 
 datason uses a plugin-based architecture. Every type beyond JSON primitives is handled by a `TypePlugin` registered in a priority-sorted registry:
@@ -222,6 +233,7 @@ from datason._protocols import TypePlugin, SerializeContext, DeserializeContext
 from datason._registry import default_registry
 from datason._types import TYPE_METADATA_KEY, VALUE_METADATA_KEY
 
+
 class MoneyPlugin:
     name = "money"
     priority = 400  # 400+ for user plugins
@@ -238,6 +250,7 @@ class MoneyPlugin:
     def deserialize(self, data, ctx):
         v = data[VALUE_METADATA_KEY]
         return Money(Decimal(v["amount"]), v["currency"])
+
 
 default_registry.register(MoneyPlugin())
 ```

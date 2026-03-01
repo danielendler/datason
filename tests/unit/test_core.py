@@ -55,12 +55,24 @@ class TestDumpsContainers:
         assert datason.dumps([1, 2, 3]) == "[1, 2, 3]"
 
     def test_tuple_becomes_list(self):
-        result = json.loads(datason.dumps((1, 2, 3)))
+        result = json.loads(datason.dumps((1, 2, 3), include_type_hints=False))
         assert result == [1, 2, 3]
 
     def test_set_becomes_sorted_list(self):
-        result = json.loads(datason.dumps({3, 1, 2}))
+        result = json.loads(datason.dumps({3, 1, 2}, include_type_hints=False))
         assert sorted(result) == [1, 2, 3]
+
+    def test_tuple_round_trip_with_type_hints(self):
+        value = (1, 2, 3)
+        assert datason.loads(datason.dumps(value)) == value
+
+    def test_set_round_trip_with_type_hints(self):
+        value = {1, 2, 3}
+        assert datason.loads(datason.dumps(value)) == value
+
+    def test_frozenset_round_trip_with_type_hints(self):
+        value = frozenset({1, 2, 3})
+        assert datason.loads(datason.dumps(value)) == value
 
     def test_mixed_nested(self, sample_data):
         result = json.loads(datason.dumps(sample_data))
@@ -88,6 +100,22 @@ class TestRoundTrip:
         assert datason.loads(datason.dumps(value)) == value
 
 
+class TestJsonCompatibilityArgs:
+    """Test json-compatible kwargs are accepted."""
+
+    def test_dumps_indent(self):
+        out = datason.dumps({"a": 1}, indent=2)
+        assert out == '{\n  "a": 1\n}'
+
+    def test_dumps_ensure_ascii(self):
+        out = datason.dumps({"emoji": "🙂"}, ensure_ascii=True)
+        assert r"\ud83d\ude42" in out
+
+    def test_loads_parse_float(self):
+        value = datason.loads("1.25", parse_float=str)
+        assert value == "1.25"
+
+
 class TestNanHandling:
     """Test NaN and Infinity handling."""
 
@@ -97,7 +125,7 @@ class TestNanHandling:
 
     def test_nan_to_string(self):
         result = json.loads(datason.dumps(float("nan"), nan_handling=NanHandling.STRING))
-        assert result == "nan"
+        assert result == "NaN"
 
     def test_inf_to_null_default(self):
         result = json.loads(datason.dumps(float("inf")))

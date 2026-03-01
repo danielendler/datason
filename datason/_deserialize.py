@@ -14,7 +14,7 @@ from ._config import SerializationConfig, get_active_config
 from ._errors import DeserializationError, SecurityError
 from ._protocols import DeserializeContext
 from ._registry import default_registry
-from ._types import TYPE_METADATA_KEY
+from ._types import TYPE_METADATA_KEY, VALUE_METADATA_KEY
 
 
 def _deserialize_recursive(data: Any, ctx: DeserializeContext) -> Any:
@@ -41,21 +41,35 @@ def _deserialize_recursive(data: Any, ctx: DeserializeContext) -> Any:
 def _deserialize_dict(data: dict[str, Any], ctx: DeserializeContext) -> Any:
     """Deserialize a dict, checking for type metadata first."""
     # Check if this dict is a type-annotated value
-    if TYPE_METADATA_KEY in data:
+    if TYPE_METADATA_KEY in data and ctx.config.allow_plugin_deserialization:
         plugin_result = default_registry.find_deserializer(data, ctx)
         if plugin_result is not None:
             _plugin, deserialized = plugin_result
             return deserialized
 
-        # No plugin found for this type annotation
-        if ctx.config.strict:
-            type_name = data.get(TYPE_METADATA_KEY, "<unknown>")
-            raise DeserializationError(
-                f"No plugin registered to deserialize type "
-                f"'{type_name}'. Install the relevant plugin or "
-                f"set strict=False in config."
-            )
-        # Non-strict: fall through to regular dict deserialization
+    # Built-in type hints for core collection types
+    type_name = data.get(TYPE_METADATA_KEY)
+    if type_name in {"tuple", "set", "frozenset"}:
+        raw_value = data.get(VALUE_METADATA_KEY)
+        if not isinstance(raw_value, list):
+            if ctx.config.strict:
+                raise DeserializationError(f"Cannot deserialize {type_name}: expected list in {VALUE_METADATA_KEY}.")
+            return data
+        child = ctx.child()
+        items = [_deserialize_recursive(item, child) for item in raw_value]
+        if type_name == "tuple":
+            return tuple(items)
+        if type_name == "set":
+            return set(items)
+        return frozenset(items)
+
+    if TYPE_METADATA_KEY in data and ctx.config.strict:
+        strict_type_name = data.get(TYPE_METADATA_KEY, "<unknown>")
+        raise DeserializationError(
+            f"No plugin registered to deserialize type "
+            f"'{strict_type_name}'. Install the relevant plugin or "
+            f"set strict=False in config or allow_plugin_deserialization=True."
+        )
 
     # Regular dict: recurse into values
     child = ctx.child()
@@ -105,9 +119,10 @@ def loads(s: str, **kwargs: Any) -> Any:
         >>> isinstance(restored["ts"], dt.datetime)
         True
     """
-    config = _resolve_config(kwargs)
+    _validate_load_kwargs(kwargs, func_name="loads")
+    config = _resolve_config({k: v for k, v in kwargs.items() if k in _CONFIG_FIELDS})
     ctx = DeserializeContext(config=config)
-    parsed = json.loads(s)
+    parsed = json.loads(s, **_extract_json_loads_kwargs(kwargs))
     return _deserialize_recursive(parsed, ctx)
 
 
@@ -130,10 +145,32 @@ def load(fp: IOBase, **kwargs: Any) -> Any:
         >>> datason.load(buf)
         {'key': 'value'}
     """
-    config = _resolve_config(kwargs)
+    _validate_load_kwargs(kwargs, func_name="load")
+    config = _resolve_config({k: v for k, v in kwargs.items() if k in _CONFIG_FIELDS})
     ctx = DeserializeContext(config=config)
-    parsed = json.load(fp)
+    parsed = json.load(fp, **_extract_json_loads_kwargs(kwargs))
     return _deserialize_recursive(parsed, ctx)
+
+
+_CONFIG_FIELDS = frozenset(SerializationConfig.__dataclass_fields__.keys())
+_JSON_LOADS_KWARGS = frozenset(
+    {
+        "cls",
+        "object_hook",
+        "parse_float",
+        "parse_int",
+        "parse_constant",
+        "object_pairs_hook",
+    }
+)
+
+
+def _validate_load_kwargs(kwargs: dict[str, Any], *, func_name: str) -> None:
+    """Validate kwargs for loads/load."""
+    allowed = _CONFIG_FIELDS | _JSON_LOADS_KWARGS
+    for key in kwargs:
+        if key not in allowed:
+            raise TypeError(f"{func_name}() got an unexpected keyword argument '{key}'")
 
 
 def _resolve_config(overrides: dict[str, Any]) -> SerializationConfig:
@@ -144,3 +181,8 @@ def _resolve_config(overrides: dict[str, Any]) -> SerializationConfig:
         fields.update(overrides)
         return SerializationConfig(**fields)
     return get_active_config()
+
+
+def _extract_json_loads_kwargs(kwargs: dict[str, Any]) -> dict[str, Any]:
+    """Extract kwargs intended for json.loads/json.load."""
+    return {k: v for k, v in kwargs.items() if k in _JSON_LOADS_KWARGS}

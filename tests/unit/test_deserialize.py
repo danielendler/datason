@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 
 import datason
-from datason._errors import SecurityError
+from datason._errors import DeserializationError, SecurityError
 
 
 class TestLoadsBasicTypes:
@@ -56,3 +56,37 @@ class TestDeserializeDepthLimit:
         deep = '{"a": ' * 60 + "1" + "}" * 60
         with pytest.raises(SecurityError, match="depth"):
             datason.loads(deep)
+
+
+class TestPluginDeserializationSafety:
+    """Test plugin deserialization safety controls for untrusted inputs."""
+
+    def test_plugins_disabled_blocks_plugin_execution(self, monkeypatch):
+        def _raise_if_called(data, ctx):
+            raise RuntimeError("exploit plugin executed")
+
+        monkeypatch.setattr("datason._deserialize.default_registry.find_deserializer", _raise_if_called)
+        payload = '{"__datason_type__": "exploit", "__datason_value__": "boom"}'
+
+        with pytest.raises(DeserializationError, match="allow_plugin_deserialization"):
+            datason.loads(payload, allow_plugin_deserialization=False)
+
+    def test_plugins_enabled_executes_plugin_path(self, monkeypatch):
+        def _raise_if_called(data, ctx):
+            raise RuntimeError("exploit plugin executed")
+
+        monkeypatch.setattr("datason._deserialize.default_registry.find_deserializer", _raise_if_called)
+        payload = '{"__datason_type__": "exploit", "__datason_value__": "boom"}'
+
+        with pytest.raises(RuntimeError, match="exploit plugin executed"):
+            datason.loads(payload, allow_plugin_deserialization=True)
+
+    def test_builtin_collection_hints_still_work_when_plugins_disabled(self):
+        payload = '{"__datason_type__": "tuple", "__datason_value__": [1, 2, 3]}'
+        assert datason.loads(payload, allow_plugin_deserialization=False) == (1, 2, 3)
+
+
+class TestLoadKwargValidation:
+    def test_load_reports_correct_function_name(self):
+        with pytest.raises(TypeError, match=r"load\(\) got an unexpected keyword argument"):
+            datason.load(__import__("io").StringIO("{}"), nope=True)
