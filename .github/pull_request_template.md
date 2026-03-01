@@ -70,7 +70,14 @@ $ pytest --cov=datason --cov-report=term-missing
 
 ## 📊 **Performance Impact**
 <!-- If performance-related, include benchmarks -->
-<!-- Use scripts/benchmark_real_performance.py if applicable -->
+<!-- Use: just perf-real / just perf-real-compare -->
+- **Hotspot(s) touched**:
+- **Workload classes impacted** (`api`, `event_log`, `data_science`, `ml_serving`):
+- **Real-data replay p95 delta**:
+- **Real-data replay p99 delta**:
+- **Throughput delta**:
+- **Peak memory delta**:
+- **Synthetic benchmark impact (secondary signal)**:
 
 ## 📸 **Screenshots/Examples**
 <!-- For UI changes or new features, include examples -->
