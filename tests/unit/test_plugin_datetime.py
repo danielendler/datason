@@ -246,3 +246,37 @@ class TestRoundTrip:
         serialized = datason.dumps(obj)
         parsed = json.loads(serialized)
         assert isinstance(parsed, dict)
+
+
+class TestNaiveDatetimeRoundTrip:
+    """Test that naive datetimes stay naive after UNIX timestamp round-trip."""
+
+    def test_naive_datetime_unix_stays_naive(self) -> None:
+        original = dt.datetime(2024, 6, 15, 12, 0, 0)  # naive
+        assert original.tzinfo is None
+        serialized = datason.dumps(original, date_format=DateFormat.UNIX)
+        result = datason.loads(serialized)
+        assert isinstance(result, dt.datetime)
+        assert result.tzinfo is None, "Naive datetime should remain naive after UNIX round-trip"
+
+    def test_naive_datetime_unix_ms_stays_naive(self) -> None:
+        original = dt.datetime(2024, 6, 15, 12, 0, 0)
+        serialized = datason.dumps(original, date_format=DateFormat.UNIX_MS)
+        result = datason.loads(serialized)
+        assert result.tzinfo is None
+
+    def test_aware_datetime_unix_stays_aware(self) -> None:
+        original = dt.datetime(2024, 6, 15, 12, 0, 0, tzinfo=dt.timezone.utc)
+        serialized = datason.dumps(original, date_format=DateFormat.UNIX)
+        result = datason.loads(serialized)
+        assert result.tzinfo is not None
+
+    def test_naive_datetime_unix_value_preserved(self) -> None:
+        original = dt.datetime(2024, 6, 15, 12, 0, 0)
+        serialized = datason.dumps(original, date_format=DateFormat.UNIX)
+        result = datason.loads(serialized)
+        # Values should match (both naive)
+        assert result.year == original.year
+        assert result.month == original.month
+        assert result.day == original.day
+        assert result.hour == original.hour
