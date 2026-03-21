@@ -36,7 +36,7 @@ jobs:
       - run: uv python install 3.12
 
       - name: Install dependencies
-        run: uv sync --all-extras
+        run: uv sync  # dev deps only — no ML libs needed for linting/typing
 
       - name: Ruff lint
         run: uv run ruff check datason/ tests/
@@ -104,6 +104,8 @@ jobs:
             extras: "--all-extras"
           - python-version: "3.12"
             extras: "--all-extras"
+          - python-version: "3.13"
+            extras: "--all-extras"  # TF excluded automatically by python_version>='3.11' marker; torch/sklearn work
     steps:
       - uses: actions/checkout@v6
 
@@ -287,7 +289,7 @@ jobs:
           print("No benchmark regressions beyond threshold.")
           PY
 
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: benchmark-results
@@ -321,7 +323,7 @@ jobs:
       - name: Check package metadata
         run: uvx twine check dist/*
 
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@v7
         with:
           name: dist
           path: dist/
