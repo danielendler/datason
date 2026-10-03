@@ -48,7 +48,7 @@
   '{"__datason_type__": "numpy.ndarray", "__datason_value__": {"data": [[1, 2], [3, 4]], "dtype": "int64", "shape": [2, 2]}}'
 # ---
 # name: TestNumpySnapshots.test_float_scalar
-  '{"v": 3.14}'
+  '{"v": {"__datason_type__": "numpy.floating", "__datason_value__": 3.14}}'
 # ---
 # name: TestNumpySnapshots.test_int_scalar
   '{"v": {"__datason_type__": "numpy.integer", "__datason_value__": 42}}'
