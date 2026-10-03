@@ -9,8 +9,6 @@ from .._errors import PluginError
 from .._protocols import DeserializeContext, SerializeContext
 from .._types import TYPE_METADATA_KEY, VALUE_METADATA_KEY
 
-_HANDLED_TYPES = (decimal_mod.Decimal, complex)
-
 _TYPE_NAMES = {
     decimal_mod.Decimal: "decimal.Decimal",
     complex: "complex",
@@ -29,7 +27,9 @@ class DecimalPlugin:
         return 102
 
     def can_handle(self, obj: Any) -> bool:
-        return isinstance(obj, _HANDLED_TYPES)
+        # Scalar subclasses (for example NumPy complex128) belong to their
+        # own plugins; only claim types this plugin can actually encode.
+        return type(obj) in _TYPE_NAMES
 
     def serialize(self, obj: Any, ctx: SerializeContext) -> Any:
         type_name = _TYPE_NAMES.get(type(obj))

@@ -51,6 +51,12 @@ class TestCanHandle:
     def test_rejects_int(self, plugin: DecimalPlugin) -> None:
         assert not plugin.can_handle(42)
 
+    def test_rejects_subclasses_without_a_matching_type_tag(self, plugin: DecimalPlugin) -> None:
+        class ComplexSubclass(complex):
+            pass
+
+        assert not plugin.can_handle(ComplexSubclass(1, 2))
+
 
 class TestSerializeDecimal:
     def test_with_type_hints(self, plugin: DecimalPlugin, ser_ctx: SerializeContext) -> None:
