@@ -12,17 +12,24 @@ from .._registry import default_registry
 from .datetime import DatetimePlugin
 from .decimal import DecimalPlugin
 from .path import PathPlugin
+from .structured import StructuredPlugin
 from .uuid import UUIDPlugin
 
 
 def _register_builtins() -> None:
     """Register all built-in plugins with the default registry."""
     # Stdlib plugins (always available)
-    for plugin_cls in (DatetimePlugin, UUIDPlugin, DecimalPlugin, PathPlugin):
+    for plugin_cls in (DatetimePlugin, UUIDPlugin, DecimalPlugin, PathPlugin, StructuredPlugin):
         default_registry.register(plugin_cls())
 
     # Data science plugins (optional dependencies)
     _register_optional_plugins()
+    try:
+        from .pydantic import PydanticPlugin
+
+        default_registry.register(PydanticPlugin())
+    except ImportError:
+        pass
 
 
 def _register_optional_plugins() -> None:

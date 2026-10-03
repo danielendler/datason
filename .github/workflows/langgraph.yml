@@ -1,0 +1,38 @@
+name: LangGraph Compatibility
+
+on:
+  pull_request:
+    paths:
+      - "datason/**"
+      - "tests/integration/test_langgraph_checkpoint.py"
+      - "pyproject.toml"
+      - "uv.lock"
+      - ".github/workflows/langgraph.yml"
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  checkpoint:
+    name: SQLite resume (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.13"]
+    steps:
+      - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+      - run: uv python install ${{ matrix.python-version }}
+      - name: Verify pinned framework compatibility
+        env:
+          UV_PYTHON: ${{ matrix.python-version }}
+        run: >-
+          uv run --locked --extra numpy
+          --with langgraph==1.2.12
+          --with langgraph-checkpoint-sqlite==3.1.1
+          pytest tests/integration/test_langgraph_checkpoint.py

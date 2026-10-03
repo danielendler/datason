@@ -10,7 +10,7 @@
 **JSON serialization for Python data across APIs, diagnostics, and stored state. Supported types include datetime, NumPy, Pandas, and ML values through optional plugins. The core has zero dependencies.**
 
 The current release is an alpha. The [hardening roadmap](docs/hardening-roadmap.md)
-records the proposed fixes, tested contracts, open PRs, and merge sequence.
+records the implemented hardening, tested contracts, and next validation milestones.
 
 ```python
 import datason

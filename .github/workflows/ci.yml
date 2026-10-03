@@ -14,7 +14,7 @@ on:
   push:
     branches: [main]
   pull_request:
-    branches: [main]
+    branches: ["**"]  # Include stacked PRs before they are retargeted to main.
 
 permissions:
   contents: read
@@ -36,7 +36,8 @@ jobs:
       - run: uv python install 3.12
 
       - name: Install dependencies
-        run: uv sync --all-extras
+        # Strict typing checks optional plugin imports, so install their libraries.
+        run: uv sync --all-extras --locked
 
       - name: Ruff lint
         run: uv run ruff check datason/ tests/
@@ -92,7 +93,7 @@ jobs:
   # ---------------------------------------------------------------------------
   test:
     name: Test (Python ${{ matrix.python-version }})
-    needs: quality
+    # Run regressions even when the quality job reports dependency advisories.
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -104,6 +105,8 @@ jobs:
             extras: "--all-extras"
           - python-version: "3.12"
             extras: "--all-extras"
+          - python-version: "3.13"
+            extras: "--all-extras"  # TF excluded automatically by python_version>='3.11' marker; torch/sklearn work
     steps:
       - uses: actions/checkout@v6
 
@@ -144,7 +147,6 @@ jobs:
   # ---------------------------------------------------------------------------
   benchmark:
     name: Benchmarks
-    needs: quality
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
     continue-on-error: true
@@ -307,7 +309,7 @@ jobs:
           print("No benchmark regressions beyond threshold.")
           PY
 
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: benchmark-results
@@ -326,7 +328,7 @@ jobs:
   # ---------------------------------------------------------------------------
   build:
     name: Build Package
-    needs: test
+    needs: [quality, test]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -345,7 +347,7 @@ jobs:
       - name: Check package metadata
         run: uvx twine check dist/*
 
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@v7
         with:
           name: dist
           path: dist/

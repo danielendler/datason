@@ -109,10 +109,12 @@ class TestPandasSnapshots:
 
     def test_dataframe_records(self, snapshot: SnapshotAssertion) -> None:
         df = pd.DataFrame({"a": [1, 2], "b": [3.0, 4.0]})
+        df.columns = pd.Index(["a", "b"], dtype="object")
         assert datason.dumps(df) == snapshot
 
     def test_dataframe_split(self, snapshot: SnapshotAssertion) -> None:
         df = pd.DataFrame({"a": [1, 2], "b": [3.0, 4.0]})
+        df.columns = pd.Index(["a", "b"], dtype="object")
         assert datason.dumps(df, dataframe_orient=DataFrameOrient.SPLIT) == snapshot
 
     def test_series(self, snapshot: SnapshotAssertion) -> None:
