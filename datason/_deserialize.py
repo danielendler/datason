@@ -12,6 +12,7 @@ from typing import Any
 
 from ._config import SerializationConfig, get_active_config
 from ._errors import DeserializationError, SecurityError
+from ._limits import check_input, check_tree
 from ._protocols import DeserializeContext
 from ._registry import default_registry
 from ._types import TYPE_METADATA_KEY, VALUE_METADATA_KEY
@@ -51,13 +52,23 @@ def _deserialize_dict(data: dict[str, Any], ctx: DeserializeContext) -> Any:
     # Check if this dict is a type-annotated value
     if TYPE_METADATA_KEY in data:
         type_name = data[TYPE_METADATA_KEY]
+        if not isinstance(type_name, str):
+            raise DeserializationError("Type metadata must be a string")
 
         # Built-in collections (tuple/set/frozenset) — no plugin needed
         if type_name in _COLLECTION_TYPES:
+            raw = data.get(VALUE_METADATA_KEY)
+            if not isinstance(raw, list):
+                raise DeserializationError(f"Cannot deserialize {type_name}: expected list payload")
             child = ctx.child()
-            items = [_deserialize_recursive(item, child) for item in data.get(VALUE_METADATA_KEY, [])]
-            return _COLLECTION_TYPES[type_name](items)
+            items = [_deserialize_recursive(item, child) for item in raw]
+            try:
+                return _COLLECTION_TYPES[type_name](items)
+            except TypeError as exc:
+                raise DeserializationError(f"Invalid items for {type_name}") from exc
 
+        if not ctx.config.allow_plugin_deserialization:
+            raise DeserializationError("Type reconstruction requires allow_plugin_deserialization=True")
         plugin_result = default_registry.find_deserializer(data, ctx)
         if plugin_result is not None:
             _plugin, deserialized = plugin_result
@@ -124,7 +135,12 @@ def loads(s: str, **kwargs: Any) -> Any:
     json_kwargs, config_kwargs = _split_kwargs(kwargs, _JSON_LOADS_KWARGS)
     cfg = _resolve_config(config_kwargs)
     ctx = DeserializeContext(config=cfg)
-    parsed = json.loads(s, **json_kwargs)
+    check_input(s, cfg)
+    try:
+        parsed = json.loads(s, **json_kwargs)
+    except RecursionError as exc:
+        raise SecurityError("JSON parser depth exceeds supported limit") from exc
+    check_tree(parsed, cfg)
     return _deserialize_recursive(parsed, ctx)
 
 
@@ -147,11 +163,10 @@ def load(fp: IOBase, **kwargs: Any) -> Any:
         >>> datason.load(buf)
         {'key': 'value'}
     """
-    json_kwargs, config_kwargs = _split_kwargs(kwargs, _JSON_LOADS_KWARGS)
+    _, config_kwargs = _split_kwargs(kwargs, _JSON_LOADS_KWARGS)
     cfg = _resolve_config(config_kwargs)
-    ctx = DeserializeContext(config=cfg)
-    parsed = json.load(fp, **json_kwargs)
-    return _deserialize_recursive(parsed, ctx)
+    s = fp.read(cfg.max_input_bytes + 1)
+    return loads(s, **kwargs)
 
 
 def _resolve_config(overrides: dict[str, Any]) -> SerializationConfig:
