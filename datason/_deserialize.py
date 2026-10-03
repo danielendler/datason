@@ -99,7 +99,7 @@ def _deserialize_list(data: list[Any], ctx: DeserializeContext) -> list[Any]:
 # =========================================================================
 
 
-def loads(s: str, **kwargs: Any) -> Any:
+def loads(s: str | bytes | bytearray, **kwargs: Any) -> Any:
     """Deserialize a JSON string back to Python objects.
 
     Drop-in replacement for ``json.loads``. Values serialized with
