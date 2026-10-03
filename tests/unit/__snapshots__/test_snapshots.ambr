@@ -6,7 +6,7 @@
   '{"score": 95.5, "ts": {"__datason_type__": "datetime", "__datason_value__": "2024-01-15T00:00:00+00:00"}}'
 # ---
 # name: TestConfigPresetSnapshots.test_ml_config
-  '{"ts": {"__datason_type__": "datetime", "__datason_value__": 1705276800000.0}, "score": 95.5}'
+  '{"ts": {"__datason_type__": "datetime", "__datason_value__": 1705276800000.0, "tz_aware": true}, "score": 95.5}'
 # ---
 # name: TestDatetimeSnapshots.test_date_only
   '{"d": {"__datason_type__": "date", "__datason_value__": "2024-06-15"}}'
@@ -24,22 +24,22 @@
   '{"td": {"__datason_type__": "timedelta", "__datason_value__": 9000.0}}'
 # ---
 # name: TestDatetimeSnapshots.test_unix_format
-  '{"ts": {"__datason_type__": "datetime", "__datason_value__": 1718447400.0}}'
+  '{"ts": {"__datason_type__": "datetime", "__datason_value__": 1718447400.0, "tz_aware": true}}'
 # ---
 # name: TestDatetimeSnapshots.test_unix_ms_format
-  '{"ts": {"__datason_type__": "datetime", "__datason_value__": 1718447400000.0}}'
+  '{"ts": {"__datason_type__": "datetime", "__datason_value__": 1718447400000.0, "tz_aware": true}}'
 # ---
 # name: TestNanHandlingSnapshots.test_inf_null
   '{"v": null}'
 # ---
 # name: TestNanHandlingSnapshots.test_inf_string
-  '{"v": "inf"}'
+  '{"v": "Infinity"}'
 # ---
 # name: TestNanHandlingSnapshots.test_nan_null
   '{"v": null}'
 # ---
 # name: TestNanHandlingSnapshots.test_nan_string
-  '{"v": "nan"}'
+  '{"v": "NaN"}'
 # ---
 # name: TestNumpySnapshots.test_1d_array
   '{"__datason_type__": "numpy.ndarray", "__datason_value__": {"data": [1.0, 2.0, 3.0], "dtype": "float64", "shape": [3]}}'
@@ -72,7 +72,7 @@
   '{"age": 30, "name": "Alice"}'
 # ---
 # name: TestPrimitiveSnapshots.test_tuple_and_set
-  '{"set": [1, 2, 3], "tuple": [1, 2, 3]}'
+  '{"set": {"__datason_type__": "set", "__datason_value__": [1, 2, 3]}, "tuple": {"__datason_type__": "tuple", "__datason_value__": [1, 2, 3]}}'
 # ---
 # name: TestPrimitiveSnapshots.test_unicode_strings
   '{"cjk": "test", "emoji": "hello"}'

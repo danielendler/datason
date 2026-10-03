@@ -43,7 +43,11 @@ class DatetimePlugin:
         value = _serialize_value(obj, ctx.config.date_format)
 
         if ctx.config.include_type_hints:
-            return {TYPE_METADATA_KEY: type_name, VALUE_METADATA_KEY: value}
+            meta: dict[str, Any] = {TYPE_METADATA_KEY: type_name, VALUE_METADATA_KEY: value}
+            # Track naive/aware for numeric formats so round-trip is lossless
+            if isinstance(obj, dt.datetime) and isinstance(value, int | float):
+                meta["tz_aware"] = obj.tzinfo is not None
+            return meta
         return value
 
     def can_deserialize(self, data: dict[str, Any]) -> bool:
@@ -52,7 +56,8 @@ class DatetimePlugin:
     def deserialize(self, data: dict[str, Any], ctx: DeserializeContext) -> Any:
         type_name = data[TYPE_METADATA_KEY]
         value = data[VALUE_METADATA_KEY]
-        return _deserialize_value(type_name, value)
+        tz_aware = data.get("tz_aware")  # None = old format (assume aware, backward compat)
+        return _deserialize_value(type_name, value, tz_aware=tz_aware)
 
 
 def _serialize_value(obj: Any, fmt: DateFormat) -> str | float:
@@ -81,7 +86,7 @@ def _serialize_value(obj: Any, fmt: DateFormat) -> str | float:
             return obj.isoformat()
 
 
-def _deserialize_value(type_name: str, value: Any) -> Any:
+def _deserialize_value(type_name: str, value: Any, tz_aware: bool | None = None) -> Any:
     """Reconstruct a datetime-family object from its serialized value."""
     match type_name:
         case "datetime":
@@ -90,6 +95,9 @@ def _deserialize_value(type_name: str, value: Any) -> Any:
             if isinstance(value, int | float):
                 # Detect millisecond timestamps (> year 2100 in seconds)
                 ts = value / 1000 if abs(value) > 4_102_444_800 else value
+                # tz_aware=False → naive (local time); None or True → UTC (backward compat)
+                if tz_aware is False:
+                    return dt.datetime.fromtimestamp(ts)
                 return dt.datetime.fromtimestamp(ts, tz=dt.timezone.utc)
             raise PluginError(f"Cannot deserialize datetime from {type(value).__name__}")
         case "date":
