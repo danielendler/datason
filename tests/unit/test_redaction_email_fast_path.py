@@ -1,6 +1,7 @@
 """Impossible stock-email scans retain redaction and extension semantics."""
 
 import re
+from types import SimpleNamespace
 
 import pytest
 from hypothesis import given
@@ -14,7 +15,7 @@ def test_long_non_email_string_does_not_enter_regex_engine(monkeypatch):
     def forbidden(*args, **kwargs):
         pytest.fail("Stock email regex ran on a string without its required literal")
 
-    monkeypatch.setattr("datason.security.redaction.re.sub", forbidden)
+    monkeypatch.setattr("datason.security.redaction.re", SimpleNamespace(sub=forbidden))
     text = "x" * 900_000
     assert redact_string(text, ("email",)) == text
     assert datason.loads(datason.dumps({"text": text}, redact_patterns=("email",))) == {"text": text}
