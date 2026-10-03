@@ -7,6 +7,7 @@ types directly.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
@@ -23,6 +24,7 @@ class SerializeContext:
     seen_ids: set[int] = field(default_factory=lambda: set[int]())
     representation: bool = False
     visited: list[int] = field(default_factory=lambda: [0])
+    json_options: tuple[Callable[[Any], Any] | None, bool] | None = None
 
     def child(self) -> SerializeContext:
         """Create a child context with incremented depth."""
@@ -32,12 +34,18 @@ class SerializeContext:
             seen_ids=self.seen_ids,
             representation=self.representation,
             visited=self.visited,
+            json_options=self.json_options,
         )
 
     def for_representation(self) -> SerializeContext:
         """Apply policies to plugin output while allowing internal metadata."""
         return SerializeContext(
-            config=self.config, depth=self.depth, seen_ids=self.seen_ids, representation=True, visited=self.visited
+            config=self.config,
+            depth=self.depth,
+            seen_ids=self.seen_ids,
+            representation=True,
+            visited=self.visited,
+            json_options=self.json_options,
         )
 
 

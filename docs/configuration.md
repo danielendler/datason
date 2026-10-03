@@ -72,6 +72,21 @@ datason.dumps({"v": float("nan")}, nan_handling=NanHandling.KEEP)    # NaN (inva
 datason.dumps({"v": float("nan")}, nan_handling=NanHandling.DROP)    # null
 ```
 
+## JSON compatibility arguments
+
+`dumps` and `dump` accept `indent`, `ensure_ascii`, `separators`, `allow_nan`,
+`skipkeys`, `check_circular`, `default`, and `cls` alongside configuration options.
+Use `default` or a `json.JSONEncoder` subclass for objects that have no registered
+Datason plugin. Registered plugins retain priority. Callback results still pass
+through Datason's redaction, circular-reference checks, and size/depth limits.
+`check_circular=False` changes the final JSON encoder's setting while Datason
+continues to enforce its own limits. `skipkeys=True` omits dictionary entries
+whose keys are outside the types accepted by the standard JSON encoder.
+
+`loads` and `load` accept `parse_float`, `parse_int`, `parse_constant`,
+`object_hook`, `object_pairs_hook`, and `cls`. Unrecognized arguments raise a
+`TypeError` naming the public function that received them.
+
 ## DataFrameOrient
 
 Controls Pandas DataFrame serialization format:

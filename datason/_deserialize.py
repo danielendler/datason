@@ -24,6 +24,7 @@ _JSON_LOADS_KWARGS = frozenset(
 
 # Built-in collection types reconstructed from type metadata (no plugin needed)
 _COLLECTION_TYPES: dict[str, type] = {"tuple": tuple, "set": set, "frozenset": frozenset}
+_CONFIG_FIELDS = frozenset(SerializationConfig.__dataclass_fields__)
 
 
 def _deserialize_recursive(data: Any, ctx: DeserializeContext) -> Any:
@@ -132,7 +133,7 @@ def loads(s: str | bytes | bytearray, **kwargs: Any) -> Any:
         >>> isinstance(restored["ts"], dt.datetime)
         True
     """
-    json_kwargs, config_kwargs = _split_kwargs(kwargs, _JSON_LOADS_KWARGS)
+    json_kwargs, config_kwargs = _split_kwargs(kwargs, _JSON_LOADS_KWARGS, func_name="loads")
     cfg = _resolve_config(config_kwargs)
     ctx = DeserializeContext(config=cfg)
     check_input(s, cfg)
@@ -163,7 +164,7 @@ def load(fp: IOBase, **kwargs: Any) -> Any:
         >>> datason.load(buf)
         {'key': 'value'}
     """
-    _, config_kwargs = _split_kwargs(kwargs, _JSON_LOADS_KWARGS)
+    _, config_kwargs = _split_kwargs(kwargs, _JSON_LOADS_KWARGS, func_name="load")
     cfg = _resolve_config(config_kwargs)
     s = fp.read(cfg.max_input_bytes + 1)
     return loads(s, **kwargs)
@@ -179,8 +180,13 @@ def _resolve_config(overrides: dict[str, Any]) -> SerializationConfig:
     return get_active_config()
 
 
-def _split_kwargs(kwargs: dict[str, Any], json_keys: frozenset[str]) -> tuple[dict[str, Any], dict[str, Any]]:
+def _split_kwargs(
+    kwargs: dict[str, Any], json_keys: frozenset[str], *, func_name: str
+) -> tuple[dict[str, Any], dict[str, Any]]:
     """Split kwargs into (json_native, datason_config) dicts."""
+    for key in kwargs:
+        if key not in json_keys and key not in _CONFIG_FIELDS:
+            raise TypeError(f"{func_name}() got an unexpected keyword argument '{key}'")
     json_kw = {k: v for k, v in kwargs.items() if k in json_keys}
     config_kw = {k: v for k, v in kwargs.items() if k not in json_keys}
     return json_kw, config_kw
