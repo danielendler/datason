@@ -17,6 +17,7 @@ from hypothesis import given
 from hypothesis import strategies as st
 
 import datason
+from datason._types import TYPE_METADATA_KEY
 from tests.conftest import (
     st_dates,
     st_datetimes,
@@ -57,7 +58,7 @@ class TestJsonPrimitiveRoundtrip:
 
 
 class TestJsonCompositeRoundtrip:
-    """Composite JSON structures roundtrip."""
+    """Composite JSON structures without reserved metadata keys roundtrip."""
 
     @given(
         st.recursive(
@@ -67,7 +68,10 @@ class TestJsonCompositeRoundtrip:
             | st.floats(allow_nan=False, allow_infinity=False)
             | st.text(max_size=50),
             lambda children: (
-                st.lists(children, max_size=5) | st.dictionaries(st.text(max_size=20), children, max_size=5)
+                st.lists(children, max_size=5)
+                | st.dictionaries(
+                    st.text(max_size=20).filter(lambda key: key != TYPE_METADATA_KEY), children, max_size=5
+                )
             ),
             max_leaves=30,
         )
@@ -163,7 +167,9 @@ class TestJsonOutputValidity:
         parsed = json.loads(s)
         assert parsed == data
 
-    @given(st.dictionaries(st.text(max_size=20), st.integers(), max_size=20))
+    @given(
+        st.dictionaries(st.text(max_size=20).filter(lambda key: key != TYPE_METADATA_KEY), st.integers(), max_size=20)
+    )
     def test_string_int_dict_valid_json(self, data: dict[str, Any]) -> None:
         s = datason.dumps(data)
         parsed = json.loads(s)
