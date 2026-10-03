@@ -22,6 +22,10 @@ test *ARGS:
 test-file FILE:
     uv run pytest {{FILE}} -v --tb=short
 
+# Run replay/perf harness tests
+test-perf:
+    uv run pytest tests/perf/ -v
+
 # Run tests matching a keyword
 test-k KEYWORD:
     uv run pytest tests/unit/ -k "{{KEYWORD}}" -v --tb=short
@@ -103,6 +107,14 @@ bench-save:
 # Compare benchmarks against saved baseline
 bench-compare:
     uv run pytest tests/benchmarks/ --benchmark-only --benchmark-compare=baseline --benchmark-sort=mean
+
+# Run real-data replay benchmark suite (sample corpus)
+perf-real *ARGS:
+    uv run python scripts/perf/replay_benchmark.py --input perf/workloads/sample --output perf/results/replay-summary.json {{ARGS}}
+
+# Compare replay suite against an existing baseline summary
+perf-real-compare BASELINE *ARGS:
+    uv run python scripts/perf/replay_benchmark.py --input perf/workloads/sample --output perf/results/replay-summary.json --baseline {{BASELINE}} --fail-on-regression {{ARGS}}
 
 # Run mutation testing (manual/targeted use)
 mutmut *ARGS:
