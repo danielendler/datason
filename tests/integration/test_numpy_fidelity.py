@@ -1,6 +1,7 @@
 """Public API regression tests for scientific values and reconstruction limits."""
 
 import json
+import warnings
 
 import pytest
 
@@ -83,3 +84,18 @@ def test_structured_dtype_requires_explicit_plugin():
     value = np.array([(1, 2.0)], dtype=[("a", "i4"), ("b", "f8")])
     with pytest.raises(SerializationError, match="custom plugin"):
         datason.dumps(value)
+
+
+@pytest.mark.parametrize("dtype", [np.complex64, np.complex128])
+@pytest.mark.parametrize("include_type_hints", [True, False])
+def test_complex_scalar_dispatch_without_plugin_warnings(dtype, include_type_hints):
+    original = dtype(2 + 3j)
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        restored = datason.loads(datason.dumps(original, include_type_hints=include_type_hints))
+    if include_type_hints:
+        assert type(restored) is type(original)
+        assert restored.dtype == original.dtype
+        assert restored == original
+    else:
+        assert restored == [2.0, 3.0]
