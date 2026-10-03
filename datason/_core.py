@@ -48,6 +48,10 @@ def _serialize_recursive(obj: Any, ctx: SerializeContext) -> Any:
 
     try:
         result = _serialize_value(obj, ctx)
+    except SerializationError as exc:
+        if ctx.depth == 0:
+            exc.annotate_path()
+        raise
     finally:
         # Remove from seen set after processing (allow same object
         # to appear in different branches of the tree)
@@ -142,7 +146,11 @@ def _serialize_dict(obj: dict[Any, Any], ctx: SerializeContext) -> dict[str, Any
         elif should_redact_field(key, ctx.config.redact_fields):
             result[key] = _REDACTED
         else:
-            serialized = _serialize_recursive(v, child)
+            try:
+                serialized = _serialize_recursive(v, child)
+            except SerializationError as exc:
+                exc.add_path_segment(key)
+                raise
             result[key] = redact_value(serialized, ctx.config.redact_patterns)
     return result
 
@@ -152,7 +160,14 @@ def _serialize_sequence(obj: Any, ctx: SerializeContext) -> list[Any]:
     if len(obj) > ctx.config.max_size:
         raise SecurityError(f"Sequence size {len(obj)} exceeds limit {ctx.config.max_size}")
     child = ctx.child()
-    return [_serialize_recursive(item, child) for item in obj]
+    result = []
+    for index, item in enumerate(obj):
+        try:
+            result.append(_serialize_recursive(item, child))
+        except SerializationError as exc:
+            exc.add_path_segment(index)
+            raise
+    return result
 
 
 # =========================================================================
