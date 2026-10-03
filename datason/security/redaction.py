@@ -12,10 +12,11 @@ import re
 from typing import Any
 
 _REDACTED = "[REDACTED]"
+_EMAIL_PATTERN = r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}"
 
 # Built-in patterns for common PII types
 BUILTIN_PATTERNS: dict[str, str] = {
-    "email": r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}",
+    "email": _EMAIL_PATTERN,
     "ssn": r"\b\d{3}-\d{2}-\d{4}\b",
     "credit_card": r"\b\d{4}[-\s]?\d{4}[-\s]?\d{4}[-\s]?\d{4}\b",
     "phone_us": r"\b\d{3}[-.]?\d{3}[-.]?\d{4}\b",
@@ -53,6 +54,10 @@ def redact_string(value: str, patterns: tuple[str, ...]) -> str:
     for pattern in patterns:
         # Resolve built-in pattern names
         regex = BUILTIN_PATTERNS.get(pattern, pattern)
+        # A native literal scan avoids quadratic failed email matches.
+        # Keep custom patterns and str-subclass behavior on the regex path.
+        if regex == _EMAIL_PATTERN and type(result) is str and "@" not in result:
+            continue
         result = re.sub(regex, _REDACTED, result)
     return result
 
