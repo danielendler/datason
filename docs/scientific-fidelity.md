@@ -17,7 +17,8 @@ fidelity contract. Non-finite-number and redaction policies may intentionally
 change values, so a diagnostic export is not always a resumable checkpoint.
 
 Typed Pandas frames preserve indexes, columns, names, and column dtypes. Nullable
-integers/strings, categorical domains/order, timestamps, and nanosecond timedeltas
+integers/strings (including Pandas 3's missing-value convention), categorical
+domains/order, timestamps, and nanosecond timedeltas
 are supported. Series preserve their index and dtype. Common indexes include
 RangeIndex, ordinary Index, DatetimeIndex, TimedeltaIndex, CategoricalIndex, and
 MultiIndex. Empty frames, duplicate labels, and non-string columns use a split
