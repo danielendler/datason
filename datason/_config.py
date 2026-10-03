@@ -68,17 +68,23 @@ class SerializationConfig:
     max_depth: int = 50
     max_size: int = 100_000
     max_string_length: int = 1_000_000
+    max_input_bytes: int = 16_777_216
+    max_nodes: int = 1_000_000
 
     # Behavior
     fallback_to_string: bool = False
     strict: bool = True
-
-    # Deserialization safety
     allow_plugin_deserialization: bool = True
 
     # Redaction (optional, for security module)
     redact_fields: tuple[str, ...] = field(default_factory=tuple)
     redact_patterns: tuple[str, ...] = field(default_factory=tuple)
+
+    def __post_init__(self) -> None:
+        for name in ("max_depth", "max_size", "max_string_length", "max_input_bytes", "max_nodes"):
+            value = getattr(self, name)
+            if type(value) is not int or value < 0:
+                raise ValueError(f"{name} must be a nonnegative integer")
 
 
 def ml_config(**overrides: Any) -> SerializationConfig:

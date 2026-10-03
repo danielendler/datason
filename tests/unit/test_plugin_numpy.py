@@ -93,7 +93,7 @@ class TestSerializeNdarray:
 class TestSerializeScalars:
     def test_int64(self, plugin: NumpyPlugin, ser_ctx: SerializeContext) -> None:
         result = plugin.serialize(np.int64(42), ser_ctx)
-        assert result == {TYPE_METADATA_KEY: "numpy.integer", VALUE_METADATA_KEY: 42}
+        assert result == {TYPE_METADATA_KEY: "numpy.integer", VALUE_METADATA_KEY: 42, "dtype": "int64"}
 
     def test_float64(self, plugin: NumpyPlugin, ser_ctx: SerializeContext) -> None:
         result = plugin.serialize(np.float64(3.14), ser_ctx)
@@ -102,11 +102,11 @@ class TestSerializeScalars:
 
     def test_bool_(self, plugin: NumpyPlugin, ser_ctx: SerializeContext) -> None:
         result = plugin.serialize(np.bool_(True), ser_ctx)
-        assert result == {TYPE_METADATA_KEY: "numpy.bool_", VALUE_METADATA_KEY: True}
+        assert result == {TYPE_METADATA_KEY: "numpy.bool_", VALUE_METADATA_KEY: True, "dtype": "bool"}
 
     def test_complex128(self, plugin: NumpyPlugin, ser_ctx: SerializeContext) -> None:
         result = plugin.serialize(np.complex128(3 + 4j), ser_ctx)
-        assert result == {TYPE_METADATA_KEY: "numpy.complex", VALUE_METADATA_KEY: [3.0, 4.0]}
+        assert result == {TYPE_METADATA_KEY: "numpy.complex", VALUE_METADATA_KEY: [3.0, 4.0], "dtype": "complex128"}
 
     def test_scalar_without_hints(self, plugin: NumpyPlugin) -> None:
         ctx = SerializeContext(config=SerializationConfig(include_type_hints=False))
@@ -224,11 +224,11 @@ class TestRoundTrip:
         assert result == 42
 
     def test_float64_scalar(self) -> None:
-        """np.float64 inherits from float — JSON fast-path preserves value, not type."""
+        """Scalar subclasses reach their plugin and retain dtype."""
         obj = np.float64(3.14159)
         serialized = datason.dumps(obj)
         result = datason.loads(serialized)
-        # Value is preserved; type degrades to Python float (expected)
+        assert isinstance(result, np.float64)
         assert abs(result - 3.14159) < 1e-10
 
     def test_bool_scalar(self) -> None:

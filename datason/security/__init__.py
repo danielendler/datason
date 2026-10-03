@@ -1,7 +1,7 @@
 """Security modules for datason.
 
 Includes PII redaction, data integrity (hash/sign/verify),
-and safe pickle-to-JSON conversion.
+and explicitly trusted pickle-to-JSON migration.
 """
 
 from .integrity import (

@@ -70,7 +70,7 @@ json_str = datason.dumps(data)
 wrapped = wrap_with_integrity(json_str)
 is_valid, payload = verify_integrity(wrapped)
 
-# HMAC with secret key (tamper-proof)
+# HMAC with secret key (authenticated payload)
 wrapped = wrap_with_integrity(json_str, key="my-secret")
 is_valid, payload = verify_integrity(wrapped, key="my-secret")
 ```
@@ -83,3 +83,15 @@ The envelope format:
     "__datason_hash__": "sha256hex..."
 }
 ```
+
+New envelopes include `__datason_integrity_version__: 1` and sign a stable,
+sorted, compact JSON representation of the payload. Whitespace and input key
+order do not affect verification. Duplicate keys and non-finite numbers are
+rejected when wrapping. This representation is specific to Datason, not RFC 8785.
+
+Supplying a key requires an HMAC envelope: verification never falls back to an
+unsigned hash. Empty keys are rejected. Legacy envelopes written with the old
+default JSON formatting remain readable; old signatures of other formatting
+cannot be reconstructed. Hash-only envelopes detect accidental corruption and
+provide no authentication. HMAC does not provide encryption, ownership checks,
+or replay prevention; applications must enforce those separately.

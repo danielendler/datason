@@ -14,7 +14,6 @@ with datason.config(sort_keys=True):
 
 # 3. Presets
 from datason import ml_config
-
 with datason.config(**ml_config().__dict__):
     datason.dumps(data)
 ```
@@ -33,7 +32,6 @@ with datason.config(**ml_config().__dict__):
 | `max_string_length` | `int` | `1_000_000` | Max string length (security) |
 | `fallback_to_string` | `bool` | `False` | `str()` unknown types instead of raising |
 | `strict` | `bool` | `True` | Raise on unrecognized type metadata in `loads` |
-| `allow_plugin_deserialization` | `bool` | `True` | Allow plugin code to run during `loads`/`load` |
 | `redact_fields` | `tuple[str, ...]` | `()` | Field names to redact |
 | `redact_patterns` | `tuple[str, ...]` | `()` | Regex patterns to redact |
 
@@ -68,11 +66,26 @@ Controls how `float('nan')` and `float('inf')` are serialized:
 ```python
 from datason import NanHandling
 
-datason.dumps({"v": float("nan")}, nan_handling=NanHandling.NULL)  # null
-datason.dumps({"v": float("nan")}, nan_handling=NanHandling.STRING)  # "NaN"
-datason.dumps({"v": float("nan")}, nan_handling=NanHandling.KEEP)  # NaN (invalid JSON!)
-datason.dumps({"v": float("nan")}, nan_handling=NanHandling.DROP)  # null
+datason.dumps({"v": float("nan")}, nan_handling=NanHandling.NULL)    # null
+datason.dumps({"v": float("nan")}, nan_handling=NanHandling.STRING)  # "nan"
+datason.dumps({"v": float("nan")}, nan_handling=NanHandling.KEEP)    # NaN (invalid JSON!)
+datason.dumps({"v": float("nan")}, nan_handling=NanHandling.DROP)    # null
 ```
+
+## JSON compatibility arguments
+
+`dumps` and `dump` accept `indent`, `ensure_ascii`, `separators`, `allow_nan`,
+`skipkeys`, `check_circular`, `default`, and `cls` alongside configuration options.
+Use `default` or a `json.JSONEncoder` subclass for objects that have no registered
+Datason plugin. Registered plugins retain priority. Callback results still pass
+through Datason's redaction, circular-reference checks, and size/depth limits.
+`check_circular=False` changes the final JSON encoder's setting while Datason
+continues to enforce its own limits. `skipkeys=True` omits dictionary entries
+whose keys are outside the types accepted by the standard JSON encoder.
+
+`loads` and `load` accept `parse_float`, `parse_int`, `parse_constant`,
+`object_hook`, `object_pairs_hook`, and `cls`. Unrecognized arguments raise a
+`TypeError` naming the public function that received them.
 
 ## DataFrameOrient
 

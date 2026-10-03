@@ -43,7 +43,14 @@ class DatetimePlugin:
         value = _serialize_value(obj, ctx.config.date_format)
 
         if ctx.config.include_type_hints:
-            return {TYPE_METADATA_KEY: type_name, VALUE_METADATA_KEY: value}
+            meta: dict[str, Any] = {TYPE_METADATA_KEY: type_name, VALUE_METADATA_KEY: value}
+            # Track naive/aware for numeric formats so round-trip is lossless
+            if isinstance(obj, dt.datetime) and isinstance(value, int | float):
+                meta["tz_aware"] = obj.tzinfo is not None
+                meta["timestamp_unit"] = "milliseconds" if ctx.config.date_format == DateFormat.UNIX_MS else "seconds"
+                meta["datetime_iso"] = obj.isoformat()
+                meta["fold"] = obj.fold
+            return meta
         return value
 
     def can_deserialize(self, data: dict[str, Any]) -> bool:
@@ -52,10 +59,13 @@ class DatetimePlugin:
     def deserialize(self, data: dict[str, Any], ctx: DeserializeContext) -> Any:
         type_name = data[TYPE_METADATA_KEY]
         value = data[VALUE_METADATA_KEY]
-        return _deserialize_value(type_name, value)
+        if type_name == "datetime" and "datetime_iso" in data:
+            return dt.datetime.fromisoformat(data["datetime_iso"]).replace(fold=data.get("fold", 0))
+        tz_aware = data.get("tz_aware")  # None = old format (assume aware, backward compat)
+        return _deserialize_value(type_name, value, tz_aware=tz_aware, unit=data.get("timestamp_unit"))
 
 
-def _serialize_value(obj: Any, fmt: DateFormat) -> str | float | dict[str, Any]:
+def _serialize_value(obj: Any, fmt: DateFormat) -> str | float:
     """Serialize a datetime-family object according to the format config."""
     if isinstance(obj, dt.timedelta):
         return obj.total_seconds()
@@ -69,15 +79,11 @@ def _serialize_value(obj: Any, fmt: DateFormat) -> str | float | dict[str, Any]:
             return obj.isoformat()
         case DateFormat.UNIX:
             if isinstance(obj, dt.datetime):
-                if obj.tzinfo is None:
-                    return {"timestamp": obj.timestamp(), "naive": True}
-                return obj.timestamp()
+                return _timestamp(obj)
             return obj.isoformat()
         case DateFormat.UNIX_MS:
             if isinstance(obj, dt.datetime):
-                if obj.tzinfo is None:
-                    return {"timestamp": obj.timestamp() * 1000, "naive": True}
-                return obj.timestamp() * 1000
+                return _timestamp(obj) * 1000
             return obj.isoformat()
         case DateFormat.STRING:
             return str(obj)
@@ -85,24 +91,26 @@ def _serialize_value(obj: Any, fmt: DateFormat) -> str | float | dict[str, Any]:
             return obj.isoformat()
 
 
-def _deserialize_value(type_name: str, value: Any) -> Any:
+def _timestamp(obj: dt.datetime) -> float:
+    """Interpret naive timestamps as UTC rather than the machine's local zone."""
+    return obj.replace(tzinfo=dt.timezone.utc).timestamp() if obj.tzinfo is None else obj.timestamp()
+
+
+def _deserialize_value(type_name: str, value: Any, tz_aware: bool | None = None, unit: str | None = None) -> Any:
     """Reconstruct a datetime-family object from its serialized value."""
     match type_name:
         case "datetime":
             if isinstance(value, str):
                 return dt.datetime.fromisoformat(value)
-            if isinstance(value, dict):
-                ts_value = value.get("timestamp")
-                if not isinstance(ts_value, int | float):
-                    raise PluginError("Cannot deserialize datetime dict without numeric timestamp")
-                ts = ts_value / 1000 if abs(ts_value) > 4_102_444_800 else ts_value
-                restored = dt.datetime.fromtimestamp(ts, tz=dt.timezone.utc)
-                if value.get("naive") is True:
-                    return restored.replace(tzinfo=None)
-                return restored
             if isinstance(value, int | float):
                 # Detect millisecond timestamps (> year 2100 in seconds)
-                ts = value / 1000 if abs(value) > 4_102_444_800 else value
+                if unit not in (None, "seconds", "milliseconds"):
+                    raise PluginError("Unknown datetime timestamp unit")
+                is_ms = unit == "milliseconds" if unit is not None else abs(value) > 4_102_444_800
+                ts = value / 1000 if is_ms else value
+                # tz_aware=False → naive (local time); None or True → UTC (backward compat)
+                if tz_aware is False:
+                    return dt.datetime.fromtimestamp(ts)
                 return dt.datetime.fromtimestamp(ts, tz=dt.timezone.utc)
             raise PluginError(f"Cannot deserialize datetime from {type(value).__name__}")
         case "date":

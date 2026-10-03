@@ -7,14 +7,17 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Docs](https://img.shields.io/badge/docs-GitHub%20Pages-blue)](https://danielendler.github.io/datason/)
 
-**Drop-in replacement for `json.dumps`/`json.loads` that handles datetime, NumPy, Pandas, PyTorch, and 50+ Python types. Zero dependencies.**
+**JSON serialization for Python data across APIs, diagnostics, and stored state. Supported types include datetime, NumPy, Pandas, and ML values through optional plugins. The core has zero dependencies.**
+
+The current release is an alpha. The [hardening roadmap](docs/hardening-roadmap.md)
+records the implemented hardening, tested contracts, and next validation milestones.
 
 ```python
 import datason
 import datetime as dt
 import numpy as np
 
-# Just replace json.dumps with datason.dumps — everything else works
+# Serialize datetime and NumPy values through the dumps interface
 datason.dumps({"ts": dt.datetime.now(), "scores": np.array([0.9, 0.1])})
 ```
 
@@ -27,7 +30,7 @@ pip install datason                    # Core (zero dependencies)
 pip install datason[numpy]             # + NumPy support
 pip install datason[pandas]            # + Pandas support
 pip install datason[ml]                # + PyTorch, TensorFlow, scikit-learn, SciPy
-pip install datason[all]               # Everything
+pip install datason[all]               # NumPy, Pandas, ML, and crypto extras
 ```
 
 Requires Python 3.10+.
@@ -101,11 +104,11 @@ assert isinstance(restored["weights"], torch.Tensor)
 ```python
 import datason
 
-datason.dumps(obj, **config)  # Serialize to JSON string
-datason.loads(s, **config)  # Deserialize from JSON string
-datason.dump(obj, fp, **config)  # Write to file
-datason.load(fp, **config)  # Read from file
-datason.config(**config)  # Context manager for temp config
+datason.dumps(obj, **config)    # Serialize to JSON string
+datason.loads(s, **config)      # Deserialize from JSON string
+datason.dump(obj, fp, **config) # Write to file
+datason.load(fp, **config)      # Read from file
+datason.config(**config)        # Context manager for temp config
 ```
 
 That's the entire public API.
@@ -148,10 +151,10 @@ with datason.config(sort_keys=True, nan_handling=NanHandling.STRING):
 from datason import ml_config, api_config, strict_config, performance_config
 
 with datason.config(**ml_config().__dict__):
-    datason.dumps(model_output)  # UNIX_MS dates, fallback to string
+    datason.dumps(model_output)   # UNIX_MS dates, fallback to string
 
 with datason.config(**api_config().__dict__):
-    datason.dumps(response)  # ISO dates, sorted keys, no type hints
+    datason.dumps(response)       # ISO dates, sorted keys, no type hints
 ```
 
 ### Config Options
@@ -167,7 +170,6 @@ with datason.config(**api_config().__dict__):
 | `max_size` | `int` | `100_000` | Max dict/list size (security) |
 | `fallback_to_string` | `bool` | `False` | `str()` unknown types instead of raising |
 | `strict` | `bool` | `True` | Raise on unrecognized type metadata |
-| `allow_plugin_deserialization` | `bool` | `True` | Allow plugin code to run during `loads`/`load` |
 | `redact_fields` | `tuple[str, ...]` | `()` | Field names to redact |
 | `redact_patterns` | `tuple[str, ...]` | `()` | Regex patterns to redact from strings |
 
@@ -205,16 +207,6 @@ is_valid, payload = verify_integrity(wrapped, key="secret")
 
 All limits raise `SecurityError` and are configurable.
 
-### Untrusted Input Recommendation
-
-If you load JSON from untrusted sources, disable plugin deserialization to avoid executing plugin code paths:
-
-```python
-safe = datason.loads(payload, allow_plugin_deserialization=False)
-```
-
-This still supports built-in collection hints (`tuple`, `set`, `frozenset`) but blocks plugin-based reconstruction.
-
 ## How It Works
 
 datason uses a plugin-based architecture. Every type beyond JSON primitives is handled by a `TypePlugin` registered in a priority-sorted registry:
@@ -233,7 +225,6 @@ from datason._protocols import TypePlugin, SerializeContext, DeserializeContext
 from datason._registry import default_registry
 from datason._types import TYPE_METADATA_KEY, VALUE_METADATA_KEY
 
-
 class MoneyPlugin:
     name = "money"
     priority = 400  # 400+ for user plugins
@@ -250,7 +241,6 @@ class MoneyPlugin:
     def deserialize(self, data, ctx):
         v = data[VALUE_METADATA_KEY]
         return Money(Decimal(v["amount"]), v["currency"])
-
 
 default_registry.register(MoneyPlugin())
 ```

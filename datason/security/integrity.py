@@ -38,6 +38,8 @@ def compute_hmac(data: str, key: str, algorithm: str = "sha256") -> str:
     Returns:
         Hex digest of the HMAC.
     """
+    if not key:
+        raise ValueError("HMAC key must not be empty")
     return hmac.new(
         key.encode("utf-8"),
         data.encode("utf-8"),
@@ -74,11 +76,13 @@ def wrap_with_integrity(data: str, key: str | None = None) -> str:
     Returns:
         JSON string with integrity envelope.
     """
-    envelope: dict[str, Any] = {"__datason_payload__": json.loads(data)}
-    if key:
-        envelope["__datason_hmac__"] = compute_hmac(data, key)
+    payload = json.loads(data, object_pairs_hook=_unique_object)
+    canonical = _canonical_payload(payload)
+    envelope: dict[str, Any] = {"__datason_payload__": payload, "__datason_integrity_version__": 1}
+    if key is not None:
+        envelope["__datason_hmac__"] = compute_hmac(canonical, key)
     else:
-        envelope["__datason_hash__"] = compute_hash(data)
+        envelope["__datason_hash__"] = compute_hash(canonical)
     return json.dumps(envelope, ensure_ascii=False)
 
 
@@ -94,20 +98,37 @@ def verify_integrity(envelope_str: str, key: str | None = None) -> tuple[bool, s
         If verification fails, original data is still returned
         but is_valid is False.
     """
-    envelope = json.loads(envelope_str)
-
-    if "__datason_payload__" not in envelope:
+    try:
+        envelope = json.loads(envelope_str, object_pairs_hook=_unique_object)
+        if not isinstance(envelope, dict) or "__datason_payload__" not in envelope:
+            return False, envelope_str
+        version = envelope.get("__datason_integrity_version__")
+        if version is not None and (type(version) is not int or version != 1):
+            return False, envelope_str
+        payload_str = _canonical_payload(envelope["__datason_payload__"])
+        if version is None:
+            payload_str = json.dumps(envelope["__datason_payload__"], ensure_ascii=False, allow_nan=False)
+        signature = "__datason_hmac__" if key is not None else "__datason_hash__"
+        other = "__datason_hash__" if key is not None else "__datason_hmac__"
+        expected = envelope.get(signature)
+        if other in envelope or not isinstance(expected, str) or len(expected) != 64:
+            return False, payload_str
+        actual = compute_hmac(payload_str, key) if key is not None else compute_hash(payload_str)
+        return hmac.compare_digest(actual, expected), payload_str
+    except (ValueError, TypeError, RecursionError):
         return False, envelope_str
 
-    payload_str = json.dumps(envelope["__datason_payload__"], ensure_ascii=False)
 
-    if key and "__datason_hmac__" in envelope:
-        is_valid = verify_hmac(payload_str, key, envelope["__datason_hmac__"])
-        return is_valid, payload_str
+def _canonical_payload(payload: Any) -> str:
+    """Stable version-1 representation; this is not RFC 8785 canonical JSON."""
+    return json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False)
 
-    if "__datason_hash__" in envelope:
-        expected = envelope["__datason_hash__"]
-        actual = compute_hash(payload_str)
-        return hmac.compare_digest(actual, expected), payload_str
 
-    return False, payload_str
+def _unique_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+    """Reject duplicate keys rather than authenticate an ambiguous object."""
+    result: dict[str, Any] = {}
+    for name, value in pairs:
+        if name in result:
+            raise ValueError(f"Duplicate JSON key: {name}")
+        result[name] = value
+    return result

@@ -8,43 +8,40 @@ from __future__ import annotations
 
 import json
 import math
+from collections.abc import Callable
 from contextlib import contextmanager
 from io import IOBase
 from typing import Any
 
 from ._config import SerializationConfig, _active_config, get_active_config
 from ._errors import SecurityError, SerializationError
+from ._limits import check_tree
 from ._protocols import SerializeContext
 from ._registry import default_registry
-from ._types import JSON_BASIC_TYPES
+from ._types import JSON_BASIC_TYPES, TYPE_METADATA_KEY, VALUE_METADATA_KEY
 from .security.redaction import redact_value, should_redact_field
 
 _REDACTED = "[REDACTED]"
-_CONFIG_FIELDS = frozenset(SerializationConfig.__dataclass_fields__.keys())
+
+# json.dumps kwargs that pass through directly (not SerializationConfig fields)
 _JSON_DUMPS_KWARGS = frozenset(
-    {
-        "skipkeys",
-        "ensure_ascii",
-        "check_circular",
-        "allow_nan",
-        "cls",
-        "indent",
-        "separators",
-        "default",
-        "sort_keys",
-    }
+    {"indent", "skipkeys", "ensure_ascii", "separators", "allow_nan", "default", "cls", "check_circular"}
 )
+_CONFIG_FIELDS = frozenset(SerializationConfig.__dataclass_fields__)
 
 
 def _serialize_recursive(obj: Any, ctx: SerializeContext) -> Any:
     """Recursively serialize obj to a JSON-safe representation."""
+    ctx.visited[0] += 1
+    if ctx.visited[0] > ctx.config.max_nodes:
+        raise SecurityError(f"Serialization traversal exceeds node limit {ctx.config.max_nodes}")
     # Security: depth limit
     if ctx.depth > ctx.config.max_depth:
         raise SecurityError(f"Serialization depth {ctx.depth} exceeds limit {ctx.config.max_depth}")
 
     # Security: circular reference detection
     obj_id = id(obj)
-    if isinstance(obj, dict | list | tuple | set | frozenset):
+    if type(obj) not in JSON_BASIC_TYPES:
         if obj_id in ctx.seen_ids:
             raise SecurityError(f"Circular reference detected for {type(obj).__name__}")
         ctx.seen_ids.add(obj_id)
@@ -62,9 +59,13 @@ def _serialize_recursive(obj: Any, ctx: SerializeContext) -> Any:
 def _serialize_value(obj: Any, ctx: SerializeContext) -> Any:
     """Serialize a single value, dispatching to plugins if needed."""
     # Fast path: JSON-basic types need no transformation
-    if isinstance(obj, JSON_BASIC_TYPES):
+    if type(obj) in JSON_BASIC_TYPES:
         if isinstance(obj, float):
             return _handle_float(obj, ctx)
+        if isinstance(obj, str):
+            if len(obj) > ctx.config.max_string_length:
+                raise SecurityError(f"String length exceeds limit {ctx.config.max_string_length}")
+            return redact_value(obj, ctx.config.redact_patterns)
         return obj
 
     # Containers: recurse
@@ -72,22 +73,20 @@ def _serialize_value(obj: Any, ctx: SerializeContext) -> Any:
         return _serialize_dict(obj, ctx)
     if isinstance(obj, list):
         return _serialize_sequence(obj, ctx)
-    if isinstance(obj, tuple):
-        return _serialize_sequence_with_type_hint(obj, "tuple", ctx)
-    if isinstance(obj, set):
-        return _serialize_sequence_with_type_hint(sorted(obj, key=repr), "set", ctx)
-    if isinstance(obj, frozenset):
-        return _serialize_sequence_with_type_hint(sorted(obj, key=repr), "frozenset", ctx)
+    if isinstance(obj, tuple | set | frozenset):
+        return _serialize_collection_with_type(obj, ctx)
 
     # Plugin dispatch
     plugin_result = default_registry.find_serializer(obj, ctx)
     if plugin_result is not None:
         _plugin, serialized = plugin_result
-        return serialized
+        return _serialize_recursive(serialized, ctx.for_representation())
 
     # Fallback
+    if ctx.default_handler is not None:
+        return _serialize_recursive(ctx.default_handler(obj), ctx.child())
     if ctx.config.fallback_to_string:
-        return str(obj)
+        return _serialize_recursive(str(obj), ctx)
 
     raise SerializationError(
         f"Cannot serialize object of type {type(obj).__name__}. "
@@ -105,9 +104,7 @@ def _handle_float(obj: float, ctx: SerializeContext) -> Any:
             case "string":
                 if math.isnan(obj):
                     return "NaN"
-                if math.isinf(obj):
-                    return "Infinity" if obj > 0 else "-Infinity"
-                return str(obj)
+                return "Infinity" if obj > 0 else "-Infinity"
             case "keep":
                 return obj
             case "drop":
@@ -115,15 +112,33 @@ def _handle_float(obj: float, ctx: SerializeContext) -> Any:
     return obj
 
 
-def _serialize_dict(obj: dict[str, Any], ctx: SerializeContext) -> dict[str, Any]:
+def _serialize_collection_with_type(obj: tuple[Any, ...] | set[Any] | frozenset[Any], ctx: SerializeContext) -> Any:
+    """Serialize tuple/set/frozenset, preserving type metadata when configured."""
+    type_name = type(obj).__name__
+    items = sorted(obj, key=repr) if isinstance(obj, set | frozenset) else obj
+    serialized = _serialize_sequence(items, ctx)
+    if ctx.config.include_type_hints:
+        return {TYPE_METADATA_KEY: type_name, VALUE_METADATA_KEY: serialized}
+    return serialized
+
+
+def _serialize_dict(obj: dict[Any, Any], ctx: SerializeContext) -> dict[str, Any]:
     """Serialize a dict, recursing into values. Applies redaction if configured."""
     if len(obj) > ctx.config.max_size:
         raise SecurityError(f"Dict size {len(obj)} exceeds limit {ctx.config.max_size}")
+    if TYPE_METADATA_KEY in obj and not ctx.representation:
+        raise SerializationError(f"Reserved metadata key {TYPE_METADATA_KEY} in user dictionary")
     child = ctx.child()
     result: dict[str, Any] = {}
     for k, v in obj.items():
+        if ctx.skipkeys and k is not None and not isinstance(k, str | int | float | bool):
+            continue
         key = str(k)
-        if should_redact_field(key, ctx.config.redact_fields):
+        if key in result:
+            raise SerializationError(f"Dictionary keys collide after JSON conversion: {key!r}")
+        if key == TYPE_METADATA_KEY and ctx.representation:
+            result[key] = v
+        elif should_redact_field(key, ctx.config.redact_fields):
             result[key] = _REDACTED
         else:
             serialized = _serialize_recursive(v, child)
@@ -137,14 +152,6 @@ def _serialize_sequence(obj: Any, ctx: SerializeContext) -> list[Any]:
         raise SecurityError(f"Sequence size {len(obj)} exceeds limit {ctx.config.max_size}")
     child = ctx.child()
     return [_serialize_recursive(item, child) for item in obj]
-
-
-def _serialize_sequence_with_type_hint(obj: Any, type_name: str, ctx: SerializeContext) -> Any:
-    """Serialize tuple/set/frozenset with optional type hint metadata."""
-    serialized = _serialize_sequence(obj, ctx)
-    if ctx.config.include_type_hints:
-        return {"__datason_type__": type_name, "__datason_value__": serialized}
-    return serialized
 
 
 # =========================================================================
@@ -180,15 +187,13 @@ def dumps(obj: Any, **kwargs: Any) -> str:
         >>> datason.dumps({"z": 1, "a": 2}, sort_keys=True)
         '{"a": 2, "z": 1}'
     """
-    config_kwargs, json_kwargs = _split_dumps_kwargs(kwargs)
-    config = _resolve_config(config_kwargs)
-    ctx = SerializeContext(config=config)
+    json_kwargs, config_kwargs = _split_kwargs(kwargs, _JSON_DUMPS_KWARGS, func_name="dumps")
+    cfg = _resolve_config(config_kwargs)
+    ctx = _serialize_context(cfg, json_kwargs)
     serialized = _serialize_recursive(obj, ctx)
-    if "sort_keys" not in json_kwargs:
-        json_kwargs["sort_keys"] = config.sort_keys
-    if "ensure_ascii" not in json_kwargs:
-        json_kwargs["ensure_ascii"] = False
-    return json.dumps(serialized, **json_kwargs)
+    check_tree(serialized, cfg)
+    json_kwargs.setdefault("ensure_ascii", False)
+    return json.dumps(serialized, sort_keys=cfg.sort_keys, **json_kwargs)
 
 
 def dump(obj: Any, fp: IOBase, **kwargs: Any) -> None:
@@ -209,15 +214,13 @@ def dump(obj: Any, fp: IOBase, **kwargs: Any) -> None:
         >>> buf.getvalue()
         '{"key": "value"}'
     """
-    config_kwargs, json_kwargs = _split_dumps_kwargs(kwargs)
-    config = _resolve_config(config_kwargs)
-    ctx = SerializeContext(config=config)
+    json_kwargs, config_kwargs = _split_kwargs(kwargs, _JSON_DUMPS_KWARGS, func_name="dump")
+    cfg = _resolve_config(config_kwargs)
+    ctx = _serialize_context(cfg, json_kwargs)
     serialized = _serialize_recursive(obj, ctx)
-    if "sort_keys" not in json_kwargs:
-        json_kwargs["sort_keys"] = config.sort_keys
-    if "ensure_ascii" not in json_kwargs:
-        json_kwargs["ensure_ascii"] = False
-    json.dump(serialized, fp, **json_kwargs)
+    check_tree(serialized, cfg)
+    json_kwargs.setdefault("ensure_ascii", False)
+    json.dump(serialized, fp, sort_keys=cfg.sort_keys, **json_kwargs)
 
 
 @contextmanager
@@ -257,22 +260,30 @@ def _resolve_config(overrides: dict[str, Any]) -> SerializationConfig:
     """Resolve config from: inline kwargs > context var > defaults."""
     if overrides:
         base = get_active_config()
-        # Build new config with overrides applied
         fields = {f.name: getattr(base, f.name) for f in base.__dataclass_fields__.values()}
         fields.update(overrides)
         return SerializationConfig(**fields)
     return get_active_config()
 
 
-def _split_dumps_kwargs(kwargs: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:
-    """Split kwargs into datason config overrides and json.dumps kwargs."""
-    config_kwargs: dict[str, Any] = {}
-    json_kwargs: dict[str, Any] = {}
-    for key, value in kwargs.items():
-        if key in _CONFIG_FIELDS:
-            config_kwargs[key] = value
-        elif key in _JSON_DUMPS_KWARGS:
-            json_kwargs[key] = value
-        else:
-            raise TypeError(f"dumps() got an unexpected keyword argument '{key}'")
-    return config_kwargs, json_kwargs
+def _serialize_context(cfg: SerializationConfig, json_kwargs: dict[str, Any]) -> SerializeContext:
+    """Apply custom JSON fallback handlers before validating their output."""
+    handler: Callable[[Any], Any] | None = None
+    if "default" in json_kwargs or "cls" in json_kwargs:
+        encoder_cls = json_kwargs.get("cls") or json.JSONEncoder
+        options = {k: v for k, v in json_kwargs.items() if k != "cls"}
+        options.setdefault("ensure_ascii", False)
+        handler = encoder_cls(sort_keys=cfg.sort_keys, **options).default
+    return SerializeContext(config=cfg, default_handler=handler, skipkeys=json_kwargs.get("skipkeys", False))
+
+
+def _split_kwargs(
+    kwargs: dict[str, Any], json_keys: frozenset[str], *, func_name: str
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Split kwargs into (json_native, datason_config) dicts."""
+    for key in kwargs:
+        if key not in json_keys and key not in _CONFIG_FIELDS:
+            raise TypeError(f"{func_name}() got an unexpected keyword argument '{key}'")
+    json_kw = {k: v for k, v in kwargs.items() if k in json_keys}
+    config_kw = {k: v for k, v in kwargs.items() if k not in json_keys}
+    return json_kw, config_kw

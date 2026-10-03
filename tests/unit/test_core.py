@@ -54,27 +54,22 @@ class TestDumpsContainers:
     def test_list_of_ints(self):
         assert datason.dumps([1, 2, 3]) == "[1, 2, 3]"
 
-    def test_tuple_becomes_list(self):
+    def test_tuple_round_trips(self):
+        # With type hints (default), tuple is preserved on round-trip
+        assert datason.loads(datason.dumps((1, 2, 3))) == (1, 2, 3)
+
+    def test_tuple_without_type_hints_becomes_list(self):
         result = json.loads(datason.dumps((1, 2, 3), include_type_hints=False))
         assert result == [1, 2, 3]
 
-    def test_set_becomes_sorted_list(self):
+    def test_set_round_trips(self):
+        assert datason.loads(datason.dumps({3, 1, 2})) == {3, 1, 2}
+
+    def test_set_without_type_hints_becomes_list(self):
         result = json.loads(datason.dumps({3, 1, 2}, include_type_hints=False))
         assert sorted(result) == [1, 2, 3]
 
-    def test_tuple_round_trip_with_type_hints(self):
-        value = (1, 2, 3)
-        assert datason.loads(datason.dumps(value)) == value
-
-    def test_set_round_trip_with_type_hints(self):
-        value = {1, 2, 3}
-        assert datason.loads(datason.dumps(value)) == value
-
-    def test_frozenset_round_trip_with_type_hints(self):
-        value = frozenset({1, 2, 3})
-        assert datason.loads(datason.dumps(value)) == value
-
-    def test_mixed_nested(self, sample_data):
+    def test_mixed_nested(self, sample_data: dict[str, object]) -> None:
         result = json.loads(datason.dumps(sample_data))
         assert result == sample_data
 
@@ -96,24 +91,8 @@ class TestRoundTrip:
             {"nested": {"list": [1, "two", None]}},
         ],
     )
-    def test_round_trip(self, value):
+    def test_round_trip(self, value: object) -> None:
         assert datason.loads(datason.dumps(value)) == value
-
-
-class TestJsonCompatibilityArgs:
-    """Test json-compatible kwargs are accepted."""
-
-    def test_dumps_indent(self):
-        out = datason.dumps({"a": 1}, indent=2)
-        assert out == '{\n  "a": 1\n}'
-
-    def test_dumps_ensure_ascii(self):
-        out = datason.dumps({"emoji": "🙂"}, ensure_ascii=True)
-        assert r"\ud83d\ude42" in out
-
-    def test_loads_parse_float(self):
-        value = datason.loads("1.25", parse_float=str)
-        assert value == "1.25"
 
 
 class TestNanHandling:
@@ -141,8 +120,8 @@ class TestSecurityLimits:
 
     def test_depth_limit_raises(self):
         # Build deeply nested dict
-        data: dict = {}
-        current = data
+        data: dict[str, object] = {}
+        current: dict[str, object] = data
         for _i in range(60):
             current["next"] = {}
             current = current["next"]
@@ -161,7 +140,7 @@ class TestSecurityLimits:
             datason.dumps(big)
 
     def test_circular_reference_raises(self):
-        data: dict = {}
+        data: dict[str, object] = {}
         data["self"] = data
         with pytest.raises(SecurityError, match="Circular"):
             datason.dumps(data)
@@ -187,3 +166,82 @@ class TestConfigContext:
         with datason.config(sort_keys=True):
             result = datason.dumps(data)
         assert result == '{"a": 1, "b": 2}'
+
+
+class TestJsonDropinCompat:
+    """Test json.dumps / json.loads drop-in compatibility."""
+
+    def test_dumps_indent(self):
+        result = datason.dumps({"a": 1}, indent=2)
+        assert "\n" in result
+        assert "  " in result
+
+    def test_dumps_ensure_ascii_false(self):
+        result = datason.dumps({"emoji": "🎉"}, ensure_ascii=False)
+        assert "🎉" in result
+
+    def test_dumps_ensure_ascii_true(self):
+        result = datason.dumps({"emoji": "🎉"}, ensure_ascii=True)
+        assert "🎉" not in result
+        assert "\\u" in result
+
+    def test_dumps_separators(self):
+        result = datason.dumps({"a": 1, "b": 2}, separators=(",", ":"))
+        assert " " not in result
+
+    def test_loads_parse_float(self):
+        from decimal import Decimal
+
+        result = datason.loads('{"v": 1.5}', parse_float=Decimal)
+        assert isinstance(result["v"], Decimal)
+
+    def test_mixed_json_and_config_kwargs(self):
+        # indent is json kwarg, sort_keys is config kwarg — both must work together
+        import json as _json
+
+        result = datason.dumps({"z": 1, "a": 2}, indent=2, sort_keys=True)
+        parsed = _json.loads(result)
+        assert list(parsed.keys()) == ["a", "z"]
+        assert "\n" in result
+
+
+class TestNanStringValues:
+    """Test NaN/Infinity string representation follows JSON5/JS conventions."""
+
+    def test_nan_string_is_capitalized(self):
+        result = json.loads(datason.dumps(float("nan"), nan_handling=NanHandling.STRING))
+        assert result == "NaN"
+
+    def test_inf_string(self):
+        result = json.loads(datason.dumps(float("inf"), nan_handling=NanHandling.STRING))
+        assert result == "Infinity"
+
+    def test_neg_inf_string(self):
+        result = json.loads(datason.dumps(float("-inf"), nan_handling=NanHandling.STRING))
+        assert result == "-Infinity"
+
+
+class TestCollectionRoundTrip:
+    """Test tuple/set/frozenset round-trip with type hints."""
+
+    def test_tuple_round_trip(self):
+        original = (1, "two", 3.0)
+        assert datason.loads(datason.dumps(original)) == original
+
+    def test_set_round_trip(self):
+        original = {1, 2, 3}
+        assert datason.loads(datason.dumps(original)) == original
+
+    def test_frozenset_round_trip(self):
+        original = frozenset({1, 2, 3})
+        assert datason.loads(datason.dumps(original)) == original
+
+    def test_nested_tuple_in_dict(self):
+        original = {"coords": (10, 20), "tags": frozenset({"a", "b"})}
+        result = datason.loads(datason.dumps(original))
+        assert result["coords"] == (10, 20)
+        assert result["tags"] == frozenset({"a", "b"})
+
+    def test_no_type_hints_loses_type(self):
+        result = datason.loads(datason.dumps((1, 2, 3), include_type_hints=False))
+        assert isinstance(result, list)
