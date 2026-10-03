@@ -8,9 +8,10 @@ from __future__ import annotations
 
 import json
 import math
+from collections.abc import Callable
 from contextlib import contextmanager
 from io import IOBase
-from typing import Any
+from typing import Any, TextIO, cast
 
 from ._config import SerializationConfig, _active_config, get_active_config
 from ._errors import SecurityError, SerializationError
@@ -23,7 +24,10 @@ from .security.redaction import redact_value, should_redact_field
 _REDACTED = "[REDACTED]"
 
 # json.dumps kwargs that pass through directly (not SerializationConfig fields)
-_JSON_DUMPS_KWARGS = frozenset({"indent", "skipkeys", "ensure_ascii", "separators", "allow_nan"})
+_JSON_DUMPS_KWARGS = frozenset(
+    {"indent", "skipkeys", "ensure_ascii", "separators", "allow_nan", "default", "cls", "check_circular"}
+)
+_CONFIG_FIELDS = frozenset(SerializationConfig.__dataclass_fields__)
 
 
 def _serialize_recursive(obj: Any, ctx: SerializeContext) -> Any:
@@ -79,6 +83,8 @@ def _serialize_value(obj: Any, ctx: SerializeContext) -> Any:
         return _serialize_recursive(serialized, ctx.for_representation())
 
     # Fallback
+    if ctx.json_options is not None and ctx.json_options[0] is not None:
+        return _serialize_recursive(ctx.json_options[0](obj), ctx.child())
     if ctx.config.fallback_to_string:
         return _serialize_recursive(str(obj), ctx)
 
@@ -116,7 +122,7 @@ def _serialize_collection_with_type(obj: tuple[Any, ...] | set[Any] | frozenset[
     return serialized
 
 
-def _serialize_dict(obj: dict[str, Any], ctx: SerializeContext) -> dict[str, Any]:
+def _serialize_dict(obj: dict[Any, Any], ctx: SerializeContext) -> dict[str, Any]:
     """Serialize a dict, recursing into values. Applies redaction if configured."""
     if len(obj) > ctx.config.max_size:
         raise SecurityError(f"Dict size {len(obj)} exceeds limit {ctx.config.max_size}")
@@ -124,7 +130,10 @@ def _serialize_dict(obj: dict[str, Any], ctx: SerializeContext) -> dict[str, Any
         raise SerializationError(f"Reserved metadata key {TYPE_METADATA_KEY} in user dictionary")
     child = ctx.child()
     result: dict[str, Any] = {}
+    skipkeys = ctx.json_options is not None and ctx.json_options[1]
     for k, v in obj.items():
+        if skipkeys and k is not None and not isinstance(k, str | int | float | bool):
+            continue
         key = str(k)
         if key in result:
             raise SerializationError(f"Dictionary keys collide after JSON conversion: {key!r}")
@@ -179,11 +188,16 @@ def dumps(obj: Any, **kwargs: Any) -> str:
         >>> datason.dumps({"z": 1, "a": 2}, sort_keys=True)
         '{"a": 2, "z": 1}'
     """
-    json_kwargs, config_kwargs = _split_kwargs(kwargs, _JSON_DUMPS_KWARGS)
+    json_kwargs, config_kwargs = _split_kwargs(kwargs, _JSON_DUMPS_KWARGS, func_name="dumps")
     cfg = _resolve_config(config_kwargs)
-    ctx = SerializeContext(config=cfg)
+    if json_kwargs:
+        ctx, encoder = _serialize_context(cfg, json_kwargs)
+    else:
+        ctx, encoder = SerializeContext(config=cfg), None
     serialized = _serialize_recursive(obj, ctx)
     check_tree(serialized, cfg)
+    if encoder is not None:
+        return encoder.encode(serialized)
     json_kwargs.setdefault("ensure_ascii", False)
     return json.dumps(serialized, sort_keys=cfg.sort_keys, **json_kwargs)
 
@@ -206,13 +220,20 @@ def dump(obj: Any, fp: IOBase, **kwargs: Any) -> None:
         >>> buf.getvalue()
         '{"key": "value"}'
     """
-    json_kwargs, config_kwargs = _split_kwargs(kwargs, _JSON_DUMPS_KWARGS)
+    json_kwargs, config_kwargs = _split_kwargs(kwargs, _JSON_DUMPS_KWARGS, func_name="dump")
     cfg = _resolve_config(config_kwargs)
-    ctx = SerializeContext(config=cfg)
+    if json_kwargs:
+        ctx, encoder = _serialize_context(cfg, json_kwargs)
+    else:
+        ctx, encoder = SerializeContext(config=cfg), None
     serialized = _serialize_recursive(obj, ctx)
     check_tree(serialized, cfg)
     json_kwargs.setdefault("ensure_ascii", False)
-    json.dump(serialized, fp, sort_keys=cfg.sort_keys, **json_kwargs)
+    if encoder is None:
+        json.dump(serialized, fp, sort_keys=cfg.sort_keys, **json_kwargs)
+    else:
+        for chunk in encoder.iterencode(serialized):
+            cast(TextIO, fp).write(chunk)
 
 
 @contextmanager
@@ -258,8 +279,31 @@ def _resolve_config(overrides: dict[str, Any]) -> SerializationConfig:
     return get_active_config()
 
 
-def _split_kwargs(kwargs: dict[str, Any], json_keys: frozenset[str]) -> tuple[dict[str, Any], dict[str, Any]]:
+def _serialize_context(
+    cfg: SerializationConfig, json_kwargs: dict[str, Any]
+) -> tuple[SerializeContext, json.JSONEncoder | None]:
+    """Apply custom JSON fallback handlers before validating their output."""
+    handler: Callable[[Any], Any] | None = None
+    encoder: json.JSONEncoder | None = None
+    if "default" in json_kwargs or "cls" in json_kwargs:
+        encoder_cls = json_kwargs.get("cls") or json.JSONEncoder
+        options = {k: v for k, v in json_kwargs.items() if k != "cls"}
+        options.setdefault("ensure_ascii", False)
+        encoder = cast(json.JSONEncoder, encoder_cls(sort_keys=cfg.sort_keys, **options))
+        handler = encoder.default
+    skipkeys = bool(json_kwargs.get("skipkeys", False))
+    options = (handler, skipkeys) if handler is not None or skipkeys else None
+    ctx = SerializeContext(config=cfg, json_options=options)
+    return ctx, encoder
+
+
+def _split_kwargs(
+    kwargs: dict[str, Any], json_keys: frozenset[str], *, func_name: str
+) -> tuple[dict[str, Any], dict[str, Any]]:
     """Split kwargs into (json_native, datason_config) dicts."""
+    for key in kwargs:
+        if key not in json_keys and key not in _CONFIG_FIELDS:
+            raise TypeError(f"{func_name}() got an unexpected keyword argument '{key}'")
     json_kw = {k: v for k, v in kwargs.items() if k in json_keys}
     config_kw = {k: v for k, v in kwargs.items() if k not in json_keys}
     return json_kw, config_kw
