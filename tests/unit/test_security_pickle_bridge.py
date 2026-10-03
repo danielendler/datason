@@ -76,7 +76,7 @@ class TestPickleToJson:
 
     def test_simple_dict(self) -> None:
         data = pickle.dumps({"name": "Alice", "age": 30})
-        result = pickle_to_json(data)
+        result = pickle_to_json(data, trusted=True)
         restored = datason.loads(result)
         assert restored["name"] == "Alice"
         assert restored["age"] == 30
@@ -84,7 +84,7 @@ class TestPickleToJson:
     def test_with_datetime(self) -> None:
         original = {"ts": dt.datetime(2024, 6, 15, 10, 30)}
         data = pickle.dumps(original)
-        result = pickle_to_json(data)
+        result = pickle_to_json(data, trusted=True)
         restored = datason.loads(result)
         assert isinstance(restored["ts"], dt.datetime)
         assert restored["ts"].year == 2024
@@ -92,20 +92,20 @@ class TestPickleToJson:
     def test_with_numpy_array(self) -> None:
         original = np.array([1.0, 2.0, 3.0])
         data = pickle.dumps(original)
-        result = pickle_to_json(data)
+        result = pickle_to_json(data, trusted=True)
         restored = datason.loads(result)
         assert isinstance(restored, np.ndarray)
         assert list(restored) == [1.0, 2.0, 3.0]
 
     def test_with_config_overrides(self) -> None:
         data = pickle.dumps({"key": "value"})
-        result = pickle_to_json(data, sort_keys=True)
+        result = pickle_to_json(data, trusted=True, sort_keys=True)
         assert '"key"' in result
 
     def test_rejects_disallowed_modules(self) -> None:
         data = pickle.dumps(np.array([1, 2]))
         with pytest.raises(SecurityError, match="disallowed modules"):
-            pickle_to_json(data, allowed_modules=frozenset({"builtins"}))
+            pickle_to_json(data, trusted=True, allowed_modules=frozenset({"builtins"}))
 
 
 class TestJsonToPickle:
@@ -138,7 +138,7 @@ class TestPickleFileToJson:
 
         from datason.security.pickle_bridge import pickle_file_to_json
 
-        result = pickle_file_to_json(pkl_path)
+        result = pickle_file_to_json(pkl_path, trusted=True)
         restored = datason.loads(result)
         assert restored == original
 
@@ -146,4 +146,4 @@ class TestPickleFileToJson:
         from datason.security.pickle_bridge import pickle_file_to_json
 
         with pytest.raises(FileNotFoundError):
-            pickle_file_to_json("/nonexistent/path.pkl")
+            pickle_file_to_json("/nonexistent/path.pkl", trusted=True)

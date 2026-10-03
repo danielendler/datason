@@ -7,14 +7,17 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Docs](https://img.shields.io/badge/docs-GitHub%20Pages-blue)](https://danielendler.github.io/datason/)
 
-**Drop-in replacement for `json.dumps`/`json.loads` that handles datetime, NumPy, Pandas, PyTorch, and 50+ Python types. Zero dependencies.**
+**JSON serialization for Python data across APIs, diagnostics, and stored state. Supported types include datetime, NumPy, Pandas, and ML values through optional plugins. The core has zero dependencies.**
+
+The current release is an alpha. The [hardening roadmap](docs/hardening-roadmap.md)
+records the implemented hardening, tested contracts, and next validation milestones.
 
 ```python
 import datason
 import datetime as dt
 import numpy as np
 
-# Just replace json.dumps with datason.dumps — everything else works
+# Serialize datetime and NumPy values through the dumps interface
 datason.dumps({"ts": dt.datetime.now(), "scores": np.array([0.9, 0.1])})
 ```
 
@@ -27,7 +30,7 @@ pip install datason                    # Core (zero dependencies)
 pip install datason[numpy]             # + NumPy support
 pip install datason[pandas]            # + Pandas support
 pip install datason[ml]                # + PyTorch, TensorFlow, scikit-learn, SciPy
-pip install datason[all]               # Everything
+pip install datason[all]               # NumPy, Pandas, ML, and crypto extras
 ```
 
 Requires Python 3.10+.

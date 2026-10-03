@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import json
 
+import pytest
+
 import datason
 from datason.security.integrity import (
     compute_hash,
@@ -131,3 +133,49 @@ class TestVerifyIntegrity:
         assert is_valid is True
         restored = datason.loads(payload)
         assert restored == original
+
+
+@pytest.mark.parametrize("data", ['{"a":1}', '{ "z": 2, "a": "é" }', "[1,2,3]", "null"])
+@pytest.mark.parametrize("key", [None, "review-secret"])
+def test_formatting_independent_envelope(data: str, key: str | None) -> None:
+    wrapped = wrap_with_integrity(data, key=key)
+    valid, payload = verify_integrity(wrapped, key=key)
+    assert valid
+    assert json.loads(payload) == json.loads(data)
+
+
+def test_hmac_cannot_downgrade_to_hash() -> None:
+    envelope = json.loads(wrap_with_integrity('{"authorized": false}', key="secret"))
+    envelope.pop("__datason_hmac__")
+    envelope["__datason_payload__"]["authorized"] = True
+    envelope["__datason_hash__"] = compute_hash('{"authorized":true}')
+    assert verify_integrity(json.dumps(envelope), key="secret")[0] is False
+
+
+@pytest.mark.parametrize("payload", ["[]", "null", "{", '{"__datason_payload__": 1, "__datason_hash__": 42}'])
+def test_malformed_envelopes_fail_closed(payload: str) -> None:
+    assert verify_integrity(payload)[0] is False
+
+
+def test_signature_cannot_change_authentication_mode() -> None:
+    wrapped = wrap_with_integrity('{"a":1}', key="secret")
+    assert verify_integrity(wrapped)[0] is False
+    assert verify_integrity(wrap_with_integrity('{"a":1}'), key="secret")[0] is False
+
+
+def test_legacy_default_formatted_envelope_still_verifies() -> None:
+    data = '{"a": 1}'
+    envelope = {"__datason_payload__": {"a": 1}, "__datason_hmac__": compute_hmac(data, "secret")}
+    assert verify_integrity(json.dumps(envelope), key="secret")[0]
+
+
+@pytest.mark.parametrize("data", ['{"a":1,"a":2}', '{"a":NaN}'])
+def test_ambiguous_or_nonfinite_payload_cannot_be_signed(data: str) -> None:
+    with pytest.raises(ValueError):
+        wrap_with_integrity(data, key="secret")
+
+
+def test_empty_hmac_key_is_rejected() -> None:
+    with pytest.raises(ValueError, match="empty"):
+        wrap_with_integrity('{"a":1}', key="")
+    assert verify_integrity(wrap_with_integrity('{"a":1}'), key="")[0] is False

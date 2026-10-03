@@ -21,6 +21,8 @@ class SerializeContext:
     config: SerializationConfig
     depth: int = 0
     seen_ids: set[int] = field(default_factory=lambda: set[int]())
+    representation: bool = False
+    visited: list[int] = field(default_factory=lambda: [0])
 
     def child(self) -> SerializeContext:
         """Create a child context with incremented depth."""
@@ -28,6 +30,14 @@ class SerializeContext:
             config=self.config,
             depth=self.depth + 1,
             seen_ids=self.seen_ids,
+            representation=self.representation,
+            visited=self.visited,
+        )
+
+    def for_representation(self) -> SerializeContext:
+        """Apply policies to plugin output while allowing internal metadata."""
+        return SerializeContext(
+            config=self.config, depth=self.depth, seen_ids=self.seen_ids, representation=True, visited=self.visited
         )
 
 
