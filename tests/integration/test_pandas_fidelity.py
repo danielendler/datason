@@ -51,6 +51,17 @@ def test_non_string_columns_do_not_collide():
     pd.testing.assert_frame_equal(datason.loads(datason.dumps(frame)), frame)
 
 
+def test_inferred_string_dtype_and_missing_values():
+    frame = pd.DataFrame({"text": ["hello", None]}, index=["first", "second"])
+    pd.testing.assert_frame_equal(datason.loads(datason.dumps(frame)), frame)
+
+
+def test_string_index_with_missing_label():
+    index = pd.Index(["present", None], name="label")
+    original = pd.Series([1, 2], index=index)
+    pd.testing.assert_series_equal(datason.loads(datason.dumps(original)), original)
+
+
 def test_empty_frame_keeps_columns_and_dtypes():
     frame = pd.DataFrame({"a": pd.Series(dtype="Int32"), "b": pd.Series(dtype="float32")})
     pd.testing.assert_frame_equal(datason.loads(datason.dumps(frame)), frame)

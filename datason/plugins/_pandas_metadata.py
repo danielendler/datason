@@ -14,7 +14,10 @@ def describe_dtype(dtype: Any) -> dict[str, Any]:
     if isinstance(dtype, pd.CategoricalDtype):
         return {"dtype": "category", "categories": dtype.categories.tolist(), "ordered": dtype.ordered}
     if isinstance(dtype, pd.StringDtype):
-        return {"dtype": "string", "storage": dtype.storage}
+        meta = {"dtype": "string", "storage": dtype.storage}
+        if getattr(dtype, "na_value", pd.NA) is not pd.NA:
+            meta["na_value"] = "nan"
+        return meta
     return {"dtype": str(dtype)}
 
 
@@ -22,6 +25,8 @@ def restore_dtype(meta: dict[str, Any]) -> Any:
     if meta["dtype"] == "category":
         return pd.CategoricalDtype(categories=meta["categories"], ordered=meta["ordered"])
     if meta["dtype"] == "string":
+        if meta.get("na_value") == "nan":
+            return pd.StringDtype(storage=meta.get("storage", "python"), na_value=float("nan"))
         return pd.StringDtype(storage=meta.get("storage", "python"))
     return meta["dtype"]
 
