@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "datason"
-version = "2.0.0a1"
+version = "2.0.0a2"
 description = "Drop-in replacement for json.dumps/json.loads that handles datetime, NumPy, Pandas, PyTorch, and 50+ Python types. Zero dependencies."
 readme = "README.md"
 requires-python = ">=3.10"

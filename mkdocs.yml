@@ -40,6 +40,7 @@ nav:
   - Performance Strategy: performance-strategy.md
   - Rust Feasibility Gate: rust-feasibility.md
   - Migration from v1: migration.md
+  - Release Notes: releases/2.0.0a2.md
   - Changelog: changelog.md
 
 plugins:

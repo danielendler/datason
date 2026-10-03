@@ -1,0 +1,16 @@
+{
+  "source_tag": "v2.0.0a1",
+  "source_commit": "88b110f79922ceef7e4ae3bc92392c0bdbdfa2ba",
+  "numpy_version": "2.5.3",
+  "pandas_version": "3.0.6",
+  "payloads": {
+    "stdlib": "{\"datetime\": {\"__datason_type__\": \"datetime\", \"__datason_value__\": \"2026-02-07T12:34:56.123456+00:00\"}, \"date\": {\"__datason_type__\": \"date\", \"__datason_value__\": \"2026-02-07\"}, \"time\": {\"__datason_type__\": \"time\", \"__datason_value__\": \"12:34:56.123456\"}, \"timedelta\": {\"__datason_type__\": \"timedelta\", \"__datason_value__\": 3.000005}, \"uuid\": {\"__datason_type__\": \"uuid.UUID\", \"__datason_value__\": \"12345678-1234-5678-1234-567812345678\"}, \"decimal\": {\"__datason_type__\": \"decimal.Decimal\", \"__datason_value__\": \"123.4500\"}, \"path\": {\"__datason_type__\": \"pathlib.Path\", \"__datason_value__\": \"artifacts/checkpoint.json\"}}",
+    "collections": "{\"tuple\": [1, \"two\"], \"set\": [3], \"frozenset\": [4]}",
+    "numpy": "{\"integer\": {\"__datason_type__\": \"numpy.integer\", \"__datason_value__\": 7}, \"floating\": {\"__datason_type__\": \"numpy.floating\", \"__datason_value__\": 1.25}, \"boolean\": {\"__datason_type__\": \"numpy.bool_\", \"__datason_value__\": true}, \"complex\": {\"__datason_type__\": \"numpy.complex\", \"__datason_value__\": [2.0, 3.0]}, \"array\": {\"__datason_type__\": \"numpy.ndarray\", \"__datason_value__\": {\"data\": [[1, 2], [3, 4]], \"dtype\": \"int32\", \"shape\": [2, 2]}}, \"empty_array\": {\"__datason_type__\": \"numpy.ndarray\", \"__datason_value__\": {\"data\": [[], []], \"dtype\": \"float32\", \"shape\": [2, 0, 4]}}}",
+    "pandas": "{\"__datason_type__\": \"pandas.DataFrame\", \"__datason_value__\": {\"data\": [{\"count\": 1, \"score\": 1.25}, {\"count\": 2, \"score\": 2.5}], \"orient\": \"records\"}}",
+    "unix": "{\"__datason_type__\": \"datetime\", \"__datason_value__\": 1770422400.0}",
+    "unix_ms": "{\"__datason_type__\": \"datetime\", \"__datason_value__\": 1770422400000.0}",
+    "hash": "{\"__datason_payload__\": {\"message\": \"café\", \"count\": 7}, \"__datason_hash__\": \"a4228543bea3579abd8b9648ed87e2254891c2aaa885b5e57d1f93b1425f5c68\"}",
+    "hmac": "{\"__datason_payload__\": {\"message\": \"café\", \"count\": 7}, \"__datason_hmac__\": \"4d192fb81fa4b9059e3e3fdf76d1678b2860fb01dc31d645864f6e7f417bd5e5\"}"
+  }
+}
