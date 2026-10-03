@@ -16,6 +16,8 @@ from .._errors import DeserializationError, PluginError, SecurityError, Serializ
 from .._protocols import DeserializeContext, SerializeContext
 from .._types import TYPE_METADATA_KEY, VALUE_METADATA_KEY
 
+_COMPLEX_BATCH_MIN_SIZE = 32
+
 
 class NumpyPlugin:
     """Handles serialization/deserialization of NumPy types."""
@@ -81,14 +83,17 @@ def _serialize_ndarray(arr: Any, ctx: SerializeContext) -> Any:
     """Serialize an ndarray with shape and dtype metadata."""
     if arr.dtype.fields is not None or arr.dtype.kind == "V":
         raise SerializationError("Structured and void NumPy dtypes require an explicit custom plugin")
-    raw = arr.tolist()
+    if not ctx.config.include_type_hints:
+        return arr.tolist()
     encoding = None
-    if ctx.config.include_type_hints and arr.dtype.kind == "c":
-        raw = [[float(x.real), float(x.imag)] for x in arr.flat]
+    if arr.dtype.kind == "c":
+        raw = _complex_pairs(arr)
         encoding = "complex_pairs"
-    elif ctx.config.include_type_hints and arr.dtype.kind in "mM":
+    elif arr.dtype.kind in "mM":
         raw = arr.view("i8").tolist()
         encoding = "temporal_int64"
+    else:
+        raw = arr.tolist()
     value = {
         "data": raw,
         "dtype": str(arr.dtype),
@@ -96,9 +101,14 @@ def _serialize_ndarray(arr: Any, ctx: SerializeContext) -> Any:
     }
     if encoding is not None:
         value["encoding"] = encoding
-    if ctx.config.include_type_hints:
-        return {TYPE_METADATA_KEY: "numpy.ndarray", VALUE_METADATA_KEY: value}
-    return arr.tolist()
+    return {TYPE_METADATA_KEY: "numpy.ndarray", VALUE_METADATA_KEY: value}
+
+
+def _complex_pairs(arr: Any) -> Any:
+    """Batch larger standard arrays; retain float() for small/wider dtypes."""
+    if arr.size >= _COMPLEX_BATCH_MIN_SIZE and arr.dtype.itemsize <= 16:
+        return np.stack((arr.real, arr.imag), axis=-1).reshape(-1, 2).tolist()
+    return [[float(x.real), float(x.imag)] for x in arr.flat]
 
 
 def _serialize_scalar(obj: Any, ctx: SerializeContext, native_value: Any, type_name: str) -> Any:
@@ -180,13 +190,14 @@ def _check_array_allocation(dtype: Any, shape: Any, raw: Any, ctx: DeserializeCo
     budget = ctx.config.max_input_bytes
     if dtype.itemsize > budget:
         raise SecurityError("NumPy dtype item size exceeds reconstruction budget")
+    itemsize = max(dtype.itemsize, 1)
     count = 1
     if shape is not None:
         for dim in shape:
             if dim > ctx.config.max_size:
                 raise SecurityError("NumPy dimension exceeds container limit")
             count *= dim
-            if count * max(dtype.itemsize, 1) > budget:
+            if count * itemsize > budget:
                 raise SecurityError("NumPy array exceeds reconstruction byte budget")
     pending = [raw]
     count = 0
@@ -196,5 +207,5 @@ def _check_array_allocation(dtype: Any, shape: Any, raw: Any, ctx: DeserializeCo
             pending.extend(item)
         else:
             count += 1
-            if count * max(dtype.itemsize, 1) > budget:
+            if count * itemsize > budget:
                 raise SecurityError("NumPy array exceeds reconstruction byte budget")
