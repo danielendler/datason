@@ -37,6 +37,8 @@ nav:
   - Security: security.md
   - Custom Plugins: plugins.md
   - For AI Agents: ai-agents.md
+  - Performance Strategy: performance-strategy.md
+  - Rust Feasibility Gate: rust-feasibility.md
   - Migration from v1: migration.md
   - Changelog: changelog.md
 

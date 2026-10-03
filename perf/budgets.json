@@ -1,0 +1,27 @@
+{
+  "schema_version": "1.0",
+  "policy": {
+    "primary_metric": "p95_ms",
+    "secondary_metrics": [
+      "p99_ms",
+      "throughput_ops_per_sec",
+      "peak_memory_bytes"
+    ],
+    "warn_threshold_pct": 10.0,
+    "fail_after_stable_runs": 3
+  },
+  "targets": {
+    "api|dumps": null,
+    "api|loads": null,
+    "api|roundtrip": null,
+    "event_log|dumps": null,
+    "event_log|loads": null,
+    "event_log|roundtrip": null,
+    "data_science|dumps": null,
+    "data_science|loads": null,
+    "data_science|roundtrip": null,
+    "ml_serving|dumps": null,
+    "ml_serving|loads": null,
+    "ml_serving|roundtrip": null
+  }
+}
