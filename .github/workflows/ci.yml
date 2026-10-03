@@ -14,7 +14,7 @@ on:
   push:
     branches: [main]
   pull_request:
-    branches: [main]
+    branches: ["**"]  # Include stacked PRs before they are retargeted to main.
 
 permissions:
   contents: read
@@ -36,7 +36,8 @@ jobs:
       - run: uv python install 3.12
 
       - name: Install dependencies
-        run: uv sync  # dev deps only — no ML libs needed for linting/typing
+        # Strict typing checks optional plugin imports, so install their libraries.
+        run: uv sync --all-extras --locked
 
       - name: Ruff lint
         run: uv run ruff check datason/ tests/
@@ -92,7 +93,7 @@ jobs:
   # ---------------------------------------------------------------------------
   test:
     name: Test (Python ${{ matrix.python-version }})
-    needs: quality
+    # Run regressions even when the quality job reports dependency advisories.
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -146,12 +147,12 @@ jobs:
   # ---------------------------------------------------------------------------
   benchmark:
     name: Benchmarks
-    needs: quality
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
     continue-on-error: true
     env:
       BENCHMARK_REGRESSION_THRESHOLD_PCT: "15"
+      REALDATA_P95_WARN_THRESHOLD_PCT: "10"
     steps:
       - name: Checkout PR head
         uses: actions/checkout@v6
@@ -177,10 +178,17 @@ jobs:
       - name: Run base benchmarks
         working-directory: base
         run: |
-          uv run pytest tests/benchmarks/ \
+          uv run pytest -o addopts='' tests/benchmarks/ \
             --benchmark-only \
             --benchmark-sort=mean \
             --benchmark-json=benchmark-base.json
+
+      - name: Run base replay benchmark (real-data sample)
+        working-directory: base
+        run: |
+          uv run python scripts/perf/replay_benchmark.py \
+            --input perf/workloads/sample \
+            --output perf/results/replay-summary-base.json
 
       - name: Install dependencies (head)
         working-directory: head
@@ -189,10 +197,22 @@ jobs:
       - name: Run head benchmarks
         working-directory: head
         run: |
-          uv run pytest tests/benchmarks/ \
+          uv run pytest -o addopts='' tests/benchmarks/ \
             --benchmark-only \
             --benchmark-sort=mean \
             --benchmark-json=benchmark-head.json
+
+      - name: Run head replay benchmark (real-data sample) + compare
+        working-directory: head
+        run: |
+          uv run python scripts/perf/replay_benchmark.py \
+            --input perf/workloads/sample \
+            --output perf/results/replay-summary-head.json \
+            --baseline ../base/perf/results/replay-summary-base.json \
+            --p95-threshold-pct $REALDATA_P95_WARN_THRESHOLD_PCT \
+            --report-markdown ../benchmark-realdata-comparison.md \
+            --fail-on-regression \
+            --profile-top-regressions 3
 
       - name: Compare benchmark results (base vs head)
         run: |
@@ -297,6 +317,10 @@ jobs:
             base/benchmark-base.json
             head/benchmark-head.json
             benchmark-comparison.md
+            base/perf/results/replay-summary-base.json
+            head/perf/results/replay-summary-head.json
+            benchmark-realdata-comparison.md
+            head/perf/results/profiles/
           if-no-files-found: ignore
 
   # ---------------------------------------------------------------------------
@@ -304,7 +328,7 @@ jobs:
   # ---------------------------------------------------------------------------
   build:
     name: Build Package
-    needs: test
+    needs: [quality, test]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
