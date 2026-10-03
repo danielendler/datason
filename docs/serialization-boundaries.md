@@ -37,3 +37,13 @@ User dictionaries containing `__datason_type__` are rejected during serializatio
 because that key is reserved. Keys that collide after conversion to strings are
 also rejected rather than silently overwriting data. Use explicit string keys for
 API data; generic mapping-key preservation is outside the current contract.
+
+`SerializationError` identifies the responsible field in its message and its
+`path` attribute, for example `$.diagnostics.unhandled` or `$.tools[0].result`.
+Keys containing punctuation use JSON-quoted brackets, such as `$["a.b"]`.
+Container-level failures identify the containing mapping or sequence. Plugin
+output is traversed too, so its generated representation may appear in the path.
+Paths identify fields and indexes without including the unsupported value's
+representation. Exceptions raised directly outside Datason traversal may have
+`path=None`. This diagnostic does not report successful normalization or guarantee
+lossless restoration; non-finite and application-model policies still apply.
