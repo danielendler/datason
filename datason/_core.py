@@ -11,7 +11,7 @@ import math
 from collections.abc import Callable
 from contextlib import contextmanager
 from io import IOBase
-from typing import Any
+from typing import Any, TextIO, cast
 
 from ._config import SerializationConfig, _active_config, get_active_config
 from ._errors import SecurityError, SerializationError
@@ -189,9 +189,11 @@ def dumps(obj: Any, **kwargs: Any) -> str:
     """
     json_kwargs, config_kwargs = _split_kwargs(kwargs, _JSON_DUMPS_KWARGS, func_name="dumps")
     cfg = _resolve_config(config_kwargs)
-    ctx = _serialize_context(cfg, json_kwargs)
+    ctx, encoder = _serialize_context(cfg, json_kwargs)
     serialized = _serialize_recursive(obj, ctx)
     check_tree(serialized, cfg)
+    if encoder is not None:
+        return encoder.encode(serialized)
     json_kwargs.setdefault("ensure_ascii", False)
     return json.dumps(serialized, sort_keys=cfg.sort_keys, **json_kwargs)
 
@@ -216,11 +218,15 @@ def dump(obj: Any, fp: IOBase, **kwargs: Any) -> None:
     """
     json_kwargs, config_kwargs = _split_kwargs(kwargs, _JSON_DUMPS_KWARGS, func_name="dump")
     cfg = _resolve_config(config_kwargs)
-    ctx = _serialize_context(cfg, json_kwargs)
+    ctx, encoder = _serialize_context(cfg, json_kwargs)
     serialized = _serialize_recursive(obj, ctx)
     check_tree(serialized, cfg)
     json_kwargs.setdefault("ensure_ascii", False)
-    json.dump(serialized, fp, sort_keys=cfg.sort_keys, **json_kwargs)
+    if encoder is None:
+        json.dump(serialized, fp, sort_keys=cfg.sort_keys, **json_kwargs)
+    else:
+        for chunk in encoder.iterencode(serialized):
+            cast(TextIO, fp).write(chunk)
 
 
 @contextmanager
@@ -266,15 +272,20 @@ def _resolve_config(overrides: dict[str, Any]) -> SerializationConfig:
     return get_active_config()
 
 
-def _serialize_context(cfg: SerializationConfig, json_kwargs: dict[str, Any]) -> SerializeContext:
+def _serialize_context(
+    cfg: SerializationConfig, json_kwargs: dict[str, Any]
+) -> tuple[SerializeContext, json.JSONEncoder | None]:
     """Apply custom JSON fallback handlers before validating their output."""
     handler: Callable[[Any], Any] | None = None
+    encoder: json.JSONEncoder | None = None
     if "default" in json_kwargs or "cls" in json_kwargs:
         encoder_cls = json_kwargs.get("cls") or json.JSONEncoder
         options = {k: v for k, v in json_kwargs.items() if k != "cls"}
         options.setdefault("ensure_ascii", False)
-        handler = encoder_cls(sort_keys=cfg.sort_keys, **options).default
-    return SerializeContext(config=cfg, default_handler=handler, skipkeys=json_kwargs.get("skipkeys", False))
+        encoder = cast(json.JSONEncoder, encoder_cls(sort_keys=cfg.sort_keys, **options))
+        handler = encoder.default
+    ctx = SerializeContext(config=cfg, default_handler=handler, skipkeys=json_kwargs.get("skipkeys", False))
+    return ctx, encoder
 
 
 def _split_kwargs(

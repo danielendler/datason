@@ -51,6 +51,25 @@ def test_explicit_default_overrides_encoder_default() -> None:
     assert datason.dumps(Unknown(), cls=UnknownEncoder, default=lambda obj: "override") == '"override"'
 
 
+@pytest.mark.parametrize("write_file", [False, True])
+def test_stateful_encoder_is_instantiated_once(write_file: bool) -> None:
+    instances: list[UnknownEncoder] = []
+
+    class StatefulEncoder(UnknownEncoder):
+        def __init__(self, **kwargs: Any) -> None:
+            super().__init__(**kwargs)
+            instances.append(self)
+
+    if write_file:
+        stream = io.StringIO()
+        datason.dump(Unknown(), stream, cls=StatefulEncoder)
+        result = stream.getvalue()
+    else:
+        result = datason.dumps(Unknown(), cls=StatefulEncoder)
+    assert json.loads(result) == {"custom": True}
+    assert len(instances) == 1
+
+
 def test_default_is_used_before_string_fallback() -> None:
     assert datason.dumps(Unknown(), default=lambda obj: "custom", fallback_to_string=True) == '"custom"'
 
