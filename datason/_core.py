@@ -39,12 +39,16 @@ def _serialize_recursive(obj: Any, ctx: SerializeContext) -> Any:
     if ctx.depth > ctx.config.max_depth:
         raise SecurityError(f"Serialization depth {ctx.depth} exceeds limit {ctx.config.max_depth}")
 
+    # Exact primitives cannot form cycles; keep their policies and budgets
+    # without allocating an object ID or touching the container seen set.
+    if type(obj) in JSON_BASIC_TYPES:
+        return _serialize_value(obj, ctx)
+
     # Security: circular reference detection
     obj_id = id(obj)
-    if type(obj) not in JSON_BASIC_TYPES:
-        if obj_id in ctx.seen_ids:
-            raise SecurityError(f"Circular reference detected for {type(obj).__name__}")
-        ctx.seen_ids.add(obj_id)
+    if obj_id in ctx.seen_ids:
+        raise SecurityError(f"Circular reference detected for {type(obj).__name__}")
+    ctx.seen_ids.add(obj_id)
 
     try:
         result = _serialize_value(obj, ctx)
