@@ -24,8 +24,7 @@ class SerializeContext:
     seen_ids: set[int] = field(default_factory=lambda: set[int]())
     representation: bool = False
     visited: list[int] = field(default_factory=lambda: [0])
-    default_handler: Callable[[Any], Any] | None = None
-    skipkeys: bool = False
+    json_options: tuple[Callable[[Any], Any] | None, bool] | None = None
 
     def child(self) -> SerializeContext:
         """Create a child context with incremented depth."""
@@ -35,8 +34,7 @@ class SerializeContext:
             seen_ids=self.seen_ids,
             representation=self.representation,
             visited=self.visited,
-            default_handler=self.default_handler,
-            skipkeys=self.skipkeys,
+            json_options=self.json_options,
         )
 
     def for_representation(self) -> SerializeContext:
@@ -47,8 +45,7 @@ class SerializeContext:
             seen_ids=self.seen_ids,
             representation=True,
             visited=self.visited,
-            default_handler=self.default_handler,
-            skipkeys=self.skipkeys,
+            json_options=self.json_options,
         )
 
 

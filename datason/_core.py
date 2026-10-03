@@ -83,8 +83,8 @@ def _serialize_value(obj: Any, ctx: SerializeContext) -> Any:
         return _serialize_recursive(serialized, ctx.for_representation())
 
     # Fallback
-    if ctx.default_handler is not None:
-        return _serialize_recursive(ctx.default_handler(obj), ctx.child())
+    if ctx.json_options is not None and ctx.json_options[0] is not None:
+        return _serialize_recursive(ctx.json_options[0](obj), ctx.child())
     if ctx.config.fallback_to_string:
         return _serialize_recursive(str(obj), ctx)
 
@@ -130,8 +130,9 @@ def _serialize_dict(obj: dict[Any, Any], ctx: SerializeContext) -> dict[str, Any
         raise SerializationError(f"Reserved metadata key {TYPE_METADATA_KEY} in user dictionary")
     child = ctx.child()
     result: dict[str, Any] = {}
+    skipkeys = ctx.json_options is not None and ctx.json_options[1]
     for k, v in obj.items():
-        if ctx.skipkeys and k is not None and not isinstance(k, str | int | float | bool):
+        if skipkeys and k is not None and not isinstance(k, str | int | float | bool):
             continue
         key = str(k)
         if key in result:
@@ -189,7 +190,10 @@ def dumps(obj: Any, **kwargs: Any) -> str:
     """
     json_kwargs, config_kwargs = _split_kwargs(kwargs, _JSON_DUMPS_KWARGS, func_name="dumps")
     cfg = _resolve_config(config_kwargs)
-    ctx, encoder = _serialize_context(cfg, json_kwargs)
+    if json_kwargs:
+        ctx, encoder = _serialize_context(cfg, json_kwargs)
+    else:
+        ctx, encoder = SerializeContext(config=cfg), None
     serialized = _serialize_recursive(obj, ctx)
     check_tree(serialized, cfg)
     if encoder is not None:
@@ -218,7 +222,10 @@ def dump(obj: Any, fp: IOBase, **kwargs: Any) -> None:
     """
     json_kwargs, config_kwargs = _split_kwargs(kwargs, _JSON_DUMPS_KWARGS, func_name="dump")
     cfg = _resolve_config(config_kwargs)
-    ctx, encoder = _serialize_context(cfg, json_kwargs)
+    if json_kwargs:
+        ctx, encoder = _serialize_context(cfg, json_kwargs)
+    else:
+        ctx, encoder = SerializeContext(config=cfg), None
     serialized = _serialize_recursive(obj, ctx)
     check_tree(serialized, cfg)
     json_kwargs.setdefault("ensure_ascii", False)
@@ -284,7 +291,9 @@ def _serialize_context(
         options.setdefault("ensure_ascii", False)
         encoder = cast(json.JSONEncoder, encoder_cls(sort_keys=cfg.sort_keys, **options))
         handler = encoder.default
-    ctx = SerializeContext(config=cfg, default_handler=handler, skipkeys=json_kwargs.get("skipkeys", False))
+    skipkeys = bool(json_kwargs.get("skipkeys", False))
+    options = (handler, skipkeys) if handler is not None or skipkeys else None
+    ctx = SerializeContext(config=cfg, json_options=options)
     return ctx, encoder
 
 
