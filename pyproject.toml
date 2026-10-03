@@ -58,6 +58,7 @@ email = "maintainers@datason.dev"
 [project.optional-dependencies]
 numpy = ["numpy>=1.21.0"]
 pandas = ["pandas>=1.3.0"]
+pydantic = ["pydantic>=2.0.0"]
 ml = [
     "torch>=1.12.0",
     "tensorflow>=2.16.1; python_version>='3.11'",
