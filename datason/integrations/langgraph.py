@@ -9,6 +9,7 @@ from .._config import SerializationConfig
 from .._core import dumps
 from .._deserialize import loads
 from .._errors import DeserializationError
+from ._langgraph_types import register_langgraph_types
 
 _FORMAT = "datason-json-v1"
 
@@ -17,7 +18,7 @@ class DatasonSerializer:
     """Persist supported JSON state without automatic application-class hydration.
 
     Implements ``langgraph.checkpoint.serde.base.SerializerProtocol`` structurally.
-    LangGraph is optional and is not imported here. Callbacks and registered
+    The adapter enables optional codecs for installed LangGraph runtime records. Callbacks and registered
     datason plugins are trusted; this adapter is not an untrusted-code sandbox.
     """
 
@@ -27,6 +28,7 @@ class DatasonSerializer:
             raise ValueError("Checkpoint serialization requires type hints, strict loading, and no string fallback")
         if config.redact_fields or config.redact_patterns:
             raise ValueError("Use a separate diagnostic export for redaction; checkpoint state must remain usable")
+        register_langgraph_types()
         self._options = asdict(config)
 
     def dumps_typed(self, obj: Any) -> tuple[str, bytes]:

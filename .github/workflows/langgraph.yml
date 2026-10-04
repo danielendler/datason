@@ -4,7 +4,9 @@ on:
   pull_request:
     paths:
       - "datason/**"
-      - "tests/integration/test_langgraph_checkpoint.py"
+      - "tests/integration/test_langgraph*.py"
+      - "tests/fixtures/langgraph*.json"
+      - "scripts/capture_framework_fixtures.py"
       - "pyproject.toml"
       - "uv.lock"
       - ".github/workflows/langgraph.yml"
@@ -17,11 +19,22 @@ permissions:
 
 jobs:
   checkpoint:
-    name: SQLite resume (Python ${{ matrix.python-version }})
+    name: SQLite resume (${{ matrix.sdk }}, Python ${{ matrix.python-version }})
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         python-version: ["3.11", "3.13"]
+        sdk: [older, current]
+        include:
+          - sdk: older
+            langgraph: "1.0.0"
+            checkpoint: "2.1.2"
+            sqlite: "2.0.11"
+          - sdk: current
+            langgraph: "1.2.12"
+            checkpoint: "4.2.0"
+            sqlite: "3.1.1"
     steps:
       - uses: actions/checkout@v6
       - uses: astral-sh/setup-uv@v7
@@ -32,7 +45,9 @@ jobs:
         env:
           UV_PYTHON: ${{ matrix.python-version }}
         run: >-
-          uv run --locked --extra numpy
-          --with langgraph==1.2.12
-          --with langgraph-checkpoint-sqlite==3.1.1
+          uv run --locked --extra numpy --extra pydantic
+          --with langgraph==${{ matrix.langgraph }}
+          --with langgraph-checkpoint==${{ matrix.checkpoint }}
+          --with langgraph-checkpoint-sqlite==${{ matrix.sqlite }}
           pytest tests/integration/test_langgraph_checkpoint.py
+          tests/integration/test_langgraph_runtime.py
