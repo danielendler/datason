@@ -1,9 +1,8 @@
 # Datason hardening and AI integration roadmap
 
 Review date: October 4, 2026. Earlier hardening batches and release preparation
-are merged. The P1 follow-up below is implemented in review branches; its PRs
-must merge before those changes are part of main. The published alpha has not
-been replaced.
+and P1 PRs #127–#129 are merged. The P2 validation below is prepared in review
+PRs. The published alpha has not been replaced.
 
 ## Product direction
 
@@ -80,10 +79,10 @@ coverage, not a comprehensive migration guarantee. The
 metadata-inclusive budgets, scalar metadata and model normalization. Preparing
 or merging release metadata does not tag, publish or upload the package.
 
-## P1 follow-up prepared for review
+## P1 follow-up merged
 
 These are fidelity, reconstruction and integration milestones for the existing
-five-function API, not a renewed API migration. The combined candidate passes
+five-function API, not a renewed API migration. The merged P1 source was validated with
 **985 tests without skips and all 30 snapshots** locally with actual optional
 libraries and current framework pins. Branch-specific counts are in each PR.
 
@@ -92,6 +91,9 @@ libraries and current framework pins. Branch-specific counts are in each PR.
 | Persisted formats ([#127](https://github.com/danielendler/datason/pull/127)) | 24 actual a1 payload fixtures, including fitted ML predictions, custom codecs, ambiguous units, unsigned overflow and legacy signatures; explicit migration decisions | Missing producer information cannot be guessed; fixture coverage is bounded to recorded library versions |
 | Reconstruction review ([#128](https://github.com/danielendler/datason/pull/128)) | Inventory every built-in loader; 99 regression cases for pre-allocation checks, empty shapes, bfloat16, CPU restoration, JAX x64 policy, estimator hydration and dispatch-off | Typed loads remain for trusted application-owned state; buffer estimates and namespace checks are not a sandbox |
 | [Framework matrix](framework-compatibility.md) ([#129](https://github.com/danielendler/datason/pull/129)) | Real SQLite reopen/resume, closed Interrupt/Send codecs, application hydration/schema upgrade, old checkpoint replay and offline Agents approval/context restoration; two pinned SDK generations with Python 3.11/3.13 CI jobs | Native-format migrations, arbitrary message classes, Send timeout policies and replay authorization remain application responsibilities |
+
+PRs #127, #128 and #129 are merged. The changed runtime lines in #128 and #129
+were each verified at 100% patch coverage; main now requires 90%.
 
 Release preparation remains **2.0.0a2 (unreleased)**. This follow-up expands the
 original eight-fixture sample and the initial checkpoint adapter; it does not
@@ -102,9 +104,20 @@ versions and evidence rather than claiming compatibility with every SDK release.
 
 | Priority | Work | Completion criterion |
 | --- | --- | --- |
-| P2 | API/tool schema validation example | Produce ordinary JSON for an actual tool result and validate it against its declared schema, including binary field encoding |
-| P2 | Performance and optional imports | Measure cold import, allocations, representative dump/load p50/p95, and standard JSON baselines using the merged replay framework |
-| P2 | Adoption evidence | Reproduce reported framework failures, validate adapter usefulness with maintainers/users, and observe continued use before expanding integrations |
+| P2 | Tool schema contract — prepared [#131](https://github.com/danielendler/datason/pull/131) | Actual offline MCP output validated against the SDK-advertised schema; datetime/UUID, NumPy, nullable non-finite score and validated base64 bytes |
+| P2 | Boundary performance — prepared [#132](https://github.com/danielendler/datason/pull/132) | Five interleaved rounds, JSON codec controls, typed fidelity, allocation/profile evidence and three fresh-import environments; shared-container observations, not capacity claims |
+| P2 | [Adoption evidence](adoption-evidence.md) — partially validated | Scientific framework corpus and author-owned financial case verified; independent users and continued use remain unverified |
+
+The application case uses new synthetic financial values with the current API;
+it does not upgrade financialModel02 or replay its production database. The
+full local application/corpus branch passes 993 tests and all 30 snapshots.
+Independent adoption remains open because the only supplied application is
+author-owned and still targets Datason 0.8.0.
+
+The measured next performance candidate is lazy optional-plugin registration,
+subject to fresh-process, concurrent-first-use, dispatch and reconstruction
+regressions. Do not expand this into a native-language rewrite without a measured
+application bottleneck. No runtime optimization is included in this P2 batch.
 
 Do not add more type families merely to increase a supported-type count. Broaden
 the contract only when a concrete workload, fidelity fixture, and integration test
