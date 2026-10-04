@@ -47,9 +47,12 @@ cover glyphs outside that subset.
 
 Keep claims scoped to the current implementation. The page deliberately says
 v2 **alpha**, distinguishes plain JSON from typed storage, and links to fidelity
-and trust contracts. When a matching v2 release is published, update the release
-label, installation command, and version FAQ together. Do not add unverified
-benchmarks, customer logos, or usage figures.
+and trust contracts. The primary install command pins the published `2.0.0a1`
+alpha, verified against all three homepage examples in a fresh environment. The
+detailed docs track development source `2.0.0a2`; keep that distinction explicit.
+When changing the published install version, verify the examples against that
+PyPI release and update the installation command and version FAQ together.
+Do not add unverified benchmarks, customer logos, or usage figures.
 
 ## Validation and deployment
 

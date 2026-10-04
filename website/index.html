@@ -491,9 +491,11 @@ print(text)</code></pre>
           <details>
             <summary>Which version should I use?</summary>
             <p>
-              These examples target v2 development source, currently an alpha.
-              The source command below matches these docs. PyPI’s stable v1 has
-              a different API.
+              These examples work with the published v2 alpha (2.0.0a1),
+              available through pip. The detailed docs track newer development
+              source (2.0.0a2), including changes since that release. An
+              unqualified pip install datason selects stable v1 (0.13.0), which
+              has a different API.
               <a href="docs/getting-started/#installation"
                 >Check current release and installation guidance.</a
               >
@@ -524,7 +526,7 @@ print(text)</code></pre>
           </div>
           <div class="install-panel">
             <div class="install-header">
-              <span>INSTALL V2 DEVELOPMENT SOURCE</span
+              <span>INSTALL V2 ALPHA FROM PYPI</span
               ><button
                 class="copy-button"
                 data-copy="install-command"
@@ -533,13 +535,13 @@ print(text)</code></pre>
                 Copy <span aria-hidden="true">⧉</span>
               </button>
             </div>
-            <pre><code id="install-command">python -m pip install 'datason @ git+https://github.com/danielendler/datason.git@main'</code></pre>
+            <pre><code id="install-command">python -m pip install 'datason==2.0.0a1'</code></pre>
             <p>
-              Python 3.10+ · Requires Git · Pin a reviewed commit for
-              reproducible builds.
+              Python 3.10+ · Published alpha · Homepage examples verified
+              against this release.
             </p>
             <a href="docs/getting-started/#installation"
-              >Published alphas &amp; optional extras
+              >Stable v1, current source &amp; optional extras
               <span aria-hidden="true">↗︎</span></a
             >
           </div>
