@@ -46,6 +46,52 @@ def test_missing_family_is_cached_without_importing_other_families(monkeypatch, 
     assert not getattr(misc, "_HAS_" + family.upper())
 
 
+def test_unknown_family_fails_without_importing_or_caching(monkeypatch, isolated):
+    monkeypatch.setattr(misc.importlib, "import_module", lambda _: pytest.fail("unknown family imported"))
+    with pytest.raises(ValueError, match="Unknown optional ML family: unknown"):
+        misc._load_framework("unknown")
+    assert misc._loaded == set()
+    assert not any(getattr(misc, "_HAS_" + name.upper()) for name in misc._FRAMEWORKS)
+
+
+def test_initialization_failure_remains_visible_and_can_be_retried(monkeypatch, isolated):
+    imported = []
+
+    def broken(name):
+        imported.append(name)
+        raise RuntimeError("library initialization failed")
+
+    monkeypatch.setattr(misc.importlib, "import_module", broken)
+    with pytest.raises(RuntimeError, match="library initialization failed"):
+        misc._load_framework("polars")
+    assert not misc._HAS_POLARS and misc.pl is None
+    assert misc._loaded == set()
+    module = object()
+    monkeypatch.setattr(misc.importlib, "import_module", lambda name: imported.append(name) or module)
+    misc._load_framework("polars")
+    misc._load_framework("polars")
+    assert imported == ["polars", "polars"]
+    assert misc.pl is module and misc._HAS_POLARS
+    assert misc._loaded == {"polars"}
+
+
+def test_missing_jax_numpy_does_not_publish_partial_initialization(monkeypatch, isolated):
+    imported = []
+
+    def partial(name):
+        imported.append(name)
+        if name == "jax.numpy":
+            raise ImportError("transitive dependency missing")
+        return object()
+
+    monkeypatch.setattr(misc.importlib, "import_module", partial)
+    misc._load_framework("jax")
+    misc._load_framework("jax")
+    assert imported == ["jax", "jax.numpy"]
+    assert not misc._HAS_JAX and misc.jnp is None
+    assert misc._loaded == {"jax"}
+
+
 def test_jaxlib_and_application_subclasses_route_to_jax(monkeypatch, isolated):
     selected = []
     monkeypatch.setattr(misc, "_load_framework", selected.append)

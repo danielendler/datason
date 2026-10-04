@@ -59,6 +59,8 @@ def _load_framework(name: _Framework) -> None:
                 case "plotly":
                     go = importlib.import_module("plotly.graph_objects")
                     _HAS_PLOTLY = True
+                case _:
+                    raise ValueError(f"Unknown optional ML family: {name}")
         except ImportError:
             pass
         _loaded.add(name)
