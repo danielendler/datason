@@ -4,6 +4,8 @@ on:
   pull_request:
     paths:
       - "datason/**"
+      - "examples/langgraph_checkpoint.py"
+      - "docs/langgraph-checkpoints.md"
       - "tests/integration/test_langgraph*.py"
       - "tests/unit/test_langgraph_codec_policy.py"
       - "tests/fixtures/langgraph*.json"
@@ -61,3 +63,13 @@ jobs:
           files: coverage-langgraph.xml
           flags: langgraph
           fail_ci_if_error: false
+
+      - name: Run documented checkpoint example
+        env:
+          UV_PYTHON: ${{ matrix.python-version }}
+        run: >-
+          uv run --locked
+          --with langgraph==${{ matrix.langgraph }}
+          --with langgraph-checkpoint==${{ matrix.checkpoint }}
+          --with langgraph-checkpoint-sqlite==${{ matrix.sqlite }}
+          python examples/langgraph_checkpoint.py

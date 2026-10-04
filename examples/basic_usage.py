@@ -49,9 +49,10 @@ with datason.config(nan_handling=NanHandling.STRING):
 # 4. Sets and tuples
 # =========================================================================
 
-# Tuples become lists, sets become sorted lists
+# Tags restore collection types; without tags, collections become JSON lists.
 mixed = {"tuple": (1, 2, 3), "set": {3, 1, 2}}
 print(f"Mixed:      {datason.dumps(mixed)}")
+assert datason.loads(datason.dumps(mixed)) == mixed
 
 # =========================================================================
 # 5. File I/O
