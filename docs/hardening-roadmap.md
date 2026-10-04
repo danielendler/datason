@@ -67,9 +67,9 @@ The adapter's byte-input typing was aligned with the supported runtime contract.
 
 The callback compatibility and packaging follow-up #97 is now merged, as are
 complex scalar dispatch #122, failure paths #123, NumPy/traversal optimizations
-#124 and email-redaction fast-path #125. The final main code tree matches the
+#124 and email-redaction fast-path #125. The pre-P1 main code tree matched the
 combined local run: 695 tests passed, five optional skips and all 30 snapshots.
-Main CI and LangGraph compatibility checks are green.
+Main CI and LangGraph compatibility checks passed for that tree.
 
 Release preparation targets **2.0.0a2**, retaining alpha status. Eight persisted
 payload fixtures captured from the actual a1 release tag now cover standard
@@ -80,10 +80,11 @@ coverage, not a comprehensive migration guarantee. The
 metadata-inclusive budgets, scalar metadata and model normalization. Preparing
 or merging release metadata does not tag, publish or upload the package.
 
-## P1 follow-up prepared for review
+## P1 follow-up merged into main
 
 These are fidelity, reconstruction and integration milestones for the existing
-five-function API, not a renewed API migration. The combined candidate passes
+five-function API, not a renewed API migration. PRs #127–#129 are merged.
+The combined candidate was verified with
 **985 tests without skips and all 30 snapshots** locally with actual optional
 libraries and current framework pins. Branch-specific counts are in each PR.
 
