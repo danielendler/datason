@@ -53,6 +53,6 @@ jobs:
         if: matrix.family == 'misc-ml'
         run: >-
           uv pip install polars==1.38.1 'jax[cpu]==0.9.0.1'
-          plotly==6.5.2 catboost==1.2.10 optuna==4.7.0
+          plotly==6.5.2 catboost==1.2.10 optuna==4.7.0 scikit-learn==1.8.0
       - name: Exercise historical payloads and reconstruction boundaries
         run: uv run --no-sync pytest tests/integration tests/unit/test_plugin_ml_misc.py
