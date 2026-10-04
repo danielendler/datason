@@ -38,6 +38,7 @@ nav:
   - Custom Plugins: plugins.md
   - For AI Agents: ai-agents.md
   - Framework Compatibility: framework-compatibility.md
+  - Tool Schema Boundary: tool-schema-boundary.md
   - Performance Strategy: performance-strategy.md
   - Rust Feasibility Gate: rust-feasibility.md
   - Persisted Format Contract: persisted-format-contract.md
