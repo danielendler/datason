@@ -4,9 +4,9 @@ Handles torch.Tensor, torch.device, torch.dtype, and torch.Size.
 Tensors are always moved to CPU for serialization; the original device
 is recorded as metadata. Deserialization always produces CPU tensors.
 
-This module imports torch directly — if torch is not installed,
-the ImportError is caught by plugins/__init__.py and this plugin is
-simply not registered.
+This module imports its library when activated by the lazy
+loader (or explicitly imported). Unavailable optional dependencies are skipped
+on first use.
 """
 
 from __future__ import annotations

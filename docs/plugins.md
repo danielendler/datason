@@ -130,3 +130,70 @@ normalization behavior, and reconstruction limits. The core directly handles
 JSON primitives and collection tags; registered plugins handle other supported
 values. Application-model normalization is deliberately distinct from
 reconstructing their classes.
+
+
+## Optional libraries load on first use
+
+`import datason` registers stdlib handlers and lightweight optional descriptors.
+It probes only top-level module specifications, without executing installed
+NumPy, Pandas, SciPy, Torch, TensorFlow, sklearn or Pydantic libraries. The
+registered descriptor keeps the same name and priority when it activates.
+Registry counts describe registered candidates, not imported frameworks.
+
+A matching Python object activates its plugin. Matching considers base classes,
+so application subclasses still work. A known tagged snapshot can also be the
+first use: its fixed tag namespace activates the appropriate reconstruction
+plugin without requiring the application to import that library first. Import
+targets come from a reviewed table; payloads and class module strings do not
+choose arbitrary modules to import. Reconstruction still follows the existing
+trusted-state policies, limits and `allow_plugin_deserialization` setting.
+
+The miscellaneous ML plugin loads Polars, JAX, CatBoost, Optuna or Plotly
+individually. CatBoost/Optuna metadata-only exports still load without importing
+those frameworks. Libraries may import their own dependencies, and explicitly
+importing a plugin module still imports its associated library.
+
+Initialization is synchronized once per plugin/family, outside the registry
+lock. Successful and unavailable dependency results are cached; subsequent
+operations retain the active handler. Unexpected initialization failures remain
+visible at first use rather than being mistaken for an absent library.
+
+This reduces startup cost when installed libraries are unused. Required imports
+move to first use: warming a known typed workload during application startup
+may be appropriate for latency-sensitive services. It does not accelerate native
+library initialization or promise arbitrary model reconstruction.
+
+### Bounded local startup verification
+
+Measured October 4, 2026 against the eager runtime on main `e09b698`, using
+Python 3.12.14 in a shared Linux container. Three fresh processes per stage and
+environment record import intervals and resident-memory growth. Sources are
+asserted inside each child; OS caches are not cleared.
+
+| Installed environment | Eager median import | Deferred median import | Eager / deferred resident growth |
+| --- | --- | --- | --- |
+| Core only | 35 ms | 30 ms | 4.9 / 4.9 MiB |
+| NumPy/Pandas | 306 ms | 27 ms | 58.4 / 4.9 MiB |
+| Full ML validation | 4,692 ms | 26 ms | 1,083.0 / 4.8 MiB |
+
+The core-only difference is small compared with shared-container variation.
+The installed-ML result avoids importing unused native libraries; it is not a
+universal serialization speedup. In a separate fresh-process sample, first
+Torch reconstruction paid about 1.18 seconds after a 67 ms Datason import, versus
+a 5.48-second eager import followed by a sub-millisecond load. The required
+library cost is deferred, and an application needing every framework will still
+pay their initialization costs.
+
+Five warmed rounds of plain JSON, 64-element float32 NumPy snapshots and
+64-element Torch snapshots showed comparable medians: NumPy dumps 0.172 →
+0.167 ms and loads 0.095 → 0.097 ms; Torch dumps 0.133 → 0.129 ms and loads
+0.079 → 0.080 ms. These small local differences do not establish a throughput
+improvement or an end-to-end application result. Values, dtype and shape were
+checked before sampling.
+
+[Raw observations and environment/source manifests](evidence/2026-10-04-lazy-imports.json)
+retain each sample/round. Fresh-process regression tests verify unloaded
+optional libraries, first tagged loads, application subclasses, descriptor
+priority, disabled dispatch and budgets. Unit regressions cover concurrent
+initialization, unavailable dependencies, retries after unexpected failures
+and metadata-only exports.

@@ -3,9 +3,9 @@
 Handles tf.Tensor (EagerTensor), tf.Variable, and tf.SparseTensor.
 Requires TensorFlow eager execution (default in TF2).
 
-This module imports tensorflow directly — if tensorflow is not installed,
-the ImportError is caught by plugins/__init__.py and this plugin is
-simply not registered.
+This module imports its library when activated by the lazy
+loader (or explicitly imported). Unavailable optional dependencies are skipped
+on first use.
 """
 
 from __future__ import annotations

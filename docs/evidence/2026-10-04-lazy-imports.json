@@ -1,0 +1,940 @@
+{
+  "date": "2026-10-04",
+  "base_commit": "e09b698f522b5e629b000b407877735c8165589c",
+  "settings": {
+    "threads": 1,
+    "jax_platform": "cpu",
+    "import_repetitions_per_stage": 3,
+    "warm_rounds": 5,
+    "warm_iterations_per_round": 300
+  },
+  "fresh_imports": {
+    "worker_sha256": "c738ba2a366be655d9d6db61a80ae0495305ffb8b4e13fcff44c1cca6ca2c4c5",
+    "roots": {
+      "before": "/workspace/datason-p2-adoption-review",
+      "after": "/workspace/datason-lazy-imports"
+    },
+    "cases": {
+      "core": {
+        "before": {
+          "median_import_ms": 35.438717,
+          "median_rss_increase_bytes": 5177344,
+          "samples": [
+            {
+              "source_path": "/workspace/datason-p2-adoption-review/datason/__init__.py",
+              "import_ms": 57.286563,
+              "rss_increase_bytes": 5177344,
+              "peak_rss_bytes": 19136512,
+              "rss_method": "Linux /proc/self/status",
+              "loaded_optional": [],
+              "packages": {
+                "datason": "2.0.0a2"
+              }
+            },
+            {
+              "source_path": "/workspace/datason-p2-adoption-review/datason/__init__.py",
+              "import_ms": 35.438717,
+              "rss_increase_bytes": 5177344,
+              "peak_rss_bytes": 19132416,
+              "rss_method": "Linux /proc/self/status",
+              "loaded_optional": [],
+              "packages": {
+                "datason": "2.0.0a2"
+              }
+            },
+            {
+              "source_path": "/workspace/datason-p2-adoption-review/datason/__init__.py",
+              "import_ms": 33.557493,
+              "rss_increase_bytes": 5177344,
+              "peak_rss_bytes": 19132416,
+              "rss_method": "Linux /proc/self/status",
+              "loaded_optional": [],
+              "packages": {
+                "datason": "2.0.0a2"
+              }
+            }
+          ]
+        },
+        "after": {
+          "median_import_ms": 29.713368,
+          "median_rss_increase_bytes": 5144576,
+          "samples": [
+            {
+              "source_path": "/workspace/datason-lazy-imports/datason/__init__.py",
+              "import_ms": 29.713368,
+              "rss_increase_bytes": 5144576,
+              "peak_rss_bytes": 19132416,
+              "rss_method": "Linux /proc/self/status",
+              "loaded_optional": [],
+              "packages": {
+                "datason": "2.0.0a2"
+              }
+            },
+            {
+              "source_path": "/workspace/datason-lazy-imports/datason/__init__.py",
+              "import_ms": 37.337398,
+              "rss_increase_bytes": 5144576,
+              "peak_rss_bytes": 19132416,
+              "rss_method": "Linux /proc/self/status",
+              "loaded_optional": [],
+              "packages": {
+                "datason": "2.0.0a2"
+              }
+            },
+            {
+              "source_path": "/workspace/datason-lazy-imports/datason/__init__.py",
+              "import_ms": 20.276298,
+              "rss_increase_bytes": 5148672,
+              "peak_rss_bytes": 19136512,
+              "rss_method": "Linux /proc/self/status",
+              "loaded_optional": [],
+              "packages": {
+                "datason": "2.0.0a2"
+              }
+            }
+          ]
+        }
+      },
+      "dataframe": {
+        "before": {
+          "median_import_ms": 305.536075,
+          "median_rss_increase_bytes": 61272064,
+          "samples": [
+            {
+              "source_path": "/workspace/datason-p2-adoption-review/datason/__init__.py",
+              "import_ms": 336.993813,
+              "rss_increase_bytes": 61972480,
+              "peak_rss_bytes": 75804672,
+              "rss_method": "Linux /proc/self/status",
+              "loaded_optional": [
+                "numpy",
+                "pandas"
+              ],
+              "packages": {
+                "datason": "2.0.0a1",
+                "numpy": "2.5.3",
+                "pandas": "3.0.6"
+              }
+            },
+            {
+              "source_path": "/workspace/datason-p2-adoption-review/datason/__init__.py",
+              "import_ms": 305.536075,
+              "rss_increase_bytes": 60755968,
+              "peak_rss_bytes": 74584064,
+              "rss_method": "Linux /proc/self/status",
+              "loaded_optional": [
+                "numpy",
+                "pandas"
+              ],
+              "packages": {
+                "datason": "2.0.0a1",
+                "numpy": "2.5.3",
+                "pandas": "3.0.6"
+              }
+            },
+            {
+              "source_path": "/workspace/datason-p2-adoption-review/datason/__init__.py",
+              "import_ms": 285.296161,
+              "rss_increase_bytes": 61272064,
+              "peak_rss_bytes": 75104256,
+              "rss_method": "Linux /proc/self/status",
+              "loaded_optional": [
+                "numpy",
+                "pandas"
+              ],
+              "packages": {
+                "datason": "2.0.0a1",
+                "numpy": "2.5.3",
+                "pandas": "3.0.6"
+              }
+            }
+          ]
+        },
+        "after": {
+          "median_import_ms": 27.316227,
+          "median_rss_increase_bytes": 5140480,
+          "samples": [
+            {
+              "source_path": "/workspace/datason-lazy-imports/datason/__init__.py",
+              "import_ms": 28.859684,
+              "rss_increase_bytes": 5140480,
+              "peak_rss_bytes": 19136512,
+              "rss_method": "Linux /proc/self/status",
+              "loaded_optional": [],
+              "packages": {
+                "datason": "2.0.0a1",
+                "numpy": "2.5.3",
+                "pandas": "3.0.6"
+              }
+            },
+            {
+              "source_path": "/workspace/datason-lazy-imports/datason/__init__.py",
+              "import_ms": 27.316227,
+              "rss_increase_bytes": 5140480,
+              "peak_rss_bytes": 19136512,
+              "rss_method": "Linux /proc/self/status",
+              "loaded_optional": [],
+              "packages": {
+                "datason": "2.0.0a1",
+                "numpy": "2.5.3",
+                "pandas": "3.0.6"
+              }
+            },
+            {
+              "source_path": "/workspace/datason-lazy-imports/datason/__init__.py",
+              "import_ms": 25.770559,
+              "rss_increase_bytes": 5144576,
+              "peak_rss_bytes": 19136512,
+              "rss_method": "Linux /proc/self/status",
+              "loaded_optional": [],
+              "packages": {
+                "datason": "2.0.0a1",
+                "numpy": "2.5.3",
+                "pandas": "3.0.6"
+              }
+            }
+          ]
+        }
+      },
+      "full_ml": {
+        "before": {
+          "median_import_ms": 4692.196775,
+          "median_rss_increase_bytes": 1135652864,
+          "samples": [
+            {
+              "source_path": "/workspace/datason-p2-adoption-review/datason/__init__.py",
+              "import_ms": 4864.533986,
+              "rss_increase_bytes": 1129893888,
+              "peak_rss_bytes": 1143754752,
+              "rss_method": "Linux /proc/self/status",
+              "loaded_optional": [
+                "numpy",
+                "pandas",
+                "torch",
+                "tensorflow",
+                "jax",
+                "sklearn"
+              ],
+              "packages": {
+                "datason": "2.0.0a2",
+                "numpy": "2.4.2",
+                "pandas": "3.0.1",
+                "torch": "2.10.0+cpu",
+                "tensorflow": "2.20.0",
+                "jax": "0.9.0.1",
+                "scikit-learn": "1.8.0"
+              }
+            },
+            {
+              "source_path": "/workspace/datason-p2-adoption-review/datason/__init__.py",
+              "import_ms": 4668.087587,
+              "rss_increase_bytes": 1135652864,
+              "peak_rss_bytes": 1149513728,
+              "rss_method": "Linux /proc/self/status",
+              "loaded_optional": [
+                "numpy",
+                "pandas",
+                "torch",
+                "tensorflow",
+                "jax",
+                "sklearn"
+              ],
+              "packages": {
+                "datason": "2.0.0a2",
+                "numpy": "2.4.2",
+                "pandas": "3.0.1",
+                "torch": "2.10.0+cpu",
+                "tensorflow": "2.20.0",
+                "jax": "0.9.0.1",
+                "scikit-learn": "1.8.0"
+              }
+            },
+            {
+              "source_path": "/workspace/datason-p2-adoption-review/datason/__init__.py",
+              "import_ms": 4692.196775,
+              "rss_increase_bytes": 1140011008,
+              "peak_rss_bytes": 1153871872,
+              "rss_method": "Linux /proc/self/status",
+              "loaded_optional": [
+                "numpy",
+                "pandas",
+                "torch",
+                "tensorflow",
+                "jax",
+                "sklearn"
+              ],
+              "packages": {
+                "datason": "2.0.0a2",
+                "numpy": "2.4.2",
+                "pandas": "3.0.1",
+                "torch": "2.10.0+cpu",
+                "tensorflow": "2.20.0",
+                "jax": "0.9.0.1",
+                "scikit-learn": "1.8.0"
+              }
+            }
+          ]
+        },
+        "after": {
+          "median_import_ms": 25.686259,
+          "median_rss_increase_bytes": 5013504,
+          "samples": [
+            {
+              "source_path": "/workspace/datason-lazy-imports/datason/__init__.py",
+              "import_ms": 23.376224,
+              "rss_increase_bytes": 5013504,
+              "peak_rss_bytes": 19136512,
+              "rss_method": "Linux /proc/self/status",
+              "loaded_optional": [],
+              "packages": {
+                "datason": "2.0.0a2",
+                "numpy": "2.4.2",
+                "pandas": "3.0.1",
+                "torch": "2.10.0+cpu",
+                "tensorflow": "2.20.0",
+                "jax": "0.9.0.1",
+                "scikit-learn": "1.8.0"
+              }
+            },
+            {
+              "source_path": "/workspace/datason-lazy-imports/datason/__init__.py",
+              "import_ms": 25.686259,
+              "rss_increase_bytes": 5013504,
+              "peak_rss_bytes": 19267584,
+              "rss_method": "Linux /proc/self/status",
+              "loaded_optional": [],
+              "packages": {
+                "datason": "2.0.0a2",
+                "numpy": "2.4.2",
+                "pandas": "3.0.1",
+                "torch": "2.10.0+cpu",
+                "tensorflow": "2.20.0",
+                "jax": "0.9.0.1",
+                "scikit-learn": "1.8.0"
+              }
+            },
+            {
+              "source_path": "/workspace/datason-lazy-imports/datason/__init__.py",
+              "import_ms": 26.721039,
+              "rss_increase_bytes": 5013504,
+              "peak_rss_bytes": 19267584,
+              "rss_method": "Linux /proc/self/status",
+              "loaded_optional": [],
+              "packages": {
+                "datason": "2.0.0a2",
+                "numpy": "2.4.2",
+                "pandas": "3.0.1",
+                "torch": "2.10.0+cpu",
+                "tensorflow": "2.20.0",
+                "jax": "0.9.0.1",
+                "scikit-learn": "1.8.0"
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  "warm_and_first_use": {
+    "before": {
+      "source": "/workspace/datason-p2-adoption-review/datason/__init__.py",
+      "import_ms": 5478.833394,
+      "first_tensor_load_ms": 0.52839,
+      "total_first_tensor_ms": 5479.361784000001,
+      "rounds": [
+        {
+          "plain:dumps": {
+            "p50_ms": 0.040039,
+            "p95_ms": 0.075176
+          },
+          "plain:loads": {
+            "p50_ms": 0.032013,
+            "p95_ms": 0.063451
+          },
+          "numpy:dumps": {
+            "p50_ms": 0.172312,
+            "p95_ms": 0.574746
+          },
+          "numpy:loads": {
+            "p50_ms": 0.095133,
+            "p95_ms": 0.208724
+          },
+          "torch:dumps": {
+            "p50_ms": 0.129321,
+            "p95_ms": 0.304682
+          },
+          "torch:loads": {
+            "p50_ms": 0.079067,
+            "p95_ms": 0.185479
+          }
+        },
+        {
+          "plain:dumps": {
+            "p50_ms": 0.039995,
+            "p95_ms": 0.069685
+          },
+          "plain:loads": {
+            "p50_ms": 0.032732,
+            "p95_ms": 0.060869
+          },
+          "numpy:dumps": {
+            "p50_ms": 0.169216,
+            "p95_ms": 0.314054
+          },
+          "numpy:loads": {
+            "p50_ms": 0.094845,
+            "p95_ms": 0.18127
+          },
+          "torch:dumps": {
+            "p50_ms": 0.130357,
+            "p95_ms": 0.282169
+          },
+          "torch:loads": {
+            "p50_ms": 0.077331,
+            "p95_ms": 0.172537
+          }
+        },
+        {
+          "plain:dumps": {
+            "p50_ms": 0.04045,
+            "p95_ms": 0.080952
+          },
+          "plain:loads": {
+            "p50_ms": 0.032996,
+            "p95_ms": 0.060206
+          },
+          "numpy:dumps": {
+            "p50_ms": 0.171739,
+            "p95_ms": 0.354339
+          },
+          "numpy:loads": {
+            "p50_ms": 0.094721,
+            "p95_ms": 0.195079
+          },
+          "torch:dumps": {
+            "p50_ms": 0.133259,
+            "p95_ms": 0.329437
+          },
+          "torch:loads": {
+            "p50_ms": 0.07919,
+            "p95_ms": 0.207845
+          }
+        },
+        {
+          "plain:dumps": {
+            "p50_ms": 0.040685,
+            "p95_ms": 0.07878
+          },
+          "plain:loads": {
+            "p50_ms": 0.033239,
+            "p95_ms": 0.05942
+          },
+          "numpy:dumps": {
+            "p50_ms": 0.172888,
+            "p95_ms": 0.341534
+          },
+          "numpy:loads": {
+            "p50_ms": 0.097317,
+            "p95_ms": 0.246792
+          },
+          "torch:dumps": {
+            "p50_ms": 0.135848,
+            "p95_ms": 0.357169
+          },
+          "torch:loads": {
+            "p50_ms": 0.082562,
+            "p95_ms": 0.222991
+          }
+        },
+        {
+          "plain:dumps": {
+            "p50_ms": 0.040499,
+            "p95_ms": 0.070599
+          },
+          "plain:loads": {
+            "p50_ms": 0.033076,
+            "p95_ms": 0.06276
+          },
+          "numpy:dumps": {
+            "p50_ms": 0.172414,
+            "p95_ms": 0.421877
+          },
+          "numpy:loads": {
+            "p50_ms": 0.096999,
+            "p95_ms": 0.187672
+          },
+          "torch:dumps": {
+            "p50_ms": 0.133282,
+            "p95_ms": 0.283928
+          },
+          "torch:loads": {
+            "p50_ms": 0.079758,
+            "p95_ms": 0.184052
+          }
+        }
+      ]
+    },
+    "after": {
+      "source": "/workspace/datason-lazy-imports/datason/__init__.py",
+      "import_ms": 67.336499,
+      "first_tensor_load_ms": 1179.089112,
+      "total_first_tensor_ms": 1246.425611,
+      "rounds": [
+        {
+          "plain:dumps": {
+            "p50_ms": 0.039025,
+            "p95_ms": 0.060587
+          },
+          "plain:loads": {
+            "p50_ms": 0.03206,
+            "p95_ms": 0.070845
+          },
+          "numpy:dumps": {
+            "p50_ms": 0.162196,
+            "p95_ms": 0.300689
+          },
+          "numpy:loads": {
+            "p50_ms": 0.095538,
+            "p95_ms": 0.211611
+          },
+          "torch:dumps": {
+            "p50_ms": 0.126204,
+            "p95_ms": 0.225959
+          },
+          "torch:loads": {
+            "p50_ms": 0.078,
+            "p95_ms": 0.16956
+          }
+        },
+        {
+          "plain:dumps": {
+            "p50_ms": 0.039727,
+            "p95_ms": 0.078918
+          },
+          "plain:loads": {
+            "p50_ms": 0.032528,
+            "p95_ms": 0.060876
+          },
+          "numpy:dumps": {
+            "p50_ms": 0.167953,
+            "p95_ms": 0.316181
+          },
+          "numpy:loads": {
+            "p50_ms": 0.097278,
+            "p95_ms": 0.21043
+          },
+          "torch:dumps": {
+            "p50_ms": 0.129312,
+            "p95_ms": 0.286852
+          },
+          "torch:loads": {
+            "p50_ms": 0.080097,
+            "p95_ms": 0.18226
+          }
+        },
+        {
+          "plain:dumps": {
+            "p50_ms": 0.040028,
+            "p95_ms": 0.083428
+          },
+          "plain:loads": {
+            "p50_ms": 0.032884,
+            "p95_ms": 0.06288
+          },
+          "numpy:dumps": {
+            "p50_ms": 0.166585,
+            "p95_ms": 0.369318
+          },
+          "numpy:loads": {
+            "p50_ms": 0.098717,
+            "p95_ms": 0.243318
+          },
+          "torch:dumps": {
+            "p50_ms": 0.132335,
+            "p95_ms": 0.30892
+          },
+          "torch:loads": {
+            "p50_ms": 0.082336,
+            "p95_ms": 0.199511
+          }
+        },
+        {
+          "plain:dumps": {
+            "p50_ms": 0.040256,
+            "p95_ms": 0.07248
+          },
+          "plain:loads": {
+            "p50_ms": 0.032627,
+            "p95_ms": 0.051961
+          },
+          "numpy:dumps": {
+            "p50_ms": 0.167407,
+            "p95_ms": 0.317131
+          },
+          "numpy:loads": {
+            "p50_ms": 0.100494,
+            "p95_ms": 0.225648
+          },
+          "torch:dumps": {
+            "p50_ms": 0.131477,
+            "p95_ms": 0.305498
+          },
+          "torch:loads": {
+            "p50_ms": 0.081954,
+            "p95_ms": 0.178394
+          }
+        },
+        {
+          "plain:dumps": {
+            "p50_ms": 0.039105,
+            "p95_ms": 0.066907
+          },
+          "plain:loads": {
+            "p50_ms": 0.031923,
+            "p95_ms": 0.038214
+          },
+          "numpy:dumps": {
+            "p50_ms": 0.165046,
+            "p95_ms": 0.329292
+          },
+          "numpy:loads": {
+            "p50_ms": 0.096192,
+            "p95_ms": 0.167865
+          },
+          "torch:dumps": {
+            "p50_ms": 0.127587,
+            "p95_ms": 0.246494
+          },
+          "torch:loads": {
+            "p50_ms": 0.079048,
+            "p95_ms": 0.159231
+          }
+        }
+      ]
+    }
+  },
+  "runtime_source_sha256": {
+    "before": {
+      "datason/__init__.py": "78d985538f20d7c8d1730449b1a9e67573f441e916bf125c8d336ab149431bf8",
+      "datason/_cache.py": "398c536d9ae4b57b40a3e8c6ab349e87aa6b0ecd06b98ba38397bc31ed3ac1e1",
+      "datason/_config.py": "ff64541f2870c9638f20b2adbaac98d273f5bda8b9a4986f4d1b77ff6bbe1300",
+      "datason/_core.py": "97667a226f698243444795d63af0a01fb9907ea22a6832bff0340ca27211c088",
+      "datason/_deserialize.py": "f2de572c49807db5f2c4da124511ba71e7f2840f9642e939b691e6bf40261e93",
+      "datason/_errors.py": "58593c12dbc04bad4cb1e4d3e32f270a65a239b6e4a13f872c9a4f9d2dbb5dc5",
+      "datason/_limits.py": "254abbafda77f7f73111e7cb9d4a9040c6888df3e6427aedbb88bb54a6cee5eb",
+      "datason/_protocols.py": "91888fe6353611331ce817b3dbcc9d88c72b0609ed67236c47d25c69282098e6",
+      "datason/_reconstruction.py": "77dad4e231a2d57bbe13453c7ee776596ec2c9764292436e06ac34cfda1a514f",
+      "datason/_registry.py": "49790edcb24e0fd62507f6a8f71c50bafe910db38ead8e60c89824416aa7655d",
+      "datason/_types.py": "bbbef490ac50581948e1c73057060a6ca80eae19cfe9e6052681fc2a23337303",
+      "datason/integrations/__init__.py": "27a21d10380195b3c4117b6dec33574f3300d0cd0e5c6a12832dfaf669e1118c",
+      "datason/integrations/_langgraph_types.py": "20f84fa13a09cc3ced6324e035177c25984b6ed830ea1857dce247ceb354f080",
+      "datason/integrations/langgraph.py": "4e58134f45572b497286ae7446cb0fe2a8d32e3c0875de5d24234fb1dadb3095",
+      "datason/plugins/__init__.py": "ba277595c8f585507c21bf1eb0f49e659f631de16156802aae02b20b6be0db8b",
+      "datason/plugins/_pandas_metadata.py": "af24bb8c65d64f95c89a71c6249f5794e963592ca573fe642d710095f5d5ba9d",
+      "datason/plugins/datetime.py": "cb783c86c88d8430996437a333312e37f68b44a8a19273168d8847d1099227d9",
+      "datason/plugins/decimal.py": "aa8ca327e973cf678f757854cc0f73911415896bf5cb06cbd45353b63fd592e7",
+      "datason/plugins/ml_misc.py": "ed124a1481d14986de991d99d46d2e02b46e1a764d588840ce4cffa8162a4def",
+      "datason/plugins/numpy.py": "579674157d744e318fb7d8b3d8f984fc3c56f5144c1897d6af1e3e2e4be5e0fa",
+      "datason/plugins/pandas.py": "b2a2027a5ff009bd850ea53ffb3cbabf13e024fa5ca346687c22276834052bd5",
+      "datason/plugins/path.py": "b9785e1c4dee249c5227dbb2bb432779f83349eaa1e79deac70a33781b00fcc7",
+      "datason/plugins/pydantic.py": "b62885e8d3de3c1db98ae8b016df8628010d9c57567071880eb8c52ab7fbd893",
+      "datason/plugins/scipy_sparse.py": "7efd0e9dabd88449ec00c7466c07bfaadb34a10c3025358d4ddb2d1d0db0d44a",
+      "datason/plugins/sklearn.py": "37e501509004054b24b41f9f4a8a464cf2048b20aeefb029fa636606bc779384",
+      "datason/plugins/structured.py": "098b6ec0c73010e3d8709b82c4f097efab5674ca488f9015373673041768cfaa",
+      "datason/plugins/tensorflow.py": "36cb76fa72f010aefa77576183fc3db21df2e3b2a7a0f52cb4ac3b4760dbd0ef",
+      "datason/plugins/torch.py": "c9da1786a391c504e5f5b9357edf376bcaea31c0654cfbd1c51f85828a91fb69",
+      "datason/plugins/uuid.py": "c5a7593c2b8255829b5d0c526b821d18919ec63bc419cd6d881b99965a9af148",
+      "datason/security/__init__.py": "9a2678fe7bd5e2c1e2f83c1ff02d87a030e122473d7d457a6716de7e17b27a1e",
+      "datason/security/integrity.py": "2d79b3afa2eb9f80e8dc4cb826ce48d9c1ce8a2157135f3436573855d265a9c2",
+      "datason/security/pickle_bridge.py": "d1435e5dbd324436887efacf4d36f667d45530e481b5edf4e6bb8ab401e72dcf",
+      "datason/security/redaction.py": "353f431dbd617f8e879198398845e9a3c801ded4767afccf9712d7f86b209718"
+    },
+    "after": {
+      "datason/__init__.py": "78d985538f20d7c8d1730449b1a9e67573f441e916bf125c8d336ab149431bf8",
+      "datason/_cache.py": "398c536d9ae4b57b40a3e8c6ab349e87aa6b0ecd06b98ba38397bc31ed3ac1e1",
+      "datason/_config.py": "ff64541f2870c9638f20b2adbaac98d273f5bda8b9a4986f4d1b77ff6bbe1300",
+      "datason/_core.py": "97667a226f698243444795d63af0a01fb9907ea22a6832bff0340ca27211c088",
+      "datason/_deserialize.py": "f2de572c49807db5f2c4da124511ba71e7f2840f9642e939b691e6bf40261e93",
+      "datason/_errors.py": "58593c12dbc04bad4cb1e4d3e32f270a65a239b6e4a13f872c9a4f9d2dbb5dc5",
+      "datason/_limits.py": "254abbafda77f7f73111e7cb9d4a9040c6888df3e6427aedbb88bb54a6cee5eb",
+      "datason/_protocols.py": "91888fe6353611331ce817b3dbcc9d88c72b0609ed67236c47d25c69282098e6",
+      "datason/_reconstruction.py": "77dad4e231a2d57bbe13453c7ee776596ec2c9764292436e06ac34cfda1a514f",
+      "datason/_registry.py": "49790edcb24e0fd62507f6a8f71c50bafe910db38ead8e60c89824416aa7655d",
+      "datason/_types.py": "bbbef490ac50581948e1c73057060a6ca80eae19cfe9e6052681fc2a23337303",
+      "datason/integrations/__init__.py": "27a21d10380195b3c4117b6dec33574f3300d0cd0e5c6a12832dfaf669e1118c",
+      "datason/integrations/_langgraph_types.py": "20f84fa13a09cc3ced6324e035177c25984b6ed830ea1857dce247ceb354f080",
+      "datason/integrations/langgraph.py": "4e58134f45572b497286ae7446cb0fe2a8d32e3c0875de5d24234fb1dadb3095",
+      "datason/plugins/__init__.py": "989d1860411112e8db50588a5f513b64333c5aa6973817f8a25d31f25a5c8a6f",
+      "datason/plugins/_lazy.py": "7f3db85547fdc5e0b607c784e95c665745e4212c9160487e818265d5d9cd42d3",
+      "datason/plugins/_pandas_metadata.py": "af24bb8c65d64f95c89a71c6249f5794e963592ca573fe642d710095f5d5ba9d",
+      "datason/plugins/datetime.py": "cb783c86c88d8430996437a333312e37f68b44a8a19273168d8847d1099227d9",
+      "datason/plugins/decimal.py": "aa8ca327e973cf678f757854cc0f73911415896bf5cb06cbd45353b63fd592e7",
+      "datason/plugins/ml_misc.py": "3d3dc76db4f13a319a38e68f4a5f1755380f933fb671b334e2ba4120302ce877",
+      "datason/plugins/numpy.py": "83723e1e796c7a1e9ae451db49ecf60b5e4e71a815a26ca9f5f97079586113a4",
+      "datason/plugins/pandas.py": "aeeca548b4a9372392a9f2bce4896625f8346ef09c183adb1b6531cb765571a2",
+      "datason/plugins/path.py": "b9785e1c4dee249c5227dbb2bb432779f83349eaa1e79deac70a33781b00fcc7",
+      "datason/plugins/pydantic.py": "b62885e8d3de3c1db98ae8b016df8628010d9c57567071880eb8c52ab7fbd893",
+      "datason/plugins/scipy_sparse.py": "2550712b777d9fcdc7f24914e690a8bf66a8924ba9afd90343efe64469753dfe",
+      "datason/plugins/sklearn.py": "47f9a5d77e6ff2f965dcad0b52fa3cc66428fa4a024198c279d78757c98c249e",
+      "datason/plugins/structured.py": "098b6ec0c73010e3d8709b82c4f097efab5674ca488f9015373673041768cfaa",
+      "datason/plugins/tensorflow.py": "41427ef01cdef5611c00bde6f7b5079a26631484e089c0d9ad6ad37c82b977b9",
+      "datason/plugins/torch.py": "6675ececdd1627e9bb67a4cf261b71df66b4ac0868b29fbfc01b59cec0ea50d8",
+      "datason/plugins/uuid.py": "c5a7593c2b8255829b5d0c526b821d18919ec63bc419cd6d881b99965a9af148",
+      "datason/security/__init__.py": "9a2678fe7bd5e2c1e2f83c1ff02d87a030e122473d7d457a6716de7e17b27a1e",
+      "datason/security/integrity.py": "2d79b3afa2eb9f80e8dc4cb826ce48d9c1ce8a2157135f3436573855d265a9c2",
+      "datason/security/pickle_bridge.py": "d1435e5dbd324436887efacf4d36f667d45530e481b5edf4e6bb8ab401e72dcf",
+      "datason/security/redaction.py": "353f431dbd617f8e879198398845e9a3c801ded4767afccf9712d7f86b209718"
+    }
+  },
+  "installed_environments": {
+    "core": {
+      "datason": "2.0.0a2"
+    },
+    "dataframe": {
+      "attrs": "26.1.0",
+      "rpds-py": "2026.6.3",
+      "aiosqlite": "0.22.1",
+      "pyright": "1.1.414",
+      "griffelib": "2.3.0",
+      "langchain-protocol": "0.0.19",
+      "langgraph-sdk": "0.4.5",
+      "orjson": "3.12.0",
+      "jsonpatch": "1.33",
+      "certifi": "2026.7.22",
+      "nh3": "0.3.7",
+      "coverage": "7.16.2",
+      "openai": "3.24.0",
+      "syrupy": "6.1.1",
+      "pycparser": "3.0",
+      "sniffio": "1.3.1",
+      "pytest-cov": "7.1.0",
+      "langgraph": "1.2.12",
+      "openai-agents": "0.23.1",
+      "markdown-it-py": "4.2.0",
+      "typing_extensions": "4.16.0",
+      "langchain-core": "1.6.6",
+      "jeepney": "0.9.0",
+      "anyio": "4.15.1",
+      "httpx2": "2.13.1",
+      "tomlkit": "0.15.1",
+      "PyJWT": "2.15.1",
+      "distro": "1.9.0",
+      "uvicorn": "0.54.0",
+      "python-dateutil": "2.9.0.post0",
+      "referencing": "0.37.0",
+      "hatchling": "1.32.4",
+      "py-cpuinfo2": "10.1.1",
+      "jaraco.functools": "4.6.0",
+      "cryptography": "50.0.2",
+      "opentelemetry-api": "1.45.0",
+      "pyproject_hooks": "1.3.3",
+      "pytest-benchmark": "5.3.0",
+      "jsonpointer": "3.1.1",
+      "rfc3986": "2.0.0",
+      "build": "1.6.1",
+      "docutils": "0.23",
+      "cffi": "2.1.1",
+      "h11": "0.16.0",
+      "pathspec": "1.1.1",
+      "websockets": "16.1.1",
+      "sse-starlette": "3.5.0",
+      "sqlite-vec": "0.1.9",
+      "starlette": "1.7.0",
+      "uuid_utils": "0.17.1",
+      "Pygments": "2.21.0",
+      "charset-normalizer": "3.5.2",
+      "mdurl": "0.1.2",
+      "typing-inspection": "0.4.4",
+      "langgraph-checkpoint-sqlite": "3.1.1",
+      "keyring": "25.7.0",
+      "nodeenv": "1.11.0",
+      "click": "8.5.0",
+      "idna": "3.20",
+      "pluggy": "1.6.0",
+      "httpx": "0.28.1",
+      "langgraph-checkpoint": "4.2.0",
+      "sortedcontainers": "2.4.0",
+      "numpy": "2.5.3",
+      "packaging": "26.3",
+      "jsonschema": "4.26.0",
+      "tenacity": "9.1.4",
+      "requests-toolbelt": "1.0.0",
+      "jaraco.context": "6.1.2",
+      "twine": "7.0.0",
+      "SecretStorage": "3.5.0",
+      "urllib3": "2.8.0",
+      "mcp": "2.3.0",
+      "httpcore2": "2.13.1",
+      "trove-classifiers": "2026.9.21.13",
+      "jsonschema-specifications": "2025.9.1",
+      "iniconfig": "2.3.0",
+      "mcp-types": "2.3.0",
+      "PyYAML": "6.0.3",
+      "xxhash": "4.0.1",
+      "annotated-types": "0.8.0",
+      "hypothesis": "6.168.3",
+      "python-multipart": "0.0.32",
+      "readme_renderer": "46.0",
+      "ruff": "0.16.10",
+      "ormsgpack": "1.12.2",
+      "pydantic_core": "2.46.5",
+      "requests": "2.34.2",
+      "id": "1.6.1",
+      "pydantic": "2.13.5",
+      "httpcore": "1.0.9",
+      "pytest": "9.1.1",
+      "langgraph-prebuilt": "1.1.0",
+      "rich": "15.0.0",
+      "jiter": "0.17.0",
+      "more-itertools": "11.1.0",
+      "pandas": "3.0.6",
+      "six": "1.17.0",
+      "datason": "2.0.0a1",
+      "langsmith": "0.14.4",
+      "truststore": "0.10.4",
+      "jaraco.classes": "3.4.0",
+      "zstandard": "0.25.0"
+    },
+    "full_ml": {
+      "optree": "0.20.0",
+      "attrs": "26.1.0",
+      "pandas": "3.0.1",
+      "rpds-py": "2026.6.3",
+      "aiosqlite": "0.22.1",
+      "griffelib": "2.3.0",
+      "torch": "2.10.0+cpu",
+      "langchain-protocol": "0.0.19",
+      "numpy": "2.4.2",
+      "libclang": "18.1.1",
+      "langgraph-sdk": "0.4.5",
+      "orjson": "3.12.0",
+      "jsonpatch": "1.33",
+      "certifi": "2026.7.22",
+      "coverage": "7.16.2",
+      "openai": "3.24.0",
+      "syrupy": "6.1.1",
+      "pycparser": "3.0",
+      "sniffio": "1.3.1",
+      "google-pasta": "0.2.0",
+      "pytest-cov": "7.1.0",
+      "graphviz": "0.21",
+      "langgraph": "1.2.12",
+      "openai-agents": "0.23.1",
+      "polars-runtime-32": "1.38.1",
+      "markdown-it-py": "4.2.0",
+      "typing_extensions": "4.16.0",
+      "langchain-core": "1.6.6",
+      "pillow": "12.3.0",
+      "anyio": "4.15.1",
+      "httpx2": "2.13.1",
+      "tqdm": "4.70.1",
+      "grpcio": "1.84.0",
+      "PyJWT": "2.15.1",
+      "distro": "1.9.0",
+      "uvicorn": "0.54.0",
+      "python-dateutil": "2.9.0.post0",
+      "referencing": "0.37.0",
+      "fonttools": "4.66.1",
+      "py-cpuinfo2": "10.1.1",
+      "tensorboard-data-server": "0.7.2",
+      "cryptography": "50.0.2",
+      "opentelemetry-api": "1.45.0",
+      "protobuf": "7.36.2",
+      "pytest-benchmark": "5.3.0",
+      "Werkzeug": "3.1.9",
+      "tensorboard": "2.20.0",
+      "jsonpointer": "3.1.1",
+      "termcolor": "3.3.0",
+      "cffi": "2.1.1",
+      "h11": "0.16.0",
+      "websockets": "16.1.1",
+      "absl-py": "2.5.0",
+      "sse-starlette": "3.5.0",
+      "sqlite-vec": "0.1.9",
+      "starlette": "1.7.0",
+      "sympy": "1.14.0",
+      "uuid_utils": "0.17.1",
+      "Pygments": "2.21.0",
+      "charset-normalizer": "3.5.2",
+      "mdurl": "0.1.2",
+      "namex": "0.1.0",
+      "Jinja2": "3.1.6",
+      "flatbuffers": "25.12.19",
+      "typing-inspection": "0.4.4",
+      "langgraph-checkpoint-sqlite": "3.1.1",
+      "joblib": "1.6.0",
+      "click": "8.5.0",
+      "optuna": "4.7.0",
+      "idna": "3.20",
+      "pyparsing": "3.3.3",
+      "pluggy": "1.6.0",
+      "httpx": "0.28.1",
+      "scikit-learn": "1.8.0",
+      "SQLAlchemy": "2.1.3",
+      "h5py": "3.16.0",
+      "langgraph-checkpoint": "4.2.0",
+      "sortedcontainers": "2.4.0",
+      "packaging": "26.3",
+      "jsonschema": "4.26.0",
+      "Mako": "1.4.3",
+      "tenacity": "9.1.4",
+      "jaxlib": "0.9.0.1",
+      "Markdown": "3.11",
+      "ml_dtypes": "0.6.0",
+      "requests-toolbelt": "1.0.0",
+      "jax": "0.9.0.1",
+      "contourpy": "1.4.0",
+      "astunparse": "1.6.3",
+      "urllib3": "2.8.0",
+      "cloudpickle": "3.1.2",
+      "networkx": "3.6.1",
+      "mcp": "2.3.0",
+      "httpcore2": "2.13.1",
+      "jsonschema-specifications": "2025.9.1",
+      "iniconfig": "2.3.0",
+      "opt_einsum": "3.4.0",
+      "colorlog": "6.12.0",
+      "mcp-types": "2.3.0",
+      "wrapt": "2.5.0",
+      "PyYAML": "6.0.3",
+      "filelock": "3.32.3",
+      "MarkupSafe": "3.0.3",
+      "xxhash": "4.0.1",
+      "scipy": "1.17.1",
+      "annotated-types": "0.8.0",
+      "setuptools": "78.1.0",
+      "threadpoolctl": "3.7.0",
+      "hypothesis": "6.168.3",
+      "polars": "1.38.1",
+      "python-multipart": "0.0.32",
+      "matplotlib": "3.11.2",
+      "wheel": "0.48.0",
+      "ormsgpack": "1.12.2",
+      "pydantic_core": "2.46.5",
+      "requests": "2.34.2",
+      "kiwisolver": "1.5.1",
+      "pydantic": "2.13.5",
+      "httpcore": "1.0.9",
+      "pytest": "9.1.1",
+      "langgraph-prebuilt": "1.1.0",
+      "rich": "15.0.0",
+      "jiter": "0.17.0",
+      "fsspec": "2026.7.0",
+      "narwhals": "2.26.0",
+      "keras": "3.15.1",
+      "six": "1.17.0",
+      "catboost": "1.2.10",
+      "cycler": "0.12.1",
+      "datason": "2.0.0a2",
+      "mpmath": "1.3.0",
+      "tensorflow": "2.20.0",
+      "alembic": "1.20.0",
+      "gast": "0.7.0",
+      "langsmith": "0.14.4",
+      "plotly": "6.5.2",
+      "truststore": "0.10.4",
+      "zstandard": "0.25.0"
+    }
+  },
+  "measurement_scope": "Shared Linux container; three fresh import samples per stage/environment; first-Torch load is one sample; five steady-state rounds, 300 samples per operation per round; no latency gates or capacity claim."
+}

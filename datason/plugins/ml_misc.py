@@ -1,32 +1,30 @@
 """Plugin for miscellaneous ML framework types.
 
 Handles Polars DataFrames/Series, JAX arrays, CatBoost models,
-Optuna studies, and Plotly figures. Available libraries are imported when this module loads
-and guarded by availability checks.
-
-This module imports all five libraries directly — if any is not
-installed, only those types are skipped (not the whole plugin).
+Optuna studies, and Plotly figures. Libraries are imported per family on first
+use. If a library is unavailable, only its types are skipped.
 """
 
 # pyright: reportOptionalMemberAccess=false
 # pyright: reportConstantRedefinition=false
 from __future__ import annotations
 
-from typing import Any
+# Imports are selected per family, including direct plugin use.
+import importlib
+import threading
+from typing import Any, Literal
 
 from .._errors import PluginError
 from .._protocols import DeserializeContext, SerializeContext
 from .._reconstruction import check_dense_allocation
 from .._types import TYPE_METADATA_KEY, VALUE_METADATA_KEY
+from ._lazy import matches_family
 
-# Lazy import flags — pyright can't model try/except import patterns,
-# so we suppress the relevant warnings at module level above.
-_HAS_POLARS = False
-_HAS_JAX = False
-_HAS_CATBOOST = False
-_HAS_OPTUNA = False
-_HAS_PLOTLY = False
-
+_Framework = Literal["polars", "jax", "catboost", "optuna", "plotly"]
+_FRAMEWORKS: tuple[_Framework, ...] = ("polars", "jax", "catboost", "optuna", "plotly")
+_loaded: set[_Framework] = set()
+_import_lock = threading.Lock()
+_HAS_POLARS = _HAS_JAX = _HAS_CATBOOST = _HAS_OPTUNA = _HAS_PLOTLY = False
 pl: Any = None
 jax: Any = None
 jnp: Any = None
@@ -34,41 +32,45 @@ catboost: Any = None
 optuna: Any = None
 go: Any = None
 
-try:
-    import polars as pl
 
-    _HAS_POLARS = True
-except ImportError:
-    pass
+def _load_framework(name: _Framework) -> None:
+    global pl, jax, jnp, catboost, optuna, go
+    global _HAS_POLARS, _HAS_JAX, _HAS_CATBOOST, _HAS_OPTUNA, _HAS_PLOTLY
+    if name in _loaded:
+        return
+    with _import_lock:
+        if name in _loaded:
+            return
+        try:
+            match name:
+                case "polars":
+                    pl = importlib.import_module("polars")
+                    _HAS_POLARS = True
+                case "jax":
+                    jax = importlib.import_module("jax")
+                    jnp = importlib.import_module("jax.numpy")
+                    _HAS_JAX = True
+                case "catboost":
+                    catboost = importlib.import_module("catboost")
+                    _HAS_CATBOOST = True
+                case "optuna":
+                    optuna = importlib.import_module("optuna")
+                    _HAS_OPTUNA = True
+                case "plotly":
+                    go = importlib.import_module("plotly.graph_objects")
+                    _HAS_PLOTLY = True
+                case _:
+                    raise ValueError(f"Unknown optional ML family: {name}")
+        except ImportError:
+            pass
+        _loaded.add(name)
 
-try:
-    import jax
-    import jax.numpy as jnp
 
-    _HAS_JAX = True
-except ImportError:
-    pass
-
-try:
-    import catboost
-
-    _HAS_CATBOOST = True
-except ImportError:
-    pass
-
-try:
-    import optuna
-
-    _HAS_OPTUNA = True
-except ImportError:
-    pass
-
-try:
-    import plotly.graph_objects as go
-
-    _HAS_PLOTLY = True
-except ImportError:
-    pass
+def _load_for_object(obj: Any) -> None:
+    for name in _FRAMEWORKS:
+        roots = ("jax", "jaxlib") if name == "jax" else (name,)
+        if matches_family(obj, roots):
+            _load_framework(name)
 
 
 _TYPE_NAMES = frozenset(
@@ -95,6 +97,7 @@ class MlMiscPlugin:
         return 350
 
     def can_handle(self, obj: Any) -> bool:
+        _load_for_object(obj)
         if _HAS_POLARS and isinstance(obj, pl.DataFrame | pl.Series):
             return True
         if _HAS_JAX and isinstance(obj, jax.Array):
@@ -117,6 +120,7 @@ class MlMiscPlugin:
 
 def _serialize_ml_misc(obj: Any, ctx: SerializeContext) -> Any:
     """Route to type-specific serializer."""
+    _load_for_object(obj)
     if _HAS_POLARS and isinstance(obj, pl.DataFrame):
         return _serialize_polars_df(obj, ctx)
     if _HAS_POLARS and isinstance(obj, pl.Series):
@@ -272,6 +276,7 @@ def _deserialize_ml_misc(data: dict[str, Any], ctx: DeserializeContext) -> Any:
 
 def _reconstruct_polars_df(value: Any) -> Any:
     """Reconstruct a Polars DataFrame."""
+    _load_framework("polars")
     if not _HAS_POLARS:
         raise PluginError("polars is not installed")
     return pl.DataFrame(value["data"])
@@ -279,6 +284,7 @@ def _reconstruct_polars_df(value: Any) -> Any:
 
 def _reconstruct_polars_series(value: Any) -> Any:
     """Reconstruct a Polars Series."""
+    _load_framework("polars")
     if not _HAS_POLARS:
         raise PluginError("polars is not installed")
     return pl.Series(value["name"], value["data"])
@@ -286,6 +292,7 @@ def _reconstruct_polars_series(value: Any) -> Any:
 
 def _reconstruct_jax_array(value: Any, ctx: DeserializeContext) -> Any:
     """Reconstruct a JAX array."""
+    _load_framework("jax")
     if not _HAS_JAX:
         raise PluginError("jax is not installed")
     import numpy as np
@@ -308,6 +315,7 @@ def _reconstruct_jax_array(value: Any, ctx: DeserializeContext) -> Any:
 
 def _reconstruct_plotly_figure(value: Any) -> Any:
     """Reconstruct a Plotly Figure from dict."""
+    _load_framework("plotly")
     if not _HAS_PLOTLY:
         raise PluginError("plotly is not installed")
     return go.Figure(value)

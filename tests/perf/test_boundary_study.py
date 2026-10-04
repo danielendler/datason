@@ -47,4 +47,5 @@ def test_fresh_process_measures_actual_import_and_records_environment():
     sample = report["samples"][0]
     assert sample["process_ms"] >= sample["import_ms"] > 0
     assert "datason" in sample["packages"]
-    assert "numpy" in sample["loaded_optional"]
+    assert "numpy" in sample["packages"]
+    assert sample["loaded_optional"] == []

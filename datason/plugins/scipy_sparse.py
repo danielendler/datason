@@ -4,9 +4,9 @@ Handles csr_matrix/csr_array, csc_matrix/csc_array, coo_matrix/coo_array,
 and other sparse formats. All formats are normalized to COO for storage,
 with the original format recorded for reconstruction.
 
-This module imports scipy.sparse directly — if scipy is not installed,
-the ImportError is caught by plugins/__init__.py and this plugin is
-simply not registered.
+This module imports its library when activated by the lazy
+loader (or explicitly imported). Unavailable optional dependencies are skipped
+on first use.
 """
 
 from __future__ import annotations
