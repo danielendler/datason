@@ -63,20 +63,26 @@ also exposed Pandas 3's different string missing-value convention; metadata now
 preserves that convention, and snapshot inputs use explicit stable column dtypes.
 The adapter's byte-input typing was aligned with the supported runtime contract.
 
-Existing single-package dependency PRs overlap with #117. Earlier compatibility
-proposal #97 also overlaps with #101; any remaining API options should be reviewed
-separately. Those proposals have not been merged as part of this batch.
+The callback compatibility and packaging follow-up #97 is now merged, as are
+complex scalar dispatch #122, failure paths #123, NumPy/traversal optimizations
+#124 and email-redaction fast-path #125. The final main code tree matches the
+combined local run: 695 tests passed, five optional skips and all 30 snapshots.
+Main CI and LangGraph compatibility checks are green.
 
-Before the next alpha, retain serialized fixtures from previous releases and
-document the intentional changes: pickle trust opt-in, metadata-key/key-collision
-rejection, metadata-inclusive budgets, exact scalar dispatch, scientific metadata,
-and model normalization. Merging this batch does not publish a package release.
+Release preparation targets **2.0.0a2**, retaining alpha status. Eight persisted
+payload fixtures captured from the actual a1 release tag now cover standard
+values, legacy collections, NumPy, a basic DataFrame, numeric datetimes and
+legacy default-formatted integrity envelopes. This is initial compatibility
+coverage, not a comprehensive migration guarantee. The
+[release notes](releases/2.0.0a2.md) document trust opt-in, key rejection,
+metadata-inclusive budgets, scalar metadata and model normalization. Preparing
+or merging release metadata does not tag, publish or upload the package.
 
 ## Next validation milestones
 
 | Priority | Work | Completion criterion |
 | --- | --- | --- |
-| P1 | Persisted format fixtures and migration contract | Read fixtures from each supported prior alpha; document which representations require migration |
+| P1 | Persisted format fixtures and migration contract | Expand the initial a1 fixtures to supported ML/custom data and timestamp/signature edge cases; document migrations |
 | P1 | ML reconstruction review | Enumerate constructors, file/import behavior, and allocation paths for every plugin before recommending untrusted typed loads |
 | P1 | Framework compatibility matrix | Exercise actual supported SDK versions, model hydration, interrupts, and checkpoint schema upgrades; avoid implicit pickle fallbacks |
 | P2 | API/tool schema validation example | Produce ordinary JSON for an actual tool result and validate it against its declared schema, including binary field encoding |
