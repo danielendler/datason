@@ -1,9 +1,9 @@
 """Plugin for Pandas type serialization.
 
 Handles DataFrame, Series, Timestamp, Timedelta, and Categorical.
-This module imports pandas directly — if pandas is not installed,
-the ImportError is caught by plugins/__init__.py and this plugin
-is simply not registered.
+This module imports its library when activated by the lazy
+loader (or explicitly imported). Unavailable optional dependencies are skipped
+on first use.
 """
 
 from __future__ import annotations

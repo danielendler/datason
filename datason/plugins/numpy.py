@@ -1,9 +1,9 @@
 """Plugin for NumPy type serialization.
 
 Handles ndarray, scalar types (integer, floating, bool_, str_),
-and complex types. This module imports numpy directly — if numpy
-is not installed, the ImportError is caught by plugins/__init__.py
-and this plugin is simply not registered.
+and complex types. This module imports its library when activated by the lazy
+loader (or explicitly imported). Unavailable optional dependencies are skipped
+on first use.
 """
 
 from __future__ import annotations

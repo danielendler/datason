@@ -1,94 +1,47 @@
-"""Built-in type handler plugins.
+"""Register stdlib handlers and defer optional libraries until first use.
 
-Plugins are auto-registered when this package is imported.
-Each plugin handles serialization/deserialization for a specific
-family of types (datetime, uuid, numpy, etc.).
-
-Third-party plugins (numpy, pandas) are registered only if the
-library is installed — import errors are silently skipped.
+Optional plugin modules are imported only for matching objects or known tag
+namespaces. Availability discovery probes top-level specs without importing the
+libraries. Import targets and priorities are fixed by the table below.
 """
 
+from importlib.util import find_spec
+
 from .._registry import default_registry
+from ._lazy import LazyPlugin
 from .datetime import DatetimePlugin
 from .decimal import DecimalPlugin
 from .path import PathPlugin
 from .structured import StructuredPlugin
 from .uuid import UUIDPlugin
 
+# name, priority, class, object module roots, wire tag prefixes
+_OPTIONAL = (
+    ("numpy", 200, "NumpyPlugin", ("numpy",), ("numpy.",)),
+    ("pandas", 201, "PandasPlugin", ("pandas",), ("pandas.",)),
+    ("scipy_sparse", 250, "ScipySparsePlugin", ("scipy",), ("scipy.sparse.",)),
+    ("torch", 300, "TorchPlugin", ("torch",), ("torch.",)),
+    ("tensorflow", 301, "TensorFlowPlugin", ("tensorflow",), ("tf.",)),
+    ("sklearn", 302, "SklearnPlugin", ("sklearn",), ("sklearn.",)),
+    (
+        "ml_misc",
+        350,
+        "MlMiscPlugin",
+        ("polars", "jax", "jaxlib", "catboost", "optuna", "plotly"),
+        ("polars.", "jax.", "catboost.", "optuna.", "plotly."),
+    ),
+    ("pydantic", 10_001, "PydanticPlugin", ("pydantic",), ()),
+)
+
 
 def _register_builtins() -> None:
-    """Register all built-in plugins with the default registry."""
-    # Stdlib plugins (always available)
     for plugin_cls in (DatetimePlugin, UUIDPlugin, DecimalPlugin, PathPlugin, StructuredPlugin):
         default_registry.register(plugin_cls())
-
-    # Data science plugins (optional dependencies)
-    _register_optional_plugins()
-    try:
-        from .pydantic import PydanticPlugin
-
-        default_registry.register(PydanticPlugin())
-    except ImportError:
-        pass
-
-
-def _register_optional_plugins() -> None:
-    """Register plugins for optional third-party libraries."""
-    try:
-        from .numpy import NumpyPlugin
-
-        default_registry.register(NumpyPlugin())
-    except ImportError:
-        pass
-
-    try:
-        from .pandas import PandasPlugin
-
-        default_registry.register(PandasPlugin())
-    except ImportError:
-        pass
-
-    # SciPy sparse plugin (between pandas and ML frameworks)
-    try:
-        from .scipy_sparse import ScipySparsePlugin
-
-        default_registry.register(ScipySparsePlugin())
-    except ImportError:
-        pass
-
-    _register_ml_plugins()
-
-
-def _register_ml_plugins() -> None:
-    """Register ML framework plugins (optional dependencies)."""
-    try:
-        from .torch import TorchPlugin
-
-        default_registry.register(TorchPlugin())
-    except ImportError:
-        pass
-
-    try:
-        from .tensorflow import TensorFlowPlugin
-
-        default_registry.register(TensorFlowPlugin())
-    except ImportError:
-        pass
-
-    try:
-        from .sklearn import SklearnPlugin
-
-        default_registry.register(SklearnPlugin())
-    except ImportError:
-        pass
-
-    # Misc ML plugins (Polars, JAX, CatBoost, Optuna, Plotly)
-    try:
-        from .ml_misc import MlMiscPlugin
-
-        default_registry.register(MlMiscPlugin())
-    except ImportError:
-        pass
+    for name, priority, class_name, roots, tags in _OPTIONAL:
+        # ml_misc also reads metadata-only CatBoost/Optuna exports without those libraries.
+        dependency = "scipy" if name == "scipy_sparse" else name
+        if name == "ml_misc" or find_spec(dependency) is not None:
+            default_registry.register(LazyPlugin(name, priority, class_name, roots, tags))
 
 
 _register_builtins()

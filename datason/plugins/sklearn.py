@@ -9,9 +9,9 @@ Security: only sklearn BaseEstimator classes may be reconstructed. Importing
 installed modules and calling estimator __setstate__ remain trusted operations;
 namespace checks are not a sandbox for untrusted model state.
 
-This module imports sklearn directly — if sklearn is not installed,
-the ImportError is caught by plugins/__init__.py and this plugin is
-simply not registered.
+This module imports its library when activated by the lazy
+loader (or explicitly imported). Unavailable optional dependencies are skipped
+on first use.
 """
 
 from __future__ import annotations
