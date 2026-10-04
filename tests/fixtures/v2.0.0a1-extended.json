@@ -30,7 +30,8 @@
     "custom_point": "{\"__datason_type__\": \"example.point.v1\", \"__datason_value__\": [3, 4]}",
     "unix_future": "{\"__datason_type__\": \"datetime\", \"__datason_value__\": 13569465600.0}",
     "unix_ms_near_epoch": "{\"__datason_type__\": \"datetime\", \"__datason_value__\": 3600000.0}",
-    "compact_hmac": "{\"__datason_payload__\": {\"message\": \"café\", \"count\": 7}, \"__datason_hmac__\": \"9899655c8ac5a6940be7e4df01fb2c05b25411b561fdbe168a00edfd02107ed6\"}"
+    "compact_hmac": "{\"__datason_payload__\": {\"message\": \"café\", \"count\": 7}, \"__datason_hmac__\": \"9899655c8ac5a6940be7e4df01fb2c05b25411b561fdbe168a00edfd02107ed6\"}",
+    "legacy_uint64_max": "{\"__datason_type__\": \"numpy.integer\", \"__datason_value__\": 18446744073709551615}"
   },
   "original_signed_json": "{\"message\":\"café\",\"count\":7}"
 }

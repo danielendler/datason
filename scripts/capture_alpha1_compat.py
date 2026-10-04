@@ -69,6 +69,7 @@ def ml_values() -> dict[str, Any]:
 
     return {
         **sklearn_values(),
+        "legacy_uint64_max": np.uint64(2**64 - 1),
         "scipy_csr": sp.csr_matrix([[1, 0], [0, 2]], dtype=np.float32),
         "torch_tensor": torch.tensor([[1, 2], [3, 4]], dtype=torch.float32),
         "tf_tensor": tf.constant([[1, 2], [3, 4]], dtype=tf.float32),

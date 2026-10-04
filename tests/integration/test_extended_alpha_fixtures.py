@@ -16,6 +16,20 @@ _PAYLOADS = _FIXTURE["payloads"]
 _KEY = "public-test-fixture-key"
 
 
+def test_legacy_uint64_requires_authoritative_dtype():
+    np = pytest.importorskip("numpy")
+    wire = _PAYLOADS["legacy_uint64_max"]
+    with pytest.raises(DeserializationError) as failure:
+        datason.loads(wire)  # Missing dtype makes the legacy reader select int64.
+    assert isinstance(failure.value.__cause__, OverflowError)
+    declared = json.loads(wire)
+    declared["dtype"] = "uint64"  # Supplied by the producer/schema, never inferred.
+    restored = datason.loads(json.dumps(declared))
+    assert restored.dtype == np.dtype("uint64")
+    assert int(restored) == 2**64 - 1
+    assert datason.loads(datason.dumps(restored)).dtype == restored.dtype
+
+
 @pytest.mark.parametrize("name", ["sklearn_estimator", "sklearn_pipeline"])
 def test_published_fitted_estimators_predict(name):
     np = pytest.importorskip("numpy")

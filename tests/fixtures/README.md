@@ -13,13 +13,15 @@ are included. The integration tests describe the original values and expected le
 reconstruction; use the historical source when investigating fixture changes.
 
 Legacy collection values were written as lists. Legacy scalar tags did not
-record scalar width and continue to reconstruct int64/float64/complex128. Empty
+record scalar width and default to int64/float64/complex128; large uint64 values
+require an authoritative dtype before reconstruction. Empty
 array shape metadata was present in a1 even though its reader ignored it; the
 current reader applies that metadata. A basic numeric DataFrame does not prove
 compatibility for every index, extension dtype or library release.
 
-`v2.0.0a1-extended.json` adds 15 immutable payloads covering optional ML,
-custom tags, ambiguous timestamp units and a custom-formatted HMAC. It records
+`v2.0.0a1-extended.json` adds 16 immutable payloads covering optional ML,
+custom tags, ambiguous timestamp units, uint64 overflow and a custom-formatted
+HMAC. It records
 all producer-library versions and retains the original signed bytes for that
 signature fixture. `scripts/capture_alpha1_compat.py` verifies the producer's
 exact commit and unmodified source before capture. See

@@ -9,11 +9,12 @@ names are imported automatically to hydrate models.
 
 ## Compatibility evidence
 
-Tests retain the original eight payloads and 15 additional payloads captured from
+Tests retain the original eight payloads and 16 additional payloads captured from
 that exact source: fitted LinearRegression and a fitted Pipeline, SciPy CSR,
 Torch/TF/JAX float32 arrays, a TF sparse tensor, a numeric Polars frame, a Plotly
 figure, CatBoost and Optuna diagnostic metadata, a custom plugin record, two
-ambiguous numeric timestamps and a compact legacy HMAC envelope. Capture records
+ambiguous numeric timestamps, a dtype-less uint64 maximum and a compact legacy
+HMAC envelope. Capture records
 Python and every optional library version. These are historical **Datason**
 fixtures produced with the recorded libraries, not artifacts from old releases
 of every ML framework.
@@ -40,7 +41,7 @@ CI must install the libraries to exercise those cases.
 | Stored representation | Contract and action |
 | --- | --- |
 | Standard tagged values and supported NumPy arrays | Read with the current loader; validate required values, dtype and shape |
-| Legacy scalar tag without dtype | Reads as int64/float64/complex128; original width is absent and cannot be inferred |
+| Legacy scalar tag without dtype | Defaults to int64/float64/complex128; uint64 values beyond int64 raise. Original width/signedness is absent; restore only with an authoritative dtype |
 | Legacy untagged tuple/set/frozenset | Reads as a list; restore a collection only from an authoritative application schema |
 | Supported fitted sklearn fixture | Predictions match in the tested library versions; pin dependencies and verify predictions before migrating other estimators |
 | CatBoost/Optuna export | Diagnostic metadata, not model weights or resumable study storage; use framework-native artifacts for executable state |
