@@ -1,0 +1,58 @@
+name: Optional reconstruction compatibility
+
+on:
+  pull_request:
+    paths:
+      - "datason/**"
+      - "tests/fixtures/**"
+      - "tests/integration/**"
+      - "tests/unit/test_plugin_*.py"
+      - "scripts/capture_alpha1_compat.py"
+      - ".github/workflows/optional-compatibility.yml"
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  reconstruction:
+    name: Optional reconstruction (${{ matrix.family }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        family: [cpu-ml, misc-ml]
+    env:
+      OMP_NUM_THREADS: "1"
+      OPENBLAS_NUM_THREADS: "1"
+      TF_NUM_INTEROP_THREADS: "1"
+      TF_NUM_INTRAOP_THREADS: "1"
+      TF_CPP_MIN_LOG_LEVEL: "3"
+      JAX_PLATFORMS: cpu
+    steps:
+      - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+      - run: uv python install 3.12
+      - run: uv venv --python 3.12
+      - name: Install fixture test dependencies
+        run: >-
+          uv pip install -e . pytest==9.1.1 hypothesis==6.168.3
+          syrupy==6.1.1 pytest-benchmark==5.3.0
+          numpy==2.4.2 pandas==3.0.1 pydantic==2.13.5
+      - name: Install CPU Torch
+        if: matrix.family == 'cpu-ml'
+        run: uv pip install --index-url https://download.pytorch.org/whl/cpu torch==2.10.0
+      - name: Install core ML fixture libraries
+        if: matrix.family == 'cpu-ml'
+        run: uv pip install scipy==1.17.1 scikit-learn==1.8.0 tensorflow==2.20.0
+      - name: Install miscellaneous fixture libraries
+        if: matrix.family == 'misc-ml'
+        run: >-
+          uv pip install polars==1.38.1 'jax[cpu]==0.9.0.1'
+          plotly==6.5.2 catboost==1.2.10 optuna==4.7.0
+      - name: Exercise historical payloads and reconstruction boundaries
+        run: uv run --no-sync pytest tests/integration tests/unit/test_plugin_ml_misc.py

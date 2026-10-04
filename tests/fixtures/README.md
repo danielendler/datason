@@ -17,3 +17,10 @@ record scalar width and continue to reconstruct int64/float64/complex128. Empty
 array shape metadata was present in a1 even though its reader ignored it; the
 current reader applies that metadata. A basic numeric DataFrame does not prove
 compatibility for every index, extension dtype or library release.
+
+`v2.0.0a1-extended.json` adds 15 immutable payloads covering optional ML,
+custom tags, ambiguous timestamp units and a custom-formatted HMAC. It records
+all producer-library versions and retains the original signed bytes for that
+signature fixture. `scripts/capture_alpha1_compat.py` verifies the producer's
+exact commit and unmodified source before capture. See
+`docs/persisted-format-contract.md` for explicit migration decisions.
