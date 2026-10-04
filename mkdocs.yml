@@ -59,6 +59,7 @@ nav:
   - Project:
       - Hardening roadmap: hardening-roadmap.md
       - Performance strategy: performance-strategy.md
+      - Performance baseline: performance-baseline.md
       - Rust feasibility gate: rust-feasibility.md
       - Release notes: releases/2.0.0a2.md
       - Changelog: changelog.md
