@@ -1,55 +1,65 @@
 # datason
 
-**Drop-in replacement for `json.dumps`/`json.loads` that handles datetime, NumPy, Pandas, PyTorch, and 50+ Python types. Zero dependencies.**
+**Serialize Python data to JSON for APIs, diagnostics, and stored state.**
+datason handles datetime, UUID, Decimal, paths, and collections, with optional
+plugins for NumPy, Pandas, and ML libraries. The core has no runtime dependencies.
+Python 3.10+ is required.
+
+!!! note "Match your installation to these docs"
+    These docs follow development `main`, currently versioned `2.0.0a2`.
+    As of October 4, 2026, PyPI's stable release is v1 (`0.13.0`) and its
+    published v2 alpha is `2.0.0a1`. Some features here are newer than that alpha.
+    Start with the [installation guide](getting-started.md#installation).
+
+## Your first round trip
 
 ```python
-import datason
 import datetime as dt
-import numpy as np
+from decimal import Decimal
 
-data = {"ts": dt.datetime.now(), "scores": np.array([0.9, 0.1])}
-json_str = datason.dumps(data)
-restored = datason.loads(json_str)
-# restored["ts"] is a datetime, restored["scores"] is a numpy array
+import datason
+
+event = {"observed": dt.datetime(2026, 10, 4, tzinfo=dt.timezone.utc),
+         "price": Decimal("19.99")}
+text = datason.dumps(event)
+restored = datason.loads(text)
+assert restored == event
 ```
 
-## Why datason?
+The JSON contains type metadata so datason can restore supported Python types.
+For example, `Decimal("19.99")` becomes:
 
-Python's `json` module fails on anything beyond primitives:
-
-```python
-import json
-json.dumps({"ts": datetime.now()})  # TypeError!
-json.dumps({"arr": np.array([1,2])})  # TypeError!
+```json
+{"__datason_type__": "decimal.Decimal", "__datason_value__": "19.99"}
 ```
 
-datason handles all of these types automatically while maintaining the same `dumps`/`loads` API you already know.
+An ordinary JSON reader sees that object; it does not reconstruct a Decimal.
+For a consumer expecting a plain string, use `include_type_hints=False`.
 
-## Key Features
+## Choose the output your consumer needs
 
-- **Zero dependencies** -- only stdlib in core. NumPy, Pandas, ML libs are optional.
-- **5-function API** -- `dumps`, `loads`, `dump`, `load`, `config`. That's it.
-- **Perfect round-trips** -- types are reconstructed on deserialization.
-- **50+ types** -- datetime, UUID, Decimal, Path, NumPy, Pandas, PyTorch, TensorFlow, scikit-learn, SciPy.
-- **Security built-in** -- depth limits, size limits, circular reference detection, PII redaction.
-- **Plugin architecture** -- extend with custom types in ~20 lines.
-- **Thread-safe** -- config scoping via ContextVar, registry with threading.Lock.
+| Your task | Start with | What to expect |
+| --- | --- | --- |
+| Return an API or tool response | [API recipe](recipes.md#api-and-tool-responses) | Plain JSON with tags disabled; validate against the consumer's schema |
+| Export logs and diagnostics | [Redaction recipe](recipes.md#redacted-diagnostics) | Explicit field/pattern redaction; keep the original state separately |
+| Save Python data for later | [Stored-data recipe](recipes.md#typed-stored-data) | Type tags enabled; supported types reconstructed by datason |
+| Preserve arrays and DataFrames | [Scientific fidelity](scientific-fidelity.md) | Defined dtype, shape, and index contracts, with examples |
+| Resume a LangGraph workflow | [Checkpoint guide](langgraph-checkpoints.md) | An opt-in serializer and complete SQLite pause/resume example |
+| Handle your own Python type | [Custom plugins](plugins.md) | A runnable plugin and round-trip check |
 
-## Quick Install
+## Familiar interface, explicit policies
 
-```bash
-pip install datason                    # Core (zero dependencies)
-pip install datason[numpy]             # + NumPy support
-pip install datason[pandas]            # + Pandas support
-pip install datason[ml]                # + PyTorch, TensorFlow, scikit-learn, SciPy
-pip install datason[all]               # Everything
-```
+The five everyday operations are `dumps`, `loads`, `dump`, `load`, and `config`.
+[Configuration enums and preset factories](configuration.md) are also exported.
+Common stdlib JSON arguments such as `indent` and `parse_float` work, but defaults
+differ: datason emits Unicode directly, converts non-finite numbers to `null`,
+and includes type metadata. It also enforces traversal and input budgets.
+See [JSON compatibility](api.md#compatibility-with-stdlib-json).
 
-Requires Python 3.10+.
+Type preservation depends on the type and policy: application models normalize
+to fields, redaction changes data, and some ML plugins export metadata only.
+The [supported-types table](supported-types.md) explains what comes back.
 
-## Next Steps
-
-- [Getting Started](getting-started.md) -- installation and first examples
-- [API Reference](api.md) -- complete function signatures
-- [Configuration](configuration.md) -- all config options and presets
-- [For AI Agents](ai-agents.md) -- llms.txt and machine-readable docs
+Continue with [Getting started](getting-started.md) for installation and complete
+examples. Use [Troubleshooting](troubleshooting.md) when an error or unexpected
+output gets in the way, and the [API reference](api.md) for exact call behavior.

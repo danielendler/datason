@@ -4,6 +4,8 @@ on:
   pull_request:
     paths:
       - "datason/**"
+      - "examples/langgraph_checkpoint.py"
+      - "docs/langgraph-checkpoints.md"
       - "tests/integration/test_langgraph_checkpoint.py"
       - "pyproject.toml"
       - "uv.lock"
@@ -36,3 +38,12 @@ jobs:
           --with langgraph==1.2.12
           --with langgraph-checkpoint-sqlite==3.1.1
           pytest tests/integration/test_langgraph_checkpoint.py
+
+      - name: Run documented checkpoint example
+        env:
+          UV_PYTHON: ${{ matrix.python-version }}
+        run: >-
+          uv run --locked
+          --with langgraph==1.2.12
+          --with langgraph-checkpoint-sqlite==3.1.1
+          python examples/langgraph_checkpoint.py

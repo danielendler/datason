@@ -6,14 +6,27 @@ It does not import application classes from JSON or run their constructors.
 Application plugins with ordinary priority (for example, 400) can override these
 fallback normalizers when a stronger type contract is needed.
 
-Install `datason[pydantic]` for the optional Pydantic v2 integration.
+Install the `pydantic` extra for the optional Pydantic v2 integration, following
+the [installation guide](getting-started.md#installation).
 
 For a Pydantic v2 model, validate explicitly after loading:
 
 ```python
+from decimal import Decimal
+
+from pydantic import BaseModel, Field
+
+import datason
+
+class Result(BaseModel):
+    cost: Decimal = Field(alias="total")
+
+result = Result(total=Decimal("19.99"))
 encoded = datason.dumps(result)
 fields = datason.loads(encoded)
+assert fields == {"total": Decimal("19.99")}
 restored = Result.model_validate(fields)
+assert restored == result
 ```
 
 Dataclass fields and Pydantic output pass through the shared traversal, including
@@ -31,3 +44,31 @@ Use `include_type_hints=False` for an ordinary JSON tool response. Check the res
 against the tool's schema; serialization alone does not establish schema validity.
 Use typed records for internal data that requires supported type reconstruction,
 and validate the loaded application state before resuming work.
+
+## Dataclasses and binary fields
+
+This example uses only the core package. Tags preserve the binary field while
+an application dataclass normalizes to a dictionary:
+
+```python
+from dataclasses import dataclass
+from enum import Enum
+
+import datason
+
+class Status(Enum):
+    READY = "ready"
+
+@dataclass
+class ToolResult:
+    status: Status
+    payload: bytes
+
+fields = datason.loads(datason.dumps(ToolResult(Status.READY, b"hello")))
+assert fields == {"status": "ready", "payload": b"hello"}
+restored = ToolResult(Status(fields["status"]), fields["payload"])
+assert restored.status is Status.READY
+```
+
+For provider responses, use the [API recipe](recipes.md#api-and-tool-responses).
+For a custom class that needs automatic reconstruction, see [Custom plugins](plugins.md).

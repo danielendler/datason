@@ -1,139 +1,159 @@
 # Configuration
 
-## Overview
+Choose configuration around the output your consumer expects. The defaults
+include type tags for Python reconstruction; `api_config()` disables tags for
+ordinary JSON responses. See [Recipes](recipes.md) for complete workflows.
 
-datason uses a frozen dataclass `SerializationConfig` with sensible defaults. You can override settings three ways:
+## Scope and precedence
 
-```python
-# 1. Inline kwargs (highest priority)
-datason.dumps(data, sort_keys=True)
-
-# 2. Context manager (scoped)
-with datason.config(sort_keys=True):
-    datason.dumps(data)
-
-# 3. Presets
-from datason import ml_config
-with datason.config(**ml_config().__dict__):
-    datason.dumps(data)
-```
-
-## All Options
-
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `date_format` | `DateFormat` | `ISO` | Datetime serialization: `ISO`, `UNIX`, `UNIX_MS`, `STRING` |
-| `dataframe_orient` | `DataFrameOrient` | `RECORDS` | DataFrame format: `RECORDS`, `SPLIT`, `DICT`, `LIST`, `VALUES` |
-| `nan_handling` | `NanHandling` | `NULL` | NaN/Inf handling: `NULL`, `STRING`, `KEEP`, `DROP` |
-| `include_type_hints` | `bool` | `True` | Emit `__datason_type__` for round-trip fidelity |
-| `sort_keys` | `bool` | `False` | Sort dict keys alphabetically |
-| `max_depth` | `int` | `50` | Max nesting depth (security) |
-| `max_size` | `int` | `100_000` | Max dict/list items (security) |
-| `max_string_length` | `int` | `1_000_000` | Max string length (security) |
-| `fallback_to_string` | `bool` | `False` | `str()` unknown types instead of raising |
-| `strict` | `bool` | `True` | Raise on unrecognized type metadata in `loads` |
-| `redact_fields` | `tuple[str, ...]` | `()` | Field names to redact |
-| `redact_patterns` | `tuple[str, ...]` | `()` | Regex patterns to redact |
-
-## DateFormat
-
-Controls how `datetime` objects are serialized:
+Inline options override the active scope. Without a scope, they override
+`SerializationConfig` defaults. The context manager yields the active frozen
+config and restores the previous scope on exit, including after an exception.
+It uses `ContextVar` for scoped thread/async-task state.
 
 ```python
-from datason import DateFormat
-
-# ISO 8601 (default)
-datason.dumps({"ts": dt}, date_format=DateFormat.ISO)
-# "2024-01-15T10:30:00"
-
-# Unix timestamp (seconds)
-datason.dumps({"ts": dt}, date_format=DateFormat.UNIX)
-# 1705312200.0
-
-# Unix timestamp (milliseconds)
-datason.dumps({"ts": dt}, date_format=DateFormat.UNIX_MS)
-# 1705312200000.0
-
-# Python str()
-datason.dumps({"ts": dt}, date_format=DateFormat.STRING)
-# "2024-01-15 10:30:00"
-```
-
-## NanHandling
-
-Controls how `float('nan')` and `float('inf')` are serialized:
-
-```python
+import datason
 from datason import NanHandling
 
-datason.dumps({"v": float("nan")}, nan_handling=NanHandling.NULL)    # null
-datason.dumps({"v": float("nan")}, nan_handling=NanHandling.STRING)  # "nan"
-datason.dumps({"v": float("nan")}, nan_handling=NanHandling.KEEP)    # NaN (invalid JSON!)
-datason.dumps({"v": float("nan")}, nan_handling=NanHandling.DROP)    # null
+with datason.config(sort_keys=True, nan_handling=NanHandling.STRING) as active:
+    assert active.sort_keys
+    assert datason.dumps({"v": float("NaN")}) == '{"v": "NaN"}'
+    assert datason.dumps({"v": float("NaN")}, nan_handling=NanHandling.NULL) == '{"v": null}'
+    # A new scope starts from defaults, not unspecified settings in the outer scope.
+    with datason.config(sort_keys=True):
+        assert datason.dumps({"v": float("NaN")}) == '{"v": null}'
+    assert datason.dumps({"v": float("NaN")}) == '{"v": "NaN"}'
+assert datason.dumps({"v": float("NaN")}) == '{"v": null}'
 ```
 
-## JSON compatibility arguments
+## All options
 
-`dumps` and `dump` accept `indent`, `ensure_ascii`, `separators`, `allow_nan`,
-`skipkeys`, `check_circular`, `default`, and `cls` alongside configuration options.
-Use `default` or a `json.JSONEncoder` subclass for objects that have no registered
-Datason plugin. Registered plugins retain priority. Callback results still pass
-through Datason's redaction, circular-reference checks, and size/depth limits.
-`check_circular=False` changes the final JSON encoder's setting while Datason
-continues to enforce its own limits. `skipkeys=True` omits dictionary entries
-whose keys are outside the types accepted by the standard JSON encoder.
+Use enum members, not their string spellings, for enum-valued options. Limits
+must be nonnegative integers; negative values and booleans raise `ValueError`.
+Not every formatting option affects loading: for example, type tags already
+record the representation needed by the corresponding deserializer.
 
-`loads` and `load` accept `parse_float`, `parse_int`, `parse_constant`,
-`object_hook`, `object_pairs_hook`, and `cls`. Unrecognized arguments raise a
-`TypeError` naming the public function that received them.
+| Option | Type | Default | Meaning |
+| --- | --- | --- | --- |
+| `date_format` | `DateFormat` | `ISO` | Datetime: `ISO`, `UNIX`, `UNIX_MS`, `STRING` |
+| `dataframe_orient` | `DataFrameOrient` | `RECORDS` | Frame: `RECORDS`, `SPLIT`, `DICT`, `LIST`, `VALUES` |
+| `nan_handling` | `NanHandling` | `NULL` | Non-finite output: `NULL`, `STRING`, `KEEP`, `DROP` |
+| `include_type_hints` | `bool` | `True` | Write type metadata when the handler supports it |
+| `sort_keys` | `bool` | `False` | Sort output dictionary keys |
+| `max_depth` | `int` | `50` | Representation traversal depth, including metadata |
+| `max_size` | `int` | `100_000` | Entries per representation container |
+| `max_string_length` | `int` | `1_000_000` | Characters per string/key |
+| `max_input_bytes` | `int` | `16_777_216` | Incoming encoded JSON budget; also used for supported NumPy allocation estimates |
+| `max_nodes` | `int` | `1_000_000` | Traversal work, including plugin conversion |
+| `fallback_to_string` | `bool` | `False` | Stringify unsupported values; loses their original type |
+| `strict` | `bool` | `True` | Raise for unknown type metadata during loading |
+| `allow_plugin_deserialization` | `bool` | `True` | Permit typed plugin reconstruction during loading |
+| `redact_fields` | `tuple[str, ...]` | `()` | Case-insensitive field-name substring matches |
+| `redact_patterns` | `tuple[str, ...]` | `()` | Named patterns or custom regexes on string values |
 
-## DataFrameOrient
+`strict=False` leaves unknown tags as dictionaries; it does not bypass limits
+or all malformed-payload errors. `allow_plugin_deserialization=False` rejects
+plugin tags even with `strict=False`. Built-in collection tags can still restore
+collections. See [Serialization boundaries](serialization-boundaries.md).
 
-Controls Pandas DataFrame serialization format:
+## Date formats
+
+With tags disabled, the format determines the plain JSON value. This example
+uses an aware UTC datetime so numeric output does not depend on local time:
 
 ```python
+import datetime as dt
+import json
+
+import datason
+from datason import DateFormat
+
+stamp = dt.datetime(1970, 1, 1, 0, 0, 1, tzinfo=dt.timezone.utc)
+assert json.loads(datason.dumps(stamp, include_type_hints=False,
+                               date_format=DateFormat.ISO)) == "1970-01-01T00:00:01+00:00"
+assert json.loads(datason.dumps(stamp, include_type_hints=False,
+                               date_format=DateFormat.UNIX)) == 1.0
+assert json.loads(datason.dumps(stamp, include_type_hints=False,
+                               date_format=DateFormat.UNIX_MS)) == 1000.0
+assert json.loads(datason.dumps(stamp, include_type_hints=False,
+                               date_format=DateFormat.STRING)) == "1970-01-01 00:00:01+00:00"
+```
+
+Tagged numeric datetime records include explicit units and an ISO representation
+for reconstruction. Naive numeric encoding uses UTC. Named timezone identity is
+not preserved, although the offset is. See [Scientific fidelity](scientific-fidelity.md).
+
+## Non-finite numbers
+
+These policies apply to supported float leaves, including plugin output.
+`allow_nan=False` is a final JSON encoder check: `KEEP` plus that argument raises
+`ValueError`, while default normalization to null succeeds.
+
+```python
+import datason
+from datason import NanHandling
+
+assert datason.dumps({"v": float("NaN")}) == '{"v": null}'
+assert datason.dumps({"v": float("NaN")}, nan_handling=NanHandling.STRING) == '{"v": "NaN"}'
+assert datason.dumps({"v": float("NaN")}, nan_handling=NanHandling.KEEP) == '{"v": NaN}'
+assert datason.dumps({"v": float("NaN")}, nan_handling=NanHandling.DROP) == '{"v": null}'
+```
+
+`KEEP` can produce tokens outside the JSON standard. `DROP` currently replaces
+with null rather than removing a field or array element. These are output
+policies; ordinary incoming JSON NaN tokens follow the stdlib decoder unless
+you provide a `parse_constant` callback. Choose a policy that matches your schema
+and stored-data requirements.
+
+## DataFrame orientation
+
+For API output without tags:
+
+```python
+import json
+
+import pandas as pd
+
+import datason
 from datason import DataFrameOrient
 
-# Records (default): [{"a": 1, "b": 2}, {"a": 3, "b": 4}]
-datason.dumps(df, dataframe_orient=DataFrameOrient.RECORDS)
-
-# Split: {"columns": ["a","b"], "index": [0,1], "data": [[1,2],[3,4]]}
-datason.dumps(df, dataframe_orient=DataFrameOrient.SPLIT)
-
-# Dict: {"a": {"0": 1, "1": 3}, "b": {"0": 2, "1": 4}}
-datason.dumps(df, dataframe_orient=DataFrameOrient.DICT)
+frame = pd.DataFrame({"a": [1, 2]})
+assert json.loads(datason.dumps(frame, include_type_hints=False,
+                               dataframe_orient=DataFrameOrient.RECORDS)) == [{"a": 1}, {"a": 2}]
+assert json.loads(datason.dumps(frame, include_type_hints=False,
+                               dataframe_orient=DataFrameOrient.SPLIT)) == {
+    "columns": ["a"], "index": [0, 1], "data": [[1], [2]],
+}
 ```
+
+`DICT` maps columns to index/value mappings, `LIST` maps columns to value lists,
+and `VALUES` emits rows only. Tagged frames carry separate metadata; empty
+frames, duplicate labels, and non-string columns may force split orientation
+for fidelity. See [Scientific fidelity](scientific-fidelity.md).
 
 ## Presets
 
-Four built-in presets for common workflows:
-
-### ml_config()
-
-For ML pipelines: UNIX_MS timestamps, lenient type handling.
+Factories return a `SerializationConfig`, not a context manager or a dict.
+Use `dataclasses.asdict` to pass it as options. Factory overrides are supported:
 
 ```python
-from datason import ml_config
+from dataclasses import asdict
 
-with datason.config(**ml_config().__dict__):
-    datason.dumps({"predictions": np.array([0.9, 0.1])})
+import datason
+from datason import api_config, NanHandling
+
+preset = api_config(nan_handling=NanHandling.STRING)
+with datason.config(**asdict(preset)):
+    assert datason.dumps({"score": float("NaN")}) == '{"score": "NaN"}'
 ```
 
-### api_config()
+| Factory | Differences from defaults | Tradeoff |
+| --- | --- | --- |
+| `api_config()` | Sorted keys; no type tags | Ordinary JSON, no exact Python reconstruction |
+| `ml_config()` | UNIX_MS dates; string fallback | Convenient export; unsupported objects lose type information |
+| `strict_config()` | Explicit strict loading, tags, no string fallback | Same current defaults; not a requirement that all input contain tags |
+| `performance_config()` | No tags, no sorting, KEEP non-finite values, string fallback | Lossy; may emit non-standard JSON; benchmark your workload |
 
-For API responses: ISO dates, sorted keys, no type metadata.
-
-```python
-from datason import api_config
-
-with datason.config(**api_config().__dict__):
-    datason.dumps({"created": dt.datetime.now(), "status": "ok"})
-```
-
-### strict_config()
-
-For validation: unknown types raise errors, type hints required.
-
-### performance_config()
-
-For speed: no type hints, no sorting, keep NaN as-is.
+For JSON encoder/decoder kwargs and their interaction with plugins, see the
+[API reference](api.md#compatibility-with-stdlib-json). For redaction and budgets,
+see [Security](security.md).

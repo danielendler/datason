@@ -1,22 +1,79 @@
 # LangGraph checkpoint adapter
 
-Install the optional framework and persistence dependencies:
+Use the development source installation from [Getting started](getting-started.md#installation),
+then install the optional framework and SQLite dependencies. These versions match
+the existing compatibility example:
 
 ```bash
-pip install datason numpy langgraph langgraph-checkpoint-sqlite
+python -m pip install 'langgraph==1.2.12' 'langgraph-checkpoint-sqlite==3.1.1'
 ```
 
-Pass an explicit datason serializer to the checkpointer:
+## Pause, reopen, and resume
+
+This complete example stores a datetime and bytes, closes the SQLite connection,
+then resumes from a fresh connection. Its temporary directory is cleaned up on
+exit. For persistent application state, choose a durable database path.
 
 ```python
+"""Pause a LangGraph workflow, reopen SQLite, and resume typed stored state."""
+
+import datetime as dt
+from pathlib import Path
+from tempfile import TemporaryDirectory
+from typing import TypedDict
+
 from langgraph.checkpoint.sqlite import SqliteSaver
+from langgraph.graph import END, START, StateGraph
+
 from datason.integrations.langgraph import DatasonSerializer
 
-with SqliteSaver.from_conn_string("checkpoints.sqlite") as saver:
-    saver.serde = DatasonSerializer()
-    graph = builder.compile(checkpointer=saver)
-    graph.invoke(initial_state, {"configurable": {"thread_id": "job-1"}})
+
+class State(TypedDict):
+    observed: dt.datetime
+    payload: bytes
+    steps: int
+
+
+def advance(state: State) -> dict[str, int]:
+    return {"steps": state["steps"] + 1}
+
+
+builder = StateGraph(State)
+builder.add_node("advance", advance)
+builder.add_edge(START, "advance")
+builder.add_edge("advance", END)
+config = {"configurable": {"thread_id": "job-1"}}
+initial: State = {
+    "observed": dt.datetime(2026, 10, 4, tzinfo=dt.timezone.utc),
+    "payload": b"hello",
+    "steps": 0,
+}
+
+with TemporaryDirectory() as directory:
+    database = str(Path(directory) / "checkpoints.sqlite")
+    with SqliteSaver.from_conn_string(database) as saver:
+        saver.serde = DatasonSerializer()
+        graph = builder.compile(checkpointer=saver, interrupt_before=["advance"])
+        graph.invoke(initial, config)
+        assert graph.get_state(config).next == ("advance",)
+
+    # A fresh connection demonstrates restoration from stored JSON.
+    with SqliteSaver.from_conn_string(database) as saver:
+        saver.serde = DatasonSerializer()
+        graph = builder.compile(checkpointer=saver)
+        restored = graph.invoke(None, config)
+        assert restored["steps"] == 1
+        assert restored["observed"] == initial["observed"]
+        assert restored["payload"] == b"hello"
+
+print("Checkpoint reopened and resumed successfully.")
 ```
+
+The same example is available as
+[`examples/langgraph_checkpoint.py`](https://github.com/danielendler/datason/blob/main/examples/langgraph_checkpoint.py).
+Run it with `python examples/langgraph_checkpoint.py` after installation.
+
+## Storage and compatibility contract
 
 The adapter implements LangGraph's typed serializer protocol and stores UTF-8 JSON
 under the `datason-json-v1` format label. It rejects other formats and does not
