@@ -17,6 +17,7 @@ import torch
 
 from .._errors import PluginError
 from .._protocols import DeserializeContext, SerializeContext
+from .._reconstruction import check_dense_allocation
 from .._types import TYPE_METADATA_KEY, VALUE_METADATA_KEY
 
 
@@ -42,7 +43,7 @@ class TorchPlugin:
         return isinstance(type_name, str) and type_name.startswith("torch.")
 
     def deserialize(self, data: dict[str, Any], ctx: DeserializeContext) -> Any:
-        return _deserialize_torch(data)
+        return _deserialize_torch(data, ctx)
 
 
 def _serialize_torch(obj: Any, ctx: SerializeContext) -> Any:
@@ -83,14 +84,14 @@ def _dtype_to_str(dtype: torch.dtype) -> str:
     return str(dtype).removeprefix("torch.")
 
 
-def _deserialize_torch(data: dict[str, Any]) -> Any:
+def _deserialize_torch(data: dict[str, Any], ctx: DeserializeContext) -> Any:
     """Reconstruct a PyTorch object from serialized data."""
     type_name = data[TYPE_METADATA_KEY]
     value = data[VALUE_METADATA_KEY]
 
     match type_name:
         case "torch.Tensor":
-            return _reconstruct_tensor(value)
+            return _reconstruct_tensor(value, ctx)
         case "torch.device":
             if not isinstance(value, str):
                 raise PluginError(f"Expected str for device, got {type(value).__name__}")
@@ -107,13 +108,15 @@ def _deserialize_torch(data: dict[str, Any]) -> Any:
             raise PluginError(f"Unknown torch type: {type_name}")
 
 
-def _reconstruct_tensor(value: Any) -> torch.Tensor:
+def _reconstruct_tensor(value: Any, ctx: DeserializeContext) -> torch.Tensor:
     """Reconstruct a tensor from serialized dict."""
     if not isinstance(value, dict):
         raise PluginError(f"Expected dict for Tensor, got {type(value).__name__}")
     dtype_str = value.get("dtype", "float32")
     dtype = _str_to_dtype(dtype_str)
-    return torch.tensor(value["data"], dtype=dtype)
+    shape = check_dense_allocation(value["data"], value.get("shape"), _dtype_itemsize(dtype), ctx)
+    result = torch.tensor(value["data"], dtype=dtype, device="cpu")
+    return result.reshape(shape) if shape is not None else result
 
 
 def _str_to_dtype(name: str) -> torch.dtype:
@@ -122,3 +125,15 @@ def _str_to_dtype(name: str) -> torch.dtype:
     if not isinstance(result, torch.dtype):
         raise PluginError(f"Unknown torch dtype: {name}")
     return result
+
+
+def _dtype_itemsize(dtype: torch.dtype) -> int:
+    """Use dtype information available on the supported older Torch releases."""
+    width = getattr(dtype, "itemsize", None)
+    if isinstance(width, int):
+        return width
+    if dtype is torch.bool:
+        return 1
+    if dtype.is_floating_point or dtype.is_complex:
+        return max(torch.finfo(dtype).bits // 8, 1) * (2 if dtype.is_complex else 1)
+    return max(torch.iinfo(dtype).bits // 8, 1)
