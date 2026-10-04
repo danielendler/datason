@@ -84,12 +84,22 @@ These docs describe development `main` (versioned `2.0.0a2`). As of October 4,
 alpha is `2.0.0a1`. Choose deliberately:
 
 ```bash
-# Published v2 alpha; it predates some features described in these docs
+# Stable v1: a different API from the v2 examples on this site
+python -m pip install datason
+
+# Published v2 alpha: matches the three marketing homepage examples
 python -m pip install 'datason==2.0.0a1'
 
 # Current source matching the development docs (requires Git)
 python -m pip install 'datason @ git+https://github.com/danielendler/datason.git@main'
 ```
+
+The published v2 alpha is enough to run the homepage's API JSON, typed storage,
+and redacted diagnostics examples; all three were verified in a fresh PyPI
+installation. It predates newer fixes and features in these development guides,
+including the LangGraph integration and reconstruction hardening. Use current
+source when following the latest guides. An exact prerelease pin installs the
+alpha without needing `--pre`.
 
 The following optional extras install the libraries used by their plugins.
 For current source, select extras in the package name:
