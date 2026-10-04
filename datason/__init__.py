@@ -1,26 +1,21 @@
-"""datason: Drop-in replacement for json that handles datetime, NumPy, Pandas, and 50+ types.
+"""JSON serialization for Python APIs, diagnostics, and typed stored data.
 
-Zero-dependency Python serialization library. Replace ``json.dumps``
-with ``datason.dumps`` to serialize datetime, UUID, Decimal, Path,
-NumPy arrays, Pandas DataFrames, PyTorch tensors, TensorFlow tensors,
-and scikit-learn models to JSON automatically.
+The core has zero runtime dependencies. Optional plugins support NumPy,
+Pandas, and ML libraries under documented normalization and fidelity contracts.
+Type tags are enabled by default; disable them for ordinary JSON consumers.
 
 Quick start::
 
-    import datason
     import datetime as dt
-    import numpy as np
+    import datason
 
-    data = {"ts": dt.datetime.now(), "scores": np.array([0.9, 0.1])}
-    json_str = datason.dumps(data)
-    restored = datason.loads(json_str)  # types are reconstructed
+    event = {"observed": dt.datetime(2026, 10, 4, tzinfo=dt.timezone.utc)}
+    text = datason.dumps(event)
+    assert datason.loads(text) == event
 
-API:
-    - ``datason.dumps(obj, **config)`` -- serialize to JSON string
-    - ``datason.loads(s, **config)`` -- deserialize from JSON string
-    - ``datason.dump(obj, fp, **config)`` -- write to file
-    - ``datason.load(fp, **config)`` -- read from file
-    - ``datason.config(**config)`` -- context manager for temp config
+Everyday operations: dumps, loads, dump, load, config.
+Configuration enums, SerializationConfig, and preset factories are also exported.
+See https://danielendler.github.io/datason/ for installation and policy details.
 """
 
 from importlib.metadata import version

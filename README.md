@@ -7,251 +7,150 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Docs](https://img.shields.io/badge/docs-GitHub%20Pages-blue)](https://danielendler.github.io/datason/)
 
-**JSON serialization for Python data across APIs, diagnostics, and stored state. Supported types include datetime, NumPy, Pandas, and ML values through optional plugins. The core has zero dependencies.**
+**JSON serialization for Python APIs, diagnostics, and stored state.**
+Handle datetime, UUID, Decimal, paths, and collections, with optional plugins for
+NumPy, Pandas, and ML libraries. The core has no runtime dependencies. Python 3.10+.
 
-The current release is an alpha. The [hardening roadmap](docs/hardening-roadmap.md)
-records the implemented hardening, tested contracts, and next validation milestones.
+[Get started](https://danielendler.github.io/datason/getting-started/) ·
+[Recipes](https://danielendler.github.io/datason/recipes/) ·
+[Supported types](https://danielendler.github.io/datason/supported-types/) ·
+[API reference](https://danielendler.github.io/datason/api/)
 
-```python
-import datason
-import datetime as dt
-import numpy as np
+## Install the version you intend to use
 
-# Serialize datetime and NumPy values through the dumps interface
-datason.dumps({"ts": dt.datetime.now(), "scores": np.array([0.9, 0.1])})
-```
-
-No more `TypeError: Object of type datetime is not JSON serializable`.
-
-## Install
+This README and the documentation follow development `main` (versioned
+`2.0.0a2`). As of October 4, 2026, PyPI's stable release is v1 (`0.13.0`), and
+its published v2 alpha is `2.0.0a1`. An unqualified `pip install datason`
+installs v1, whose API differs. v2 remains an alpha.
 
 ```bash
-pip install datason                    # Core (zero dependencies)
-pip install datason[numpy]             # + NumPy support
-pip install datason[pandas]            # + Pandas support
-pip install datason[ml]                # + PyTorch, TensorFlow, scikit-learn, SciPy
-pip install datason[all]               # NumPy, Pandas, ML, and crypto extras
+# Published v2 alpha; some documented features landed after this release
+python -m pip install 'datason==2.0.0a1'
+
+# Source matching these development docs (requires Git)
+python -m pip install 'datason @ git+https://github.com/danielendler/datason.git@main'
+
+# Add NumPy and Pandas support to current source
+python -m pip install 'datason[numpy,pandas] @ git+https://github.com/danielendler/datason.git@main'
 ```
 
-Requires Python 3.10+.
+Pin a reviewed commit instead of `main` for reproducible deployments.
+The [installation guide](docs/getting-started.md#installation) explains all
+extras, including `pydantic`, `ml`, and `ml-extra`. `all` includes NumPy, Pandas,
+ML and crypto dependencies; it excludes `pydantic` and `ml-extra`.
 
-## Quick Start
+## First round trip
+
+This example uses only the core package:
 
 ```python
-import datason
 import datetime as dt
-import uuid
 from decimal import Decimal
-from pathlib import Path
 
-# Works exactly like json for simple data
-datason.dumps({"name": "Alice", "age": 30})
-# '{"name": "Alice", "age": 30}'
+import datason
 
-# But also handles complex types that json.dumps cannot
-data = {
-    "timestamp": dt.datetime(2024, 6, 15, 10, 30),
-    "id": uuid.uuid4(),
-    "price": Decimal("19.99"),
-    "config_path": Path("/data/models"),
-}
-json_str = datason.dumps(data)
-
-# And brings them back on deserialization
-restored = datason.loads(json_str)
-assert isinstance(restored["timestamp"], dt.datetime)
-assert isinstance(restored["id"], uuid.UUID)
+event = {"observed": dt.datetime(2026, 10, 4, tzinfo=dt.timezone.utc),
+         "price": Decimal("19.99")}
+text = datason.dumps(event)
+restored = datason.loads(text)
+assert restored == event
+assert isinstance(restored["price"], Decimal)
 ```
 
-### NumPy + Pandas
+`dumps` writes a JSON string, including metadata for supported Python types.
+A Decimal is represented as
+`{"__datason_type__": "decimal.Decimal", "__datason_value__": "19.99"}`.
+`loads` uses those tags to reconstruct it; an ordinary JSON reader sees a dict.
+
+## Choose the right JSON for your task
+
+| Task | Settings and behavior | Guide |
+| --- | --- | --- |
+| API or tool response | Disable tags; check normalized values against the consumer's schema | [Recipes](docs/recipes.md#api-and-tool-responses) |
+| Logs and diagnostics | Select redaction fields/patterns; keep original state separately | [Security](docs/security.md) |
+| Internal stored data | Keep tags; install the corresponding libraries when restoring | [Scientific fidelity](docs/scientific-fidelity.md) |
+| Application models | Dataclass/Pydantic fields and Enum values normalize; validate models explicitly | [Structured data](docs/agent-data.md) |
+| LangGraph checkpoint | Opt-in serializer with a SQLite pause/resume example | [LangGraph](docs/langgraph-checkpoints.md) |
+
+For ordinary API JSON:
+
+```python
+import json
+from decimal import Decimal
+
+import datason
+
+text = datason.dumps({"price": Decimal("19.99")}, include_type_hints=False)
+assert json.loads(text) == {"price": "19.99"}
+```
+
+For scientific stored data (install `numpy,pandas`):
 
 ```python
 import numpy as np
 import pandas as pd
+
 import datason
 
-# NumPy arrays serialize with shape and dtype preserved
-arr = np.array([[1.0, 2.0], [3.0, 4.0]])
-json_str = datason.dumps(arr)
-restored = datason.loads(json_str)
-assert isinstance(restored, np.ndarray)
-assert restored.shape == (2, 2)
+array = np.array([[1, 2], [3, 4]], dtype=np.int16)
+restored = datason.loads(datason.dumps(array))
+np.testing.assert_array_equal(restored, array)
+assert restored.dtype == array.dtype
 
-# Pandas DataFrames serialize as records by default
-df = pd.DataFrame({"name": ["Alice", "Bob"], "score": [95.5, 87.3]})
-json_str = datason.dumps(df)
-restored = datason.loads(json_str)
-assert isinstance(restored, pd.DataFrame)
+frame = pd.DataFrame({"score": pd.array([95, None], dtype="Int64")})
+pd.testing.assert_frame_equal(datason.loads(datason.dumps(frame)), frame)
 ```
 
-### ML Frameworks
+Type tags support defined round-trip contracts, not every Python object.
+Non-finite-number policies and redaction can change values. Some ML plugins
+export metadata only; tensors do not preserve every runtime property.
+See [Supported types](docs/supported-types.md) before choosing a storage format.
+
+## Everyday API
+
+| Operation | Result |
+| --- | --- |
+| `datason.dumps(obj, **options)` | JSON string |
+| `datason.loads(text, **options)` | Python values; supported tagged types reconstructed |
+| `datason.dump(obj, file, **options)` | Write JSON to an open text file |
+| `datason.load(file, **options)` | Read and deserialize within input budgets |
+| `datason.config(**options)` | Temporarily select configuration in a context |
+
+Configuration enums, `SerializationConfig`, and four preset factories are also
+exported. Common JSON arguments such as `indent`, `default`, and `parse_float`
+are supported. Defaults differ from stdlib `json`: Unicode is emitted directly,
+NaN/Infinity become `null`, tags are enabled, and traversal budgets are enforced.
+See [API compatibility](docs/api.md#compatibility-with-stdlib-json).
 
 ```python
-import torch
+from dataclasses import asdict
+
 import datason
+from datason import api_config
 
-# PyTorch tensors
-tensor = torch.randn(3, 3)
-json_str = datason.dumps({"weights": tensor})
-restored = datason.loads(json_str)
-assert isinstance(restored["weights"], torch.Tensor)
-
-# Also supports: TensorFlow tensors, scikit-learn models, SciPy sparse matrices
+with datason.config(**asdict(api_config())):
+    text = datason.dumps({"status": "ok", "value": float("nan")})
+assert text == '{"status": "ok", "value": null}'
 ```
 
-## API — 5 Functions
+Inline options override the active scope. Entering a new `config` scope starts
+from defaults; see [Configuration](docs/configuration.md#scope-and-precedence).
 
-```python
-import datason
+## Explore and contribute
 
-datason.dumps(obj, **config)    # Serialize to JSON string
-datason.loads(s, **config)      # Deserialize from JSON string
-datason.dump(obj, fp, **config) # Write to file
-datason.load(fp, **config)      # Read from file
-datason.config(**config)        # Context manager for temp config
-```
+- [Troubleshooting](docs/troubleshooting.md): versions, missing plugins, tags, NaN, and limits.
+- [Custom plugins](docs/plugins.md): complete Money type example and registration.
+- [Serialization boundaries](docs/serialization-boundaries.md): reserved keys, budgets, and incoming data.
+- [Migration from v1](docs/migration.md): API and persisted-data differences.
+- [Contributing](CONTRIBUTING.md): development setup and documentation checks.
+- [Examples](examples/): runnable basic, type, security, and checkpoint examples.
+- [Hardening roadmap](docs/hardening-roadmap.md): tested scope and remaining validation.
+- [For AI agents](docs/ai-agents.md): [llms.txt](llms.txt) and [llms-full.txt](llms-full.txt).
 
-That's the entire public API.
-
-## Supported Types
-
-| Category | Types |
-|----------|-------|
-| **JSON primitives** | `str`, `int`, `float`, `bool`, `None`, `dict`, `list` |
-| **Stdlib** | `datetime`, `date`, `time`, `timedelta`, `UUID`, `Decimal`, `complex`, `Path`, `set`, `tuple`, `frozenset` |
-| **NumPy** | `ndarray`, `integer`, `floating`, `bool_`, `complexfloating` |
-| **Pandas** | `DataFrame`, `Series`, `Timestamp`, `Timedelta` |
-| **PyTorch** | `Tensor` |
-| **TensorFlow** | `Tensor`, `EagerTensor` |
-| **scikit-learn** | All estimators (`LinearRegression`, `RandomForestClassifier`, etc.) |
-| **SciPy** | Sparse matrices (`csr`, `csc`, `coo`, etc.) |
-| **Polars** | `DataFrame`, `Series` |
-| **JAX** | `Array` |
-| **Plotly** | `Figure` |
-
-All non-core types are optional — install the relevant extra (`numpy`, `pandas`, `ml`).
-
-## Configuration
-
-```python
-import datason
-from datason import DateFormat, NanHandling, DataFrameOrient
-
-# Inline overrides
-datason.dumps(data, sort_keys=True)
-datason.dumps(data, date_format=DateFormat.UNIX)
-datason.dumps(data, nan_handling=NanHandling.STRING)
-datason.dumps(data, include_type_hints=False)  # Smaller output, no round-trip
-
-# Context manager for scoped config
-with datason.config(sort_keys=True, nan_handling=NanHandling.STRING):
-    datason.dumps(data)
-
-# Presets for common use cases
-from datason import ml_config, api_config, strict_config, performance_config
-
-with datason.config(**ml_config().__dict__):
-    datason.dumps(model_output)   # UNIX_MS dates, fallback to string
-
-with datason.config(**api_config().__dict__):
-    datason.dumps(response)       # ISO dates, sorted keys, no type hints
-```
-
-### Config Options
-
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `date_format` | `DateFormat` | `ISO` | How to serialize datetimes: `ISO`, `UNIX`, `UNIX_MS`, `STRING` |
-| `dataframe_orient` | `DataFrameOrient` | `RECORDS` | DataFrame format: `RECORDS`, `SPLIT`, `DICT`, `LIST`, `VALUES` |
-| `nan_handling` | `NanHandling` | `NULL` | Float NaN/Inf: `NULL`, `STRING`, `KEEP`, `DROP` |
-| `include_type_hints` | `bool` | `True` | Emit type metadata for round-trip fidelity |
-| `sort_keys` | `bool` | `False` | Sort dict keys in output |
-| `max_depth` | `int` | `50` | Max nesting depth (security) |
-| `max_size` | `int` | `100_000` | Max dict/list size (security) |
-| `fallback_to_string` | `bool` | `False` | `str()` unknown types instead of raising |
-| `strict` | `bool` | `True` | Raise on unrecognized type metadata |
-| `redact_fields` | `tuple[str, ...]` | `()` | Field names to redact |
-| `redact_patterns` | `tuple[str, ...]` | `()` | Regex patterns to redact from strings |
-
-## Security Features
-
-### PII Redaction
-
-```python
-# Redact by field name (case-insensitive substring match)
-datason.dumps(user_data, redact_fields=("password", "key", "secret", "token"))
-# {"username": "alice", "password": "[REDACTED]", "api_key": "[REDACTED]"}
-
-# Redact patterns in string values (built-in: email, ssn, credit_card, phone_us, ipv4)
-datason.dumps(data, redact_patterns=("email", "ssn"))
-```
-
-### Integrity Verification
-
-```python
-from datason.security.integrity import wrap_with_integrity, verify_integrity
-
-# Wrap with hash-based integrity envelope
-wrapped = wrap_with_integrity(datason.dumps(data))
-is_valid, payload = verify_integrity(wrapped)
-
-# HMAC with secret key
-wrapped = wrap_with_integrity(datason.dumps(data), key="secret")
-is_valid, payload = verify_integrity(wrapped, key="secret")
-```
-
-### Built-in Limits
-- **Max depth**: 50 (prevents stack overflow from nested data)
-- **Max size**: 100,000 items per dict/list (prevents memory exhaustion)
-- **Circular reference detection** (prevents infinite loops)
-
-All limits raise `SecurityError` and are configurable.
-
-## How It Works
-
-datason uses a plugin-based architecture. Every type beyond JSON primitives is handled by a `TypePlugin` registered in a priority-sorted registry:
-
-```
-Your object --> dumps() --> Plugin registry --> Type-specific serializer --> JSON
-JSON string --> loads() --> Plugin registry --> Type-specific deserializer --> Your object
-```
-
-Type metadata is embedded as `{"__datason_type__": "datetime", "__datason_value__": "2024-01-15T10:30:00"}`, enabling lossless round-trips.
-
-### Writing a Custom Plugin
-
-```python
-from datason._protocols import TypePlugin, SerializeContext, DeserializeContext
-from datason._registry import default_registry
-from datason._types import TYPE_METADATA_KEY, VALUE_METADATA_KEY
-
-class MoneyPlugin:
-    name = "money"
-    priority = 400  # 400+ for user plugins
-
-    def can_handle(self, obj):
-        return isinstance(obj, Money)
-
-    def serialize(self, obj, ctx):
-        return {TYPE_METADATA_KEY: "Money", VALUE_METADATA_KEY: {"amount": str(obj.amount), "currency": obj.currency}}
-
-    def can_deserialize(self, data):
-        return data.get(TYPE_METADATA_KEY) == "Money"
-
-    def deserialize(self, data, ctx):
-        v = data[VALUE_METADATA_KEY]
-        return Money(Decimal(v["amount"]), v["currency"])
-
-default_registry.register(MoneyPlugin())
-```
-
-## For AI Agents
-
-datason includes [`llms.txt`](llms.txt) and [`llms-full.txt`](llms-full.txt) for AI agent discoverability. The full reference contains complete API signatures, all config options, and ready-to-use code examples.
-
-## Documentation
-
-Full documentation at **[danielendler.github.io/datason](https://danielendler.github.io/datason/)**.
+For local development, run `uv sync --locked --group docs`, then `uv run pytest`
+and `uv run mkdocs build --strict`. Report reproducible problems in
+[Issues](https://github.com/danielendler/datason/issues) or discuss usage in
+[Discussions](https://github.com/danielendler/datason/discussions).
 
 ## License
 

@@ -1,79 +1,45 @@
-# For AI Agents
+# For AI coding agents
 
-datason is designed to be easily discoverable and usable by AI coding agents (Claude, GPT, Copilot, etc.).
+Use this documentation to write datason code with explicit output policies and
+version assumptions. For serializing application/agent models, use the
+[structured-data guide](agent-data.md).
 
-## Machine-Readable Documentation
+## Machine-readable documentation
 
-datason provides [`llms.txt`](https://github.com/danielendler/datason/blob/v2/llms.txt) and [`llms-full.txt`](https://github.com/danielendler/datason/blob/v2/llms-full.txt) following the [llms.txt standard](https://llmstxt.org/).
+- [llms.txt](https://danielendler.github.io/datason/llms.txt): concise overview and links.
+- [llms-full.txt](https://danielendler.github.io/datason/llms-full.txt): assembled guides and reference with complete examples.
+- [Source llms.txt](https://github.com/danielendler/datason/blob/main/llms.txt) and
+  [source full reference](https://github.com/danielendler/datason/blob/main/llms-full.txt).
 
-- **`llms.txt`** -- Short summary with links to API docs, examples, and source files
-- **`llms-full.txt`** -- Complete API reference with all function signatures, config options, and ready-to-use code examples in a single file
+The full reference is generated from the user documentation with
+`python scripts/sync_docs.py`. CI checks it for drift. GitHub Pages serves both
+files at the site root after a docs deployment.
 
-## Why datason for AI Agents?
+## Before generating code
 
-AI agents frequently need to serialize complex Python objects when:
+1. Check the version: these docs follow development `main`, ahead of the published
+   alpha as of October 4, 2026. Use [Installation](getting-started.md#installation).
+2. Choose plain JSON for a tool/API consumer or tagged data for supported Python
+   reconstruction. Validate the consumer's schema separately.
+3. Check [Supported types](supported-types.md), including metadata-only plugins
+   and application-model normalization. Do not assume every object is supported.
+4. Keep callbacks/plugins trusted; use the documented reconstruction controls
+   for ordinary incoming JSON. Redaction belongs in diagnostic exports.
+5. Test restored properties and retain stored-data fixtures before upgrades.
 
-- **Generating data pipeline code** -- ML model outputs contain NumPy arrays, timestamps, UUIDs
-- **Building API endpoints** -- Response dicts contain datetime objects, Decimal prices
-- **Logging and debugging** -- Mixed-type dicts need JSON output for structured logging
-- **Persisting state** -- Agent state includes datetime, arrays, paths
-
-With datason, agents can write:
-
-```python
-import datason
-datason.dumps(any_python_object)
-```
-
-Instead of:
+## A small working example
 
 ```python
 import json
+from decimal import Decimal
 
-class CustomEncoder(json.JSONEncoder):
-    def default(self, obj):
-        if isinstance(obj, datetime):
-            return obj.isoformat()
-        if isinstance(obj, np.ndarray):
-            return obj.tolist()
-        if isinstance(obj, UUID):
-            return str(obj)
-        # ... 20 more type checks
-        return super().default(obj)
-
-json.dumps(data, cls=CustomEncoder)
-```
-
-## Quick Reference for Agents
-
-### Installation
-
-```bash
-pip install datason
-pip install datason[numpy]   # if using NumPy
-pip install datason[pandas]  # if using Pandas
-pip install datason[ml]      # if using PyTorch/TF/sklearn
-```
-
-### API (5 functions)
-
-```python
 import datason
 
-datason.dumps(obj)              # -> JSON string
-datason.loads(s)                # -> Python object (types reconstructed)
-datason.dump(obj, file)         # -> write JSON to file
-datason.load(file)              # -> read JSON from file
-
-with datason.config(sort_keys=True):
-    datason.dumps(obj)          # -> sorted JSON string
+result = {"cost": Decimal("19.99")}
+text = datason.dumps(result, include_type_hints=False)
+assert json.loads(text) == {"cost": "19.99"}
 ```
 
-### Common Config Options
-
-```python
-datason.dumps(data, sort_keys=True)                # Sort keys
-datason.dumps(data, include_type_hints=False)       # No metadata (smaller output)
-datason.dumps(data, fallback_to_string=True)        # str() unknown types
-datason.dumps(data, redact_fields=("password",))    # PII redaction
-```
+Use [Recipes](recipes.md) for APIs, redaction, and persistence; [API](api.md) and
+[Configuration](configuration.md) for exact options. A string fallback loses
+unknown type information and should be an explicit policy, not a universal fix.

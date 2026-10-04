@@ -107,4 +107,4 @@ $ pytest --cov=datason --cov-report=term-missing
 
 ---
 
-**📚 Need help?** Check our [Contributing Guide](docs/CONTRIBUTING.md) | [Development Setup](docs/CONTRIBUTING.md#development-setup)
+**📚 Need help?** Check our [Contributing Guide](https://github.com/danielendler/datason/blob/main/CONTRIBUTING.md) | [Development Setup](https://github.com/danielendler/datason/blob/main/CONTRIBUTING.md#development-setup)

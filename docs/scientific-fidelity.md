@@ -1,5 +1,8 @@
 # Scientific round-trip contract
 
+This contract describes development source; see [Installation](getting-started.md#installation)
+for the distinction from published releases.
+
 With `include_type_hints=True`, datason preserves numeric NumPy scalar dtype
 widths, unsigned integers, booleans, and complex scalars. Array shape metadata is
 used during reconstruction, including empty dimensions and zero-dimensional
@@ -37,3 +40,41 @@ Without type hints, these types normalize to JSON values according to the chosen
 API policies. Such JSON is intended for consumers that do not understand datason
 metadata and does not promise exact type reconstruction. Persisted typed payloads
 remain version-sensitive: retain fixture files and test them before upgrading.
+
+## Check the properties your application needs
+
+Install `numpy,pandas` before running these independent examples. An empty shape
+still carries its dimensions and dtype:
+
+```python
+import numpy as np
+
+import datason
+
+array = np.empty((0, 3), dtype=np.uint16)
+restored = datason.loads(datason.dumps(array))
+assert restored.shape == (0, 3)
+assert restored.dtype == array.dtype
+
+stamp = np.datetime64("2026-10-04T10:30:00.123456789", "ns")
+restored_stamp = datason.loads(datason.dumps(stamp))
+assert restored_stamp.dtype == stamp.dtype
+assert restored_stamp == stamp
+```
+
+A nullable integer column and a named index survive a tagged round trip:
+
+```python
+import pandas as pd
+
+import datason
+
+frame = pd.DataFrame({"count": pd.array([1, None], dtype="Int64")},
+                     index=pd.Index(["a", "b"], name="sample"))
+restored = datason.loads(datason.dumps(frame))
+pd.testing.assert_frame_equal(restored, frame)
+```
+
+Use [Supported types](supported-types.md) for other libraries and
+[Typed stored data](recipes.md#typed-stored-data) for file persistence. Retain
+representative fixtures to check these properties when upgrading dependencies.
