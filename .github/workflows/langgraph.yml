@@ -5,6 +5,7 @@ on:
     paths:
       - "datason/**"
       - "tests/integration/test_langgraph*.py"
+      - "tests/unit/test_langgraph_codec_policy.py"
       - "tests/fixtures/langgraph*.json"
       - "scripts/capture_framework_fixtures.py"
       - "pyproject.toml"
@@ -51,6 +52,7 @@ jobs:
           --with langgraph-checkpoint-sqlite==${{ matrix.sqlite }}
           pytest tests/integration/test_langgraph_checkpoint.py
           tests/integration/test_langgraph_runtime.py
+          tests/unit/test_langgraph_codec_policy.py
           --cov=datason --cov-report=xml:coverage-langgraph.xml
       - name: Include real framework execution in patch coverage
         if: matrix.python-version == '3.11'

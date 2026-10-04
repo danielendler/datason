@@ -22,7 +22,8 @@ accepting untrusted SQL. Source SDK versions, format and codec hash are retained
 The capture script requires the older pins and disables tracing/provider calls.
 
 Local verification uses Python 3.12.14. The CI jobs validate the other listed
-Python versions. This table states explicit test scope, not support for all
+Python versions and upload actual codec execution coverage. Changed-code
+coverage requires 90%, including partially covered branches. This table states explicit test scope, not support for all
 SDK releases, arbitrary historical checkpoint schemas or provider transports.
 
 ## LangGraph runtime records

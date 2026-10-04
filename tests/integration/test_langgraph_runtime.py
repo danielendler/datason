@@ -7,7 +7,7 @@ from typing import Annotated, TypedDict
 
 import pytest
 
-from datason._errors import DeserializationError
+from datason._errors import DeserializationError, SerializationError
 from datason._registry import default_registry
 from datason.integrations.langgraph import DatasonSerializer
 
@@ -124,7 +124,15 @@ def test_adapter_registration_is_idempotent():
 
 
 @pytest.mark.parametrize(
-    "tag,value", [("langgraph.Interrupt.v1", {"id": 1, "value": True}), ("langgraph.Send.v1", {"node": 1, "arg": {}})]
+    "tag,value",
+    [
+        ("langgraph.Interrupt.v1", {"id": 1, "value": True}),
+        ("langgraph.Send.v1", {"node": 1, "arg": {}}),
+        ("langgraph.Interrupt.v1", []),
+        ("langgraph.Interrupt.v1", {"id": "valid", "value": True, "response_schema": "invalid"}),
+        ("langgraph.Interrupt.v1", {"id": "valid"}),
+        ("langgraph.Send.v1", {"node": "target"}),
+    ],
 )
 def test_runtime_record_validation(tag, value):
     payload = json.dumps({"__datason_type__": tag, "__datason_value__": value}).encode()
@@ -153,9 +161,59 @@ def test_response_schema_survives_runtime_record_when_supported():
     import inspect
 
     if "response_schema" not in inspect.signature(Interrupt).parameters:
-        pytest.skip("This older LangGraph release has no response_schema field")
+        payload = json.dumps(
+            {
+                "__datason_type__": "langgraph.Interrupt.v1",
+                "__datason_value__": {
+                    "id": "schema-interrupt",
+                    "value": True,
+                    "response_schema": {"type": "boolean"},
+                },
+            }
+        ).encode()
+        with pytest.raises(DeserializationError, match="cannot restore.*response schema"):
+            DatasonSerializer().loads_typed(("datason-json-v1", payload))
+        return
     schema = {"type": "boolean"}
     original = Interrupt(value={"question": "Continue?"}, id="schema-interrupt", response_schema=schema)
     serializer = DatasonSerializer()
     restored = serializer.loads_typed(serializer.dumps_typed((original,)))[0]
     assert restored.response_schema == schema
+
+
+def test_python_schema_class_is_rejected_on_write():
+    import inspect
+
+    if "response_schema" not in inspect.signature(Interrupt).parameters:
+        pytest.skip("Older SDK cannot construct an interrupt with a response schema")
+    serializer = DatasonSerializer()
+    with pytest.raises(SerializationError, match="JSON Schema data"):
+        serializer.dumps_typed(Interrupt(value=True, id="invalid-schema", response_schema=int))
+
+
+def test_send_timeout_policy_is_rejected_on_write():
+    import inspect
+
+    if "timeout" not in inspect.signature(Send).parameters:
+        pytest.skip("Older SDK cannot construct a Send with a timeout")
+    serializer = DatasonSerializer()
+    with pytest.raises(SerializationError, match="timeout policies"):
+        serializer.dumps_typed(Send("target", {}, timeout=1))
+
+
+@pytest.mark.parametrize("kind", ["interrupt", "send"])
+def test_untagged_runtime_export_is_explicit_normalization(kind):
+    import datason
+
+    DatasonSerializer()  # Enables the reviewed codec without changing core defaults.
+    obj = Interrupt(value={"approved": True}, id="export") if kind == "interrupt" else Send("target", {"number": 1})
+    plain = json.loads(datason.dumps(obj, include_type_hints=False))
+    expected = (
+        {"id": "export", "value": {"approved": True}, "response_schema": None}
+        if kind == "interrupt"
+        else {
+            "node": "target",
+            "arg": {"number": 1},
+        }
+    )
+    assert plain == expected
