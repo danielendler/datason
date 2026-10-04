@@ -17,7 +17,7 @@ metadata. Incoming JSON also has a byte budget before parsing.
 | `max_size` | 100,000 | Bound entries per container |
 | `max_string_length` | 1,000,000 | Bound string/key length |
 | `max_nodes` | 1,000,000 | Bound traversal work |
-| `max_input_bytes` | 16,777,216 | Bound encoded input and supported NumPy allocation estimates |
+| `max_input_bytes` | 16,777,216 | Bound encoded input and supported reconstruction buffer estimates |
 | Circular-reference detection | Always enabled by datason | Reject cycles during serialization |
 
 Budget violations raise `SecurityError`. These are representation budgets, not a
@@ -118,3 +118,16 @@ Pickle conversion requires `trusted=True`, because loading pickle can execute
 Python code. Module scanning is diagnostic and does not establish safety.
 See [Trusted pickle migration](pickle-migration.md) for an example and the
 [serialization boundaries](serialization-boundaries.md) for reconstruction controls.
+
+## Reconstruction trust
+
+Built-in typed loaders call installed library constructors; sklearn state
+restoration also imports estimator classes and calls their state hooks. Keep
+model snapshots application-owned and plugins reviewed. For ordinary incoming
+JSON, `allow_plugin_deserialization=False` rejects plugin reconstruction before
+dispatch, including nested tags and non-strict loading. Parser callbacks and
+custom decoder classes remain trusted code.
+
+See the [built-in reconstruction review](ml-reconstruction-review.md) for all
+constructor/import paths, allocation checks and fidelity limits. Bounds on
+individual buffers do not provide a process-wide memory or execution sandbox.

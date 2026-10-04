@@ -43,7 +43,7 @@ record the representation needed by the corresponding deserializer.
 | `max_depth` | `int` | `50` | Representation traversal depth, including metadata |
 | `max_size` | `int` | `100_000` | Entries per representation container |
 | `max_string_length` | `int` | `1_000_000` | Characters per string/key |
-| `max_input_bytes` | `int` | `16_777_216` | Incoming encoded JSON budget; also used for supported NumPy allocation estimates |
+| `max_input_bytes` | `int` | `16_777_216` | Incoming encoded JSON budget; also used for supported reconstruction buffer estimates |
 | `max_nodes` | `int` | `1_000_000` | Traversal work, including plugin conversion |
 | `fallback_to_string` | `bool` | `False` | Stringify unsupported values; loses their original type |
 | `strict` | `bool` | `True` | Raise for unknown type metadata during loading |

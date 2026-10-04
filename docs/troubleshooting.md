@@ -57,7 +57,7 @@ leaves. `STRING` emits strings; `KEEP` can emit the non-standard tokens `NaN` an
 Read the limit named by the error. Metadata counts toward representation depth
 and size, so tagged data can reach a limit before an equivalent plain dict does.
 `max_size` is per container, `max_nodes` bounds traversal, and `max_input_bytes`
-bounds incoming JSON and supported NumPy allocation estimates. They are not a
+bounds incoming JSON and supported reconstruction buffer estimates. They are not a
 process-wide memory quota. Increase only the relevant budget for a known workload.
 See [Serialization boundaries](serialization-boundaries.md).
 

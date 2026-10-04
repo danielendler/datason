@@ -81,11 +81,15 @@ fall back to pickle. Type hints, strict loading, and no string fallback are requ
 Redaction belongs in a separate diagnostic export because it changes state.
 Datason does not install or import LangGraph through its core package.
 
-The integration test pauses a graph before a node, closes SQLite, opens a fresh
-connection, and resumes from stored state. It checks a NumPy float32 array,
-datetime, and binary payload. Locally verified with LangGraph 1.2.12 and
-langgraph-checkpoint-sqlite 3.1.1. This establishes a bounded compatibility example,
-not support for every LangGraph object or historical checkpoint format.
+Compatibility tests exercise pause-before-node, dynamic interrupts, pending
+Send fan-out, explicit model hydration and application-schema upgrades after a
+SQLite close/reopen. The [framework matrix](framework-compatibility.md) pins older
+and current SDK versions and replays a checkpoint captured by the older SDK.
+
+The adapter opts into closed, reviewed Interrupt/Send codecs when LangGraph is
+installed. Those codecs register once in the shared plugin registry. Other
+runtime/message object families and Send timeout policies need explicit codecs.
+This is a bounded integration contract, not general framework-object hydration.
 
 Dataclasses, Pydantic models, and Enums normalize to fields/values. If a node needs
 an application-class instance, validate or hydrate it explicitly in application
@@ -98,5 +102,5 @@ workflow service.
 Run the compatibility example after installing the optional packages:
 
 ```bash
-pytest tests/integration/test_langgraph_checkpoint.py
+pytest tests/integration/test_langgraph_checkpoint.py tests/integration/test_langgraph_runtime.py
 ```

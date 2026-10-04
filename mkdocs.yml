@@ -41,15 +41,18 @@ nav:
       - Structured agent data: agent-data.md
       - Scientific fidelity: scientific-fidelity.md
       - LangGraph checkpoints: langgraph-checkpoints.md
+      - Framework compatibility: framework-compatibility.md
       - Custom plugins: plugins.md
   - Safety and boundaries:
       - Security: security.md
       - Serialization boundaries: serialization-boundaries.md
+      - Built-in reconstruction review: ml-reconstruction-review.md
       - Trusted pickle migration: pickle-migration.md
   - Reference:
       - API: api.md
       - For AI agents: ai-agents.md
       - Migration from v1: migration.md
+      - Persisted format contract: persisted-format-contract.md
   - Project:
       - Hardening roadmap: hardening-roadmap.md
       - Performance strategy: performance-strategy.md

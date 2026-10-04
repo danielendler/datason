@@ -43,11 +43,13 @@ not covered by a blanket compatibility guarantee. Keep the old decoder available
 read representative records, normalize or convert them under an explicit schema,
 and validate the v2 output before switching readers or replacing files.
 
-The current source tests eight fixture payloads from `2.0.0a1`; that sample does
+The current source tests the original eight fixture payloads and 16 additional
+payloads captured from `2.0.0a1`; that sample does
 not establish compatibility with every v1 or alpha payload. Old untagged
 collections remain lists, missing scalar dtype information cannot be recovered,
 and legacy numeric timestamps may have ambiguous units. See
-[Release notes](releases/2.0.0a2.md) for the covered cases.
+[Release notes](releases/2.0.0a2.md) for the covered cases and the [persisted-format contract](persisted-format-contract.md)
+for explicit migration decisions.
 
 ## Review policy changes
 

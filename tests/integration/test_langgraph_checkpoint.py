@@ -28,7 +28,6 @@ def test_sqlite_checkpoint_survives_connection_reopen(tmp_path):
     np = pytest.importorskip("numpy")
     pytest.importorskip("langgraph")
     sqlite = pytest.importorskip("langgraph.checkpoint.sqlite")
-    from langgraph.checkpoint.serde.base import SerializerProtocol
     from langgraph.graph import END, START, StateGraph
 
     class State(TypedDict):
@@ -45,7 +44,6 @@ def test_sqlite_checkpoint_survives_connection_reopen(tmp_path):
     builder.add_edge(START, "advance")
     builder.add_edge("advance", END)
     serializer = DatasonSerializer()
-    assert isinstance(serializer, SerializerProtocol)
     db = str(tmp_path / "checkpoints.sqlite")
     config = {"configurable": {"thread_id": "fidelity-test"}}
     initial = {

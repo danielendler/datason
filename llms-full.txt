@@ -383,12 +383,12 @@ Both writer and reader need the relevant library for reconstruction.
 | NumPy / `numpy` | Arrays and supported numeric, complex, temporal scalars | Supported dtype widths, shape, temporal units; see the [scientific contract](https://danielendler.github.io/datason/scientific-fidelity/) |
 | Pandas / `pandas` | DataFrame, Series, Timestamp, Timedelta | Supported labels, indexes, dtypes, categories; exclusions listed in the [scientific contract](https://danielendler.github.io/datason/scientific-fidelity/) |
 | Pydantic v2 / `pydantic` | BaseModel instances | Alias field dictionaries; call `model_validate` yourself |
-| PyTorch / `ml` | Tensor | Value/dtype/shape reconstruction; does not preserve device or autograd history |
-| TensorFlow / `ml` (Python 3.11+) | Tensor / EagerTensor | Value/dtype/shape reconstruction; does not preserve graph or training state |
+| PyTorch / `ml` | Tensor, device, Size | Supported numeric values/dtype/shape; CPU tensors, no autograd history |
+| TensorFlow / `ml` (Python 3.11+) | Tensor / EagerTensor, Variable, SparseTensor | Supported numeric values/dtype/shape; CPU placement, no graph or training-state guarantee |
 | scikit-learn / `ml` | BaseEstimator and Pipeline | Supported state reconstruction; custom objects within state may need plugins; verify predictions and versions |
 | SciPy / `ml` | Sparse matrices | CSR, CSC, COO representations; other formats restore as COO; sparse arrays restore as matrices |
 | Polars / `ml-extra` | DataFrame, Series | Reconstructed from values; stored schema is not fully reapplied |
-| JAX / `ml-extra` | Array | Reconstructed values; dtype depends on JAX's precision settings |
+| JAX / `ml-extra` | Array | Supported numeric/bool dtype and shape; x64 narrowing rejected when x64 is disabled |
 | Plotly / `ml-extra` | Figure | Reconstructed from figure data |
 | CatBoost / `ml-extra` | Model | Metadata dictionary; fitted trees are not restored |
 | Optuna / `ml-extra` | Study | Metadata/trial summaries; study storage is not restored |
@@ -413,6 +413,9 @@ trusted typed records and workload-specific validation; see
 For concrete output and comparisons, use [Getting started](https://danielendler.github.io/datason/getting-started/)
 and [Recipes](https://danielendler.github.io/datason/recipes/). For another type, choose a JSON `default` callback
 for normalization or a [custom plugin](https://danielendler.github.io/datason/plugins/) for a typed contract.
+
+See the [built-in reconstruction review](https://danielendler.github.io/datason/ml-reconstruction-review/) for current
+ML constructor paths, supported numeric cases, buffer checks, and exclusions.
 
 ---
 
@@ -475,7 +478,7 @@ leaves. `STRING` emits strings; `KEEP` can emit the non-standard tokens `NaN` an
 Read the limit named by the error. Metadata counts toward representation depth
 and size, so tagged data can reach a limit before an equivalent plain dict does.
 `max_size` is per container, `max_nodes` bounds traversal, and `max_input_bytes`
-bounds incoming JSON and supported NumPy allocation estimates. They are not a
+bounds incoming JSON and supported reconstruction buffer estimates. They are not a
 process-wide memory quota. Increase only the relevant budget for a known workload.
 See [Serialization boundaries](https://danielendler.github.io/datason/serialization-boundaries/).
 
@@ -701,7 +704,7 @@ record the representation needed by the corresponding deserializer.
 | `max_depth` | `int` | `50` | Representation traversal depth, including metadata |
 | `max_size` | `int` | `100_000` | Entries per representation container |
 | `max_string_length` | `int` | `1_000_000` | Characters per string/key |
-| `max_input_bytes` | `int` | `16_777_216` | Incoming encoded JSON budget; also used for supported NumPy allocation estimates |
+| `max_input_bytes` | `int` | `16_777_216` | Incoming encoded JSON budget; also used for supported reconstruction buffer estimates |
 | `max_nodes` | `int` | `1_000_000` | Traversal work, including plugin conversion |
 | `fallback_to_string` | `bool` | `False` | Stringify unsupported values; loses their original type |
 | `strict` | `bool` | `True` | Raise for unknown type metadata during loading |
@@ -837,7 +840,7 @@ metadata. Incoming JSON also has a byte budget before parsing.
 | `max_size` | 100,000 | Bound entries per container |
 | `max_string_length` | 1,000,000 | Bound string/key length |
 | `max_nodes` | 1,000,000 | Bound traversal work |
-| `max_input_bytes` | 16,777,216 | Bound encoded input and supported NumPy allocation estimates |
+| `max_input_bytes` | 16,777,216 | Bound encoded input and supported reconstruction buffer estimates |
 | Circular-reference detection | Always enabled by datason | Reject cycles during serialization |
 
 Budget violations raise `SecurityError`. These are representation budgets, not a
@@ -938,6 +941,19 @@ Pickle conversion requires `trusted=True`, because loading pickle can execute
 Python code. Module scanning is diagnostic and does not establish safety.
 See [Trusted pickle migration](https://danielendler.github.io/datason/pickle-migration/) for an example and the
 [serialization boundaries](https://danielendler.github.io/datason/serialization-boundaries/) for reconstruction controls.
+
+## Reconstruction trust
+
+Built-in typed loaders call installed library constructors; sklearn state
+restoration also imports estimator classes and calls their state hooks. Keep
+model snapshots application-owned and plugins reviewed. For ordinary incoming
+JSON, `allow_plugin_deserialization=False` rejects plugin reconstruction before
+dispatch, including nested tags and non-strict loading. Parser callbacks and
+custom decoder classes remain trusted code.
+
+See the [built-in reconstruction review](https://danielendler.github.io/datason/ml-reconstruction-review/) for all
+constructor/import paths, allocation checks and fidelity limits. Bounds on
+individual buffers do not provide a process-wide memory or execution sandbox.
 
 ---
 
@@ -1376,11 +1392,15 @@ fall back to pickle. Type hints, strict loading, and no string fallback are requ
 Redaction belongs in a separate diagnostic export because it changes state.
 Datason does not install or import LangGraph through its core package.
 
-The integration test pauses a graph before a node, closes SQLite, opens a fresh
-connection, and resumes from stored state. It checks a NumPy float32 array,
-datetime, and binary payload. Locally verified with LangGraph 1.2.12 and
-langgraph-checkpoint-sqlite 3.1.1. This establishes a bounded compatibility example,
-not support for every LangGraph object or historical checkpoint format.
+Compatibility tests exercise pause-before-node, dynamic interrupts, pending
+Send fan-out, explicit model hydration and application-schema upgrades after a
+SQLite close/reopen. The [framework matrix](https://danielendler.github.io/datason/framework-compatibility/) pins older
+and current SDK versions and replays a checkpoint captured by the older SDK.
+
+The adapter opts into closed, reviewed Interrupt/Send codecs when LangGraph is
+installed. Those codecs register once in the shared plugin registry. Other
+runtime/message object families and Send timeout policies need explicit codecs.
+This is a bounded integration contract, not general framework-object hydration.
 
 Dataclasses, Pydantic models, and Enums normalize to fields/values. If a node needs
 an application-class instance, validate or hydrate it explicitly in application
@@ -1393,7 +1413,7 @@ workflow service.
 Run the compatibility example after installing the optional packages:
 
 ```bash
-pytest tests/integration/test_langgraph_checkpoint.py
+pytest tests/integration/test_langgraph_checkpoint.py tests/integration/test_langgraph_runtime.py
 ```
 
 ---
@@ -1478,11 +1498,13 @@ not covered by a blanket compatibility guarantee. Keep the old decoder available
 read representative records, normalize or convert them under an explicit schema,
 and validate the v2 output before switching readers or replacing files.
 
-The current source tests eight fixture payloads from `2.0.0a1`; that sample does
+The current source tests the original eight fixture payloads and 16 additional
+payloads captured from `2.0.0a1`; that sample does
 not establish compatibility with every v1 or alpha payload. Old untagged
 collections remain lists, missing scalar dtype information cannot be recovered,
 and legacy numeric timestamps may have ambiguous units. See
-[Release notes](https://danielendler.github.io/datason/releases/2.0.0a2/) for the covered cases.
+[Release notes](https://danielendler.github.io/datason/releases/2.0.0a2/) for the covered cases and the [persisted-format contract](https://danielendler.github.io/datason/persisted-format-contract/)
+for explicit migration decisions.
 
 ## Review policy changes
 
@@ -1496,3 +1518,333 @@ and legacy numeric timestamps may have ambiguous units. See
 Run round-trip assertions against real fixtures and dependency versions before
 an upgrade. [Troubleshooting](https://danielendler.github.io/datason/troubleshooting/) covers missing plugins, limits,
 and output that differs from your expected schema.
+
+---
+
+# Framework compatibility matrix
+
+The supported integration contract is deliberately bounded to the installed SDK
+pins below. Tests execute framework hooks and real SQLite persistence; they do
+not replace SDK state machines, rely on pickle fallbacks, call paid model APIs
+or contact a provider. Core Datason has no new required runtime dependencies.
+
+## Pinned matrix and evidence
+
+| Framework | SDK / checkpoint / storage pins | Python CI | Covered behavior |
+| --- | --- | --- | --- |
+| LangGraph older | 1.0.0 / 2.1.2 / SQLite 2.0.11 | 3.11, 3.13 | Reopen/resume, dynamic interrupts by id, Send fan-out, explicit application hydration/schema upgrades |
+| LangGraph current | 1.2.12 / 4.2.0 / SQLite 3.1.1 | 3.11, 3.13 | Same cases; response-schema record preservation when supported |
+| OpenAI Agents older | 0.22.0 | 3.11, 3.13 | Actual custom-context hooks, tool approval pause/resume and rebound model/tool dependencies |
+| OpenAI Agents current | 0.23.1 | 3.11, 3.13 | Same cases, including an actual snapshot captured by 0.22.0 |
+
+A committed SQLite dump captured under the older LangGraph/checkpoint/storage
+pins is also loaded and resumed by the current matrix. A committed Agents
+snapshot captured under 0.22.0 is restored and resumed by both SDK versions.
+These are owned repository fixtures; SQL execution is test setup, not an API for
+accepting untrusted SQL. Source SDK versions, format and codec hash are retained.
+The capture script requires the older pins and disables tracing/provider calls.
+
+Local verification uses Python 3.12.14. The CI jobs validate the other listed
+Python versions and upload actual codec execution coverage. Changed-code
+coverage requires 90%, including partially covered branches. This table states explicit test scope, not support for all
+SDK releases, arbitrary historical checkpoint schemas or provider transports.
+
+## LangGraph runtime records
+
+Constructing `DatasonSerializer` enables a reviewed integration plugin **when
+LangGraph is installed**. Registration is atomic and idempotent by plugin name.
+The plugin is shared by Datason's normal registry; ordinary application model
+classes continue to normalize rather than being imported from their names.
+Importing the core package does not install or import LangGraph.
+
+The codec preserves only two closed, versioned tags:
+
+- `langgraph.Interrupt.v1`: interrupt id, value and optional JSON response schema.
+- `langgraph.Send.v1`: target node and argument.
+
+Payload fields never select an arbitrary Python class or module to import.
+Nested scientific/binary values use Datason's existing traversal and policies.
+`allow_plugin_deserialization=False` also blocks these runtime tags. Interrupt
+response schemas must be data, not arbitrary Python classes. Older SDKs that
+cannot represent a non-null response schema reject it. Send timeout policies
+require a reviewed application codec and are deliberately rejected here.
+Other framework object families and LangChain message-class hydration remain
+outside this integration contract.
+
+Dynamic interrupts previously normalized to dictionaries, so resumed execution
+failed when LangGraph accessed `interrupt.id`. The regression tests close/reopen
+SQLite before resuming the exact interrupt. Fan-out tests additionally exercise
+pending Send packets. The outer wire label remains `datason-json-v1`; plain
+existing Datason checkpoints remain readable. Older dictionary-normalized
+interrupt writes cannot safely regain a runtime type just by guessing fields:
+export/recover them deliberately from an owned snapshot and application schema.
+
+Native JsonPlus/MessagePack checkpoints have another format. Tests generate a
+real native payload and confirm explicit rejection rather than a pickle fallback.
+Do not silently change the serializer on a live native-checkpoint database. Export
+validated application state and start a new Datason-backed thread; checkpoint
+history and interrupted operations need a separate framework-aware migration.
+
+## Application schema upgrade and hydration
+
+The test persists a version-1 record, pauses before consumption, reopens SQLite,
+then applies an explicit migration and `Reading.model_validate` before the node
+uses the record. The node writes schema version 2 and validated fields back.
+An application owns the version check, migrations and validation; Datason's
+wire label and LangGraph's internal schema version do not replace that contract.
+Keep old snapshots and check resume behavior before retiring them.
+
+## Agents SDK context recipe
+
+Use the documented SDK hooks for a **non-mapping** context and a dedicated
+configuration rather than active diagnostic redaction/string-fallback settings. The SDK intentionally
+handles mapping contexts directly; its custom serializer hook does not rewrite
+arbitrary mapping leaves.
+
+The context codec itself can be checked independently of a provider call:
+
+```python
+import datetime as dt
+from dataclasses import dataclass, asdict
+
+import datason
+
+@dataclass
+class AppContext:
+    observed: dt.datetime
+    payload: bytes
+
+def serialize_context(context):
+    return {"datason_context": datason.dumps(context, **asdict(datason.strict_config()))}
+
+def deserialize_context(mapping):
+    return AppContext(**datason.loads(mapping["datason_context"], **asdict(datason.strict_config())))
+
+context = AppContext(dt.datetime(2026, 10, 4, tzinfo=dt.timezone.utc), b"hello")
+assert deserialize_context(serialize_context(context)) == context
+```
+
+Attach these hooks to the SDK-owned result and your reviewed agent. This
+integration sketch assumes `result` and `agent` are supplied by your application
+and runs inside an async function:
+
+```text
+snapshot = result.to_state().to_json(
+    context_serializer=serialize_context, strict_context=True,
+)
+# Store the SDK-owned snapshot using the application's storage policy.
+state = await RunState.from_json(
+    agent, snapshot,
+    context_deserializer=deserialize_context, strict_context=True,
+)
+```
+
+The test uses datetime, float32 NumPy values and bytes in a dataclass context,
+then verifies a paused tool executes once after the test's explicit approval.
+Runtime clients, callables and live connections are supplied by application code,
+not serialized. These tests do not establish replay prevention or exactly-once
+execution across concurrently restored copies.
+
+Only restore server-owned snapshots or state whose integrity **and ownership**
+the application has verified. SDK snapshots contain pending calls and approvals;
+Datason's encoding and HMAC helpers do not grant authorization to resume them.
+
+---
+
+# Built-in reconstruction review
+
+Review date: October 4, 2026. Scope: every current built-in loader and its
+constructors, imports, file behavior, resource expansion and fidelity limits.
+This is a source/control-flow review backed by the regression tests below,
+not a security assessment of the installed native libraries themselves.
+
+## Trust contract
+
+Typed loads are intended for **trusted application-owned snapshots and reviewed
+plugins**. Registered code, installed library imports and estimator state hooks
+are trusted Python. Checking a module namespace does not make model state safe.
+Datason does not provide a safe-unpickling or arbitrary-code sandbox.
+
+For a boundary that must not dispatch reconstruction plugins:
+
+```python
+import datason
+
+raw_json = '{"score": 1}'
+fields = datason.loads(raw_json, allow_plugin_deserialization=False)
+assert fields == {"score": 1}
+# Validate ordinary fields against the application's schema before use.
+```
+
+This rejects typed plugin tags before dispatch, even with `strict=False` and
+when they are nested inside tagged collections. Basic tuple/set/frozenset
+reconstruction remains available. Do not provide unreviewed parser hooks or
+custom JSON decoder classes: those execute during parsing, before this policy.
+Optional installed libraries may already be imported when Datason itself loads;
+the policy controls reconstruction, not module initialization.
+
+## Constructor and fidelity inventory
+
+| Family / implementation | Reconstruction and possible effects | Fidelity and resource boundary |
+| --- | --- | --- |
+| datetime | `fromisoformat`, `fromtimestamp`, timedelta constructors; no selected module/file loading | Current numeric records include units/ISO; legacy timezone/unit ambiguity needs an explicit migration |
+| UUID, Decimal, Path | UUID/Decimal/Path constructors; Path does not open the named file | Values restore under input/string limits; Path is a value, not an authorized filesystem capability |
+| structured / Pydantic | Validated base64 decode for binary; application models, dataclasses and enums normalize on write | No automatic model-class import/hydration; application explicitly validates loaded fields |
+| NumPy | dtype parsing and array/scalar constructors; no pickle or user-selected module import | Dtype/shape/allocation checks; structured/void rejected; object arrays and extended precision outside the guaranteed contract |
+| Pandas | DataFrame/Series/index/category constructors and dtype conversions | Supported dtype/index metadata restored; budgets cover JSON and underlying NumPy paths, not every possible extension dtype or aggregate allocation |
+| SciPy sparse | COO constructor, optional CSR/CSC conversion | Check shape/coordinates/dtype and estimated COO/pointer buffers before construction; retain huge logical COO shapes with few stored values. Sparse arrays normalize to matrices; other formats normalize to COO |
+| Torch | dtype lookup, CPU tensor/reshape, device/Size value constructors | Dense shape and represented-buffer budgets checked; empty/scalar shapes restored; tested numeric tensors always CPU; complex/quantized tensors need a separate contract. Device metadata does not allocate on that device; autograd/storage alias identity is not retained |
+| TensorFlow | dtype parsing; CPU constant/reshape/Variable/SparseTensor constructors | Dense shape and buffer checks; sparse coordinate/index-buffer checks. Numeric dense/sparse cases are tested; complex/string/resource/variant tensors are outside the guaranteed round-trip contract. Variable name/trainability and original device identity are not guaranteed |
+| sklearn | Import installed `sklearn.*` module; require a BaseEstimator class; `object.__new__` and `__setstate__`; Pipeline constructor | Reject non-estimator classes and malformed state before hydration. State hooks can execute trusted installed code; no safe-untrusted-model claim. Predictions verified for retained examples; library compatibility and Pipeline options remain bounded |
+| Polars | DataFrame/Series constructors from exported values; no payload-selected import/file API | Inferred types; stored schema is not a general dtype restoration contract. Empty/narrow/temporal/extension columns need application validation |
+| JAX | NumPy buffer then configured JAX backend array | Numeric/bool dtypes, shape and buffer checks. Reject x64 narrowing when application x64 is disabled; application chooses backend/x64 policy; device identity is not retained |
+| CatBoost | Return diagnostic dictionary; no model constructor, weight import or training on load | Metadata only; use native artifacts to retain fitted model weights |
+| Optuna | Return diagnostic dictionary; no study/storage constructor on load | Metadata only; trial summaries are not resumable storage |
+| Plotly | Figure constructor and its schema validation | Restores supported figure data/layout; no file/image fetch API invoked by Datason. External asset references may be used later by an application renderer |
+| user plugins | Application-defined methods | Code and allocation/I/O behavior must be reviewed separately; the built-in inventory cannot certify them |
+
+The core imports available optional plugin modules by availability. Only sklearn
+reconstruction selects a dotted module/class from a payload, and that selection
+is restricted to sklearn estimator classes. All libraries listed above remain
+optional; the shared dense allocation helper uses only the Python standard
+library.
+
+## Allocation checks and intentional changes
+
+`max_input_bytes` caps both the parsed input and an estimated **represented
+buffer** for dense ML values. A shape must agree with the supplied element
+count, use non-negative integer dimensions, and respect `max_size`. Validate
+before expensive constructors, then apply the stored shape, including zero-size
+multidimensional arrays. Arrays with omitted legacy shape still use inference.
+
+Sparse storage is proportional to stored entries and sometimes a pointer array,
+not the full logical dense product. CSR checks a row pointer budget, CSC a column
+pointer budget, and COO permits very large logical dimensions when its buffers
+fit. Sparse coordinates must be within their shape. TF sparse checks its index
+and value buffers without treating the logical dense product as an allocation.
+
+These estimates do **not** cap peak memory, total allocations across a snapshot,
+JIT compilation, native-library workspaces or application callbacks. For untrusted
+input, use the dispatch-off policy, schema validation and application/process
+resource controls rather than inferring a sandbox from individual checks.
+
+JAX snapshots requiring 64-bit values fail clearly when x64 is disabled instead
+of silently narrowing. Enable x64 deliberately in the application if its runtime
+supports it, or perform an explicit schema-approved conversion before writing.
+CPU reconstruction of Torch/TF tensors is intentional and portable; no arbitrary
+device from the payload is selected for tensor allocation.
+
+## Regression evidence
+
+`tests/integration/test_ml_reconstruction.py` exercises actual Torch, TF, JAX,
+SciPy and sklearn libraries: empty/scalar dimensions, malformed shapes,
+constructor-not-reached assertions, huge CSR/CSC pointer rejection, large sparse
+COO acceptance, TF sparse coordinate checks, CPU restoration, bfloat16 fidelity,
+JAX x64 policy and non-numeric dtype rejection before allocation,
+non-estimator state-hook rejection, and malformed state rejected before import.
+It also checks dispatch-off behavior for every family and nested typed records.
+
+Pinned local runtime: Torch 2.10.0+cpu, TF 2.20.0, JAX 0.9.0.1, SciPy 1.17.1,
+sklearn 1.8.0, NumPy 2.4.2 and Pandas 3.0.1. Optional compatibility CI covers core
+CPU ML and miscellaneous ML separately when the persisted-format PR is present.
+A broader supported-library/version policy remains a future expansion, rather
+than evidence supplied by this source audit.
+
+---
+
+# Persisted formats and migration contract
+
+The supported historical producer is **v2.0.0a1**, source commit
+`88b110f79922ceef7e4ae3bc92392c0bdbdfa2ba`. The core reader recognizes supported
+`__datason_type__` / `__datason_value__` records; this envelope does not carry an
+application schema version or promise arbitrary historical plugin compatibility.
+Unknown tags fail under the default strict policy. No dotted application class
+names are imported automatically to hydrate models.
+
+## Compatibility evidence
+
+Tests retain the original eight payloads and 16 additional payloads captured from
+that exact source: fitted LinearRegression and a fitted Pipeline, SciPy CSR,
+Torch/TF/JAX float32 arrays, a TF sparse tensor, a numeric Polars frame, a Plotly
+figure, CatBoost and Optuna diagnostic metadata, a custom plugin record, two
+ambiguous numeric timestamps, a dtype-less uint64 maximum and a compact legacy
+HMAC envelope. Capture records
+Python and every optional library version. These are historical **Datason**
+fixtures produced with the recorded libraries, not artifacts from old releases
+of every ML framework.
+
+The capture script verifies the producer commit and unmodified source. Preserve
+the stored strings rather than regenerating them with a candidate writer:
+
+```bash
+git worktree add --detach /tmp/datason-a1 v2.0.0a1
+PYTHONPATH=/tmp/datason-a1 python scripts/capture_alpha1_compat.py \
+  --output /tmp/v2.0.0a1-extended.json
+pytest tests/integration/test_published_alpha_fixtures.py \
+  tests/integration/test_extended_alpha_fixtures.py
+```
+
+Use an isolated environment containing Datason distribution metadata, the
+optional packages at the fixture's versions, and a CPU-capable runtime. The
+producer is established from the imported source, not distribution metadata.
+Tests skip a family when its optional library is absent; optional compatibility
+CI must install the libraries to exercise those cases.
+
+## Reader and migration decisions
+
+| Stored representation | Contract and action |
+| --- | --- |
+| Standard tagged values and supported NumPy arrays | Read with the current loader; validate required values, dtype and shape |
+| Legacy scalar tag without dtype | Defaults to int64/float64/complex128; uint64 values beyond int64 raise. Original width/signedness is absent; restore only with an authoritative dtype |
+| Legacy untagged tuple/set/frozenset | Reads as a list; restore a collection only from an authoritative application schema |
+| Supported fitted sklearn fixture | Predictions match in the tested library versions; pin dependencies and verify predictions before migrating other estimators |
+| CatBoost/Optuna export | Diagnostic metadata, not model weights or resumable study storage; use framework-native artifacts for executable state |
+| Custom plugin record | Register reviewed code explicitly; version the application's tags and support old tags deliberately |
+| Ambiguous numeric datetime | Supply the producer's seconds/milliseconds policy and timezone semantics; never infer them from magnitude |
+| Default-formatted legacy integrity envelope | Supported by the legacy verification path; keyed verification still requires an HMAC |
+| Custom-formatted legacy signature | Requires the original signed bytes; never sign a payload after verification failed |
+| Native LangGraph checkpoint | Different serializer format; export validated application state to a new Datason-backed thread rather than silently rewriting framework history |
+| v1-era Datason formats | No general v1 reader guarantee; use a pinned legacy reader in a trusted isolated environment, validate, then write the current format |
+
+For owned numeric-date records missing `timestamp_unit`, the fixture tests show
+adding the **known** unit before loading. They intentionally prove that the old
+magnitude heuristic gives a different date in the ambiguous cases. Legacy naive
+local timestamps additionally require the producer's timezone; keep that
+conversion in application migration code and write an explicit ISO datetime.
+Do not edit a signed payload before authentication; authenticate and unwrap it
+first, then validate and convert.
+
+For a custom-formatted legacy HMAC, if the exact original JSON is retained:
+
+```python
+import json
+import secrets
+
+from datason.security.integrity import compute_hmac, verify_hmac, wrap_with_integrity
+
+# Create a trusted legacy example with the original signed formatting retained.
+key = secrets.token_hex(32)
+original_signed_json = '{"value":1}'
+legacy_envelope = json.dumps({
+    "__datason_payload__": {"value": 1},
+    "__datason_hmac__": compute_hmac(original_signed_json, key),
+})
+
+signature = json.loads(legacy_envelope)["__datason_hmac__"]
+if not verify_hmac(original_signed_json, key, signature):
+    raise ValueError("Original snapshot authentication failed")
+# Use only the authenticated original; ignore unsigned envelope data.
+upgraded_envelope = wrap_with_integrity(original_signed_json, key=key)
+```
+
+If the signed bytes are gone, do not guess formatting or bypass verification.
+Recover from a trusted backup/source. A hash alone authenticates no owner.
+
+## Application schema upgrades
+
+Persist an application `schema_version` alongside the data. Authenticate the
+complete snapshot where needed, check supported versions, apply explicit
+application migrations, validate the target schema, then write a new snapshot.
+Keep originals until resume/prediction checks pass. Never mutate a checkpoint DB
+in place while an execution may still use it. Datason's type envelope and
+LangGraph's internal checkpoint version do not replace this application contract.

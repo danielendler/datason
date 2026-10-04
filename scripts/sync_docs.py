@@ -25,6 +25,9 @@ PAGES = (
     "langgraph-checkpoints.md",
     "pickle-migration.md",
     "migration.md",
+    "framework-compatibility.md",
+    "ml-reconstruction-review.md",
+    "persisted-format-contract.md",
 )
 
 

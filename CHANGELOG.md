@@ -21,12 +21,18 @@ minimum. See [release notes](docs/releases/2.0.0a2.md) for upgrade guidance.
 - Structured dataclass/Pydantic/enum data and typed binary values (#116).
 - Serialization error field paths, preserving exception identity and causes (#123).
 - Input-byte/node budgets and a plugin reconstruction policy (#113).
-- Persisted payload fixtures captured from the actual v2.0.0a1 release tag.
+- 24 persisted payload fixtures captured from actual a1 source and an explicit
+  migration contract (#127).
+- LangGraph Interrupt/Send runtime codecs, a two-generation SDK matrix and
+  offline Agents snapshot/context/approval restoration tests.
 
 ### Fixed
 
 - NumPy scalar dtype/unsigned range, complex and temporal values, empty array shapes;
   supported Pandas labels, indexes, dtypes and timestamp precision (#115).
+- Empty ML tensor shapes, portable CPU restoration, sparse allocation checks,
+  JAX x64 loss rejection and sklearn estimator-state validation (#128).
+- Preserve numeric bfloat16 across Torch/TF/JAX reconstruction.
 - NumPy complex128 dispatch under warnings-as-errors (#122).
 - JSON options/callback compatibility, collection reconstruction, mapping-key
   validation and shared non-finite-value policies (#97, #101, #113).
@@ -47,8 +53,9 @@ minimum. See [release notes](docs/releases/2.0.0a2.md) for upgrade guidance.
 - Reserved metadata keys and normalized key collisions are rejected. Metadata and
   plugin output now count toward configured limits.
 - Application models normalize to structured dictionaries rather than reconstructing
-  arbitrary classes. Legacy scalar tags remain readable but cannot recover absent
-  dtype information. Legacy untagged collections remain lists.
+  arbitrary classes. Legacy scalar tags cannot recover absent dtype information;
+  large unsigned values need an authoritative dtype. Legacy untagged collections
+  remain lists. Typed ML snapshots require trusted application-owned state.
 - The LangGraph adapter uses a distinct checkpoint format; existing native checkpoints
   require an explicit migration. This is still an alpha, not a stable 2.0 release.
 

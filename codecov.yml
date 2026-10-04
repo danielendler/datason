@@ -37,10 +37,9 @@ coverage:
     # Coverage on PR changes only
     patch:
       default:
-        # Require 70% coverage on new code
-        target: 70%
-        # Allow new code to drop slightly
-        threshold: 10%
+        # Require 90% coverage on changed code, including reconstruction branches
+        target: 90%
+        threshold: 0%
         # Only check the changes, not the whole project
         base: auto
         if_ci_failed: success

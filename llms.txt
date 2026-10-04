@@ -21,11 +21,15 @@ Everyday operations: dumps, loads, dump, load, config. Config enums, Serializati
 - [Custom plugins](https://danielendler.github.io/datason/plugins/): Complete Money plugin and registration
 - [LangGraph](https://danielendler.github.io/datason/langgraph-checkpoints/): Complete SQLite pause/reopen/resume example
 
+- [Framework compatibility](https://danielendler.github.io/datason/framework-compatibility/): Pinned SDK matrix and context hooks
+
 ## Boundaries and upgrades
 
 - [Security](https://danielendler.github.io/datason/security/): Budgets, redaction, hash/HMAC verification
 - [Serialization boundaries](https://danielendler.github.io/datason/serialization-boundaries/): Reconstruction controls, reserved keys, trusted code
 - [Pickle migration](https://danielendler.github.io/datason/pickle-migration/): Explicit trust required before unpickling
+- [Built-in reconstruction review](https://danielendler.github.io/datason/ml-reconstruction-review/): Constructors, fidelity, and represented buffers
+- [Persisted format contract](https://danielendler.github.io/datason/persisted-format-contract/): Historical fixtures and explicit migration decisions
 - [Migration from v1](https://danielendler.github.io/datason/migration/): Changed entry points and stored-data validation
 - [Hardening roadmap](https://danielendler.github.io/datason/hardening-roadmap/): Tested scope and remaining review
 

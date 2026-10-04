@@ -6,7 +6,10 @@ on:
       - "datason/**"
       - "examples/langgraph_checkpoint.py"
       - "docs/langgraph-checkpoints.md"
-      - "tests/integration/test_langgraph_checkpoint.py"
+      - "tests/integration/test_langgraph*.py"
+      - "tests/unit/test_langgraph_codec_policy.py"
+      - "tests/fixtures/langgraph*.json"
+      - "scripts/capture_framework_fixtures.py"
       - "pyproject.toml"
       - "uv.lock"
       - ".github/workflows/langgraph.yml"
@@ -19,11 +22,22 @@ permissions:
 
 jobs:
   checkpoint:
-    name: SQLite resume (Python ${{ matrix.python-version }})
+    name: SQLite resume (${{ matrix.sdk }}, Python ${{ matrix.python-version }})
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         python-version: ["3.11", "3.13"]
+        sdk: [older, current]
+        include:
+          - sdk: older
+            langgraph: "1.0.0"
+            checkpoint: "2.1.2"
+            sqlite: "2.0.11"
+          - sdk: current
+            langgraph: "1.2.12"
+            checkpoint: "4.2.0"
+            sqlite: "3.1.1"
     steps:
       - uses: actions/checkout@v6
       - uses: astral-sh/setup-uv@v7
@@ -34,16 +48,28 @@ jobs:
         env:
           UV_PYTHON: ${{ matrix.python-version }}
         run: >-
-          uv run --locked --extra numpy
-          --with langgraph==1.2.12
-          --with langgraph-checkpoint-sqlite==3.1.1
+          uv run --locked --extra numpy --extra pydantic
+          --with langgraph==${{ matrix.langgraph }}
+          --with langgraph-checkpoint==${{ matrix.checkpoint }}
+          --with langgraph-checkpoint-sqlite==${{ matrix.sqlite }}
           pytest tests/integration/test_langgraph_checkpoint.py
+          tests/integration/test_langgraph_runtime.py
+          tests/unit/test_langgraph_codec_policy.py
+          --cov=datason --cov-report=xml:coverage-langgraph.xml
+      - name: Include real framework execution in patch coverage
+        if: matrix.python-version == '3.11'
+        uses: codecov/codecov-action@v5
+        with:
+          files: coverage-langgraph.xml
+          flags: langgraph
+          fail_ci_if_error: false
 
       - name: Run documented checkpoint example
         env:
           UV_PYTHON: ${{ matrix.python-version }}
         run: >-
           uv run --locked
-          --with langgraph==1.2.12
-          --with langgraph-checkpoint-sqlite==3.1.1
+          --with langgraph==${{ matrix.langgraph }}
+          --with langgraph-checkpoint==${{ matrix.checkpoint }}
+          --with langgraph-checkpoint-sqlite==${{ matrix.sqlite }}
           python examples/langgraph_checkpoint.py
