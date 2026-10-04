@@ -1,0 +1,40 @@
+name: MCP Tool Schema Compatibility
+
+on:
+  pull_request:
+    paths:
+      - "datason/**"
+      - "examples/mcp_schema_boundary.py"
+      - "tests/integration/test_mcp_schema_boundary.py"
+      - ".github/workflows/mcp.yml"
+      - "pyproject.toml"
+      - "uv.lock"
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  schema:
+    name: MCP schema (${{ matrix.sdk }}, Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.13"]
+        sdk: ["2.2.0", "2.3.0"]
+    steps:
+      - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+      - run: uv python install ${{ matrix.python-version }}
+      - name: Validate actual offline protocol outputs
+        env:
+          UV_PYTHON: ${{ matrix.python-version }}
+        run: >-
+          uv run --locked --extra numpy --extra pydantic
+          --with mcp==${{ matrix.sdk }} --with jsonschema==4.26.0
+          pytest tests/integration/test_mcp_schema_boundary.py

@@ -44,6 +44,7 @@ nav:
       - Scientific fidelity: scientific-fidelity.md
       - LangGraph checkpoints: langgraph-checkpoints.md
       - Framework compatibility: framework-compatibility.md
+      - Tool schema boundary: tool-schema-boundary.md
       - Custom plugins: plugins.md
   - Safety and boundaries:
       - Security: security.md
