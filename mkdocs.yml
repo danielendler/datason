@@ -1,12 +1,14 @@
 site_name: datason
 site_description: "JSON serialization for Python APIs, diagnostics, and typed stored data, with examples and explicit fidelity contracts."
-site_url: https://danielendler.github.io/datason/
+site_url: https://danielendler.github.io/datason/docs/
 repo_url: https://github.com/danielendler/datason
 repo_name: danielendler/datason
 edit_uri: edit/main/docs/
 
 theme:
   name: material
+  logo: assets/mark.svg
+  favicon: assets/mark.svg
   palette:
     - scheme: default
       primary: blue
@@ -42,6 +44,7 @@ nav:
       - Scientific fidelity: scientific-fidelity.md
       - LangGraph checkpoints: langgraph-checkpoints.md
       - Framework compatibility: framework-compatibility.md
+      - Tool schema boundary: tool-schema-boundary.md
       - Custom plugins: plugins.md
   - Safety and boundaries:
       - Security: security.md
@@ -55,11 +58,16 @@ nav:
       - Persisted format contract: persisted-format-contract.md
   - Project:
       - Hardening roadmap: hardening-roadmap.md
+      - Adoption evidence: adoption-evidence.md
       - Performance strategy: performance-strategy.md
+      - Performance baseline: performance-baseline.md
       - Rust feasibility gate: rust-feasibility.md
       - Release notes: releases/2.0.0a2.md
       - Changelog: changelog.md
       - Contributing: https://github.com/danielendler/datason/blob/main/CONTRIBUTING.md
+
+extra:
+  homepage: https://danielendler.github.io/datason/
 
 hooks:
   - scripts/docs_hooks.py

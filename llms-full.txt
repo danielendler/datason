@@ -15,7 +15,7 @@ Python 3.10+ is required.
     These docs follow development `main`, currently versioned `2.0.0a2`.
     As of October 4, 2026, PyPI's stable release is v1 (`0.13.0`) and its
     published v2 alpha is `2.0.0a1`. Some features here are newer than that alpha.
-    Start with the [installation guide](https://danielendler.github.io/datason/getting-started/#installation).
+    Start with the [installation guide](https://danielendler.github.io/datason/docs/getting-started/#installation).
 
 ## Your first round trip
 
@@ -46,29 +46,29 @@ For a consumer expecting a plain string, use `include_type_hints=False`.
 
 | Your task | Start with | What to expect |
 | --- | --- | --- |
-| Return an API or tool response | [API recipe](https://danielendler.github.io/datason/recipes/#api-and-tool-responses) | Plain JSON with tags disabled; validate against the consumer's schema |
-| Export logs and diagnostics | [Redaction recipe](https://danielendler.github.io/datason/recipes/#redacted-diagnostics) | Explicit field/pattern redaction; keep the original state separately |
-| Save Python data for later | [Stored-data recipe](https://danielendler.github.io/datason/recipes/#typed-stored-data) | Type tags enabled; supported types reconstructed by datason |
-| Preserve arrays and DataFrames | [Scientific fidelity](https://danielendler.github.io/datason/scientific-fidelity/) | Defined dtype, shape, and index contracts, with examples |
-| Resume a LangGraph workflow | [Checkpoint guide](https://danielendler.github.io/datason/langgraph-checkpoints/) | An opt-in serializer and complete SQLite pause/resume example |
-| Handle your own Python type | [Custom plugins](https://danielendler.github.io/datason/plugins/) | A runnable plugin and round-trip check |
+| Return an API or tool response | [API recipe](https://danielendler.github.io/datason/docs/recipes/#api-and-tool-responses) | Plain JSON with tags disabled; validate against the consumer's schema |
+| Export logs and diagnostics | [Redaction recipe](https://danielendler.github.io/datason/docs/recipes/#redacted-diagnostics) | Explicit field/pattern redaction; keep the original state separately |
+| Save Python data for later | [Stored-data recipe](https://danielendler.github.io/datason/docs/recipes/#typed-stored-data) | Type tags enabled; supported types reconstructed by datason |
+| Preserve arrays and DataFrames | [Scientific fidelity](https://danielendler.github.io/datason/docs/scientific-fidelity/) | Defined dtype, shape, and index contracts, with examples |
+| Resume a LangGraph workflow | [Checkpoint guide](https://danielendler.github.io/datason/docs/langgraph-checkpoints/) | An opt-in serializer and complete SQLite pause/resume example |
+| Handle your own Python type | [Custom plugins](https://danielendler.github.io/datason/docs/plugins/) | A runnable plugin and round-trip check |
 
 ## Familiar interface, explicit policies
 
 The five everyday operations are `dumps`, `loads`, `dump`, `load`, and `config`.
-[Configuration enums and preset factories](https://danielendler.github.io/datason/configuration/) are also exported.
+[Configuration enums and preset factories](https://danielendler.github.io/datason/docs/configuration/) are also exported.
 Common stdlib JSON arguments such as `indent` and `parse_float` work, but defaults
 differ: datason emits Unicode directly, converts non-finite numbers to `null`,
 and includes type metadata. It also enforces traversal and input budgets.
-See [JSON compatibility](https://danielendler.github.io/datason/api/#compatibility-with-stdlib-json).
+See [JSON compatibility](https://danielendler.github.io/datason/docs/api/#compatibility-with-stdlib-json).
 
 Type preservation depends on the type and policy: application models normalize
 to fields, redaction changes data, and some ML plugins export metadata only.
-The [supported-types table](https://danielendler.github.io/datason/supported-types/) explains what comes back.
+The [supported-types table](https://danielendler.github.io/datason/docs/supported-types/) explains what comes back.
 
-Continue with [Getting started](https://danielendler.github.io/datason/getting-started/) for installation and complete
-examples. Use [Troubleshooting](https://danielendler.github.io/datason/troubleshooting/) when an error or unexpected
-output gets in the way, and the [API reference](https://danielendler.github.io/datason/api/) for exact call behavior.
+Continue with [Getting started](https://danielendler.github.io/datason/docs/getting-started/) for installation and complete
+examples. Use [Troubleshooting](https://danielendler.github.io/datason/docs/troubleshooting/) when an error or unexpected
+output gets in the way, and the [API reference](https://danielendler.github.io/datason/docs/api/) for exact call behavior.
 
 ---
 
@@ -84,12 +84,22 @@ These docs describe development `main` (versioned `2.0.0a2`). As of October 4,
 alpha is `2.0.0a1`. Choose deliberately:
 
 ```bash
-# Published v2 alpha; it predates some features described in these docs
+# Stable v1: a different API from the v2 examples on this site
+python -m pip install datason
+
+# Published v2 alpha: matches the three marketing homepage examples
 python -m pip install 'datason==2.0.0a1'
 
 # Current source matching the development docs (requires Git)
 python -m pip install 'datason @ git+https://github.com/danielendler/datason.git@main'
 ```
+
+The published v2 alpha is enough to run the homepage's API JSON, typed storage,
+and redacted diagnostics examples; all three were verified in a fresh PyPI
+installation. It predates newer fixes and features in these development guides,
+including the LangGraph integration and reconstruction hardening. Use current
+source when following the latest guides. An exact prerelease pin installs the
+alpha without needing `--pre`.
 
 The following optional extras install the libraries used by their plugins.
 For current source, select extras in the package name:
@@ -109,7 +119,7 @@ python -m pip install 'datason[numpy,pandas] @ git+https://github.com/danielendl
 | `all` | `numpy`, `pandas`, `ml`, `crypto`; excludes `pydantic` and `ml-extra` |
 
 Install only what you use; `ml` and `ml-extra` can be large. Existing installed
-libraries are detected at import time. The [supported-types guide](https://danielendler.github.io/datason/supported-types/)
+libraries are detected at import time. The [supported-types guide](https://danielendler.github.io/datason/docs/supported-types/)
 lists each handler's behavior; installing an extra does not guarantee fidelity
 for every object in that library. For reproducible development deployments,
 replace `main` in the install URL with a reviewed commit SHA.
@@ -188,7 +198,7 @@ restored_frame = datason.loads(datason.dumps(frame))
 pd.testing.assert_frame_equal(restored_frame, frame)
 ```
 
-See [Scientific fidelity](https://danielendler.github.io/datason/scientific-fidelity/) for indexes, empty shapes,
+See [Scientific fidelity](https://danielendler.github.io/datason/docs/scientific-fidelity/) for indexes, empty shapes,
 timestamp units, and unsupported dtypes. Default non-finite-number policies can
 change values even when tags are enabled.
 
@@ -216,18 +226,18 @@ with TemporaryDirectory() as directory:
 
 ## Go further
 
-- [Recipes](https://danielendler.github.io/datason/recipes/): API responses, redacted logs, stored scientific data, and errors.
-- [Configuration](https://danielendler.github.io/datason/configuration/): defaults, scope, presets, and output policies.
-- [Supported types](https://danielendler.github.io/datason/supported-types/): normalization versus reconstruction.
-- [Serialization boundaries](https://danielendler.github.io/datason/serialization-boundaries/): incoming data and budgets.
-- [Migration from v1](https://danielendler.github.io/datason/migration/): changed entry points and persisted data.
+- [Recipes](https://danielendler.github.io/datason/docs/recipes/): API responses, redacted logs, stored scientific data, and errors.
+- [Configuration](https://danielendler.github.io/datason/docs/configuration/): defaults, scope, presets, and output policies.
+- [Supported types](https://danielendler.github.io/datason/docs/supported-types/): normalization versus reconstruction.
+- [Serialization boundaries](https://danielendler.github.io/datason/docs/serialization-boundaries/): incoming data and budgets.
+- [Migration from v1](https://danielendler.github.io/datason/docs/migration/): changed entry points and persisted data.
 
 ---
 
 # Recipes
 
 Each example is complete and can run independently on the source version
-covered by these docs. See [Installation](https://danielendler.github.io/datason/getting-started/#installation) first.
+covered by these docs. See [Installation](https://danielendler.github.io/datason/docs/getting-started/#installation) first.
 
 ## API and tool responses
 
@@ -256,7 +266,7 @@ Decide whether your schema permits a Decimal string and a nullable score before
 returning the result. Serialization converts values; it does not validate a tool
 schema. For an ordinary JSON request, use
 `datason.loads(text, allow_plugin_deserialization=False)` to reject plugin tags.
-See [Serialization boundaries](https://danielendler.github.io/datason/serialization-boundaries/) for the collection-tag
+See [Serialization boundaries](https://danielendler.github.io/datason/docs/serialization-boundaries/) for the collection-tag
 exception and trusted callback behavior.
 
 ## Redacted diagnostics
@@ -282,7 +292,7 @@ assert record["api_token"] == "private-token"
 Field matching uses case-insensitive substrings: `key` also matches `monkey`.
 Pattern matching runs on string values. Test your rules against representative
 records; matching rules do not establish that every sensitive field was removed.
-Keep redacted exports separate from resumable state. See [Security](https://danielendler.github.io/datason/security/).
+Keep redacted exports separate from resumable state. See [Security](https://danielendler.github.io/datason/docs/security/).
 
 ## Typed stored data
 
@@ -317,7 +327,7 @@ assert restored["payload"] == b"data"
 
 Retain representative stored JSON as upgrade fixtures. JSON tags are a
 version-sensitive format, and disabling them changes the storage contract.
-For graph workflows, see the [LangGraph checkpoint example](https://danielendler.github.io/datason/langgraph-checkpoints/).
+For graph workflows, see the [LangGraph checkpoint example](https://danielendler.github.io/datason/docs/langgraph-checkpoints/).
 
 ## Find the unsupported field
 
@@ -340,7 +350,7 @@ else:
 ```
 
 Normalize that field explicitly, use `default=` for a one-way JSON conversion,
-or write a [custom plugin](https://danielendler.github.io/datason/plugins/) when reconstruction is required.
+or write a [custom plugin](https://danielendler.github.io/datason/docs/plugins/) when reconstruction is required.
 `fallback_to_string=True` is a deliberate lossy export policy.
 
 ---
@@ -371,17 +381,17 @@ No optional libraries are needed for these handlers.
 
 Dataclasses and Enums do not regain their application class. Dict keys become strings; use explicit string
 keys when the consumer's contract matters. Reserved metadata keys and collisions
-raise errors. See [Serialization boundaries](https://danielendler.github.io/datason/serialization-boundaries/).
+raise errors. See [Serialization boundaries](https://danielendler.github.io/datason/docs/serialization-boundaries/).
 
 ## Optional libraries
 
-Install extras using the [version-aware installation guide](https://danielendler.github.io/datason/getting-started/#installation).
+Install extras using the [version-aware installation guide](https://danielendler.github.io/datason/docs/getting-started/#installation).
 Both writer and reader need the relevant library for reconstruction.
 
 | Library / extra | Input | Reconstruction and limits |
 | --- | --- | --- |
-| NumPy / `numpy` | Arrays and supported numeric, complex, temporal scalars | Supported dtype widths, shape, temporal units; see the [scientific contract](https://danielendler.github.io/datason/scientific-fidelity/) |
-| Pandas / `pandas` | DataFrame, Series, Timestamp, Timedelta | Supported labels, indexes, dtypes, categories; exclusions listed in the [scientific contract](https://danielendler.github.io/datason/scientific-fidelity/) |
+| NumPy / `numpy` | Arrays and supported numeric, complex, temporal scalars | Supported dtype widths, shape, temporal units; see the [scientific contract](https://danielendler.github.io/datason/docs/scientific-fidelity/) |
+| Pandas / `pandas` | DataFrame, Series, Timestamp, Timedelta | Supported labels, indexes, dtypes, categories; exclusions listed in the [scientific contract](https://danielendler.github.io/datason/docs/scientific-fidelity/) |
 | Pydantic v2 / `pydantic` | BaseModel instances | Alias field dictionaries; call `model_validate` yourself |
 | PyTorch / `ml` | Tensor, device, Size | Supported numeric values/dtype/shape; CPU tensors, no autograd history |
 | TensorFlow / `ml` (Python 3.11+) | Tensor / EagerTensor, Variable, SparseTensor | Supported numeric values/dtype/shape; CPU placement, no graph or training-state guarantee |
@@ -400,7 +410,7 @@ supported.
 
 ML reconstruction calls library code and can be version-sensitive. Use reviewed,
 trusted typed records and workload-specific validation; see
-[Security](https://danielendler.github.io/datason/security/) and the [hardening roadmap](https://danielendler.github.io/datason/hardening-roadmap/).
+[Security](https://danielendler.github.io/datason/docs/security/) and the [hardening roadmap](https://danielendler.github.io/datason/docs/hardening-roadmap/).
 
 ## What changes values?
 
@@ -410,11 +420,11 @@ trusted typed records and workload-specific validation; see
 - `fallback_to_string=True` converts unsupported objects to strings.
 - Application models normalize to fields; datason does not dynamically import them.
 
-For concrete output and comparisons, use [Getting started](https://danielendler.github.io/datason/getting-started/)
-and [Recipes](https://danielendler.github.io/datason/recipes/). For another type, choose a JSON `default` callback
-for normalization or a [custom plugin](https://danielendler.github.io/datason/plugins/) for a typed contract.
+For concrete output and comparisons, use [Getting started](https://danielendler.github.io/datason/docs/getting-started/)
+and [Recipes](https://danielendler.github.io/datason/docs/recipes/). For another type, choose a JSON `default` callback
+for normalization or a [custom plugin](https://danielendler.github.io/datason/docs/plugins/) for a typed contract.
 
-See the [built-in reconstruction review](https://danielendler.github.io/datason/ml-reconstruction-review/) for current
+See the [built-in reconstruction review](https://danielendler.github.io/datason/docs/ml-reconstruction-review/) for current
 ML constructor paths, supported numeric cases, buffer checks, and exclusions.
 
 ---
@@ -431,7 +441,7 @@ python -m pip show datason
 ```
 
 An unqualified install currently selects stable v1, whose API differs from v2.
-Follow [Installation](https://danielendler.github.io/datason/getting-started/#installation) for a published alpha or
+Follow [Installation](https://danielendler.github.io/datason/docs/getting-started/#installation) for a published alpha or
 source matching these development docs. Avoid a local file named `datason.py`
 that shadows the package.
 
@@ -441,14 +451,14 @@ Tags are enabled by default for Python reconstruction. Use
 `include_type_hints=False` or `api_config()` for plain JSON consumers.
 Decimal and dates then become strings, arrays become JSON lists, and binary
 values become base64 text. Confirm those choices against the API schema.
-See the [API recipe](https://danielendler.github.io/datason/recipes/#api-and-tool-responses).
+See the [API recipe](https://danielendler.github.io/datason/docs/recipes/#api-and-tool-responses).
 
 ## A datetime or model comes back as a string or dict
 
 `loads` reconstructs recognized tagged values; it does not guess types from
 ordinary strings. Preserve tags when storing supported typed data. Dataclasses,
 Pydantic models, and Enums normalize even with tags enabled; explicitly validate
-or hydrate application classes. See [Structured agent data](https://danielendler.github.io/datason/agent-data/).
+or hydrate application classes. See [Structured agent data](https://danielendler.github.io/datason/docs/agent-data/).
 
 ## `SerializationError`: unsupported type
 
@@ -456,7 +466,7 @@ Use `error.path` to locate the field. Normalize it, supply `default=`, or regist
 a custom plugin. Confirm that the optional library is installed in the same
 interpreter, then restart the process after installation because registration
 occurs when datason is imported. String fallback loses the original type.
-See the [error recipe](https://danielendler.github.io/datason/recipes/#find-the-unsupported-field).
+See the [error recipe](https://danielendler.github.io/datason/docs/recipes/#find-the-unsupported-field).
 
 ## `DeserializationError`: missing or unknown plugin
 
@@ -464,14 +474,14 @@ Install the writer's relevant dependencies and register its custom plugins in
 the reader. For inspection only, `strict=False` leaves unknown tags as
 ordinary dictionaries; it does not reconstruct them or suppress every malformed
 payload error. With `allow_plugin_deserialization=False`, plugin tags are rejected
-regardless of `strict`. See [Serialization boundaries](https://danielendler.github.io/datason/serialization-boundaries/).
+regardless of `strict`. See [Serialization boundaries](https://danielendler.github.io/datason/docs/serialization-boundaries/).
 
 ## NaN or Infinity changed
 
 The default policy converts non-finite numbers to `null`, including plugin
 leaves. `STRING` emits strings; `KEEP` can emit the non-standard tokens `NaN` and
 `Infinity`, which strict JSON consumers reject. `DROP` currently also emits
-`null`; it does not remove an element. See [Configuration](https://danielendler.github.io/datason/configuration/#non-finite-numbers).
+`null`; it does not remove an element. See [Configuration](https://danielendler.github.io/datason/docs/configuration/#non-finite-numbers).
 
 ## `SecurityError`: a limit was reached
 
@@ -480,7 +490,7 @@ and size, so tagged data can reach a limit before an equivalent plain dict does.
 `max_size` is per container, `max_nodes` bounds traversal, and `max_input_bytes`
 bounds incoming JSON and supported reconstruction buffer estimates. They are not a
 process-wide memory quota. Increase only the relevant budget for a known workload.
-See [Serialization boundaries](https://danielendler.github.io/datason/serialization-boundaries/).
+See [Serialization boundaries](https://danielendler.github.io/datason/docs/serialization-boundaries/).
 
 ## Reserved or colliding dictionary keys
 
@@ -493,7 +503,7 @@ normalization. datason raises rather than overwrite a value.
 Inline kwargs merge with the active config. A new `datason.config(...)` scope
 starts from defaults rather than inheriting unspecified settings from the outer
 scope, then restores the outer config on exit. See
-[Scope and precedence](https://danielendler.github.io/datason/configuration/#scope-and-precedence).
+[Scope and precedence](https://danielendler.github.io/datason/docs/configuration/#scope-and-precedence).
 
 ## Need to report a problem?
 
@@ -508,7 +518,7 @@ include a sanitized fixture that still reproduces the behavior.
 
 The five everyday operations mirror the stdlib JSON interface. Configuration
 enums, `SerializationConfig`, and preset factories are also exported; see
-[Configuration](https://danielendler.github.io/datason/configuration/). These signatures describe the current source.
+[Configuration](https://danielendler.github.io/datason/docs/configuration/). These signatures describe the current source.
 
 ## `datason.dumps`
 
@@ -555,7 +565,7 @@ assert datason.loads(b'{"value": 1}') == {"value": 1}
 Use `allow_plugin_deserialization=False` for ordinary incoming JSON when typed
 plugin reconstruction should be rejected. Built-in collection tags may still
 restore collections; callbacks remain trusted code. See
-[Serialization boundaries](https://danielendler.github.io/datason/serialization-boundaries/).
+[Serialization boundaries](https://danielendler.github.io/datason/docs/serialization-boundaries/).
 
 ## `datason.dump` and `datason.load`
 
@@ -591,7 +601,7 @@ datason.config(**kwargs: Any) -> context manager yielding SerializationConfig
 Select configuration temporarily. Inline call options override the active scope.
 A new scope starts from defaults, and the previous scope is restored on exit.
 Only configuration fields are accepted here; encoder options such as `indent`
-belong on `dumps`/`dump`. See [Scope and precedence](https://danielendler.github.io/datason/configuration/#scope-and-precedence).
+belong on `dumps`/`dump`. See [Scope and precedence](https://danielendler.github.io/datason/docs/configuration/#scope-and-precedence).
 
 ```python
 import datason
@@ -638,7 +648,7 @@ assert datason.dumps({"name": "café"}, ensure_ascii=False) == '{"name": "café"
 
 Unknown keyword arguments raise `TypeError` naming the receiving function.
 `strict=False` controls unknown type tags, not JSON syntax or all plugin errors.
-See [Troubleshooting](https://danielendler.github.io/datason/troubleshooting/) for common output surprises.
+See [Troubleshooting](https://danielendler.github.io/datason/docs/troubleshooting/) for common output surprises.
 
 ## Error types
 
@@ -655,7 +665,7 @@ current error import path and is subject to alpha API changes.
 
 Other errors from stdlib parsing, user callbacks, and third-party libraries may
 propagate. String fallback does not suppress security failures. Inspect
-`SerializationError.path` with the [error recipe](https://danielendler.github.io/datason/recipes/#find-the-unsupported-field).
+`SerializationError.path` with the [error recipe](https://danielendler.github.io/datason/docs/recipes/#find-the-unsupported-field).
 
 ---
 
@@ -663,7 +673,7 @@ propagate. String fallback does not suppress security failures. Inspect
 
 Choose configuration around the output your consumer expects. The defaults
 include type tags for Python reconstruction; `api_config()` disables tags for
-ordinary JSON responses. See [Recipes](https://danielendler.github.io/datason/recipes/) for complete workflows.
+ordinary JSON responses. See [Recipes](https://danielendler.github.io/datason/docs/recipes/) for complete workflows.
 
 ## Scope and precedence
 
@@ -715,7 +725,7 @@ record the representation needed by the corresponding deserializer.
 `strict=False` leaves unknown tags as dictionaries; it does not bypass limits
 or all malformed-payload errors. `allow_plugin_deserialization=False` rejects
 plugin tags even with `strict=False`. Built-in collection tags can still restore
-collections. See [Serialization boundaries](https://danielendler.github.io/datason/serialization-boundaries/).
+collections. See [Serialization boundaries](https://danielendler.github.io/datason/docs/serialization-boundaries/).
 
 ## Date formats
 
@@ -742,7 +752,7 @@ assert json.loads(datason.dumps(stamp, include_type_hints=False,
 
 Tagged numeric datetime records include explicit units and an ISO representation
 for reconstruction. Naive numeric encoding uses UTC. Named timezone identity is
-not preserved, although the offset is. See [Scientific fidelity](https://danielendler.github.io/datason/scientific-fidelity/).
+not preserved, although the offset is. See [Scientific fidelity](https://danielendler.github.io/datason/docs/scientific-fidelity/).
 
 ## Non-finite numbers
 
@@ -790,7 +800,7 @@ assert json.loads(datason.dumps(frame, include_type_hints=False,
 `DICT` maps columns to index/value mappings, `LIST` maps columns to value lists,
 and `VALUES` emits rows only. Tagged frames carry separate metadata; empty
 frames, duplicate labels, and non-string columns may force split orientation
-for fidelity. See [Scientific fidelity](https://danielendler.github.io/datason/scientific-fidelity/).
+for fidelity. See [Scientific fidelity](https://danielendler.github.io/datason/docs/scientific-fidelity/).
 
 ## Presets
 
@@ -816,8 +826,8 @@ with datason.config(**asdict(preset)):
 | `performance_config()` | No tags, no sorting, KEEP non-finite values, string fallback | Lossy; may emit non-standard JSON; benchmark your workload |
 
 For JSON encoder/decoder kwargs and their interaction with plugins, see the
-[API reference](https://danielendler.github.io/datason/api/#compatibility-with-stdlib-json). For redaction and budgets,
-see [Security](https://danielendler.github.io/datason/security/).
+[API reference](https://danielendler.github.io/datason/docs/api/#compatibility-with-stdlib-json). For redaction and budgets,
+see [Security](https://danielendler.github.io/datason/docs/security/).
 
 ---
 
@@ -827,7 +837,7 @@ Start with the data you are reading or exporting: plain incoming JSON, trusted
 typed stored data, or redacted diagnostics. datason provides representation
 limits, redaction, and integrity helpers. Plugins, model serializers, and JSON
 callbacks remain trusted Python code. v2 is an alpha; see the
-[hardening roadmap](https://danielendler.github.io/datason/hardening-roadmap/) for review scope.
+[hardening roadmap](https://danielendler.github.io/datason/docs/hardening-roadmap/) for review scope.
 
 ## Representation budgets
 
@@ -845,7 +855,7 @@ metadata. Incoming JSON also has a byte budget before parsing.
 
 Budget violations raise `SecurityError`. These are representation budgets, not a
 process-wide memory limit or a sandbox for callbacks. A custom parser hook can
-execute before full-tree validation. See [Serialization boundaries](https://danielendler.github.io/datason/serialization-boundaries/).
+execute before full-tree validation. See [Serialization boundaries](https://danielendler.github.io/datason/docs/serialization-boundaries/).
 
 ```python
 import datason
@@ -892,7 +902,7 @@ such as `key` also matches `monkey`; matching is not a complete classification
 of sensitive data. Custom regex execution is trusted and not time-limited here.
 Policies traverse plugin output too, and redaction can prevent reconstruction.
 Use a separate diagnostic copy rather than redacting resumable state.
-See the [diagnostics recipe](https://danielendler.github.io/datason/recipes/#redacted-diagnostics).
+See the [diagnostics recipe](https://danielendler.github.io/datason/docs/recipes/#redacted-diagnostics).
 
 ## Verify integrity before reconstructing
 
@@ -939,8 +949,8 @@ or replay prevention; applications must enforce those separately.
 
 Pickle conversion requires `trusted=True`, because loading pickle can execute
 Python code. Module scanning is diagnostic and does not establish safety.
-See [Trusted pickle migration](https://danielendler.github.io/datason/pickle-migration/) for an example and the
-[serialization boundaries](https://danielendler.github.io/datason/serialization-boundaries/) for reconstruction controls.
+See [Trusted pickle migration](https://danielendler.github.io/datason/docs/pickle-migration/) for an example and the
+[serialization boundaries](https://danielendler.github.io/datason/docs/serialization-boundaries/) for reconstruction controls.
 
 ## Reconstruction trust
 
@@ -951,7 +961,7 @@ JSON, `allow_plugin_deserialization=False` rejects plugin reconstruction before
 dispatch, including nested tags and non-strict loading. Parser callbacks and
 custom decoder classes remain trusted code.
 
-See the [built-in reconstruction review](https://danielendler.github.io/datason/ml-reconstruction-review/) for all
+See the [built-in reconstruction review](https://danielendler.github.io/datason/docs/ml-reconstruction-review/) for all
 constructor/import paths, allocation checks and fidelity limits. Bounds on
 individual buffers do not provide a process-wide memory or execution sandbox.
 
@@ -1009,8 +1019,8 @@ representation. Exceptions raised directly outside Datason traversal may have
 `path=None`. This diagnostic does not report successful normalization or guarantee
 lossless restoration; non-finite and application-model policies still apply.
 
-For complete normalization and persistence examples, see [Recipes](https://danielendler.github.io/datason/recipes/).
-For all defaults and how to select a scope, see [Configuration](https://danielendler.github.io/datason/configuration/).
+For complete normalization and persistence examples, see [Recipes](https://danielendler.github.io/datason/docs/recipes/).
+For all defaults and how to select a scope, see [Configuration](https://danielendler.github.io/datason/docs/configuration/).
 
 ---
 
@@ -1023,7 +1033,7 @@ Application plugins with ordinary priority (for example, 400) can override these
 fallback normalizers when a stronger type contract is needed.
 
 Install the `pydantic` extra for the optional Pydantic v2 integration, following
-the [installation guide](https://danielendler.github.io/datason/getting-started/#installation).
+the [installation guide](https://danielendler.github.io/datason/docs/getting-started/#installation).
 
 For a Pydantic v2 model, validate explicitly after loading:
 
@@ -1086,14 +1096,14 @@ restored = ToolResult(Status(fields["status"]), fields["payload"])
 assert restored.status is Status.READY
 ```
 
-For provider responses, use the [API recipe](https://danielendler.github.io/datason/recipes/#api-and-tool-responses).
-For a custom class that needs automatic reconstruction, see [Custom plugins](https://danielendler.github.io/datason/plugins/).
+For provider responses, use the [API recipe](https://danielendler.github.io/datason/docs/recipes/#api-and-tool-responses).
+For a custom class that needs automatic reconstruction, see [Custom plugins](https://danielendler.github.io/datason/docs/plugins/).
 
 ---
 
 # Scientific round-trip contract
 
-This contract describes development source; see [Installation](https://danielendler.github.io/datason/getting-started/#installation)
+This contract describes development source; see [Installation](https://danielendler.github.io/datason/docs/getting-started/#installation)
 for the distinction from published releases.
 
 With `include_type_hints=True`, datason preserves numeric NumPy scalar dtype
@@ -1168,8 +1178,8 @@ restored = datason.loads(datason.dumps(frame))
 pd.testing.assert_frame_equal(restored, frame)
 ```
 
-Use [Supported types](https://danielendler.github.io/datason/supported-types/) for other libraries and
-[Typed stored data](https://danielendler.github.io/datason/recipes/#typed-stored-data) for file persistence. Retain
+Use [Supported types](https://danielendler.github.io/datason/docs/supported-types/) for other libraries and
+[Typed stored data](https://danielendler.github.io/datason/docs/recipes/#typed-stored-data) for file persistence. Retain
 representative fixtures to check these properties when upgrading dependencies.
 
 ---
@@ -1297,11 +1307,11 @@ rather than calling public `dumps` and accidentally creating a second JSON strin
 and other exceptions propagate. Treat plugins and their reconstruction code as
 trusted Python; representation limits do not sandbox them. Validate payload
 structure in a custom deserializer before using it. For more detail, see
-[Serialization boundaries](https://danielendler.github.io/datason/serialization-boundaries/).
+[Serialization boundaries](https://danielendler.github.io/datason/docs/serialization-boundaries/).
 
 ## Built-in handlers
 
-See [Supported types](https://danielendler.github.io/datason/supported-types/) for libraries, installation extras,
+See [Supported types](https://danielendler.github.io/datason/docs/supported-types/) for libraries, installation extras,
 normalization behavior, and reconstruction limits. The core directly handles
 JSON primitives and collection tags; registered plugins handle other supported
 values. Application-model normalization is deliberately distinct from
@@ -1378,7 +1388,7 @@ and metadata-only exports.
 
 # LangGraph checkpoint adapter
 
-Use the development source installation from [Getting started](https://danielendler.github.io/datason/getting-started/#installation),
+Use the development source installation from [Getting started](https://danielendler.github.io/datason/docs/getting-started/#installation),
 then install the optional framework and SQLite dependencies. These versions match
 the existing compatibility example:
 
@@ -1461,7 +1471,7 @@ Datason does not install or import LangGraph through its core package.
 
 Compatibility tests exercise pause-before-node, dynamic interrupts, pending
 Send fan-out, explicit model hydration and application-schema upgrades after a
-SQLite close/reopen. The [framework matrix](https://danielendler.github.io/datason/framework-compatibility/) pins older
+SQLite close/reopen. The [framework matrix](https://danielendler.github.io/datason/docs/framework-compatibility/) pins older
 and current SDK versions and replays a checkpoint captured by the older SDK.
 
 The adapter opts into closed, reviewed Interrupt/Send codecs when LangGraph is
@@ -1515,15 +1525,15 @@ Use JSON or a separately isolated migration process for untrusted inputs.
 For a file from a source you already trust to execute code, call
 `pickle_file_to_json(path, trusted=True)` from the same module. Confirm the JSON
 representation and restore it in a separate check before replacing stored data.
-See [Supported types](https://danielendler.github.io/datason/supported-types/) for normalization limitations and
-[Migration from v1](https://danielendler.github.io/datason/migration/) for historical JSON compatibility.
+See [Supported types](https://danielendler.github.io/datason/docs/supported-types/) for normalization limitations and
+[Migration from v1](https://danielendler.github.io/datason/docs/migration/) for historical JSON compatibility.
 
 ---
 
 # Migration from v1
 
 v2 is a rewrite with different entry points, configuration, and metadata.
-Choose a v2 installation explicitly using [Getting started](https://danielendler.github.io/datason/getting-started/#installation).
+Choose a v2 installation explicitly using [Getting started](https://danielendler.github.io/datason/docs/getting-started/#installation).
 An unqualified PyPI install currently selects stable v1.
 
 ## Map the operations
@@ -1556,7 +1566,7 @@ assert datason.loads(text) == output
 
 The ML preset enables string fallback, which loses unsupported type information.
 Use strict defaults and workload-specific validation for stored state.
-See [Configuration](https://danielendler.github.io/datason/configuration/) and [Supported types](https://danielendler.github.io/datason/supported-types/).
+See [Configuration](https://danielendler.github.io/datason/docs/configuration/) and [Supported types](https://danielendler.github.io/datason/docs/supported-types/).
 
 ## Inspect existing stored data
 
@@ -1570,7 +1580,7 @@ payloads captured from `2.0.0a1`; that sample does
 not establish compatibility with every v1 or alpha payload. Old untagged
 collections remain lists, missing scalar dtype information cannot be recovered,
 and legacy numeric timestamps may have ambiguous units. See
-[Release notes](https://danielendler.github.io/datason/releases/2.0.0a2/) for the covered cases and the [persisted-format contract](https://danielendler.github.io/datason/persisted-format-contract/)
+[Release notes](https://danielendler.github.io/datason/docs/releases/2.0.0a2/) for the covered cases and the [persisted-format contract](https://danielendler.github.io/datason/docs/persisted-format-contract/)
 for explicit migration decisions.
 
 ## Review policy changes
@@ -1579,11 +1589,11 @@ for explicit migration decisions.
 - Reserved metadata keys and normalized key collisions raise errors.
 - Representation metadata and plugin output count toward traversal budgets.
 - Application models normalize to fields; explicitly validate or hydrate classes.
-- Pickle migration requires explicit trust; see [Trusted pickle migration](https://danielendler.github.io/datason/pickle-migration/).
-- A LangGraph serializer change does not migrate existing checkpoints; see [LangGraph](https://danielendler.github.io/datason/langgraph-checkpoints/).
+- Pickle migration requires explicit trust; see [Trusted pickle migration](https://danielendler.github.io/datason/docs/pickle-migration/).
+- A LangGraph serializer change does not migrate existing checkpoints; see [LangGraph](https://danielendler.github.io/datason/docs/langgraph-checkpoints/).
 
 Run round-trip assertions against real fixtures and dependency versions before
-an upgrade. [Troubleshooting](https://danielendler.github.io/datason/troubleshooting/) covers missing plugins, limits,
+an upgrade. [Troubleshooting](https://danielendler.github.io/datason/docs/troubleshooting/) covers missing plugins, limits,
 and output that differs from your expected schema.
 
 ---

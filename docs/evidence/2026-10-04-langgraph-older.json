@@ -1,0 +1,77 @@
+{
+  "installed_distribution_versions": {
+    "datason": "2.0.0a2",
+    "numpy": "2.5.3",
+    "langgraph": "1.0.0",
+    "langgraph-checkpoint": "2.1.2"
+  },
+  "scope": "local scientific values, not arbitrary graph state or independent adoption",
+  "cases": {
+    "runtime_source_sha256": {
+      "native": {
+        "serialization": "failed",
+        "error_type": "AttributeError",
+        "error": "'dict' object has no attribute 'dtype'"
+      },
+      "datason": {
+        "serialization": "failed",
+        "error_type": "AttributeError",
+        "error": "'dict' object has no attribute 'dtype'"
+      }
+    },
+    "int32": {
+      "native": {
+        "serialization": "failed",
+        "error_type": "TypeError",
+        "error": "Type is not msgpack serializable: numpy.int32"
+      },
+      "datason": {
+        "serialization": "success",
+        "value_dtype_shape": "preserved"
+      }
+    },
+    "float32": {
+      "native": {
+        "serialization": "failed",
+        "error_type": "TypeError",
+        "error": "Type is not msgpack serializable: numpy.float32"
+      },
+      "datason": {
+        "serialization": "success",
+        "value_dtype_shape": "preserved"
+      }
+    },
+    "datetime64_array": {
+      "native": {
+        "serialization": "failed",
+        "error_type": "TypeError",
+        "error": "Type is not msgpack serializable: numpy.ndarray"
+      },
+      "datason": {
+        "serialization": "success",
+        "value_dtype_shape": "preserved"
+      }
+    },
+    "timedelta64_array": {
+      "native": {
+        "serialization": "failed",
+        "error_type": "TypeError",
+        "error": "Type is not msgpack serializable: numpy.ndarray"
+      },
+      "datason": {
+        "serialization": "success",
+        "value_dtype_shape": "preserved"
+      }
+    },
+    "empty_multidimensional": {
+      "native": {
+        "serialization": "success",
+        "value_dtype_shape": "preserved"
+      },
+      "datason": {
+        "serialization": "success",
+        "value_dtype_shape": "preserved"
+      }
+    }
+  }
+}

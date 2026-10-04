@@ -15,6 +15,11 @@ datason v2 optimizes for **real workload latency**, not synthetic benchmark scor
 - `data_science`: dataframe-like and feature-batch payloads
 - `ml_serving`: model request/response envelopes
 
+The bundled samples are synthetic JSON-only values, including the samples
+named `data_science`. They do not exercise real NumPy/Pandas values or establish
+customer performance. The [boundary baseline](performance-baseline.md) adds
+actual typed scientific cases, other JSON codecs and fresh-process import costs.
+
 Sample corpus is stored at:
 
 - `perf/workloads/sample/*.ndjson`

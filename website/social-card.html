@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>datason social card source</title>
+    <link rel="stylesheet" href="assets/site.css" />
+    <style>
+      html,
+      body {
+        width: 1200px;
+        height: 630px;
+        overflow: hidden;
+      }
+      body {
+        background: #14251c;
+        color: #f7f7f0;
+        position: relative;
+        padding: 60px 65px;
+      }
+      body:before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background-image:
+          linear-gradient(#ffffff04 1px, transparent 1px),
+          linear-gradient(90deg, #ffffff04 1px, transparent 1px);
+        background-size: 44px 44px;
+        pointer-events: none;
+      }
+      .brand {
+        font-size: 38px;
+        gap: 14px;
+      }
+      .brand img {
+        width: 44px;
+        height: 44px;
+      }
+      .label {
+        position: absolute;
+        right: 65px;
+        top: 72px;
+        font-family: var(--mono);
+        font-size: 14px;
+        letter-spacing: 2px;
+        color: #c4f269;
+      }
+      h1 {
+        font-size: 77px;
+        line-height: 1.06;
+        letter-spacing: -4px;
+        margin: 47px 0 23px;
+        position: relative;
+      }
+      h1 span {
+        color: #c4f269;
+      }
+      p {
+        font-size: 20px;
+        color: #b8c6ac;
+        position: relative;
+        max-width: 630px;
+        line-height: 1.6;
+      }
+      .bottom {
+        position: absolute;
+        bottom: 44px;
+        left: 65px;
+        right: 65px;
+        border-top: 1px solid #ffffff22;
+        padding-top: 22px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-family: var(--mono);
+        font-size: 12px;
+        letter-spacing: 1px;
+        color: #b8c6ac;
+      }
+      .object {
+        position: absolute;
+        right: 80px;
+        top: 205px;
+        width: 220px;
+        height: 220px;
+        background: #eaf0de;
+        border-radius: 15px;
+        box-shadow: 13px 13px 0 #344a28;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        transform: rotate(-6deg);
+      }
+      .object img {
+        width: 83px;
+        height: 83px;
+      }
+      .object code {
+        font-size: 17px;
+        color: #526c3b;
+        margin-top: 26px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="brand">
+      <img src="assets/mark.svg" alt="" /><span
+        >datason<span class="brand-dot">.</span></span
+      >
+    </div>
+    <span class="label">PYTHON → JSON</span>
+    <h1>
+      Your data is<br />richer than JSON.<br /><span>Send it anyway.</span>
+    </h1>
+    <p>
+      One familiar Python API.<br />APIs, typed storage, and redacted
+      diagnostics.
+    </p>
+    <div class="object" aria-hidden="true">
+      <img src="assets/mark.svg" alt="" /><code>datason.dumps(data)</code>
+    </div>
+    <div class="bottom">
+      <span>ZERO CORE DEPENDENCIES · OPEN SOURCE · V2 ALPHA</span
+      ><span>danielendler.github.io/datason</span>
+    </div>
+  </body>
+</html>
