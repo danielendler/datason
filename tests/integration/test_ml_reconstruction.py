@@ -67,6 +67,36 @@ def test_torch_reconstruction_uses_cpu_even_with_other_default_device():
     assert restored.tolist() == [1]
 
 
+@pytest.mark.parametrize("library", ["torch", "tensorflow", "jax"])
+def test_dense_bfloat16_preserves_dtype_and_values(library):
+    backend = pytest.importorskip(library)
+    if library == "torch":
+        value = backend.tensor([1.0, 2.0], dtype=backend.bfloat16)
+    elif library == "tensorflow":
+        value = backend.constant([1.0, 2.0], dtype=backend.bfloat16)
+    else:
+        import jax.numpy as jnp
+
+        value = jnp.array([1.0, 2.0], dtype=jnp.bfloat16)
+    restored = datason.loads(datason.dumps(value))
+    assert restored.dtype == value.dtype
+    assert tuple(restored.shape) == (2,)
+    if library == "tensorflow":
+        assert restored.numpy().tolist() == [1.0, 2.0]
+    else:
+        assert restored.tolist() == [1.0, 2.0]
+
+
+@pytest.mark.parametrize("dtype", ["object", "U1000", "V1000"])
+def test_jax_rejects_non_numeric_dtype_before_allocation(monkeypatch, dtype):
+    pytest.importorskip("jax")
+    np = pytest.importorskip("numpy")
+    with monkeypatch.context() as patch:
+        patch.setattr(np, "array", lambda *args, **kwargs: pytest.fail("unsupported dtype allocated"))
+        with pytest.raises(DeserializationError, match="numeric or boolean"):
+            datason.loads(wire("jax.Array", {"data": [1], "shape": [1], "dtype": dtype}))
+
+
 def test_tensorflow_variable_empty_shape_and_cpu():
     tf = pytest.importorskip("tensorflow")
     restored = datason.loads(datason.dumps(tf.Variable(tf.zeros([2, 0, 4]))))

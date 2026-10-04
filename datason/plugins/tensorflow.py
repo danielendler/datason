@@ -70,8 +70,9 @@ def _serialize_dense(tensor: Any, ctx: SerializeContext, type_name: str) -> Any:
     return tensor.numpy().tolist()
 
 
-def _serialize_sparse_tensor(sparse: tf.SparseTensor, ctx: SerializeContext) -> Any:
+def _serialize_sparse_tensor(sparse: Any, ctx: SerializeContext) -> Any:
     """Serialize a SparseTensor with indices, values, and shape."""
+    # TF stub versions disagree on component nullability; validate the runtime boundary.
     indices, values, dense_shape = sparse.indices, sparse.values, sparse.dense_shape
     if indices is None or values is None or dense_shape is None or values.dtype is None:
         raise PluginError("Incomplete TensorFlow sparse components")

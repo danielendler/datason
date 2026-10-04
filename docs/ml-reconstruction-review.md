@@ -82,7 +82,8 @@ device from the payload is selected for tensor allocation.
 `tests/integration/test_ml_reconstruction.py` exercises actual Torch, TF, JAX,
 SciPy and sklearn libraries: empty/scalar dimensions, malformed shapes,
 constructor-not-reached assertions, huge CSR/CSC pointer rejection, large sparse
-COO acceptance, TF sparse coordinate checks, CPU restoration, JAX x64 policy,
+COO acceptance, TF sparse coordinate checks, CPU restoration, bfloat16 fidelity,
+JAX x64 policy and non-numeric dtype rejection before allocation,
 non-estimator state-hook rejection, and malformed state rejected before import.
 It also checks dispatch-off behavior for every family and nested typed records.
 

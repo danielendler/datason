@@ -293,7 +293,7 @@ def _reconstruct_jax_array(value: Any, ctx: DeserializeContext) -> Any:
     from .._errors import DeserializationError
 
     dtype = np.dtype(value["dtype"])
-    if dtype.fields is not None or dtype.kind not in "biufc":
+    if dtype.fields is not None or not (jnp.issubdtype(dtype, jnp.number) or jnp.issubdtype(dtype, jnp.bool_)):
         raise DeserializationError("JAX reconstruction requires a numeric or boolean dtype")
     if not jax.config.x64_enabled and (
         (dtype.kind in "iuf" and dtype.itemsize > 4) or (dtype.kind == "c" and dtype.itemsize > 8)
