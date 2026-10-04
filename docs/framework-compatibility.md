@@ -78,20 +78,38 @@ configuration rather than active diagnostic redaction/string-fallback settings. 
 handles mapping contexts directly; its custom serializer hook does not rewrite
 arbitrary mapping leaves.
 
+The context codec itself can be checked independently of a provider call:
+
 ```python
+import datetime as dt
+from dataclasses import dataclass, asdict
+
 import datason
 
+@dataclass
+class AppContext:
+    observed: dt.datetime
+    payload: bytes
+
 def serialize_context(context):
-    return {"datason_context": datason.dumps(context, **datason.strict_config().__dict__)}
+    return {"datason_context": datason.dumps(context, **asdict(datason.strict_config()))}
 
 def deserialize_context(mapping):
-    return AppContext(**datason.loads(mapping["datason_context"], **datason.strict_config().__dict__))
+    return AppContext(**datason.loads(mapping["datason_context"], **asdict(datason.strict_config())))
 
+context = AppContext(dt.datetime(2026, 10, 4, tzinfo=dt.timezone.utc), b"hello")
+assert deserialize_context(serialize_context(context)) == context
+```
+
+Attach these hooks to the SDK-owned result and your reviewed agent. This
+integration sketch assumes `result` and `agent` are supplied by your application
+and runs inside an async function:
+
+```text
 snapshot = result.to_state().to_json(
     context_serializer=serialize_context, strict_context=True,
 )
-# Save the SDK-owned structured snapshot using the application's storage policy.
-# On restore, pass the reviewed application agent with rebound models/tools:
+# Store the SDK-owned snapshot using the application's storage policy.
 state = await RunState.from_json(
     agent, snapshot,
     context_deserializer=deserialize_context, strict_context=True,
