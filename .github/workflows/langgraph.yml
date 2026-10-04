@@ -51,3 +51,11 @@ jobs:
           --with langgraph-checkpoint-sqlite==${{ matrix.sqlite }}
           pytest tests/integration/test_langgraph_checkpoint.py
           tests/integration/test_langgraph_runtime.py
+          --cov=datason --cov-report=xml:coverage-langgraph.xml
+      - name: Include real framework execution in patch coverage
+        if: matrix.python-version == '3.11'
+        uses: codecov/codecov-action@v5
+        with:
+          files: coverage-langgraph.xml
+          flags: langgraph
+          fail_ci_if_error: false
