@@ -15,7 +15,11 @@ Datason does not provide a safe-unpickling or arbitrary-code sandbox.
 For a boundary that must not dispatch reconstruction plugins:
 
 ```python
+import datason
+
+raw_json = '{"score": 1}'
 fields = datason.loads(raw_json, allow_plugin_deserialization=False)
+assert fields == {"score": 1}
 # Validate ordinary fields against the application's schema before use.
 ```
 

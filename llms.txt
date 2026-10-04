@@ -1,29 +1,42 @@
 # datason
 
-> datason is a zero-dependency Python library that serializes any Python object to JSON and back. It is a drop-in replacement for `json.dumps`/`json.loads` that handles datetime, UUID, Decimal, Path, NumPy arrays, Pandas DataFrames, PyTorch tensors, TensorFlow tensors, and scikit-learn models out of the box. Install with `pip install datason`. Requires Python 3.10+.
+> JSON serialization for Python APIs, diagnostics, and typed stored data. Python 3.10+; zero core runtime dependencies, optional scientific/ML plugins. Development docs currently describe 2.0.0a2 source. As of October 4, 2026, PyPI stable is v1 (0.13.0) and the published v2 alpha is 2.0.0a1. Choose installation explicitly.
 
-datason's API is intentionally minimal: 5 functions that mirror the stdlib `json` module. Every type beyond JSON primitives is handled by a plugin-based registry that serializes objects to `{"__datason_type__": "typename", "__datason_value__": <data>}` metadata dicts, enabling perfect round-trip fidelity.
+Everyday operations: dumps, loads, dump, load, config. Config enums, SerializationConfig, and preset factories are also exported. Tags are enabled by default for supported Python reconstruction; disable them for ordinary JSON consumers. Default NaN/Infinity output is null. Models normalize to fields; some ML plugins export metadata only. Schema validation is an application responsibility.
 
-## Docs
+## Start here
 
-- [README](https://github.com/danielendler/datason/blob/v2/README.md): Quick start, installation, and feature overview
-- [Full LLM Reference](https://github.com/danielendler/datason/blob/v2/llms-full.txt): Complete API reference with all function signatures, config options, and code examples
+- [Installation](https://danielendler.github.io/datason/getting-started/): Version-aware install and complete first examples
+- [Recipes](https://danielendler.github.io/datason/recipes/): API responses, redaction, persistence, and errors
+- [Supported types](https://danielendler.github.io/datason/supported-types/): Normalization and reconstruction contracts
+- [Troubleshooting](https://danielendler.github.io/datason/troubleshooting/): Version/API mismatches, missing plugins, tags, non-finite values, and limits
+- [Full reference](https://danielendler.github.io/datason/llms-full.txt): Generated from user documentation; complete examples
 
-## API Reference
+## Reference and depth
 
-- [Core API (dumps, loads, dump, load, config)](https://github.com/danielendler/datason/blob/v2/datason/_core.py): Serialization and deserialization functions
-- [Configuration](https://github.com/danielendler/datason/blob/v2/datason/_config.py): SerializationConfig dataclass, DateFormat/NanHandling/DataFrameOrient enums, preset factories
-- [Plugin Protocol](https://github.com/danielendler/datason/blob/v2/datason/_protocols.py): TypePlugin interface for extending datason with custom types
-- [Error Types](https://github.com/danielendler/datason/blob/v2/datason/_errors.py): DatasonError, SecurityError, SerializationError, DeserializationError, PluginError
+- [API](https://danielendler.github.io/datason/api/): Accepted inputs, JSON kwargs, defaults, and errors
+- [Configuration](https://danielendler.github.io/datason/configuration/): All options, scope behavior, enums, and presets
+- [Scientific fidelity](https://danielendler.github.io/datason/scientific-fidelity/): Supported NumPy/Pandas properties and exclusions
+- [Structured data](https://danielendler.github.io/datason/agent-data/): Dataclasses, Pydantic, Enums, and bytes
+- [Custom plugins](https://danielendler.github.io/datason/plugins/): Complete Money plugin and registration
+- [LangGraph](https://danielendler.github.io/datason/langgraph-checkpoints/): Complete SQLite pause/reopen/resume example
 
-## Examples
+- [Framework compatibility](https://danielendler.github.io/datason/framework-compatibility/): Pinned SDK matrix and context hooks
 
-- [Basic Usage](https://github.com/danielendler/datason/blob/v2/examples/basic_usage.py): Drop-in json replacement, file I/O, NaN handling
-- [Type Plugins](https://github.com/danielendler/datason/blob/v2/examples/type_plugins.py): datetime, UUID, Decimal, Path, NumPy, Pandas serialization
-- [Security Features](https://github.com/danielendler/datason/blob/v2/examples/security.py): PII redaction, integrity verification
+## Boundaries and upgrades
 
-## Optional
+- [Security](https://danielendler.github.io/datason/security/): Budgets, redaction, hash/HMAC verification
+- [Serialization boundaries](https://danielendler.github.io/datason/serialization-boundaries/): Reconstruction controls, reserved keys, trusted code
+- [Pickle migration](https://danielendler.github.io/datason/pickle-migration/): Explicit trust required before unpickling
+- [Built-in reconstruction review](https://danielendler.github.io/datason/ml-reconstruction-review/): Constructors, fidelity, and represented buffers
+- [Persisted format contract](https://danielendler.github.io/datason/persisted-format-contract/): Historical fixtures and explicit migration decisions
+- [Migration from v1](https://danielendler.github.io/datason/migration/): Changed entry points and stored-data validation
+- [Hardening roadmap](https://danielendler.github.io/datason/hardening-roadmap/): Tested scope and remaining review
 
-- [Security: Integrity](https://github.com/danielendler/datason/blob/v2/datason/security/integrity.py): Hash and HMAC envelope for tamper detection
-- [Security: Redaction](https://github.com/danielendler/datason/blob/v2/datason/security/redaction.py): PII field and pattern redaction
-- [Plugin Registry](https://github.com/danielendler/datason/blob/v2/datason/_registry.py): Thread-safe plugin registration and priority dispatch
+## Source
+
+- [Repository](https://github.com/danielendler/datason): Source, issues, and contribution workflow
+- [Examples](https://github.com/danielendler/datason/tree/main/examples): Runnable scripts
+- [Core serializer](https://github.com/danielendler/datason/blob/main/datason/_core.py)
+- [Core deserializer](https://github.com/danielendler/datason/blob/main/datason/_deserialize.py)
+- [Plugin protocol](https://github.com/danielendler/datason/blob/main/datason/_protocols.py)

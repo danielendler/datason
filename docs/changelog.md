@@ -7,6 +7,14 @@ All notable changes to datason are documented here. This project uses [Semantic 
 This alpha keeps the pure Python, zero-required-dependency core and Python 3.10+
 minimum. See [release notes](releases/2.0.0a2.md) for upgrade guidance.
 
+### Documentation
+
+- Reorganize onboarding and navigation around API responses, diagnostics, and typed storage.
+- Clarify development-source versus published-alpha installation, optional extras,
+  reconstruction contracts, JSON compatibility, configuration scope, and trust controls.
+- Add recipes, troubleshooting, supported-type guidance, and runnable advanced examples.
+- Validate documentation snippets in CI and publish synchronized AI reference files.
+
 ### Added
 
 - Opt-in LangGraph checkpoint serializer with SQLite resume compatibility CI (#118).

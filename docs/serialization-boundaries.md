@@ -26,7 +26,9 @@ For incoming data that should remain ordinary JSON, disable plugin execution:
 ```python
 import datason
 
+incoming_json = '{"message": "hello", "count": 1}'
 data = datason.loads(incoming_json, allow_plugin_deserialization=False)
+assert data == {"message": "hello", "count": 1}
 ```
 
 Typed plugin records then raise `DeserializationError`, even with `strict=False`.
@@ -47,3 +49,6 @@ Paths identify fields and indexes without including the unsupported value's
 representation. Exceptions raised directly outside Datason traversal may have
 `path=None`. This diagnostic does not report successful normalization or guarantee
 lossless restoration; non-finite and application-model policies still apply.
+
+For complete normalization and persistence examples, see [Recipes](recipes.md).
+For all defaults and how to select a scope, see [Configuration](configuration.md).

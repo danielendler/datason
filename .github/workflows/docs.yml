@@ -7,10 +7,10 @@ name: Docs
 on:
   push:
     branches: [main]
-    paths: ["docs/**", "mkdocs.yml", "README.md", "pyproject.toml", "uv.lock", ".github/workflows/docs.yml"]
+    paths: ["docs/**", "mkdocs.yml", "README.md", "examples/**", "scripts/**", "llms*.txt", "pyproject.toml", "uv.lock", ".github/workflows/docs.yml"]
   pull_request:
     branches: [main]
-    paths: ["docs/**", "mkdocs.yml", "README.md", "pyproject.toml", "uv.lock", ".github/workflows/docs.yml"]
+    paths: ["docs/**", "mkdocs.yml", "README.md", "examples/**", "scripts/**", "llms*.txt", "pyproject.toml", "uv.lock", ".github/workflows/docs.yml"]
   workflow_dispatch:
 
 permissions:
@@ -36,6 +36,17 @@ jobs:
       - run: uv python install 3.12
 
       - run: uv sync --locked --group docs
+
+      - name: Lint documentation tooling
+        run: |
+          uv run --locked ruff check scripts/sync_docs.py scripts/docs_hooks.py scripts/check_doc_examples.py examples/langgraph_checkpoint.py
+          uv run --locked ruff format --check scripts/sync_docs.py scripts/docs_hooks.py scripts/check_doc_examples.py examples/langgraph_checkpoint.py
+
+      - name: Check generated AI reference
+        run: uv run --locked python scripts/sync_docs.py --check
+
+      - name: Run documentation examples
+        run: uv run --locked --extra numpy --extra pandas --extra pydantic python scripts/check_doc_examples.py
 
       - name: Build MkDocs
         run: uv run --locked mkdocs build --strict

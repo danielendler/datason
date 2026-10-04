@@ -64,7 +64,17 @@ For a custom-formatted legacy HMAC, if the exact original JSON is retained:
 
 ```python
 import json
-from datason.security.integrity import verify_hmac, wrap_with_integrity
+import secrets
+
+from datason.security.integrity import compute_hmac, verify_hmac, wrap_with_integrity
+
+# Create a trusted legacy example with the original signed formatting retained.
+key = secrets.token_hex(32)
+original_signed_json = '{"value":1}'
+legacy_envelope = json.dumps({
+    "__datason_payload__": {"value": 1},
+    "__datason_hmac__": compute_hmac(original_signed_json, key),
+})
 
 signature = json.loads(legacy_envelope)["__datason_hmac__"]
 if not verify_hmac(original_signed_json, key, signature):

@@ -1,9 +1,9 @@
 site_name: datason
-site_description: "Drop-in replacement for json.dumps/json.loads that handles datetime, NumPy, Pandas, PyTorch, and 50+ Python types."
-site_url: https://datason.readthedocs.io
+site_description: "JSON serialization for Python APIs, diagnostics, and typed stored data, with examples and explicit fidelity contracts."
+site_url: https://danielendler.github.io/datason/
 repo_url: https://github.com/danielendler/datason
 repo_name: danielendler/datason
-edit_uri: edit/v2/docs/
+edit_uri: edit/main/docs/
 
 theme:
   name: material
@@ -25,26 +25,45 @@ theme:
     - content.code.annotate
     - navigation.instant
     - navigation.sections
-    - navigation.expand
+    - navigation.top
     - search.highlight
     - toc.follow
 
 nav:
   - Home: index.md
-  - Getting Started: getting-started.md
-  - API Reference: api.md
-  - Configuration: configuration.md
-  - Security: security.md
-  - Custom Plugins: plugins.md
-  - For AI Agents: ai-agents.md
-  - Framework Compatibility: framework-compatibility.md
-  - Performance Strategy: performance-strategy.md
-  - Rust Feasibility Gate: rust-feasibility.md
-  - Persisted Format Contract: persisted-format-contract.md
-  - Migration from v1: migration.md
-  - Release Notes: releases/2.0.0a2.md
-  - Changelog: changelog.md
-  - Adoption Evidence: adoption-evidence.md
+  - Start here:
+      - Getting started: getting-started.md
+      - Recipes: recipes.md
+      - Supported types: supported-types.md
+      - Troubleshooting: troubleshooting.md
+  - Guides:
+      - Configuration: configuration.md
+      - Structured agent data: agent-data.md
+      - Scientific fidelity: scientific-fidelity.md
+      - LangGraph checkpoints: langgraph-checkpoints.md
+      - Framework compatibility: framework-compatibility.md
+      - Custom plugins: plugins.md
+  - Safety and boundaries:
+      - Security: security.md
+      - Serialization boundaries: serialization-boundaries.md
+      - Built-in reconstruction review: ml-reconstruction-review.md
+      - Trusted pickle migration: pickle-migration.md
+  - Reference:
+      - API: api.md
+      - For AI agents: ai-agents.md
+      - Migration from v1: migration.md
+      - Persisted format contract: persisted-format-contract.md
+  - Project:
+      - Hardening roadmap: hardening-roadmap.md
+      - Adoption evidence: adoption-evidence.md
+      - Performance strategy: performance-strategy.md
+      - Rust feasibility gate: rust-feasibility.md
+      - Release notes: releases/2.0.0a2.md
+      - Changelog: changelog.md
+      - Contributing: https://github.com/danielendler/datason/blob/main/CONTRIBUTING.md
+
+hooks:
+  - scripts/docs_hooks.py
 
 plugins:
   - search
