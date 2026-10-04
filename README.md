@@ -5,16 +5,17 @@
 [![PyPI version](https://img.shields.io/pypi/v/datason.svg)](https://pypi.org/project/datason/)
 [![Python versions](https://img.shields.io/pypi/pyversions/datason.svg)](https://pypi.org/project/datason/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![Docs](https://img.shields.io/badge/docs-GitHub%20Pages-blue)](https://danielendler.github.io/datason/)
+[![Docs](https://img.shields.io/badge/docs-GitHub%20Pages-blue)](https://danielendler.github.io/datason/docs/)
 
 **JSON serialization for Python APIs, diagnostics, and stored state.**
 Handle datetime, UUID, Decimal, paths, and collections, with optional plugins for
 NumPy, Pandas, and ML libraries. The core has no runtime dependencies. Python 3.10+.
 
-[Get started](https://danielendler.github.io/datason/getting-started/) ·
-[Recipes](https://danielendler.github.io/datason/recipes/) ·
-[Supported types](https://danielendler.github.io/datason/supported-types/) ·
-[API reference](https://danielendler.github.io/datason/api/)
+[Website](https://danielendler.github.io/datason/) ·
+[Get started](https://danielendler.github.io/datason/docs/getting-started/) ·
+[Recipes](https://danielendler.github.io/datason/docs/recipes/) ·
+[Supported types](https://danielendler.github.io/datason/docs/supported-types/) ·
+[API reference](https://danielendler.github.io/datason/docs/api/)
 
 ## Install the version you intend to use
 

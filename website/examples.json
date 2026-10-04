@@ -1,0 +1,39 @@
+{
+  "api": {
+    "code": "from datetime import datetime\nfrom decimal import Decimal\nimport datason\n\ndata = {\n    \"created\": datetime(2026, 10, 4),\n    \"price\": Decimal(\"19.99\"),\n}\ntext = datason.dumps(data,\n                     include_type_hints=False)\nprint(text)",
+    "expected": {
+      "created": "2026-10-04T00:00:00",
+      "price": "19.99"
+    },
+    "badge": "TAGS OFF",
+    "description": "Plain JSON for your client. Decimal stays precise as a string.",
+    "guide": "docs/recipes/#api-and-tool-responses"
+  },
+  "storage": {
+    "code": "from datetime import datetime\nfrom decimal import Decimal\nimport datason\n\ndata = {\n    \"created\": datetime(2026, 10, 4),\n    \"price\": Decimal(\"19.99\"),\n}\ntext = datason.dumps(data)\nrestored = datason.loads(text)\nassert restored == data\nprint(text)",
+    "expected": {
+      "created": {
+        "__datason_type__": "datetime",
+        "__datason_value__": "2026-10-04T00:00:00"
+      },
+      "price": {
+        "__datason_type__": "decimal.Decimal",
+        "__datason_value__": "19.99"
+      }
+    },
+    "badge": "TAGS ON",
+    "description": "Type metadata lets datason restore the datetime and Decimal.",
+    "guide": "docs/recipes/#typed-stored-data"
+  },
+  "diagnostics": {
+    "code": "import datason\n\ndata = {\n    \"event\": \"signed_in\",\n    \"email\": \"alice@example.com\",\n    \"api_token\": \"private-token\",\n}\ntext = datason.dumps(data,\n    redact_fields=(\"token\",),\n    redact_patterns=(\"email\",))\nprint(text)",
+    "expected": {
+      "event": "signed_in",
+      "email": "[REDACTED]",
+      "api_token": "[REDACTED]"
+    },
+    "badge": "REDACTION ON",
+    "description": "Keep the event. Redact the fields and patterns you choose.",
+    "guide": "docs/recipes/#redacted-diagnostics"
+  }
+}

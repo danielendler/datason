@@ -6,32 +6,32 @@ Everyday operations: dumps, loads, dump, load, config. Config enums, Serializati
 
 ## Start here
 
-- [Installation](https://danielendler.github.io/datason/getting-started/): Version-aware install and complete first examples
-- [Recipes](https://danielendler.github.io/datason/recipes/): API responses, redaction, persistence, and errors
-- [Supported types](https://danielendler.github.io/datason/supported-types/): Normalization and reconstruction contracts
-- [Troubleshooting](https://danielendler.github.io/datason/troubleshooting/): Version/API mismatches, missing plugins, tags, non-finite values, and limits
+- [Installation](https://danielendler.github.io/datason/docs/getting-started/): Version-aware install and complete first examples
+- [Recipes](https://danielendler.github.io/datason/docs/recipes/): API responses, redaction, persistence, and errors
+- [Supported types](https://danielendler.github.io/datason/docs/supported-types/): Normalization and reconstruction contracts
+- [Troubleshooting](https://danielendler.github.io/datason/docs/troubleshooting/): Version/API mismatches, missing plugins, tags, non-finite values, and limits
 - [Full reference](https://danielendler.github.io/datason/llms-full.txt): Generated from user documentation; complete examples
 
 ## Reference and depth
 
-- [API](https://danielendler.github.io/datason/api/): Accepted inputs, JSON kwargs, defaults, and errors
-- [Configuration](https://danielendler.github.io/datason/configuration/): All options, scope behavior, enums, and presets
-- [Scientific fidelity](https://danielendler.github.io/datason/scientific-fidelity/): Supported NumPy/Pandas properties and exclusions
-- [Structured data](https://danielendler.github.io/datason/agent-data/): Dataclasses, Pydantic, Enums, and bytes
-- [Custom plugins](https://danielendler.github.io/datason/plugins/): Complete Money plugin and registration
-- [LangGraph](https://danielendler.github.io/datason/langgraph-checkpoints/): Complete SQLite pause/reopen/resume example
+- [API](https://danielendler.github.io/datason/docs/api/): Accepted inputs, JSON kwargs, defaults, and errors
+- [Configuration](https://danielendler.github.io/datason/docs/configuration/): All options, scope behavior, enums, and presets
+- [Scientific fidelity](https://danielendler.github.io/datason/docs/scientific-fidelity/): Supported NumPy/Pandas properties and exclusions
+- [Structured data](https://danielendler.github.io/datason/docs/agent-data/): Dataclasses, Pydantic, Enums, and bytes
+- [Custom plugins](https://danielendler.github.io/datason/docs/plugins/): Complete Money plugin and registration
+- [LangGraph](https://danielendler.github.io/datason/docs/langgraph-checkpoints/): Complete SQLite pause/reopen/resume example
 
-- [Framework compatibility](https://danielendler.github.io/datason/framework-compatibility/): Pinned SDK matrix and context hooks
+- [Framework compatibility](https://danielendler.github.io/datason/docs/framework-compatibility/): Pinned SDK matrix and context hooks
 
 ## Boundaries and upgrades
 
-- [Security](https://danielendler.github.io/datason/security/): Budgets, redaction, hash/HMAC verification
-- [Serialization boundaries](https://danielendler.github.io/datason/serialization-boundaries/): Reconstruction controls, reserved keys, trusted code
-- [Pickle migration](https://danielendler.github.io/datason/pickle-migration/): Explicit trust required before unpickling
-- [Built-in reconstruction review](https://danielendler.github.io/datason/ml-reconstruction-review/): Constructors, fidelity, and represented buffers
-- [Persisted format contract](https://danielendler.github.io/datason/persisted-format-contract/): Historical fixtures and explicit migration decisions
-- [Migration from v1](https://danielendler.github.io/datason/migration/): Changed entry points and stored-data validation
-- [Hardening roadmap](https://danielendler.github.io/datason/hardening-roadmap/): Tested scope and remaining review
+- [Security](https://danielendler.github.io/datason/docs/security/): Budgets, redaction, hash/HMAC verification
+- [Serialization boundaries](https://danielendler.github.io/datason/docs/serialization-boundaries/): Reconstruction controls, reserved keys, trusted code
+- [Pickle migration](https://danielendler.github.io/datason/docs/pickle-migration/): Explicit trust required before unpickling
+- [Built-in reconstruction review](https://danielendler.github.io/datason/docs/ml-reconstruction-review/): Constructors, fidelity, and represented buffers
+- [Persisted format contract](https://danielendler.github.io/datason/docs/persisted-format-contract/): Historical fixtures and explicit migration decisions
+- [Migration from v1](https://danielendler.github.io/datason/docs/migration/): Changed entry points and stored-data validation
+- [Hardening roadmap](https://danielendler.github.io/datason/docs/hardening-roadmap/): Tested scope and remaining review
 
 ## Source
 
