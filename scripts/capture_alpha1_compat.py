@@ -10,6 +10,7 @@ import argparse
 import datetime as dt
 import json
 import platform
+import shutil
 import subprocess
 from importlib.metadata import version
 from pathlib import Path
@@ -96,10 +97,14 @@ def diagnostic_values() -> dict[str, Any]:
 
 def capture() -> dict[str, Any]:
     source = Path(datason.__file__).resolve().parent.parent
-    actual = subprocess.check_output(["git", "-C", str(source), "rev-parse", "HEAD"], text=True).strip()
+    git = shutil.which("git")
+    if git is None:
+        raise RuntimeError("Capture requires an installed git executable")
+    # Fixed read-only arguments against the local source checkout; no shell.
+    actual = subprocess.check_output([git, "-C", str(source), "rev-parse", "HEAD"], text=True).strip()  # noqa: S603
     if actual != SOURCE_COMMIT:
         raise ValueError("Capture must use the published a1 source commit")
-    subprocess.run(["git", "-C", str(source), "diff", "--exit-code", "HEAD", "--", "datason"], check=True)
+    subprocess.run([git, "-C", str(source), "diff", "--exit-code", "HEAD", "--", "datason"], check=True)  # noqa: S603
     default_registry.register(PointPlugin())
     values = {**ml_values(), **diagnostic_values(), "custom_point": Point(3, 4)}
     payloads = {name: datason.dumps(value) for name, value in values.items()}
