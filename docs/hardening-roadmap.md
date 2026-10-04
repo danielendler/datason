@@ -1,7 +1,9 @@
 # Datason hardening and AI integration roadmap
 
-Review date: October 3, 2026. This records the hardening batch integrated into
-main after maintainer approval. The published alpha has not been replaced.
+Review date: October 4, 2026. Earlier hardening batches and release preparation
+are merged. The P1 follow-up below is implemented in review branches; its PRs
+must merge before those changes are part of main. The published alpha has not
+been replaced.
 
 ## Product direction
 
@@ -78,13 +80,28 @@ coverage, not a comprehensive migration guarantee. The
 metadata-inclusive budgets, scalar metadata and model normalization. Preparing
 or merging release metadata does not tag, publish or upload the package.
 
-## Next validation milestones
+## P1 follow-up prepared for review
+
+These are fidelity, reconstruction and integration milestones for the existing
+five-function API, not a renewed API migration. The combined candidate passes
+**985 tests without skips and all 30 snapshots** locally with actual optional
+libraries and current framework pins. Branch-specific counts are in each PR.
+
+| Work | Implementation and evidence | Remaining boundary |
+| --- | --- | --- |
+| Persisted formats ([#127](https://github.com/danielendler/datason/pull/127)) | 24 actual a1 payload fixtures, including fitted ML predictions, custom codecs, ambiguous units, unsigned overflow and legacy signatures; explicit migration decisions | Missing producer information cannot be guessed; fixture coverage is bounded to recorded library versions |
+| Reconstruction review ([#128](https://github.com/danielendler/datason/pull/128)) | Inventory every built-in loader; 99 regression cases for pre-allocation checks, empty shapes, bfloat16, CPU restoration, JAX x64 policy, estimator hydration and dispatch-off | Typed loads remain for trusted application-owned state; buffer estimates and namespace checks are not a sandbox |
+| [Framework matrix](framework-compatibility.md) ([#129](https://github.com/danielendler/datason/pull/129)) | Real SQLite reopen/resume, closed Interrupt/Send codecs, application hydration/schema upgrade, old checkpoint replay and offline Agents approval/context restoration; two pinned SDK generations with Python 3.11/3.13 CI jobs | Native-format migrations, arbitrary message classes, Send timeout policies and replay authorization remain application responsibilities |
+
+Release preparation remains **2.0.0a2 (unreleased)**. This follow-up expands the
+original eight-fixture sample and the initial checkpoint adapter; it does not
+tag or publish the package. The framework matrix describes the exact supported
+versions and evidence rather than claiming compatibility with every SDK release.
+
+## Remaining validation milestones
 
 | Priority | Work | Completion criterion |
 | --- | --- | --- |
-| P1 | Persisted format fixtures and migration contract | Expand the initial a1 fixtures to supported ML/custom data and timestamp/signature edge cases; document migrations |
-| P1 | ML reconstruction review | Enumerate constructors, file/import behavior, and allocation paths for every plugin before recommending untrusted typed loads |
-| P1 | Framework compatibility matrix | Exercise actual supported SDK versions, model hydration, interrupts, and checkpoint schema upgrades; avoid implicit pickle fallbacks |
 | P2 | API/tool schema validation example | Produce ordinary JSON for an actual tool result and validate it against its declared schema, including binary field encoding |
 | P2 | Performance and optional imports | Measure cold import, allocations, representative dump/load p50/p95, and standard JSON baselines using the merged replay framework |
 | P2 | Adoption evidence | Reproduce reported framework failures, validate adapter usefulness with maintainers/users, and observe continued use before expanding integrations |

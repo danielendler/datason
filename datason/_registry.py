@@ -29,6 +29,15 @@ class PluginRegistry:
             self._plugins.append(plugin)
             self._plugins.sort(key=lambda p: p.priority)
 
+    def register_once(self, plugin: TypePlugin) -> bool:
+        """Register an opt-in integration codec once by its unique name."""
+        with self._lock:
+            if any(existing.name == plugin.name for existing in self._plugins):
+                return False
+            self._plugins.append(plugin)
+            self._plugins.sort(key=lambda p: p.priority)
+            return True
+
     def find_serializer(self, obj: Any, ctx: SerializeContext) -> tuple[TypePlugin, Any] | None:
         """Find a plugin that can serialize obj, and return (plugin, result).
 

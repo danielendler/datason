@@ -94,3 +94,16 @@ class TestPluginRegistry:
         assert reg.plugin_count == 1
         reg.clear()
         assert reg.plugin_count == 0
+
+
+def test_register_once_is_atomic_across_threads():
+    from concurrent.futures import ThreadPoolExecutor
+
+    registry = PluginRegistry()
+    with ThreadPoolExecutor(max_workers=8) as workers:
+        results = list(
+            workers.map(lambda _: registry.register_once(_MockPlugin("integration", 400, complex)), range(50))
+        )
+    assert sum(results) == 1
+    assert registry.plugin_count == 1
+    assert registry.find_serializer(1j, SerializeContext(config=SerializationConfig())) is not None
