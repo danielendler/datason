@@ -8,7 +8,7 @@ import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-SITE_URL = "https://danielendler.github.io/datason/"
+SITE_URL = "https://danielendler.github.io/datason/docs/"
 PAGES = (
     "index.md",
     "getting-started.md",

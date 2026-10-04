@@ -1,6 +1,6 @@
 # Contributing to datason
 
-For usage, start with the [documentation](https://danielendler.github.io/datason/).
+For usage, start with the [documentation](https://danielendler.github.io/datason/docs/).
 For bugs, include a small nonsensitive reproduction, installed version,
 Python/library versions, options, expected result, and the complete error in an
 [issue](https://github.com/danielendler/datason/issues).
@@ -22,7 +22,7 @@ uninstalled optional libraries skip. Keep changes focused and describe the
 behavior and validation in the pull request. The project uses a plugin registry
 for type handlers; see [Custom plugins](docs/plugins.md) for the extension contract.
 
-## Documentation changes
+## Website and documentation changes
 
 Edit the source pages under `docs/` and the GitHub README. Examples should include
 their imports, input, dependencies, and a check of the result. Explain output
@@ -33,17 +33,19 @@ when adding a page so it is discoverable.
 uv run python scripts/check_doc_examples.py
 uv run python scripts/sync_docs.py
 uv run python scripts/sync_docs.py --check
-uv run ruff check scripts/sync_docs.py scripts/docs_hooks.py scripts/check_doc_examples.py examples/langgraph_checkpoint.py
-uv run ruff format --check scripts/sync_docs.py scripts/docs_hooks.py scripts/check_doc_examples.py examples/langgraph_checkpoint.py
-uv run mkdocs build --strict
+uv run ruff check scripts/sync_docs.py scripts/docs_hooks.py scripts/check_doc_examples.py scripts/build_site.py scripts/check_site.py examples/langgraph_checkpoint.py
+uv run ruff format --check scripts/sync_docs.py scripts/docs_hooks.py scripts/check_doc_examples.py scripts/build_site.py scripts/check_site.py examples/langgraph_checkpoint.py
+uv run python scripts/build_site.py
+uv run python scripts/check_site.py
 uv run mkdocs serve
 ```
 
 `llms-full.txt` is generated from the guides; edit the guides and regenerate it.
-`llms.txt` is the concise curated index. The MkDocs hook serves both files at the
-site root. CI validates the generated reference, independent Python snippets,
-formatting, and strict site build. Python snippets run as trusted repository code
-in fresh processes and temporary directories, including examples in the README.
+`llms.txt` is the concise curated index. The combined build serves both files at the
+site root and under `/docs/`. CI validates the generated reference, independent
+Python snippets, formatting, the combined site build, homepage links, legacy
+redirects, and live marketing examples. Python snippets run as trusted repository
+code in fresh processes and temporary directories, including examples in the README.
 
 To check the optional framework example:
 
@@ -52,6 +54,10 @@ uv run --with langgraph==1.2.12 --with langgraph-checkpoint-sqlite==3.1.1 python
 uv run --with langgraph==1.2.12 --with langgraph-checkpoint-sqlite==3.1.1 python scripts/check_doc_examples.py --with-langgraph
 ```
 
-Docs from `main` deploy to GitHub Pages after the build passes. A pull request
+The marketing homepage is maintained in `website/`; see [its editing guide](website/README.md).
+Use `python -m http.server --directory site` to preview the combined build locally.
+MkDocs alone (`uv run mkdocs serve`) previews only the documentation.
+
+The homepage and docs from `main` deploy to GitHub Pages after the build passes. A pull request
 builds a downloadable `documentation` artifact without publishing it. Keep the
 installation guidance explicit when development source is ahead of PyPI.
