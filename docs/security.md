@@ -9,7 +9,10 @@ All limits are enforced by default and raise `SecurityError`:
 | Limit | Default | Purpose |
 |-------|---------|---------|
 | `max_depth` | 50 | Prevents stack overflow from deeply nested data |
-| `max_size` | 100,000 | Prevents memory exhaustion from huge dicts/lists |
+| `max_size` | 100,000 | Bounds dict/list container size |
+| `max_string_length` | 1,000,000 | Bounds individual strings |
+| `max_input_bytes` | 16 MiB | Bounds input and supported reconstruction buffer estimates |
+| `max_nodes` | 1,000,000 | Bounds representation traversal |
 | Circular references | Always on | Prevents infinite loops via `id()` tracking |
 
 ```python
@@ -95,3 +98,17 @@ default JSON formatting remain readable; old signatures of other formatting
 cannot be reconstructed. Hash-only envelopes detect accidental corruption and
 provide no authentication. HMAC does not provide encryption, ownership checks,
 or replay prevention; applications must enforce those separately.
+
+
+## Reconstruction trust
+
+Built-in typed loaders call installed library constructors; sklearn state
+restoration also imports estimator classes and calls their state hooks. Keep
+model snapshots application-owned and plugins reviewed. For ordinary incoming
+JSON, `allow_plugin_deserialization=False` rejects plugin reconstruction before
+dispatch, including nested tags and non-strict loading. Parser callbacks and
+custom decoder classes remain trusted code.
+
+See the [built-in reconstruction review](ml-reconstruction-review.md) for all
+constructor/import paths, allocation checks and fidelity limits. Bounds on
+individual buffers do not provide a process-wide memory or execution sandbox.

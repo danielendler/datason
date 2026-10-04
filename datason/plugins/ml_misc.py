@@ -1,7 +1,7 @@
 """Plugin for miscellaneous ML framework types.
 
 Handles Polars DataFrames/Series, JAX arrays, CatBoost models,
-Optuna studies, and Plotly figures. Each library is imported lazily
+Optuna studies, and Plotly figures. Available libraries are imported when this module loads
 and guarded by availability checks.
 
 This module imports all five libraries directly — if any is not
@@ -16,6 +16,7 @@ from typing import Any
 
 from .._errors import PluginError
 from .._protocols import DeserializeContext, SerializeContext
+from .._reconstruction import check_dense_allocation
 from .._types import TYPE_METADATA_KEY, VALUE_METADATA_KEY
 
 # Lazy import flags — pyright can't model try/except import patterns,
@@ -111,7 +112,7 @@ class MlMiscPlugin:
         return data.get(TYPE_METADATA_KEY, "") in _TYPE_NAMES
 
     def deserialize(self, data: dict[str, Any], ctx: DeserializeContext) -> Any:
-        return _deserialize_ml_misc(data)
+        return _deserialize_ml_misc(data, ctx)
 
 
 def _serialize_ml_misc(obj: Any, ctx: SerializeContext) -> Any:
@@ -247,7 +248,7 @@ def _serialize_plotly_figure(fig: Any, ctx: SerializeContext) -> Any:
 # =========================================================================
 
 
-def _deserialize_ml_misc(data: dict[str, Any]) -> Any:
+def _deserialize_ml_misc(data: dict[str, Any], ctx: DeserializeContext) -> Any:
     """Route to type-specific deserializer."""
     type_name = data[TYPE_METADATA_KEY]
     value = data[VALUE_METADATA_KEY]
@@ -258,7 +259,7 @@ def _deserialize_ml_misc(data: dict[str, Any]) -> Any:
         case "polars.Series":
             return _reconstruct_polars_series(value)
         case "jax.Array":
-            return _reconstruct_jax_array(value)
+            return _reconstruct_jax_array(value, ctx)
         case "catboost.Model":
             return value  # Metadata only — cannot reconstruct fitted model
         case "optuna.Study":
@@ -283,13 +284,25 @@ def _reconstruct_polars_series(value: Any) -> Any:
     return pl.Series(value["name"], value["data"])
 
 
-def _reconstruct_jax_array(value: Any) -> Any:
+def _reconstruct_jax_array(value: Any, ctx: DeserializeContext) -> Any:
     """Reconstruct a JAX array."""
     if not _HAS_JAX:
         raise PluginError("jax is not installed")
     import numpy as np
 
-    np_arr = np.array(value["data"], dtype=value["dtype"])
+    from .._errors import DeserializationError
+
+    dtype = np.dtype(value["dtype"])
+    if dtype.fields is not None or dtype.kind not in "biufc":
+        raise DeserializationError("JAX reconstruction requires a numeric or boolean dtype")
+    if not jax.config.x64_enabled and (
+        (dtype.kind in "iuf" and dtype.itemsize > 4) or (dtype.kind == "c" and dtype.itemsize > 8)
+    ):
+        raise DeserializationError("JAX dtype requires enabling x64 in the application")
+    shape = check_dense_allocation(value["data"], value.get("shape"), dtype.itemsize, ctx)
+    np_arr = np.array(value["data"], dtype=dtype)
+    if shape is not None:
+        np_arr = np_arr.reshape(shape)
     return jnp.array(np_arr)
 
 

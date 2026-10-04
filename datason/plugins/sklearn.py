@@ -5,9 +5,9 @@ are serialized via __getstate__() for full fitted-model round-trip.
 State dicts are recursively serialized through the core engine so
 numpy arrays inside get handled by the numpy plugin.
 
-Security: deserialization only allows importing classes from the
-sklearn.* namespace. This prevents arbitrary code execution via
-malicious class paths in serialized data.
+Security: only sklearn BaseEstimator classes may be reconstructed. Importing
+installed modules and calling estimator __setstate__ remain trusted operations;
+namespace checks are not a sandbox for untrusted model state.
 
 This module imports sklearn directly — if sklearn is not installed,
 the ImportError is caught by plugins/__init__.py and this plugin is
@@ -113,9 +113,11 @@ def _reconstruct_estimator(value: Any, ctx: DeserializeContext) -> BaseEstimator
     if not isinstance(value, dict):
         raise PluginError(f"Expected dict for estimator, got {type(value).__name__}")
 
+    state = value.get("state", {})
+    if not isinstance(state, dict):
+        raise PluginError("Estimator state must be a dictionary")
     class_path = value["class"]
     cls = _import_sklearn_class(class_path)
-    state = value.get("state", {})
 
     child = ctx.child()
     deserialized_state = {k: _deserialize_recursive(v, child) for k, v in state.items()}
@@ -137,13 +139,15 @@ def _reconstruct_pipeline(value: Any, ctx: DeserializeContext) -> Pipeline:
     return Pipeline(steps=steps)
 
 
-def _import_sklearn_class(class_path: str) -> type:
-    """Securely import a class, restricted to sklearn namespace."""
-    if not class_path.startswith("sklearn."):
+def _import_sklearn_class(class_path: Any) -> type:
+    """Import a trusted sklearn estimator, without claiming a sandbox."""
+    if not isinstance(class_path, str) or not class_path.startswith("sklearn."):
         raise PluginError(f"Security: refusing to import non-sklearn class: {class_path}")
     module_path, _, class_name = class_path.rpartition(".")
     module = importlib.import_module(module_path)
     cls = getattr(module, class_name, None)
     if cls is None:
         raise PluginError(f"Class not found: {class_path}")
+    if not isinstance(cls, type) or not issubclass(cls, BaseEstimator):
+        raise PluginError(f"Class is not a sklearn estimator: {class_path}")
     return cls
