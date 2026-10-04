@@ -39,6 +39,7 @@ nav:
   - For AI Agents: ai-agents.md
   - Framework Compatibility: framework-compatibility.md
   - Performance Strategy: performance-strategy.md
+  - Performance Baseline: performance-baseline.md
   - Rust Feasibility Gate: rust-feasibility.md
   - Persisted Format Contract: persisted-format-contract.md
   - Migration from v1: migration.md
