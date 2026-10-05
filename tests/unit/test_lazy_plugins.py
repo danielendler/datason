@@ -75,6 +75,56 @@ def test_deserialization_can_be_first_use(monkeypatch):
     assert plugin.deserialize({TYPE_METADATA_KEY: "torch.test"}, DeserializeContext(SerializationConfig())) == 7
 
 
+@pytest.mark.parametrize("first", ["can_handle", "can_deserialize", "serialize", "deserialize"])
+def test_successful_activation_bypasses_loading_checks_on_warmed_operations(monkeypatch, first):
+    monkeypatch.setattr(_lazy.importlib, "import_module", lambda _: SimpleNamespace(Delegate=Delegate))
+    plugin = deferred()
+    obj, wire = Foreign(), {TYPE_METADATA_KEY: "torch.test"}
+    calls = {
+        "can_handle": (obj,),
+        "can_deserialize": (wire,),
+        "serialize": (obj, SerializeContext(SerializationConfig())),
+        "deserialize": (wire, DeserializeContext(SerializationConfig())),
+    }
+    getattr(plugin, first)(*calls[first])
+    monkeypatch.setattr(plugin, "_load", lambda: pytest.fail("warmed operation used the loader"))
+    monkeypatch.setattr(_lazy, "matches_family", lambda *_: pytest.fail("warmed operation inspected the family"))
+    assert plugin.can_handle(obj) and not plugin.can_handle(object())
+    assert plugin.serialize(*calls["serialize"]) == {"value": 7}
+    assert plugin.deserialize(*calls["deserialize"]) == 7
+    assert plugin.can_deserialize(wire)
+    for invalid in ({}, {TYPE_METADATA_KEY: []}, {TYPE_METADATA_KEY: "untrusted.module.Class"}):
+        assert not plugin.can_deserialize(invalid)
+
+
+def test_callbacks_captured_before_activation_remain_valid(monkeypatch):
+    monkeypatch.setattr(_lazy.importlib, "import_module", lambda _: SimpleNamespace(Delegate=Delegate))
+    plugin = deferred()
+    callbacks = (plugin.can_handle, plugin.serialize, plugin.deserialize)
+    assert plugin.can_deserialize({TYPE_METADATA_KEY: "torch.test"})
+    assert callbacks[0](Foreign())
+    assert callbacks[1](Foreign(), SerializeContext(SerializationConfig())) == {"value": 7}
+    assert callbacks[2]({TYPE_METADATA_KEY: "torch.test"}, DeserializeContext(SerializationConfig())) == 7
+
+
+def test_warmed_delegate_errors_keep_registry_warning_and_fallback(monkeypatch):
+    class Failing(Delegate):
+        def serialize(self, obj, ctx):
+            raise PluginError("conversion failed")
+
+    monkeypatch.setattr(_lazy.importlib, "import_module", lambda _: SimpleNamespace(Delegate=Failing))
+    plugin, fallback = deferred(), Delegate()
+    fallback.name, fallback.priority = "fallback", 400
+    registry = PluginRegistry()
+    registry.register(plugin)
+    registry.register(fallback)
+    assert plugin.can_handle(Foreign())
+    with pytest.warns(UserWarning, match="Plugin 'torch' failed.*conversion failed"):
+        result = registry.find_serializer(Foreign(), SerializeContext(SerializationConfig()))
+    assert result == (fallback, {"value": 7})
+    assert registry.plugin_count == 2
+
+
 @pytest.mark.parametrize(
     "missing", [ModuleNotFoundError("torch missing"), ImportError("transitive dependency missing")]
 )
@@ -115,8 +165,27 @@ def test_concurrent_first_serialization_and_loading_construct_once(monkeypatch):
     gate = Barrier(8)
     entered = Event()
     release = Event()
+    queued = Event()
     count = []
+    waiters = []
     count_lock = Lock()
+
+    class ObservedLock:
+        def __init__(self):
+            self.lock = Lock()
+
+        def __enter__(self):
+            with count_lock:
+                waiters.append(True)
+                if len(waiters) == 8:
+                    queued.set()
+            self.lock.acquire()
+
+        def __exit__(self, *args):
+            self.lock.release()
+
+    monkeypatch.setattr(plugin, "_lock", ObservedLock())
+    cold_can_handle, cold_can_deserialize = plugin.can_handle, plugin.can_deserialize
 
     def slow_import(target):
         with count_lock:
@@ -130,14 +199,15 @@ def test_concurrent_first_serialization_and_loading_construct_once(monkeypatch):
     def dispatch(index):
         gate.wait(timeout=5)
         if index % 2:
-            assert plugin.can_handle(Foreign())
+            assert cold_can_handle(Foreign())
             return plugin.serialize(Foreign(), SerializeContext(SerializationConfig()))["value"]
-        assert plugin.can_deserialize({TYPE_METADATA_KEY: "torch.test"})
+        assert cold_can_deserialize({TYPE_METADATA_KEY: "torch.test"})
         return plugin.deserialize({TYPE_METADATA_KEY: "torch.test"}, DeserializeContext(SerializationConfig()))
 
     with ThreadPoolExecutor(max_workers=8) as workers:
         pending = [workers.submit(dispatch, index) for index in range(8)]
         assert entered.wait(5)
+        assert queued.wait(5)
         release.set()
         assert [item.result(timeout=5) for item in pending] == [7] * 8
     assert count == ["datason.plugins.torch"]

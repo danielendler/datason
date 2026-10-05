@@ -107,6 +107,23 @@ def test_jaxlib_and_application_subclasses_route_to_jax(monkeypatch, isolated):
     assert selected == ["jax", "polars", "jax"]
 
 
+def test_cached_families_skip_class_scans_including_unavailable_results(monkeypatch, isolated):
+    misc._loaded.update(misc._FRAMEWORKS)
+    monkeypatch.setattr(misc, "matches_family", lambda *_: pytest.fail("cached family rescanned"))
+    monkeypatch.setattr(misc, "_load_framework", lambda _: pytest.fail("cached family reloaded"))
+    assert not misc.MlMiscPlugin().can_handle(object())
+
+
+def test_cached_family_does_not_hide_a_new_family_on_an_application_subclass(monkeypatch, isolated):
+    misc._loaded.add("polars")
+    selected = []
+    monkeypatch.setattr(misc, "_load_framework", selected.append)
+    base = type("ArrayImpl", (), {"__module__": "jaxlib._jax"})
+    alias = type("AppArray", (base,), {"__module__": "polars"})
+    misc._load_for_object(alias())
+    assert selected == ["jax"]
+
+
 @pytest.mark.parametrize("tag", ["catboost.Model", "optuna.Study"])
 def test_metadata_only_tags_do_not_import_frameworks(monkeypatch, isolated, tag):
     monkeypatch.setattr(misc.importlib, "import_module", lambda _: pytest.fail("metadata needs no framework"))

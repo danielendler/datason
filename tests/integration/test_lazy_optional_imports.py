@@ -158,3 +158,31 @@ for tag in ("catboost.Model", "optuna.Study"):
     assert value == {{"params": {{}}}}
 assert not set({_OPTIONAL!r}).intersection(sys.modules)
 """)
+
+
+@pytest.mark.parametrize("family", ["polars", "jax"])
+def test_warmed_metadata_descriptor_still_loads_new_misc_families_on_demand(family):
+    if importlib.util.find_spec(family) is None:
+        pytest.skip(f"{family} is not installed")
+    run_fresh(f"""
+import json, sys, datason
+wire = json.dumps({{"__datason_type__": "optuna.Study", "__datason_value__": {{"params": {{}}}}}})
+assert datason.loads(wire) == {{"params": {{}}}}
+assert not set({_OPTIONAL!r}).intersection(sys.modules)
+from datason._registry import default_registry
+proxy = next(p for p in default_registry._plugins if p.name == "ml_misc")
+def forbidden(): raise AssertionError("warmed descriptor used loader")
+proxy._load = forbidden
+if {family!r} == "polars":
+    import polars
+    value = polars.DataFrame({{"x": [1, 2]}})
+    restored = datason.loads(datason.dumps(value))
+    assert restored.equals(value)
+else:
+    import jax.numpy as jnp
+    value = jnp.array([1, 2], dtype=jnp.int32)
+    restored = datason.loads(datason.dumps(value))
+    assert restored.dtype == value.dtype and restored.tolist() == value.tolist()
+from datason.plugins.ml_misc import _loaded
+assert _loaded == {{{family!r}}}
+""")

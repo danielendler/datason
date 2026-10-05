@@ -1341,7 +1341,12 @@ importing a plugin module still imports its associated library.
 
 Initialization is synchronized once per plugin/family, outside the registry
 lock. Successful and unavailable dependency results are cached; subsequent
-operations retain the active handler. Unexpected initialization failures remain
+object checks, serialization and reconstruction call the active handler directly.
+The descriptor retains its identity, name and priority. Tagged dispatch keeps
+its known-namespace guard and reads the cached handler without re-entering the
+loader. Miscellaneous ML families with a cached initialization result skip
+repeated class-family scans; uninitialized families still activate on demand.
+Unexpected initialization failures remain
 visible at first use rather than being mistaken for an absent library.
 
 This reduces startup cost when installed libraries are unused. Required imports
@@ -1383,6 +1388,62 @@ optional libraries, first tagged loads, application subclasses, descriptor
 priority, disabled dispatch and budgets. Unit regressions cover concurrent
 initialization, unavailable dependencies, retries after unexpected failures
 and metadata-only exports.
+
+### Warm dispatch validation
+
+A draft optimization measured October 5, 2026 replaces initialized descriptor
+callbacks with the same handler's bound methods and skips miscellaneous family
+scans once their initialization result is cached. First use, descriptor priority,
+tag guards, unavailable dependencies and later family activation retain their
+existing behavior.
+
+The comparison uses the earlier lazy implementation from PR #136 (`b8ce1cf`),
+one process with the same library versions and unchanged converters, five
+shuffled pairs per operation, one library thread and CPU JAX. All optional
+handlers/families are warmed first. Values and supported dtype/shape semantics
+are checked, and each mode must emit identical bytes before timing. There are
+36 small/medium fixtures across 12 optional integrations, JSON and five stdlib
+or structured controls: 72 end-to-end operations, plus 12 dispatch probes.
+
+The table records small-fixture medians of round medians in microseconds,
+**earlier lazy implementation → draft**. `can_handle` measures the individual
+handler check, not a complete serialization request.
+
+| Integration | dumps (µs) | loads (µs) | can_handle (µs) |
+| --- | ---: | ---: | ---: |
+| NumPy | 36.92 → 35.83 | 20.78 → 19.90 | 0.29 → 0.24 |
+| Pandas | 323.34 → 362.58 | 410.20 → 451.32 | 0.41 → 0.35 |
+| SciPy | 100.44 → 96.59 | 105.00 → 103.93 | 0.39 → 0.33 |
+| PyTorch | 38.95 → 36.90 | 25.18 → 24.30 | 0.43 → 0.37 |
+| TensorFlow | 40.55 → 36.98 | 85.83 → 87.97 | 0.32 → 0.26 |
+| sklearn | 196.06 → 176.98 | 71.31 → 67.92 | 0.20 → 0.14 |
+| Polars | 53.06 → 45.17 | 36.24 → 35.16 | 2.02 → 0.35 |
+| JAX | 52.23 → 43.42 | 72.20 → 69.37 | 2.67 → 0.53 |
+| CatBoost | 58.17 → 48.31 | 18.81 → 18.11 | 3.46 → 0.58 |
+| Optuna | 1,223.51 → 1,322.42 | 62.26 → 61.48 | 2.41 → 0.61 |
+| Plotly | 2,304.80 → 2,580.32 | 10,255.19 → 11,106.50 | 6.34 → 3.71 |
+| Pydantic | 43.20 → 36.36 | 13.84 → 13.72 | 0.24 → 0.18 |
+
+All 12 dispatch probes improved in every paired round. Complete operations
+do **not** improve uniformly: small Pandas/Optuna/Plotly operations were slower
+in this sample, and medium Optuna loads were 51.7% slower. Other medium cases and
+unchanged JSON/stdlib controls varied substantially too. These results do not
+isolate the cause of the slower observations or justify a universal speed claim;
+the draft needs further representative performance review. Conversion and
+library construction/copying dominate several workloads.
+
+CatBoost/Optuna loads are metadata-only. Pydantic and dataclass loads produce
+normalized fields, with explicit model validation checked separately. Polars
+uses an Int64 fixture because the existing loader infers dtypes; its Float32
+schema does not currently restore Float32. The fixtures do not establish fidelity
+for every type supported by these libraries. sklearn's small/medium fitted models
+have 2/64 features, while the other fixture scales are generally 10/1,000 elements
+or metadata entries; actual output sizes are recorded.
+
+[Raw observations, source hashes and versions](evidence/2026-10-05-warm-dispatch.json)
+include all slower observations, controls and paired rounds. Reproduce with
+`scripts/perf/warm_dispatch_study.py --baseline-dir PATH --output REPORT.json`
+using an application-owned earlier checkout and installed optional libraries.
 
 ---
 

@@ -68,6 +68,8 @@ def _load_framework(name: _Framework) -> None:
 
 def _load_for_object(obj: Any) -> None:
     for name in _FRAMEWORKS:
+        if name in _loaded:
+            continue
         roots = ("jax", "jaxlib") if name == "jax" else (name,)
         if matches_family(obj, roots):
             _load_framework(name)
