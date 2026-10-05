@@ -41,6 +41,11 @@ class LazyPlugin:
                     try:
                         module = importlib.import_module(f"datason.plugins.{self.name}")
                         self._plugin = cast(TypePlugin, getattr(module, self._class_name)())
+                        # Keep the descriptor's identity/priority, but bypass its
+                        # loading checks once the fully constructed handler exists.
+                        self.can_handle = self._plugin.can_handle
+                        self.serialize = self._plugin.serialize
+                        self.deserialize = self._plugin.deserialize
                     except ImportError:
                         # Match the previous optional registration's unavailable behavior.
                         pass
@@ -65,7 +70,7 @@ class LazyPlugin:
         tag = data.get(TYPE_METADATA_KEY)
         if not isinstance(tag, str) or not tag.startswith(self._tags):
             return False
-        plugin = self._load()
+        plugin = self._plugin if self._plugin is not None else self._load()
         return plugin is not None and plugin.can_deserialize(data)
 
     def deserialize(self, data: dict[str, Any], ctx: DeserializeContext) -> Any:
